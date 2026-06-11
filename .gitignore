@@ -12,6 +12,5 @@ build/
 *.egg-info/
 logs/
 artifacts/
-AGENTS.md
 .vscode/
 
