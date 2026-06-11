@@ -5,7 +5,7 @@
 本仓库由后端 Agent 架构师维护，优先覆盖 2026-06-18 前的四个交付物：
 
 - W1: LangGraph + LangChain 编排技术决策文档
-- W2: 三模型 API 封装脚本
+- W2: 三模型 API 封装脚本（统一 call_llm）
 - W3: Agent 工作流 demo 脚本
 - W4: Agent 间接口规范文档
 
@@ -40,7 +40,7 @@
 └── uv.lock                     # uv 锁文件
 ```
 
-当前后端目录仍是 MVP 骨架。已跑通 LangGraph 工作流，并让各 Agent 节点默认通过 DeepSeek 生成结构化 JSON；RAG 检索仍使用临时 Mock 上下文。
+当前后端目录仍是 MVP 骨架。已跑通 LangGraph 工作流，并通过统一 call_llm 封装接入 DeepSeek、Qwen（阿里云百炼）和 Kimi（ModelScope API-Inference）；RAG 检索仍使用临时 Mock 上下文。
 
 ## 快速开始
 
@@ -48,7 +48,7 @@
 uv sync
 uv run python backend/main.py          # 运行当前后端入口占位
 uv run python backend/scripts/show_workflow.py  # 导出 LangGraph Mermaid 工作流
-uv run python backend/scripts/run_deepseek_workflow.py --user-input "我想学习专利新颖性"
+uv run python backend/scripts/run_llm_workflow.py --provider deepseek --user-input "我想学习专利新颖性"
 uv run pytest                           # 运行后端测试
 ```
 
@@ -65,6 +65,6 @@ uv export --format requirements-txt --output-file requirements.txt
 | 日期 | 交付物 | 状态 |
 | --- | --- | --- |
 | 6/13 | W1 LangGraph + LangChain 技术决策文档 | 已更新 |
-| 6/15 | W2 三模型 API 封装脚本 | 待实现 |
+| 6/15 | W2 三模型 API 封装脚本（统一 call_llm） | 已完成 MVP |
 | 6/18 | W3 Agent 工作流 demo 脚本 | 待实现 |
 | 6/18 | W4 Agent 间接口规范文档 | 草稿占位 |

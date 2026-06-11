@@ -1,4 +1,4 @@
-"""DeepSeek-backed Agent nodes for the first real-model workflow MVP."""
+"""LLM-backed Agent nodes for the first real-model workflow MVP."""
 
 from __future__ import annotations
 
@@ -144,7 +144,7 @@ def build_agent_nodes(llm_client: LLMClient) -> dict[str, Node]:
         profile = LearnerProfile.model_validate(raw)
         return {
             "learner_profile": profile.model_dump(),
-            "events": [completed_event("diagnosis", "generated learner profile with DeepSeek")],
+            "events": [completed_event("diagnosis", "generated learner profile with LLM")],
         }
 
     def planner_node(state: StateDict) -> dict[str, Any]:
@@ -161,7 +161,7 @@ def build_agent_nodes(llm_client: LLMClient) -> dict[str, Node]:
         path = [LearningPathItem.model_validate(item) for item in raw]
         return {
             "learning_path": [item.model_dump() for item in path],
-            "events": [completed_event("planner", "planned learning path with DeepSeek")],
+            "events": [completed_event("planner", "planned learning path with LLM")],
         }
 
     def retrieve_context_node(state: StateDict) -> dict[str, Any]:
@@ -190,7 +190,7 @@ def build_agent_nodes(llm_client: LLMClient) -> dict[str, Node]:
         draft = ExpertDraft.model_validate(raw)
         return {
             "expert_a_draft": draft.model_dump(),
-            "events": [completed_event("expert_a", "generated expert A draft with DeepSeek")],
+            "events": [completed_event("expert_a", "generated expert A draft with LLM")],
         }
 
     def expert_b_node(state: StateDict) -> dict[str, Any]:
@@ -205,7 +205,7 @@ def build_agent_nodes(llm_client: LLMClient) -> dict[str, Node]:
         draft = ExpertDraft.model_validate(raw)
         return {
             "expert_b_draft": draft.model_dump(),
-            "events": [completed_event("expert_b", "generated expert B draft with DeepSeek")],
+            "events": [completed_event("expert_b", "generated expert B draft with LLM")],
         }
 
     def judge_node(state: StateDict) -> dict[str, Any]:
@@ -220,7 +220,7 @@ def build_agent_nodes(llm_client: LLMClient) -> dict[str, Node]:
         report = JudgeReport.model_validate(raw)
         return {
             "judge_report": report.model_dump(),
-            "events": [completed_event("judge", "reviewed expert drafts with DeepSeek")],
+            "events": [completed_event("judge", "reviewed expert drafts with LLM")],
         }
 
     def feedback_node(state: StateDict) -> dict[str, Any]:
@@ -235,7 +235,7 @@ def build_agent_nodes(llm_client: LLMClient) -> dict[str, Node]:
         feedback = FeedbackResult.model_validate(raw)
         return {
             "feedback_result": feedback.model_dump(),
-            "events": [completed_event("feedback", "created feedback suggestion with DeepSeek")],
+            "events": [completed_event("feedback", "created feedback suggestion with LLM")],
         }
 
     return {
@@ -246,4 +246,27 @@ def build_agent_nodes(llm_client: LLMClient) -> dict[str, Node]:
         "expert_b": expert_b_node,
         "judge": judge_node,
         "feedback": feedback_node,
+    }
+
+
+def finalize_node(state: StateDict) -> dict[str, Any]:
+    from backend.app.schemas.state import FinalAnswer
+
+    expert_a = state.get("expert_a_draft", {})
+    expert_b = state.get("expert_b_draft", {})
+    final = FinalAnswer(
+        title="个性化知识产权学习建议",
+        content="\n\n".join(
+            part
+            for part in [
+                str(expert_a.get("teaching_content", "")),
+                str(expert_b.get("teaching_content", "")),
+            ]
+            if part
+        ),
+        sources=[chunk["citation"] for chunk in state.get("retrieval_context", [])],
+    )
+    return {
+        "final_answer": final.model_dump(),
+        "events": [completed_event("finalize", "assembled final teaching answer")],
     }
