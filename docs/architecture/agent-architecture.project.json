@@ -1,0 +1,104 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="cli-anything" agent="cli-anything-drawio/1.0.0" version="24.0.0">
+  <diagram id="diagram_1781177678890303" name="Page-1">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="Patent Tutor Agent 后端 Agent 架构图" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=26;fontColor=#111827;" vertex="1" parent="1">
+          <mxGeometry x="520.0" y="30.0" width="760.0" height="48.0" as="geometry" />
+        </mxCell>
+        <mxCell id="frontend" value="React 前端&lt;br&gt;学员交互 / 状态看板" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EAF4FF;" vertex="1" parent="1">
+          <mxGeometry x="70.0" y="140.0" width="190.0" height="80.0" as="geometry" />
+        </mxCell>
+        <mxCell id="api" value="FastAPI&lt;br&gt;REST / WebSocket" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EAF4FF;" vertex="1" parent="1">
+          <mxGeometry x="330.0" y="140.0" width="190.0" height="80.0" as="geometry" />
+        </mxCell>
+        <mxCell id="orchestrator" value="LangGraph 编排器&lt;br&gt;StateDict / 并行 / 循环" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3D6;" vertex="1" parent="1">
+          <mxGeometry x="590.0" y="130.0" width="250.0" height="100.0" as="geometry" />
+        </mxCell>
+        <mxCell id="state" value="StateDict&lt;br&gt;JSON 状态合同" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#FFF8E7;" vertex="1" parent="1">
+          <mxGeometry x="910.0" y="140.0" width="190.0" height="80.0" as="geometry" />
+        </mxCell>
+        <mxCell id="diagnosis" value="学情诊断 Agent&lt;br&gt;五维画像" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EAF7EA;" vertex="1" parent="1">
+          <mxGeometry x="120.0" y="360.0" width="190.0" height="86.0" as="geometry" />
+        </mxCell>
+        <mxCell id="planner" value="路径规划 Agent&lt;br&gt;学习路径" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EAF7EA;" vertex="1" parent="1">
+          <mxGeometry x="380.0" y="360.0" width="190.0" height="86.0" as="geometry" />
+        </mxCell>
+        <mxCell id="expert_a" value="专家 A&lt;br&gt;严谨法条 / IRAC" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EAF7EA;" vertex="1" parent="1">
+          <mxGeometry x="660.0" y="300.0" width="190.0" height="86.0" as="geometry" />
+        </mxCell>
+        <mxCell id="expert_b" value="专家 B&lt;br&gt;案例化讲解" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EAF7EA;" vertex="1" parent="1">
+          <mxGeometry x="660.0" y="430.0" width="190.0" height="86.0" as="geometry" />
+        </mxCell>
+        <mxCell id="judge" value="审核裁判 Agent&lt;br&gt;评估 / 辩论 / 裁决" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE9E6;" vertex="1" parent="1">
+          <mxGeometry x="980.0" y="360.0" width="210.0" height="96.0" as="geometry" />
+        </mxCell>
+        <mxCell id="final_answer" value="最终教学内容&lt;br&gt;个性化 + 可溯源" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5EDFF;" vertex="1" parent="1">
+          <mxGeometry x="1280.0" y="360.0" width="210.0" height="96.0" as="geometry" />
+        </mxCell>
+        <mxCell id="feedback" value="反馈分析 Agent&lt;br&gt;问卷 / BKT 更新" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EAF7EA;" vertex="1" parent="1">
+          <mxGeometry x="1530.0" y="360.0" width="190.0" height="96.0" as="geometry" />
+        </mxCell>
+        <mxCell id="rag" value="RAG 检索服务&lt;br&gt;BM25 + 向量 + Reranker" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EAFBF4;" vertex="1" parent="1">
+          <mxGeometry x="180.0" y="690.0" width="270.0" height="90.0" as="geometry" />
+        </mxCell>
+        <mxCell id="llm" value="统一 LLM Wrapper&lt;br&gt;DeepSeek / Qwen / Claude" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EEF2FF;" vertex="1" parent="1">
+          <mxGeometry x="620.0" y="690.0" width="270.0" height="90.0" as="geometry" />
+        </mxCell>
+        <mxCell id="storage" value="数据存储&lt;br&gt;画像 / BKT / 会话记录" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#F3F4F6;" vertex="1" parent="1">
+          <mxGeometry x="1060.0" y="690.0" width="250.0" height="90.0" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" value="请求" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="frontend" target="api">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="会话" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="api" target="orchestrator">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="读写状态" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="orchestrator" target="state">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="启动工作流" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="orchestrator" target="diagnosis">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="画像" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="diagnosis" target="planner">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" value="并行" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="planner" target="expert_a">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" value="并行" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="planner" target="expert_b">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" value="草稿A" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="expert_a" target="judge">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" value="草稿B" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="expert_b" target="judge">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" value="裁决" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="judge" target="final_answer">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" value="反馈" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="final_answer" target="feedback">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e12" value="更新画像" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="feedback" target="storage">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e13" value="历史画像" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="storage" target="diagnosis">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e14" value="检索上下文" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="rag" target="state">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e15" value="模型调用" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="llm" target="orchestrator">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e16" value="WS状态" style="edgeStyle=orthogonalEdgeStyle;rounded=0;" edge="1" parent="1" source="state" target="frontend">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
