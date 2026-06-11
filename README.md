@@ -1,4 +1,4 @@
-# IP Agent Orchestrator
+# Patent Tutor Agent
 
 知识产权管理与专利代理实务多 Agent 系统的后端编排仓库。
 
@@ -12,7 +12,7 @@
 ## 技术栈
 
 - Python 3.11+
-- 项目管理: uv
+- 项目管理: uv（以 `pyproject.toml` 和 `uv.lock` 作为依赖来源）
 - Web 服务: FastAPI
 - 编排器: LangGraph
 - 模型调用层: httpx + tenacity
@@ -37,7 +37,7 @@
 ├── tests/
 ├── main.py
 ├── pyproject.toml
-└── requirements.txt
+└── uv.lock
 ```
 
 ## 快速开始
@@ -49,6 +49,16 @@ uv run pytest
 ```
 
 当前 `main.py` 只是项目入口占位。W2/W3 阶段会补齐 `api_wrapper.py` 和 LangGraph demo。
+
+## 依赖管理说明
+
+本项目只维护 `pyproject.toml` 和 `uv.lock`，不再手写 `requirements.txt`，避免依赖版本出现两套来源。
+
+如后续 Docker、评测平台或队友环境必须使用 `requirements.txt`，再由 uv 导出生成：
+
+```bash
+uv export --format requirements-txt --output-file requirements.txt
+```
 
 ## 近期交付节奏
 

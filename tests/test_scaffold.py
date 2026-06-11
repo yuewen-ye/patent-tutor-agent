@@ -6,7 +6,7 @@ def test_required_delivery_files_exist() -> None:
 
     assert (root / "README.md").is_file()
     assert (root / "pyproject.toml").is_file()
-    assert (root / "requirements.txt").is_file()
+    assert (root / "uv.lock").is_file()
     assert (root / "main.py").is_file()
     assert (root / "docs" / "orchestrator-selection.md").is_file()
     assert (root / "docs" / "agent-interface-spec.md").is_file()

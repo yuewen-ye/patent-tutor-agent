@@ -2,7 +2,7 @@
 
 
 def main() -> None:
-    print("IP Agent Orchestrator scaffold is ready.")
+    print("Patent Tutor Agent scaffold is ready.")
 
 
 if __name__ == "__main__":
