@@ -8,13 +8,13 @@ from langgraph.graph import END, START, StateGraph
 
 from backend.app.agents.real_nodes import Node, build_agent_nodes
 from backend.app.agents.real_nodes import finalize_node
-from backend.app.core.llm import DefaultLLMClient, LLMClient
+from backend.app.core.llm import AgentLLMRouter, DefaultLLMClient, LLMClient
 from backend.app.schemas.state import StateDict
 
 
 def build_workflow(llm_client: LLMClient | None = None) -> Any:
     builder = StateGraph(StateDict)
-    nodes: dict[str, Node] = build_agent_nodes(llm_client or DefaultLLMClient.from_env())
+    nodes: dict[str, Node] = build_agent_nodes(llm_client or AgentLLMRouter.from_env())
 
     builder.add_node("diagnosis", cast(Any, nodes["diagnosis"]))
     builder.add_node("planner", cast(Any, nodes["planner"]))
@@ -39,7 +39,9 @@ def build_workflow(llm_client: LLMClient | None = None) -> Any:
     return builder.compile()
 
 
-def run_workflow(session_id: str, user_input: str, llm_client: LLMClient | None = None) -> StateDict:
+def run_workflow(
+    session_id: str, user_input: str, llm_client: LLMClient | None = None
+) -> StateDict:
     workflow = build_workflow(llm_client=llm_client)
     result = workflow.invoke(
         {

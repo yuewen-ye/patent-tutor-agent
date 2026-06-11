@@ -1,11 +1,18 @@
 import json
 import os
+from typing import Any, cast
 
 import httpx
 import pytest
-from typing import Any, cast
 
-from backend.app.core.llm import LLMMessage, LLMProvider, LLMProviderError, call_llm, call_llm_json
+from backend.app.core.llm import (
+    AgentLLMRouter,
+    LLMMessage,
+    LLMProvider,
+    LLMProviderError,
+    call_llm,
+    call_llm_json,
+)
 
 
 def _json_response(content: str) -> httpx.Response:
@@ -46,8 +53,13 @@ def test_call_llm_posts_to_configured_openai_compatible_provider(monkeypatch) ->
     ("provider", "key_name", "model_name", "base_url"),
     [
         ("deepseek", "DEEPSEEK_API_KEY", "deepseek-v4-flash", "https://api.deepseek.com"),
-        ("qwen", "QWEN_API_KEY", "qwen3.7-max", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
-        ("kimi", "KIMI_API_KEY", "moonshotai/Kimi-K2.6", "https://api-inference.modelscope.cn/v1"),
+        (
+            "qwen",
+            "QWEN_API_KEY",
+            "qwen3.7-max",
+            "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        ),
+        ("kimi", "KIMI_API_KEY", "moonshotai/Kimi-K2.5", "https://api-inference.modelscope.cn/v1"),
     ],
 )
 def test_call_llm_supports_three_configured_providers(
@@ -64,11 +76,14 @@ def test_call_llm_supports_three_configured_providers(
         seen["body"] = json.loads(request.content.decode("utf-8"))
         return _json_response("ok")
 
-    assert call_llm(
-        provider=provider,
-        messages=[LLMMessage(role="user", content="ping")],
-        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
-    ) == "ok"
+    assert (
+        call_llm(
+            provider=provider,
+            messages=[LLMMessage(role="user", content="ping")],
+            http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+        )
+        == "ok"
+    )
     assert seen["url"] == f"{base_url}/chat/completions"
     assert cast(dict[str, Any], seen["body"])["model"] == model_name
 
@@ -95,7 +110,7 @@ def test_call_llm_json_adds_json_mode_and_parses_response(monkeypatch) -> None:
 
 def test_call_llm_wraps_provider_error_body(monkeypatch) -> None:
     monkeypatch.setenv("KIMI_API_KEY", "kimi-key")
-    monkeypatch.setenv("KIMI_MODEL", "moonshotai/Kimi-K2.6")
+    monkeypatch.setenv("KIMI_MODEL", "moonshotai/Kimi-K2.5")
     monkeypatch.setenv("KIMI_BASE_URL", "https://api-inference.modelscope.cn/v1")
 
     client = httpx.Client(
@@ -105,7 +120,9 @@ def test_call_llm_wraps_provider_error_body(monkeypatch) -> None:
     )
 
     with pytest.raises(LLMProviderError, match="bad request detail"):
-        call_llm(provider="kimi", messages=[LLMMessage(role="user", content="x")], http_client=client)
+        call_llm(
+            provider="kimi", messages=[LLMMessage(role="user", content="x")], http_client=client
+        )
 
 
 def test_call_llm_normalizes_socks_proxy(monkeypatch) -> None:
@@ -116,8 +133,22 @@ def test_call_llm_normalizes_socks_proxy(monkeypatch) -> None:
     call_llm(
         provider="deepseek",
         messages=[LLMMessage(role="user", content="ping")],
-        http_client=httpx.Client(transport=httpx.MockTransport(lambda request: _json_response("ok"))),
+        http_client=httpx.Client(
+            transport=httpx.MockTransport(lambda request: _json_response("ok"))
+        ),
     )
 
     assert os.environ["HTTP_PROXY"] == "socks5://127.0.0.1:64193/"
     assert os.environ["HTTPS_PROXY"] == "socks5://127.0.0.1:64193/"
+
+
+def test_agent_llm_router_reads_agent_specific_provider_config(monkeypatch) -> None:
+    monkeypatch.setenv("DEFAULT_LLM_PROVIDER", "deepseek")
+    monkeypatch.setenv("DIAGNOSIS_PROVIDER", "qwen")
+    monkeypatch.setenv("EXPERT_B_PROVIDER", "kimi")
+
+    router = AgentLLMRouter.from_env()
+
+    assert router.provider_for("diagnosis") == "qwen"
+    assert router.provider_for("planner") == "deepseek"
+    assert router.provider_for("expert_b") == "kimi"

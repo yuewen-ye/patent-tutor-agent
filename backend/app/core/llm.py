@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import json
 import os
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from typing import Literal, Protocol, Self
+from typing import Literal, Protocol, Self, cast
 
 import httpx
 from dotenv import load_dotenv
@@ -14,6 +14,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 LLMProvider = Literal["deepseek", "qwen", "kimi"]
 LLMRole = Literal["system", "user", "assistant"]
+AgentName = Literal["diagnosis", "planner", "expert_a", "expert_b", "judge", "feedback"]
 
 DEFAULT_PROVIDER: LLMProvider = "deepseek"
 DEFAULT_CONFIG: dict[LLMProvider, dict[str, str]] = {
@@ -35,9 +36,17 @@ DEFAULT_CONFIG: dict[LLMProvider, dict[str, str]] = {
         "api_key_env": "KIMI_API_KEY",
         "model_env": "KIMI_MODEL",
         "base_url_env": "KIMI_BASE_URL",
-        "model": "moonshotai/Kimi-K2.6",
+        "model": "moonshotai/Kimi-K2.5",
         "base_url": "https://api-inference.modelscope.cn/v1",
     },
+}
+AGENT_PROVIDER_ENV: dict[AgentName, str] = {
+    "diagnosis": "DIAGNOSIS_PROVIDER",
+    "planner": "PLANNER_PROVIDER",
+    "expert_a": "EXPERT_A_PROVIDER",
+    "expert_b": "EXPERT_B_PROVIDER",
+    "judge": "JUDGE_PROVIDER",
+    "feedback": "FEEDBACK_PROVIDER",
 }
 
 
@@ -58,7 +67,9 @@ class LLMProviderConfig:
 
 
 class LLMClient(Protocol):
-    def generate_json(self, messages: list[LLMMessage], temperature: float) -> object:
+    def generate_json(
+        self, messages: list[LLMMessage], temperature: float, agent: AgentName | None = None
+    ) -> object:
         """Generate and parse a JSON response from a chat model."""
 
 
@@ -84,6 +95,13 @@ def normalize_socks_proxy_env(
         value = os.environ.get(key)
         if value and value.startswith("socks://"):
             os.environ[key] = "socks5://" + value.removeprefix("socks://")
+
+
+def _validate_provider(value: str, source: str) -> LLMProvider:
+    provider = value.lower()
+    if provider not in DEFAULT_CONFIG:
+        raise LLMConfigurationError(f"Unsupported {source}: {value}")
+    return cast(LLMProvider, provider)
 
 
 def load_provider_config(provider: LLMProvider) -> LLMProviderConfig:
@@ -147,8 +165,6 @@ def _post_chat_completion(
             client.close()
 
 
-
-
 def call_llm(
     *,
     provider: LLMProvider = DEFAULT_PROVIDER,
@@ -187,17 +203,59 @@ def call_llm_json(
 
 
 class DefaultLLMClient:
-    """Adapter used by Agent nodes; defaults to DeepSeek unless configured otherwise."""
+    """Adapter used when all Agent nodes should use one provider."""
 
     def __init__(self, provider: LLMProvider = DEFAULT_PROVIDER) -> None:
         self.provider = provider
 
     @classmethod
     def from_env(cls) -> Self:
-        provider = os.getenv("DEFAULT_LLM_PROVIDER", DEFAULT_PROVIDER).lower()
-        if provider not in DEFAULT_CONFIG:
-            raise LLMConfigurationError(f"Unsupported DEFAULT_LLM_PROVIDER: {provider}")
-        return cls(provider=provider)  # type: ignore[arg-type]
+        load_dotenv()
+        provider = _validate_provider(
+            os.getenv("DEFAULT_LLM_PROVIDER", DEFAULT_PROVIDER), "DEFAULT_LLM_PROVIDER"
+        )
+        return cls(provider=provider)
 
-    def generate_json(self, messages: list[LLMMessage], temperature: float) -> object:
+    def generate_json(
+        self, messages: list[LLMMessage], temperature: float, agent: AgentName | None = None
+    ) -> object:
         return call_llm_json(provider=self.provider, messages=messages, temperature=temperature)
+
+
+class AgentLLMRouter:
+    """Routes each Agent node to its configured provider, falling back to the default provider."""
+
+    def __init__(
+        self,
+        default_provider: LLMProvider = DEFAULT_PROVIDER,
+        agent_providers: Mapping[AgentName, LLMProvider] | None = None,
+    ) -> None:
+        self.default_provider = default_provider
+        self.agent_providers = dict(agent_providers or {})
+
+    @classmethod
+    def from_env(cls) -> Self:
+        load_dotenv()
+        default_provider = _validate_provider(
+            os.getenv("DEFAULT_LLM_PROVIDER", DEFAULT_PROVIDER), "DEFAULT_LLM_PROVIDER"
+        )
+        agent_providers: dict[AgentName, LLMProvider] = {}
+        for agent, env_name in AGENT_PROVIDER_ENV.items():
+            value = os.getenv(env_name)
+            if value:
+                agent_providers[agent] = _validate_provider(value, env_name)
+        return cls(default_provider=default_provider, agent_providers=agent_providers)
+
+    def provider_for(self, agent: AgentName | None) -> LLMProvider:
+        if agent is None:
+            return self.default_provider
+        return self.agent_providers.get(agent, self.default_provider)
+
+    def generate_json(
+        self, messages: list[LLMMessage], temperature: float, agent: AgentName | None = None
+    ) -> object:
+        return call_llm_json(
+            provider=self.provider_for(agent),
+            messages=messages,
+            temperature=temperature,
+        )

@@ -7,6 +7,7 @@ from backend.app.graph.workflow import build_workflow, export_workflow_mermaid, 
 class QueueLLMClient:
     def __init__(self) -> None:
         self.calls: list[list[LLMMessage]] = []
+        self.agents: list[str | None] = []
         self.responses = [
             {
                 "education_background": "patent_exam_candidate",
@@ -54,8 +55,11 @@ class QueueLLMClient:
             },
         ]
 
-    def generate_json(self, messages: list[LLMMessage], temperature: float) -> object:
+    def generate_json(
+        self, messages: list[LLMMessage], temperature: float, agent: str | None = None
+    ) -> object:
         self.calls.append(messages)
+        self.agents.append(agent)
         return self.responses.pop(0)
 
 
@@ -89,6 +93,14 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm() -> None:
         "judge",
         "feedback",
         "finalize",
+    ]
+    assert llm_client.agents == [
+        "diagnosis",
+        "planner",
+        "expert_a",
+        "expert_b",
+        "judge",
+        "feedback",
     ]
 
 

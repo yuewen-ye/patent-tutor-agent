@@ -40,7 +40,7 @@
 └── uv.lock                     # uv 锁文件
 ```
 
-当前后端目录仍是 MVP 骨架。已跑通 LangGraph 工作流，并通过统一 call_llm 封装接入 DeepSeek、Qwen（阿里云百炼）和 Kimi（ModelScope API-Inference）；RAG 检索仍使用临时 Mock 上下文。
+当前后端目录仍是 MVP 骨架。已跑通 LangGraph 工作流，并通过统一 call_llm 封装接入 DeepSeek、Qwen（阿里云百炼）和 Kimi（ModelScope API-Inference）。工作流默认读取 DEFAULT_LLM_PROVIDER，也可通过 DIAGNOSIS_PROVIDER、PLANNER_PROVIDER、EXPERT_A_PROVIDER、EXPERT_B_PROVIDER、JUDGE_PROVIDER、FEEDBACK_PROVIDER 为不同 Agent 指定模型；RAG 检索仍使用临时 Mock 上下文。
 
 ## 快速开始
 
@@ -48,8 +48,8 @@
 uv sync
 uv run python backend/main.py          # 运行当前后端入口占位
 uv run python backend/scripts/show_workflow.py  # 导出 LangGraph Mermaid 工作流
-uv run python backend/scripts/run_llm_workflow.py --provider deepseek --user-input "我想学习专利新颖性"
-uv run pytest                           # 运行后端测试
+uv run python backend/scripts/run_workflow.py --user-input "我想学习专利新颖性"
+uv run pytest                           # 运行后端测试（包含真实模型 API smoke）
 ```
 
 ## 依赖管理说明

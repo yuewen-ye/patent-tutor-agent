@@ -139,7 +139,9 @@ def build_agent_nodes(llm_client: LLMClient) -> dict[str, Node]:
 
     def diagnosis_node(state: StateDict) -> dict[str, Any]:
         raw = llm_client.generate_json(
-            _messages(diagnosis_prompt, user_input=state["user_input"]), temperature=0.5
+            _messages(diagnosis_prompt, user_input=state["user_input"]),
+            temperature=0.5,
+            agent="diagnosis",
         )
         profile = LearnerProfile.model_validate(raw)
         return {
@@ -155,6 +157,7 @@ def build_agent_nodes(llm_client: LLMClient) -> dict[str, Node]:
                 learner_profile=state.get("learner_profile", {}),
             ),
             temperature=0.5,
+            agent="planner",
         )
         if not isinstance(raw, list):
             raise LLMProviderError("Planner Agent must return a JSON array.")
@@ -186,6 +189,7 @@ def build_agent_nodes(llm_client: LLMClient) -> dict[str, Node]:
                 retrieval_context=state.get("retrieval_context", []),
             ),
             temperature=0.4,
+            agent="expert_a",
         )
         draft = ExpertDraft.model_validate(raw)
         return {
@@ -201,6 +205,7 @@ def build_agent_nodes(llm_client: LLMClient) -> dict[str, Node]:
                 learner_profile=state.get("learner_profile", {}),
             ),
             temperature=0.7,
+            agent="expert_b",
         )
         draft = ExpertDraft.model_validate(raw)
         return {
@@ -216,6 +221,7 @@ def build_agent_nodes(llm_client: LLMClient) -> dict[str, Node]:
                 expert_b_draft=state.get("expert_b_draft", {}),
             ),
             temperature=0.0,
+            agent="judge",
         )
         report = JudgeReport.model_validate(raw)
         return {
@@ -231,6 +237,7 @@ def build_agent_nodes(llm_client: LLMClient) -> dict[str, Node]:
                 judge_report=state.get("judge_report", {}),
             ),
             temperature=0.5,
+            agent="feedback",
         )
         feedback = FeedbackResult.model_validate(raw)
         return {
