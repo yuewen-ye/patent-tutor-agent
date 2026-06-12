@@ -42,4 +42,4 @@ Copy `.env.example` to `.env` for local keys and never commit secrets. Keep prov
 
 ## Agent-Specific Instructions
 
-The user is the backend Agent architect. Implement the next smallest useful MVP unless explicitly asked to complete a whole feature. After code or documentation changes, commit and push according to the user's branch strategy; if branch strategy is unclear, ask before creating a branch.
+Implement the next smallest useful MVP unless explicitly asked to complete a whole feature. After code or documentation changes, commit and push according to the user's branch strategy; if branch strategy is unclear, ask before creating a branch.
