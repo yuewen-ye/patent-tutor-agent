@@ -36,3 +36,35 @@ def test_judge_normalizes_major_revision_decision_to_revise() -> None:
     result = node(state)
 
     assert result["judge_report"]["decision"] == "revise"
+
+
+def test_judge_adds_fallback_revision_request_when_revise_has_no_requests() -> None:
+    node = build_judge_node(
+        JudgeLLMClient(
+            {
+                "decision": "revise",
+                "accuracy_score": 2,
+                "adaptation_score": 4,
+                "disputes": ["抵触申请主体表述错误"],
+                "rationale": "必须修正法律概念后再输出。",
+            }
+        )
+    )
+    state: StateDict = {
+        "session_id": "debug",
+        "user_input": "学习新颖性和创造性",
+        "events": [],
+        "expert_a_draft": {},
+        "expert_b_draft": {},
+    }
+
+    result = node(state)
+
+    assert result["judge_report"]["revision_requests"] == [
+        {
+            "target": "both",
+            "issue": "抵触申请主体表述错误",
+            "required_change": "必须修正法律概念后再输出。",
+            "basis": None,
+        }
+    ]

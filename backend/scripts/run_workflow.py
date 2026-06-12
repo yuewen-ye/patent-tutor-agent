@@ -31,6 +31,8 @@ def main() -> None:
             help=f"Override {AGENT_PROVIDER_ENV[agent]} for this run.",
         )
     parser.add_argument("--session-id", default="local-llm-smoke")
+    parser.add_argument("--artifact-root", default="artifacts")
+    parser.add_argument("--max-debate-rounds", type=int, default=2)
     parser.add_argument("--user-input", default="我想学习专利新颖性和创造性的区别")
     args = parser.parse_args()
 
@@ -52,6 +54,8 @@ def main() -> None:
         session_id=args.session_id,
         user_input=args.user_input,
         llm_client=router,
+        artifact_root=args.artifact_root,
+        max_debate_rounds=args.max_debate_rounds,
     )
     print(json.dumps(state, ensure_ascii=False, indent=2))
 

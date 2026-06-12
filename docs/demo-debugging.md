@@ -45,7 +45,9 @@ FEEDBACK_PROVIDER=deepseek
 
 ```bash
 uv run python backend/scripts/run_workflow.py \
-  --user-input "我想学习专利新颖性和创造性的区别"
+  --user-input "我想学习专利新颖性和创造性的区别" \
+  --artifact-root artifacts \
+  --max-debate-rounds 2
 ```
 
 临时覆盖某个 Agent 的 provider：
@@ -54,7 +56,8 @@ uv run python backend/scripts/run_workflow.py \
 uv run python backend/scripts/run_workflow.py \
   --user-input "我想学习专利新颖性" \
   --judge-provider qwen \
-  --expert-b-provider kimi
+  --expert-b-provider kimi \
+  --artifact-root artifacts
 ```
 
 脚本会先在终端 stderr 打印本次 provider plan，例如：
@@ -63,7 +66,7 @@ uv run python backend/scripts/run_workflow.py \
 Provider plan: {'diagnosis': 'deepseek', 'planner': 'deepseek', ...}
 ```
 
-stdout 会打印最终 `StateDict` JSON，包括 `learner_profile`、`learning_path`、`retrieval_context`、`expert_a_draft`、`expert_b_draft`、`judge_report`、`feedback_result` 和 `final_answer`。
+stdout 会打印最终 `StateDict` JSON，包括 `learner_profile`、`learning_path`、`retrieval_context`、`expert_a_draft`、`expert_b_draft`、`judge_report`、`feedback_result`、`final_answer`、`artifacts`、`debate_round` 和 `revision_history`。Markdown 中间产物会写入 `artifacts/sessions/{session_id}/`，其中 `manifest.json` 汇总本次运行的产物列表。
 
 ## 3. VS Code F5 调试
 

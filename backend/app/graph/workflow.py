@@ -1,28 +1,115 @@
-"""LangGraph workflow for the real five-Agent MVP."""
+"""LangGraph workflow for the real five-Agent system."""
 
 from __future__ import annotations
 
-from typing import Any, cast
+from pathlib import Path
+from typing import Any, Literal, cast
 
 from langgraph.graph import END, START, StateGraph
 
 from backend.app.agents import Node, build_agent_nodes, finalize_node
+from backend.app.artifacts import attach_markdown_artifact, write_field_artifact, write_manifest
 from backend.app.core.llm import AgentLLMRouter, DefaultLLMClient, LLMClient
-from backend.app.schemas.state import StateDict
+from backend.app.schemas.state import AgentEvent, StateDict
+
+_ARTIFACT_FIELDS = (
+    "learner_profile",
+    "learning_path",
+    "retrieval_context",
+    "expert_a_draft",
+    "expert_b_draft",
+    "judge_report",
+    "feedback_result",
+    "final_answer",
+)
 
 
-def build_workflow(llm_client: LLMClient | None = None) -> Any:
+def _with_artifacts(node: Node, artifact_root: Path | None) -> Node:
+    def wrapped(state: StateDict) -> dict[str, Any]:
+        updates = node(state)
+        if artifact_root is None:
+            return updates
+
+        artifacts: list[dict[str, Any]] = []
+        round_number = int(state.get("debate_round", 1))
+        session_id = state["session_id"]
+        for field in _ARTIFACT_FIELDS:
+            if field not in updates:
+                continue
+            artifact = write_field_artifact(
+                artifact_root=artifact_root,
+                session_id=session_id,
+                field=field,
+                value=updates[field],
+                round_number=round_number,
+            )
+            artifacts.append(artifact)
+            updates[field] = attach_markdown_artifact(updates[field], artifact)
+
+        if artifacts:
+            updates["artifacts"] = artifacts
+
+        if "final_answer" in updates:
+            combined = dict(state)
+            combined.update(updates)
+            combined["artifacts"] = list(state.get("artifacts", [])) + artifacts
+            write_manifest(artifact_root=artifact_root, state=combined, status="completed")
+
+        return updates
+
+    return wrapped
+
+
+def _route_after_judge(state: StateDict) -> Literal["revise_experts", "feedback"]:
+    decision = str(state.get("judge_report", {}).get("decision", ""))
+    debate_round = int(state.get("debate_round", 1))
+    max_debate_rounds = int(state.get("max_debate_rounds", 2))
+    if decision == "revise" and debate_round < max_debate_rounds:
+        return "revise_experts"
+    return "feedback"
+
+
+def revise_experts_node(state: StateDict) -> dict[str, Any]:
+    next_round = int(state.get("debate_round", 1)) + 1
+    judge_report = state.get("judge_report", {})
+    revision_record = {
+        "round": next_round,
+        "judge_decision": judge_report.get("decision"),
+        "revision_requests": judge_report.get("revision_requests", []),
+        "rationale": judge_report.get("rationale"),
+    }
+    event = AgentEvent(
+        node="judge",
+        status="debate_round",
+        message=f"judge requested expert revision round {next_round}",
+        round=next_round,
+    ).model_dump()
+    return {
+        "debate_round": next_round,
+        "revision_history": [revision_record],
+        "events": [event],
+    }
+
+
+def build_workflow(
+    llm_client: LLMClient | None = None,
+    artifact_root: str | Path | None = None,
+) -> Any:
     builder = StateGraph(StateDict)
     nodes: dict[str, Node] = build_agent_nodes(llm_client or AgentLLMRouter.from_env())
+    root_path = Path(artifact_root) if artifact_root is not None else None
 
-    builder.add_node("diagnosis", cast(Any, nodes["diagnosis"]))
-    builder.add_node("planner", cast(Any, nodes["planner"]))
-    builder.add_node("retrieve_context", cast(Any, nodes["retrieve_context"]))
-    builder.add_node("expert_a", cast(Any, nodes["expert_a"]))
-    builder.add_node("expert_b", cast(Any, nodes["expert_b"]))
-    builder.add_node("judge", cast(Any, nodes["judge"]))
-    builder.add_node("feedback", cast(Any, nodes["feedback"]))
-    builder.add_node("finalize", finalize_node)
+    builder.add_node("diagnosis", cast(Any, _with_artifacts(nodes["diagnosis"], root_path)))
+    builder.add_node("planner", cast(Any, _with_artifacts(nodes["planner"], root_path)))
+    builder.add_node(
+        "retrieve_context", cast(Any, _with_artifacts(nodes["retrieve_context"], root_path))
+    )
+    builder.add_node("expert_a", cast(Any, _with_artifacts(nodes["expert_a"], root_path)))
+    builder.add_node("expert_b", cast(Any, _with_artifacts(nodes["expert_b"], root_path)))
+    builder.add_node("judge", cast(Any, _with_artifacts(nodes["judge"], root_path)))
+    builder.add_node("revise_experts", revise_experts_node)
+    builder.add_node("feedback", cast(Any, _with_artifacts(nodes["feedback"], root_path)))
+    builder.add_node("finalize", cast(Any, _with_artifacts(finalize_node, root_path)))
 
     builder.add_edge(START, "diagnosis")
     builder.add_edge("diagnosis", "planner")
@@ -31,7 +118,13 @@ def build_workflow(llm_client: LLMClient | None = None) -> Any:
     builder.add_edge("retrieve_context", "expert_b")
     builder.add_edge("expert_a", "judge")
     builder.add_edge("expert_b", "judge")
-    builder.add_edge("judge", "feedback")
+    builder.add_conditional_edges(
+        "judge",
+        _route_after_judge,
+        {"revise_experts": "revise_experts", "feedback": "feedback"},
+    )
+    builder.add_edge("revise_experts", "expert_a")
+    builder.add_edge("revise_experts", "expert_b")
     builder.add_edge("feedback", "finalize")
     builder.add_edge("finalize", END)
 
@@ -39,14 +132,22 @@ def build_workflow(llm_client: LLMClient | None = None) -> Any:
 
 
 def run_workflow(
-    session_id: str, user_input: str, llm_client: LLMClient | None = None
+    session_id: str,
+    user_input: str,
+    llm_client: LLMClient | None = None,
+    artifact_root: str | Path | None = None,
+    max_debate_rounds: int = 2,
 ) -> StateDict:
-    workflow = build_workflow(llm_client=llm_client)
+    workflow = build_workflow(llm_client=llm_client, artifact_root=artifact_root)
     result = workflow.invoke(
         {
             "session_id": session_id,
             "user_input": user_input,
             "events": [],
+            "artifacts": [],
+            "debate_round": 1,
+            "max_debate_rounds": max_debate_rounds,
+            "revision_history": [],
         }
     )
     return cast(StateDict, result)

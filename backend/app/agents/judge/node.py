@@ -28,6 +28,20 @@ def _normalize_judge_report(raw: object) -> object:
     decision = str(normalized.get("decision", "")).strip().lower()
     if decision in _DECISION_NORMALIZATION:
         normalized["decision"] = _DECISION_NORMALIZATION[decision]
+    if normalized.get("decision") == "revise" and not normalized.get("revision_requests"):
+        disputes = normalized.get("disputes")
+        issue = "需要修订专家草稿"
+        if isinstance(disputes, list) and disputes:
+            issue = str(disputes[0])
+        rationale = str(normalized.get("rationale") or issue)
+        normalized["revision_requests"] = [
+            {
+                "target": "both",
+                "issue": issue,
+                "required_change": rationale,
+                "basis": None,
+            }
+        ]
     return normalized
 
 

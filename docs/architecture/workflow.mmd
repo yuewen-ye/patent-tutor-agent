@@ -11,6 +11,7 @@ graph TD;
 	expert_a(expert_a)
 	expert_b(expert_b)
 	judge(judge)
+	revise_experts(revise_experts)
 	feedback(feedback)
 	finalize(finalize)
 	__end__([<p>__end__</p>]):::last
@@ -19,10 +20,13 @@ graph TD;
 	expert_a --> judge;
 	expert_b --> judge;
 	feedback --> finalize;
-	judge --> feedback;
+	judge -.-> feedback;
+	judge -.-> revise_experts;
 	planner --> retrieve_context;
 	retrieve_context --> expert_a;
 	retrieve_context --> expert_b;
+	revise_experts --> expert_a;
+	revise_experts --> expert_b;
 	finalize --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0

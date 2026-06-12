@@ -98,7 +98,7 @@ judge(decision=accept|accept_with_minor_revision or round limit reached) -> feed
 }
 ```
 
-`kind` 允许值：`learner_profile_report`、`learning_path_plan`、`expert_draft`、`judge_report`、`feedback_report`、`final_answer`。
+`kind` 允许值：`learner_profile_report`、`learning_path_plan`、`retrieval_context`、`expert_draft`、`judge_report`、`feedback_report`、`final_answer`。`created_by` 允许 `diagnosis`、`planner`、`retrieve_context`、`expert_a`、`expert_b`、`judge`、`feedback`、`finalize`。
 
 ## 5. Markdown 产物目录规范
 
@@ -128,7 +128,7 @@ artifacts/
 
 - `session_id` 必须经过路径安全处理，只允许字母、数字、`-`、`_`。
 - 每轮专家修订写入独立 `round-XX/`，不得覆盖上一轮草稿。
-- `manifest.json` 保存本会话所有 `MarkdownArtifact` 的列表、最终状态、开始时间和结束时间。
+- `manifest.json` 保存本会话所有 `MarkdownArtifact` 的列表、最终状态、当前辩论轮次和更新时间。
 - `retrieval_context.md` 用于调试和演示，真实 RAG 原文仍以结构化 `RetrievalChunk` 为准。
 - JSON 字段用于前端结构化渲染，Markdown 文件用于长文本、归档和人工检查；不能只生成 Markdown 而跳过 JSON 校验。
 - `artifacts/` 不应提交到远程仓库，除非后续明确需要加入脱敏示例产物。
@@ -274,7 +274,7 @@ artifacts/
 | `accept_with_minor_revision` | 只需 finalize 轻量整合 | `feedback` |
 | `revise` | 需要专家按裁判建议重写 | `revise_experts`，若达到轮次上限则进入 `feedback` |
 
-Judge 不得写教学正文，只能写争议、裁决、理由和修订请求。
+Judge 不得写教学正文，只能写争议、裁决、理由和修订请求。真实模型若返回 `decision=revise` 但遗漏 `revision_requests`，节点会根据首个 `disputes` 和 `rationale` 自动补一个 `target=both` 的 fallback 修订请求，保证下一轮专家有明确修订输入。
 
 ### 6.6 反馈分析 Agent：FeedbackResult
 
@@ -335,7 +335,7 @@ expert_a/expert_b -> judge           merge and re-review
 - 写入 `events`，状态为 `debate_round`。
 - 不调用模型，不生成正文，只准备下一轮输入。
 
-轮次上限默认 2，演示最多 3。达到上限后，即使仍为 `revise`，也进入 `feedback`，并在 `judge_summary` 中说明仍存在的风险。
+轮次上限默认 2，演示最多 3。达到上限后，即使仍为 `revise`，也进入 `feedback` 和 `finalize`，最终答案保留 `judge_summary` 中的风险说明，不继续无限循环。
 
 ## 8. 校验与测试要求
 
@@ -343,7 +343,7 @@ expert_a/expert_b -> judge           merge and re-review
 - `call_llm_json` 不允许返回 Markdown 代码块包装的 JSON。
 - 真实模型返回枚举别名时，只能在节点内做显式、可测试的归一化。
 - 新增字段必须同步更新：`state.py`、本文档、相关测试、必要时更新 `README.md`。
-- 测试至少覆盖：schema 导出、节点读写字段、条件路由、MarkdownArtifact 路径生成、provider 路由。
+- 测试至少覆盖：schema 导出、节点读写字段、条件路由、MarkdownArtifact 路径生成、provider 路由和真实 workflow smoke test。
 
 ## 9. 错误与降级
 

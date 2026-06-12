@@ -43,13 +43,13 @@
 uv sync
 uv run python backend/main.py
 uv run python backend/scripts/show_workflow.py
-uv run python backend/scripts/run_workflow.py --user-input "我想学习专利新颖性"
+uv run python backend/scripts/run_workflow.py --user-input "我想学习专利新颖性" --artifact-root artifacts --max-debate-rounds 2
 uv run pytest
 uv run ruff check .
 uv run mypy .
 ```
 
-`show_workflow.py` 会编译 LangGraph 图并导出 `docs/architecture/workflow.mmd`。`run_workflow.py` 默认从 `.env` 读取模型路由，也可用参数临时覆盖，例如 `--judge-provider qwen`。
+`show_workflow.py` 会编译 LangGraph 图并导出 `docs/architecture/workflow.mmd`。`run_workflow.py` 默认从 `.env` 读取模型路由，运行双专家并行与 Judge 修订循环，并把 Markdown 中间产物写入 `artifacts/sessions/{session_id}/`；也可用参数临时覆盖，例如 `--judge-provider qwen`、`--artifact-root artifacts`、`--max-debate-rounds 2`。
 
 调试 demo 的具体步骤见 `docs/demo-debugging.md`。
 

@@ -46,6 +46,7 @@ class MarkdownArtifact(ContractModel):
     kind: Literal[
         "learner_profile_report",
         "learning_path_plan",
+        "retrieval_context",
         "expert_draft",
         "judge_report",
         "feedback_report",
@@ -53,7 +54,7 @@ class MarkdownArtifact(ContractModel):
     ]
     path: str
     created_by: Literal[
-        "diagnosis", "planner", "expert_a", "expert_b", "judge", "feedback", "finalize"
+        "diagnosis", "planner", "retrieve_context", "expert_a", "expert_b", "judge", "feedback", "finalize"
     ]
     title: str
     mime_type: Literal["text/markdown"] = "text/markdown"
@@ -203,7 +204,7 @@ class StateDict(TypedDict):
     session_id: str
     user_input: str
     events: Annotated[list[dict[str, Any]], operator.add]
-    artifacts: NotRequired[list[dict[str, Any]]]
+    artifacts: NotRequired[Annotated[list[dict[str, Any]], operator.add]]
     learner_profile: NotRequired[dict[str, Any]]
     learning_path: NotRequired[list[dict[str, Any]]]
     retrieval_context: NotRequired[list[dict[str, Any]]]
@@ -212,6 +213,9 @@ class StateDict(TypedDict):
     judge_report: NotRequired[dict[str, Any]]
     feedback_result: NotRequired[dict[str, Any]]
     final_answer: NotRequired[dict[str, Any]]
+    debate_round: NotRequired[int]
+    max_debate_rounds: NotRequired[int]
+    revision_history: NotRequired[Annotated[list[dict[str, Any]], operator.add]]
 
 
 def _inline_array_item_schema(schema: dict[str, Any]) -> dict[str, Any]:
