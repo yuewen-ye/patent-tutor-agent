@@ -98,15 +98,6 @@ judge -> feedback -> finalize -> END
 uv export --format requirements-txt --output-file requirements.txt
 ```
 
-## 近期交付节奏
-
-| 日期 | 交付物 | 状态 |
-| --- | --- | --- |
-| 6/13 | W1 LangGraph + LangChain 技术决策文档 | 已完成 |
-| 6/15 | W2 三模型 API 封装脚本（统一 call_llm） | 已完成 |
-| 6/18 | W3 Agent 工作流 demo 脚本 | 已完成 MVP |
-| 6/18 | W4 Agent 间接口规范文档 | 已对齐运行时 schema |
-
 ## 提交规范
 
 提交信息使用简洁主题 + 结构化正文。主题保留类似 `[B3] 支持 Agent 级模型路由` 的批次前缀；正文要分条说明改了什么、为什么改、验证了哪些命令，避免只写一个笼统点。
