@@ -7,15 +7,30 @@ from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
 
-from backend.app.core.llm import LLMMessage
+from backend.app.core.llm import LLMMessage, LLMRole
 from backend.app.schemas.state import StateDict
 
 Node = Callable[[StateDict], dict[str, Any]]
 
+_LANGCHAIN_ROLE_TO_CHAT_ROLE: dict[str, LLMRole] = {
+    "system": "system",
+    "human": "user",
+    "user": "user",
+    "ai": "assistant",
+    "assistant": "assistant",
+}
+
+
+def _chat_role(langchain_role: str) -> LLMRole:
+    try:
+        return _LANGCHAIN_ROLE_TO_CHAT_ROLE[langchain_role]
+    except KeyError as exc:
+        raise ValueError(f"Unsupported LangChain message role: {langchain_role}") from exc
+
 
 def messages_from_prompt(prompt: ChatPromptTemplate, **values: object) -> list[LLMMessage]:
     return [
-        LLMMessage(role=message.type, content=str(message.content))  # type: ignore[arg-type]
+        LLMMessage(role=_chat_role(message.type), content=str(message.content))
         for message in prompt.format_messages(**values)
     ]
 
