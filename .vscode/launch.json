@@ -17,25 +17,6 @@
       "justMyCode": false
     },
     {
-      "name": "Debug Agent Workflow - Mixed Providers",
-      "type": "debugpy",
-      "request": "launch",
-      "program": "${workspaceFolder}/backend/scripts/run_workflow.py",
-      "cwd": "${workspaceFolder}",
-      "console": "integratedTerminal",
-      "envFile": "${workspaceFolder}/.env",
-      "python": "${workspaceFolder}/.venv/bin/python",
-      "args": [
-        "--user-input",
-        "我想学习专利新颖性和创造性的区别",
-        "--judge-provider",
-        "qwen",
-        "--expert-b-provider",
-        "kimi"
-      ],
-      "justMyCode": false
-    },
-    {
       "name": "Debug Show Workflow Graph",
       "type": "debugpy",
       "request": "launch",

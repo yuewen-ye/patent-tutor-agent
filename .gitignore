@@ -5,7 +5,6 @@ __pycache__/
 .ruff_cache/
 .mypy_cache/
 .env
-.env.*
 !.env.example
 dist/
 build/
@@ -13,5 +12,5 @@ build/
 logs/
 artifacts/
 .vscode/*
-!.vscode/launch.json
+
 
