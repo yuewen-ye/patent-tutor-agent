@@ -10,6 +10,26 @@ from backend.app.agents.common import Node, messages_from_prompt, schema_note
 from backend.app.core.llm import LLMClient
 from backend.app.schemas.state import JudgeReport, StateDict, completed_event
 
+_DECISION_NORMALIZATION = {
+    "accept": "accept",
+    "accept_with_minor_revision": "accept_with_minor_revision",
+    "minor_revision": "accept_with_minor_revision",
+    "accept_with_major_revision": "revise",
+    "major_revision": "revise",
+    "revise": "revise",
+    "reject": "revise",
+}
+
+
+def _normalize_judge_report(raw: object) -> object:
+    if not isinstance(raw, dict):
+        return raw
+    normalized = dict(raw)
+    decision = str(normalized.get("decision", "")).strip().lower()
+    if decision in _DECISION_NORMALIZATION:
+        normalized["decision"] = _DECISION_NORMALIZATION[decision]
+    return normalized
+
 
 def build_judge_node(llm_client: LLMClient) -> Node:
     prompt = ChatPromptTemplate.from_messages(
@@ -21,7 +41,9 @@ def build_judge_node(llm_client: LLMClient) -> Node:
                     '{"decision":"accept_with_minor_revision","accuracy_score":5,'
                     '"adaptation_score":4,"disputes":[],"rationale":"理由"}',
                 )
-                + "你是审核裁判 Agent，只评估，不生成教学正文。",
+                + "你是审核裁判 Agent，只评估，不生成教学正文。"
+                + "decision 只能是 accept、accept_with_minor_revision 或 revise。"
+                + "如果需要大幅修订，必须输出 revise。",
             ),
             (
                 "user",
@@ -40,7 +62,7 @@ def build_judge_node(llm_client: LLMClient) -> Node:
             temperature=0.0,
             agent="judge",
         )
-        report = JudgeReport.model_validate(raw)
+        report = JudgeReport.model_validate(_normalize_judge_report(raw))
         return {
             "judge_report": report.model_dump(),
             "events": [completed_event("judge", "reviewed expert drafts with LLM")],

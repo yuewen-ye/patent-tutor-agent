@@ -6,6 +6,7 @@ import httpx
 import pytest
 
 from backend.app.core.llm import (
+    AGENT_PROVIDER_ENV,
     AgentLLMRouter,
     LLMMessage,
     LLMProvider,
@@ -143,6 +144,8 @@ def test_call_llm_normalizes_socks_proxy(monkeypatch) -> None:
 
 
 def test_agent_llm_router_reads_agent_specific_provider_config(monkeypatch) -> None:
+    for env_name in AGENT_PROVIDER_ENV.values():
+        monkeypatch.setenv(env_name, "")
     monkeypatch.setenv("DEFAULT_LLM_PROVIDER", "deepseek")
     monkeypatch.setenv("DIAGNOSIS_PROVIDER", "qwen")
     monkeypatch.setenv("EXPERT_B_PROVIDER", "kimi")
