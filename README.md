@@ -51,6 +51,8 @@ uv run mypy .
 
 `show_workflow.py` 会编译 LangGraph 图并导出 `docs/architecture/workflow.mmd`。`run_workflow.py` 默认从 `.env` 读取模型路由，也可用参数临时覆盖，例如 `--judge-provider qwen`。
 
+调试 demo 的具体步骤见 `docs/demo-debugging.md`。
+
 ## 模型与配置
 
 复制 `.env.example` 为 `.env`，填入真实 key。不要提交 `.env` 或任何密钥。
