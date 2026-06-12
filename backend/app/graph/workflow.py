@@ -6,8 +6,7 @@ from typing import Any, cast
 
 from langgraph.graph import END, START, StateGraph
 
-from backend.app.agents.real_nodes import Node, build_agent_nodes
-from backend.app.agents.real_nodes import finalize_node
+from backend.app.agents import Node, build_agent_nodes, finalize_node
 from backend.app.core.llm import AgentLLMRouter, DefaultLLMClient, LLMClient
 from backend.app.schemas.state import StateDict
 
