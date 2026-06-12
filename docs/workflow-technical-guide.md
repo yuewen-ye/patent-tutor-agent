@@ -37,6 +37,7 @@ run_workflow(
     llm_client=AgentLLMRouter.from_env(),
     artifact_root="artifacts",
     max_debate_rounds=2,
+    learner_id="learner-demo",
 )
 ```
 
@@ -47,6 +48,9 @@ run_workflow(
 | `llm_client` | `LLMClient \| None` | 大模型客户端；默认从 `.env` 构造 `AgentLLMRouter`。 |
 | `artifact_root` | `str \| Path \| None` | Markdown 产物根目录；为 `None` 时只返回 JSON，不落盘。 |
 | `max_debate_rounds` | `int` | Judge 可触发的最大专家修订轮次。 |
+| `learner_id` | `str \| None` | 长期记忆身份；为空时不读写 learner Store。 |
+| `checkpointer` | `Any \| None` | LangGraph 短期记忆；默认 `InMemorySaver`。 |
+| `store` | `Any \| None` | LangGraph 长期记忆；默认 `InMemoryStore`。 |
 
 ### 命令行入口
 
@@ -55,12 +59,24 @@ uv run python backend/scripts/run_workflow.py \
   --session-id local-real-debug \
   --user-input "我想学习专利新颖性和创造性的区别" \
   --artifact-root artifacts \
-  --max-debate-rounds 2
+  --max-debate-rounds 2 \
+  --learner-id learner-demo
 ```
 
-可用 provider 覆盖参数包括 `--diagnosis-provider`、`--planner-provider`、`--expert-a-provider`、`--expert-b-provider`、`--judge-provider`、`--feedback-provider`。
+可用 provider 覆盖参数包括 `--diagnosis-provider`、`--planner-provider`、`--expert-a-provider`、`--expert-b-provider`、`--judge-provider`、`--feedback-provider`。`--learner-id` 会启用 Store 中的跨会话 learner 画像/历史读写。
 
-## 3. 全局状态 StateDict
+## 3. 记忆系统
+
+当前 MVP 使用 LangGraph 原生 memory：
+
+- 短期记忆：`InMemorySaver` 作为 checkpointer，`run_workflow()` 调用时传入 `{"configurable": {"thread_id": session_id}}`，每个 superstep 会写入同一 thread。
+- 长期记忆：`InMemoryStore` 作为 Store，`WorkflowContext(learner_id=...)` 通过 `context` 传入节点。
+- namespace：`("learners", learner_id, "profile")` 保存每次 diagnosis 后的画像版本；`("learners", learner_id, "history")` 保存本次 session 摘要。
+- 读写点：`diagnosis` 读取历史画像并注入 prompt；`feedback` 生成反馈后写入 profile/history。BKT 暂不接入。
+
+测试或 API 服务可以把同一个 `checkpointer` / `store` 对象传给多次 `run_workflow()`，从而验证同一 learner 的跨 session 记忆。CLI 每次是单进程单次运行，默认内存 Store 不跨进程持久化。
+
+## 4. 全局状态 StateDict
 
 `StateDict` 是所有节点共享的状态字典。LangGraph 每个节点返回局部更新，框架会合并回全局状态。
 
@@ -82,17 +98,19 @@ uv run python backend/scripts/run_workflow.py \
 | `max_debate_rounds` | runner | 路由函数 | 最大修订轮次。 |
 | `revision_history` | `revise_experts` | 调试/前端 | 每次进入修订轮的裁判请求摘要。 |
 
-## 4. 节点输入输出
+## 5. 节点输入输出
 
 ### `diagnosis`
 
 代码位置：`backend/app/agents/diagnosis/node.py`
 
-职责：根据 `user_input` 生成学习者画像。
+职责：读取同一 `learner_id` 的历史画像，并根据 `user_input` 生成本次学习者画像。
 
 输入：
 
 - `user_input`
+- `WorkflowContext.learner_id`（可选）
+- Store 中的历史 `profile` 记忆（可选）
 
 输出：
 
@@ -293,7 +311,7 @@ uv run python backend/scripts/run_workflow.py \
 - `judge_summary` 来自 `judge_report.rationale`。
 - `next_questions` 来自 `feedback_result.questionnaire`。
 
-## 5. 关键数据类
+## 6. 关键数据类
 
 所有运行时合同都在 `backend/app/schemas/state.py`。
 
@@ -373,7 +391,7 @@ RAG 检索片段和元数据。
 
 工作流错误对象，当前主要作为接口合同预留。错误码包括 `llm_timeout`、`llm_bad_json`、`schema_validation_failed`、`rag_unavailable`、`provider_rate_limited`、`unknown`。
 
-## 6. Markdown 产物机制
+## 7. Markdown 产物机制
 
 代码位置：`backend/app/artifacts.py`
 
@@ -429,7 +447,7 @@ artifacts/
 
 对于 dict 类型输出，例如 `expert_a_draft`、`judge_report`、`final_answer`，系统会把 `markdown_artifact` 回填到对应 JSON 对象中。对于 list 类型输出，例如 `learning_path`、`retrieval_context`，当前只在顶层 `artifacts` 列表中记录产物引用，不逐项回填。
 
-## 7. LLM 路由与 provider
+## 8. LLM 路由与 provider
 
 代码位置：`backend/app/core/llm.py`
 
@@ -464,7 +482,7 @@ Agent 级路由环境变量：
 
 未单独指定时使用 `DEFAULT_LLM_PROVIDER`。
 
-## 8. Prompt 与消息转换
+## 9. Prompt 与消息转换
 
 代码位置：`backend/app/agents/common.py`
 
@@ -476,7 +494,7 @@ Agent 级路由环境变量：
 
 这个转换很重要，因为 DeepSeek 等 OpenAI-compatible API 不接受 LangChain 原生的 `human` role。
 
-## 9. 测试覆盖
+## 10. 测试覆盖
 
 | 文件 | 覆盖内容 |
 | --- | --- |
@@ -497,10 +515,11 @@ uv run python backend/scripts/run_workflow.py \
   --session-id local-real-debug \
   --user-input "我想学习专利新颖性和创造性的区别" \
   --artifact-root artifacts \
-  --max-debate-rounds 2
+  --max-debate-rounds 2 \
+  --learner-id learner-demo
 ```
 
-## 10. 下一步开发建议
+## 11. 下一步开发建议
 
 当前 workflow 已经具备真实多模型调用、Judge 修订循环和 Markdown 产物归档。下一步建议按最小 MVP 顺序推进：
 

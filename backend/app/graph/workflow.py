@@ -2,15 +2,31 @@
 
 from __future__ import annotations
 
+import inspect
 from pathlib import Path
 from typing import Any, Literal, cast
 
+from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
+from langgraph.runtime import Runtime
+from langgraph.store.memory import InMemoryStore
 
 from backend.app.agents import Node, build_agent_nodes, finalize_node
 from backend.app.artifacts import attach_markdown_artifact, write_field_artifact, write_manifest
 from backend.app.core.llm import AgentLLMRouter, DefaultLLMClient, LLMClient
+from backend.app.schemas.context import WorkflowContext
 from backend.app.schemas.state import AgentEvent, StateDict
+
+
+def _call_node(
+    node: Node,
+    state: StateDict,
+    runtime: Runtime[WorkflowContext] | None,
+) -> dict[str, Any]:
+    if len(inspect.signature(node).parameters) >= 2:
+        return cast(dict[str, Any], node(state, runtime))
+    return cast(dict[str, Any], node(state))
+
 
 _ARTIFACT_FIELDS = (
     "learner_profile",
@@ -25,8 +41,10 @@ _ARTIFACT_FIELDS = (
 
 
 def _with_artifacts(node: Node, artifact_root: Path | None) -> Node:
-    def wrapped(state: StateDict) -> dict[str, Any]:
-        updates = node(state)
+    def wrapped(
+        state: StateDict, runtime: Runtime[WorkflowContext] | None = None
+    ) -> dict[str, Any]:
+        updates = _call_node(node, state, runtime)
         if artifact_root is None:
             return updates
 
@@ -69,7 +87,9 @@ def _route_after_judge(state: StateDict) -> Literal["revise_experts", "feedback"
     return "feedback"
 
 
-def revise_experts_node(state: StateDict) -> dict[str, Any]:
+def revise_experts_node(
+    state: StateDict, runtime: Runtime[WorkflowContext] | None = None
+) -> dict[str, Any]:
     next_round = int(state.get("debate_round", 1)) + 1
     judge_report = state.get("judge_report", {})
     revision_record = {
@@ -94,8 +114,10 @@ def revise_experts_node(state: StateDict) -> dict[str, Any]:
 def build_workflow(
     llm_client: LLMClient | None = None,
     artifact_root: str | Path | None = None,
+    checkpointer: Any | None = None,
+    store: Any | None = None,
 ) -> Any:
-    builder = StateGraph(StateDict)
+    builder = StateGraph(StateDict, context_schema=WorkflowContext)
     nodes: dict[str, Node] = build_agent_nodes(llm_client or AgentLLMRouter.from_env())
     root_path = Path(artifact_root) if artifact_root is not None else None
 
@@ -128,7 +150,10 @@ def build_workflow(
     builder.add_edge("feedback", "finalize")
     builder.add_edge("finalize", END)
 
-    return builder.compile()
+    return builder.compile(
+        checkpointer=checkpointer if checkpointer is not None else InMemorySaver(),
+        store=store if store is not None else InMemoryStore(),
+    )
 
 
 def run_workflow(
@@ -137,8 +162,16 @@ def run_workflow(
     llm_client: LLMClient | None = None,
     artifact_root: str | Path | None = None,
     max_debate_rounds: int = 2,
+    learner_id: str | None = None,
+    checkpointer: Any | None = None,
+    store: Any | None = None,
 ) -> StateDict:
-    workflow = build_workflow(llm_client=llm_client, artifact_root=artifact_root)
+    workflow = build_workflow(
+        llm_client=llm_client,
+        artifact_root=artifact_root,
+        checkpointer=checkpointer,
+        store=store,
+    )
     result = workflow.invoke(
         {
             "session_id": session_id,
@@ -148,7 +181,9 @@ def run_workflow(
             "debate_round": 1,
             "max_debate_rounds": max_debate_rounds,
             "revision_history": [],
-        }
+        },
+        {"configurable": {"thread_id": session_id}},
+        context=WorkflowContext(learner_id=learner_id),
     )
     return cast(StateDict, result)
 

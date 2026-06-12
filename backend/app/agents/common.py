@@ -8,9 +8,8 @@ from typing import Any
 from langchain_core.prompts import ChatPromptTemplate
 
 from backend.app.core.llm import LLMMessage, LLMRole
-from backend.app.schemas.state import StateDict
 
-Node = Callable[[StateDict], dict[str, Any]]
+Node = Callable[..., dict[str, Any]]
 
 _LANGCHAIN_ROLE_TO_CHAT_ROLE: dict[str, LLMRole] = {
     "system": "system",

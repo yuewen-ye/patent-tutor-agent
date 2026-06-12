@@ -5,9 +5,12 @@ from __future__ import annotations
 from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
+from langgraph.runtime import Runtime
 
 from backend.app.agents.common import Node, messages_from_prompt, schema_note
 from backend.app.core.llm import LLMClient
+from backend.app.memory import save_learner_memories
+from backend.app.schemas.context import WorkflowContext
 from backend.app.schemas.state import FeedbackResult, StateDict, completed_event
 
 
@@ -29,7 +32,9 @@ def build_feedback_node(llm_client: LLMClient) -> Node:
         ]
     )
 
-    def feedback_node(state: StateDict) -> dict[str, Any]:
+    def feedback_node(
+        state: StateDict, runtime: Runtime[WorkflowContext] | None = None
+    ) -> dict[str, Any]:
         raw = llm_client.generate_json(
             messages_from_prompt(
                 prompt,
@@ -40,8 +45,10 @@ def build_feedback_node(llm_client: LLMClient) -> Node:
             agent="feedback",
         )
         feedback = FeedbackResult.model_validate(raw)
+        feedback_dict = feedback.model_dump()
+        save_learner_memories(runtime, state, feedback_dict)
         return {
-            "feedback_result": feedback.model_dump(),
+            "feedback_result": feedback_dict,
             "events": [completed_event("feedback", "created feedback suggestion with LLM")],
         }
 
