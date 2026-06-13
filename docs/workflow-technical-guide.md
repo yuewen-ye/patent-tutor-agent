@@ -467,7 +467,7 @@ artifacts/
 
 - `deepseek`
 - `qwen`
-- `kimi`
+- `glm`
 
 Agent 级路由环境变量：
 
@@ -503,7 +503,7 @@ Agent 级路由环境变量：
 | `backend/tests/test_workflow_real_integration.py` | 真实 provider 配置下完整 workflow 能跑通并写产物。 |
 | `backend/tests/test_judge_node.py` | Judge decision 归一化和 fallback revision request。 |
 | `backend/tests/test_agent_contracts.py` | Agent JSON Schema 导出。 |
-| `backend/tests/test_llm_integration.py` | DeepSeek、Qwen、Kimi 真实 API smoke test。 |
+| `backend/tests/test_llm_integration.py` | DeepSeek、Qwen、GLM 真实 API smoke test。 |
 
 常用验证命令：
 

@@ -22,9 +22,9 @@ QWEN_API_KEY=
 QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 QWEN_MODEL=qwen3.7-max
 
-KIMI_API_KEY=
-KIMI_BASE_URL=https://api-inference.modelscope.cn/v1
-KIMI_MODEL=moonshotai/Kimi-K2.5
+GLM_API_KEY=
+GLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+GLM_MODEL=glm-5.1
 ```
 
 Agent 模型路由由这些变量控制：
@@ -34,7 +34,7 @@ DEFAULT_LLM_PROVIDER=deepseek
 DIAGNOSIS_PROVIDER=deepseek
 PLANNER_PROVIDER=deepseek
 EXPERT_A_PROVIDER=deepseek
-EXPERT_B_PROVIDER=kimi
+EXPERT_B_PROVIDER=glm
 JUDGE_PROVIDER=qwen
 FEEDBACK_PROVIDER=deepseek
 ```
@@ -56,7 +56,7 @@ uv run python backend/scripts/run_workflow.py \
 uv run python backend/scripts/run_workflow.py \
   --user-input "我想学习专利新颖性" \
   --judge-provider qwen \
-  --expert-b-provider kimi \
+  --expert-b-provider glm \
   --artifact-root artifacts
 ```
 
@@ -66,14 +66,14 @@ uv run python backend/scripts/run_workflow.py \
 Provider plan: {'diagnosis': 'deepseek', 'planner': 'deepseek', ...}
 ```
 
-stdout 会打印最终 `StateDict` JSON，包括 `learner_profile`、`learning_path`、`retrieval_context`、`expert_a_draft`、`expert_b_draft`、`judge_report`、`feedback_result`、`final_answer`、`artifacts`、`debate_round` 和 `revision_history`。Markdown 中间产物会写入 `artifacts/sessions/{session_id}/`，其中 `manifest.json` 汇总本次运行的产物列表。
+stdout 默认打印简洁运行摘要，包括 session、辩论轮次、最终答案标题、引用来源、产物数量和 `final_answer.md` 路径。需要完整 `StateDict` JSON 时添加 `--json`；Markdown 中间产物会写入 `artifacts/sessions/{session_id}/`，其中 `manifest.json` 汇总本次运行的产物列表。
 
 ## 3. VS Code F5 调试
 
 仓库已提供 `.vscode/launch.json`。在 VS Code 左侧 Run and Debug 面板选择：
 
 - `Debug Agent Workflow`：按 `.env` 默认 provider 路由运行 demo。
-- `Debug Agent Workflow - Mixed Providers`：临时使用 `judge=qwen`、`expert_b=kimi`。
+- `Debug Agent Workflow - Mixed Providers`：临时使用 `judge=qwen`、`expert_b=glm`。
 - `Debug Show Workflow Graph`：调试 workflow 图导出脚本。
 
 推荐断点位置：
@@ -139,12 +139,12 @@ Agent 节点都要求模型只输出 JSON。若报 `LLMProviderError`、`Validat
 2. 在 `llm_client.generate_json(...)` 后检查 raw 输出。
 3. 对照 `backend/app/schemas/state.py` 和 `docs/agent-interface-spec.md` 修 prompt 或 schema。
 
-### Kimi / ModelScope 返回 `has no provider supported`
+### GLM provider 返回认证或模型错误
 
-通常是 `KIMI_MODEL` 不在当前 ModelScope API-Inference 可用列表中。当前可用默认值是：
+优先检查 `GLM_API_KEY`、`GLM_BASE_URL` 和 `GLM_MODEL` 是否与当前 OpenAI 兼容接口一致。当前默认值是：
 
 ```env
-KIMI_MODEL=moonshotai/Kimi-K2.5
+GLM_MODEL=glm-5.1
 ```
 
 如需确认可用模型，调用 ModelScope `/v1/models` 或查看平台模型列表。

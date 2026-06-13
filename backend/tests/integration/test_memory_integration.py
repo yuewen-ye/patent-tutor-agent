@@ -11,6 +11,7 @@ from langgraph.store.memory import InMemoryStore
 
 from backend.app.core.llm import AgentLLMRouter, LLMConfigurationError, LLMProviderError
 from backend.app.graph.workflow import run_workflow
+from backend.app.schemas.state import StateDict
 
 pytestmark = pytest.mark.integration
 
@@ -24,7 +25,7 @@ def _make_router() -> AgentLLMRouter:
         pytest.skip(f"No provider configured: {exc}")
 
 
-def _run_workflow(session_id: str, user_input: str, router, store, checkpointer) -> dict:
+def _run_workflow(session_id: str, user_input: str, router, store, checkpointer) -> StateDict:
     try:
         return run_workflow(
             session_id=session_id,

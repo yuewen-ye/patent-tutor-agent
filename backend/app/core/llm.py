@@ -1,4 +1,4 @@
-"""Unified OpenAI-compatible LLM calls for DeepSeek, Qwen, and Kimi."""
+"""Unified OpenAI-compatible LLM calls for DeepSeek, Qwen, and GLM."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from typing import Literal, Protocol, Self, cast
 
 import httpx
 from dotenv import load_dotenv
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 LLMProvider = Literal["deepseek", "qwen", "glm"]
 LLMRole = Literal["system", "user", "assistant"]
@@ -80,6 +80,10 @@ class LLMConfigurationError(RuntimeError):
 class LLMProviderError(RuntimeError):
     """Raised when the model provider returns an invalid or failed response."""
 
+    def __init__(self, message: str, status_code: int | None = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+
 
 def normalize_socks_proxy_env(
     keys: Iterable[str] = (
@@ -121,6 +125,32 @@ def load_provider_config(provider: LLMProvider) -> LLMProviderConfig:
     )
 
 
+def _is_retryable_error(exc: BaseException) -> bool:
+    if isinstance(exc, (httpx.TimeoutException, httpx.NetworkError)):
+        return True
+    if isinstance(exc, LLMProviderError):
+        return exc.status_code in {429, 500, 502, 503, 504}
+    return False
+
+
+def _build_chat_body(
+    config: LLMProviderConfig,
+    messages: list[LLMMessage],
+    temperature: float,
+    json_mode: bool,
+    stream: bool,
+) -> dict[str, object]:
+    body: dict[str, object] = {
+        "model": config.model,
+        "messages": [message.__dict__ for message in messages],
+        "temperature": temperature,
+        "stream": stream,
+    }
+    if json_mode:
+        body["response_format"] = {"type": "json_object"}
+    return body
+
+
 def _post_chat_completion(
     config: LLMProviderConfig,
     messages: list[LLMMessage],
@@ -130,14 +160,15 @@ def _post_chat_completion(
 ) -> str:
     client = http_client or httpx.Client(timeout=config.timeout_seconds)
     close_client = http_client is None
-    body: dict[str, object] = {
-        "model": config.model,
-        "messages": [message.__dict__ for message in messages],
-        "temperature": temperature,
-        "stream": False,
-    }
-    if json_mode:
-        body["response_format"] = {"type": "json_object"}
+
+    body = _build_chat_body(
+        config=config,
+        messages=messages,
+        temperature=temperature,
+        json_mode=json_mode,
+        stream=False,
+    )
+
     try:
         response = client.post(
             f"{config.base_url}/chat/completions",
@@ -151,11 +182,12 @@ def _post_chat_completion(
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
             raise LLMProviderError(
-                f"{config.provider} API request failed: {response.status_code} {response.text}"
+                f"{config.provider} API request failed: {response.status_code} {response.text}",
+                status_code=response.status_code,
             ) from exc
         payload = response.json()
         content = payload["choices"][0]["message"]["content"]
-        if not isinstance(content, str) or not content:
+        if not isinstance(content, str) or not content.strip():
             raise LLMProviderError(f"{config.provider} returned empty content.")
         return content
     except (KeyError, IndexError, json.JSONDecodeError) as exc:
@@ -177,9 +209,21 @@ def call_llm(
     retrying = retry(
         stop=stop_after_attempt(config.retry_times),
         wait=wait_exponential(multiplier=0.5, min=0.5, max=4),
+        retry=retry_if_exception(_is_retryable_error),
         reraise=True,
     )(_post_chat_completion)
     return retrying(config, messages, temperature, json_mode, http_client)
+
+
+def _strip_json_fence(content: str) -> str:
+    text = content.strip()
+    if text.startswith("```json"):
+        text = text.removeprefix("```json").strip()
+    elif text.startswith("```"):
+        text = text.removeprefix("```").strip()
+    if text.endswith("```"):
+        text = text.removesuffix("```").strip()
+    return text
 
 
 def call_llm_json(
@@ -196,10 +240,13 @@ def call_llm_json(
         json_mode=True,
         http_client=http_client,
     )
+    cleaned = _strip_json_fence(content)
     try:
-        return json.loads(content)
+        return json.loads(cleaned)
     except json.JSONDecodeError as exc:
-        raise LLMProviderError(f"{provider} returned non-JSON content in json_mode.") from exc
+        raise LLMProviderError(
+            f"{provider} returned non-JSON content in json_mode: {content[:500]}"
+        ) from exc
 
 
 class DefaultLLMClient:

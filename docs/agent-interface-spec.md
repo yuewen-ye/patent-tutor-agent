@@ -54,13 +54,13 @@ judge(decision=accept|accept_with_minor_revision or round limit reached) -> feed
 | `feedback_result` | `FeedbackResult` | 否 | `feedback` | `finalize` |
 | `final_answer` | `FinalAnswer` | 否 | `finalize` | API / 前端 |
 
-下一阶段辩论闭环需要新增但尚未落地的字段：
+辩论闭环控制字段（已实现）：
 
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
 | `debate_round` | integer | 当前专家辩论轮次，从 1 开始 |
 | `max_debate_rounds` | integer | 最大辩论轮次，默认 2，最多 3 |
-| `revision_history` | array | 保存每轮专家草稿、裁判意见和修订请求摘要 |
+| `revision_history` | array | 保存每轮裁判决策、修订请求和裁决理由摘要 |
 
 ## 4. 通用对象
 
@@ -75,11 +75,14 @@ judge(decision=accept|accept_with_minor_revision or round limit reached) -> feed
   "message": "reviewed expert drafts with LLM",
   "round": 1,
   "timestamp": "2026-06-12T10:30:00+08:00",
+  "error_code": null,
   "duration_ms": 1200
 }
 ```
 
 `status` 允许值：`started`、`completed`、`failed`、`retrying`、`debate_round`。
+
+`error_code` 仅当 `status="failed"` 时有值，对应 §9 错误码。完成事件为 `null`。
 
 ### 4.2 MarkdownArtifact
 
@@ -187,6 +190,7 @@ artifacts/
   "citation": "《中华人民共和国专利法》第二十二条",
   "text": "授予专利权的发明和实用新型，应当具备新颖性、创造性和实用性。",
   "score": 0.92,
+  "rerank_score": 0.88,
   "metadata": {
     "doc_type": "law",
     "law_article": "22",
@@ -195,7 +199,7 @@ artifacts/
 }
 ```
 
-真实 RAG 模块落地后，`retrieval_method` 应支持 `bm25`、`vector`、`hybrid`，并保留 `source`、`citation`、`score`。
+真实 RAG 模块落地后，`retrieval_method` 应支持 `bm25`、`vector`、`hybrid`，并保留 `source`、`citation`、`score`、`rerank_score`。
 
 ### 6.4 领域专家 Agent A/B：ExpertDraft
 

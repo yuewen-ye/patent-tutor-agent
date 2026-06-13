@@ -6,8 +6,9 @@ Requires valid .env with API keys for the providers being tested.
 from __future__ import annotations
 
 import pytest
+from typing import cast
 
-from backend.app.core.llm import LLMConfigurationError, LLMMessage, LLMProviderError, call_llm_json
+from backend.app.core.llm import LLMConfigurationError, LLMMessage, LLMProvider, LLMProviderError, call_llm_json
 
 pytestmark = pytest.mark.integration
 
@@ -20,7 +21,7 @@ MESSAGES = [
 @pytest.mark.parametrize("provider", ["deepseek", "qwen", "glm"])
 def test_provider_returns_valid_json(provider: str) -> None:
     try:
-        result = call_llm_json(provider=provider, messages=MESSAGES, temperature=0.1)
+        result = call_llm_json(provider=cast(LLMProvider, provider), messages=MESSAGES, temperature=0.1)
     except LLMConfigurationError as exc:
         pytest.skip(f"{provider} not configured: {exc}")
     except LLMProviderError as exc:

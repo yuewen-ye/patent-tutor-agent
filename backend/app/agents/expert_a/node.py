@@ -6,7 +6,7 @@ from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
 
-from backend.app.agents.common import Node, messages_from_prompt, schema_note
+from backend.app.agents.common import Node, messages_from_prompt, normalize_key_aliases, schema_note
 from backend.app.core.llm import LLMClient
 from backend.app.schemas.state import ExpertDraft, StateDict, completed_event
 
@@ -48,7 +48,17 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
             temperature=0.4,
             agent="expert_a",
         )
-        draft = ExpertDraft.model_validate(raw)
+        draft = ExpertDraft.model_validate(
+            normalize_key_aliases(
+                raw,
+                {
+                    "knowledgePoints": "knowledge_points",
+                    "legalBasis": "legal_basis",
+                    "teachingContent": "teaching_content",
+                    "interactiveQuestions": "interactive_questions",
+                },
+            )
+        )
         return {
             "expert_a_draft": draft.model_dump(),
             "events": [completed_event("expert_a", "generated expert A draft with LLM")],

@@ -92,7 +92,7 @@ def test_workflow_runs_single_round_with_real_llm(tmp_path: Path) -> None:
         "artifacts/sessions/pytest-integration/round-01/expert_a_draft.md",
         "artifacts/sessions/pytest-integration/round-01/expert_b_draft.md",
         "artifacts/sessions/pytest-integration/round-01/judge_report.md",
-        "artifacts/sessions/pytest-integration/round-01/feedback_result.md",
+        "artifacts/sessions/pytest-integration/round-01/feedback_report.md",
         "artifacts/sessions/pytest-integration/final_answer.md",
     ]
     for expected in expected_artifacts:
@@ -135,14 +135,6 @@ def test_workflow_event_ordering_is_correct_with_real_llm(tmp_path: Path) -> Non
     completed_events = [
         e["node"] for e in state["events"] if e["status"] == "completed"
     ]
-    # All 8 nodes must fire in order
-    assert completed_events == [
-        "diagnosis",
-        "planner",
-        "retrieve_context",
-        "expert_a",
-        "expert_b",
-        "judge",
-        "feedback",
-        "finalize",
-    ]
+    assert completed_events[:3] == ["diagnosis", "planner", "retrieve_context"]
+    assert set(completed_events[3:5]) == {"expert_a", "expert_b"}
+    assert completed_events[5:] == ["judge", "feedback", "finalize"]

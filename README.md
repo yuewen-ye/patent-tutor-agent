@@ -2,7 +2,7 @@
 
 知识产权管理与专利代理实务多 Agent 系统。仓库采用 **Monorepo 单仓库 + 前后端分离**：后端负责 FastAPI 服务、LangGraph 多 Agent 编排、统一模型调用和 RAG 知识库模块；前端负责后续 React 交互与 Agent 运行状态可视化。
 
-当前 MVP 已完成：LangGraph + LangChain 编排选型、DeepSeek/Qwen/Kimi 统一 `call_llm` 封装、Agent 级 provider 路由、五个 Agent 的 JSON Schema 合同、模拟知识库上下文、LangGraph Checkpointer/Store 记忆底座、可导出的 LangGraph workflow，以及面向前端的 FastAPI 会话服务。
+当前 MVP 已完成：LangGraph + LangChain 编排选型、DeepSeek/Qwen/GLM 统一 `call_llm` 封装、Agent 级 provider 路由、五个 Agent 的 JSON Schema 合同、模拟知识库上下文、LangGraph Checkpointer/Store 记忆底座、可导出的 LangGraph workflow，以及面向前端的 FastAPI 会话服务。
 
 ## 技术栈
 
@@ -77,12 +77,12 @@ DEFAULT_LLM_PROVIDER=deepseek
 DIAGNOSIS_PROVIDER=deepseek
 PLANNER_PROVIDER=deepseek
 EXPERT_A_PROVIDER=deepseek
-EXPERT_B_PROVIDER=kimi
+EXPERT_B_PROVIDER=glm
 JUDGE_PROVIDER=qwen
 FEEDBACK_PROVIDER=deepseek
 ```
 
-当前支持 provider：`deepseek`、`qwen`、`kimi`。ModelScope Kimi 默认模型为 `moonshotai/Kimi-K2.5`，以 `/v1/models` 可用列表为准。
+当前支持 provider：`deepseek`、`qwen`、`glm`。GLM 默认模型为 `glm-5.1`，配置项为 `GLM_API_KEY`、`GLM_BASE_URL`、`GLM_MODEL`。
 
 ## Agent Workflow
 

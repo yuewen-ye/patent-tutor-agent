@@ -156,21 +156,19 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     assert "revision_requests" in llm_client.messages_by_agent["expert_b"][1]
 
     debate_events = [event for event in state["events"] if event["status"] == "debate_round"]
-    assert debate_events == [
-        {
-            "node": "judge",
-            "status": "debate_round",
-            "message": "judge requested expert revision round 2",
-            "round": 2,
-            "timestamp": None,
-            "error_code": None,
-            "duration_ms": None,
-        }
-    ]
+    assert len(debate_events) == 1
+    debate_event = debate_events[0]
+    assert debate_event["node"] == "judge"
+    assert debate_event["message"] == "judge requested expert revision round 2"
+    assert debate_event["round"] == 2
+    assert isinstance(debate_event["timestamp"], str) and debate_event["timestamp"]
+    assert isinstance(debate_event["duration_ms"], int)
+    assert debate_event["error_code"] is None
 
     artifact_paths = [Path(artifact["path"]) for artifact in state["artifacts"]]
     assert Path("artifacts/sessions/demo-session/round-01/expert_a_draft.md") in artifact_paths
     assert Path("artifacts/sessions/demo-session/round-02/expert_a_draft.md") in artifact_paths
+    assert Path("artifacts/sessions/demo-session/round-02/feedback_report.md") in artifact_paths
     assert Path("artifacts/sessions/demo-session/final_answer.md") in artifact_paths
 
     manifest_path = tmp_path / "artifacts" / "sessions" / "demo-session" / "manifest.json"

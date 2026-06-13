@@ -37,5 +37,17 @@ def messages_from_prompt(prompt: ChatPromptTemplate, **values: object) -> list[L
 def schema_note(schema_name: str, example: str) -> str:
     return (
         f"你必须只输出 json，不要输出 Markdown。输出必须符合 {schema_name}。"
+        "字段名必须与示例完全一致，必须使用 snake_case，不要改成 camelCase。"
         f"示例 json：{example.replace(chr(123), chr(123) * 2).replace(chr(125), chr(125) * 2)}"
     )
+
+
+def normalize_key_aliases(raw: object, aliases: dict[str, str]) -> object:
+    """Map known provider key variants to the internal contract field names."""
+    if not isinstance(raw, dict):
+        return raw
+    normalized = dict(raw)
+    for alias, canonical in aliases.items():
+        if alias in normalized and canonical not in normalized:
+            normalized[canonical] = normalized.pop(alias)
+    return normalized

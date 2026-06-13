@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import inspect
 import sys
+import time
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Callable, Literal, cast
 
@@ -24,8 +26,6 @@ WorkflowEventSink = Callable[[list[dict[str, Any]]], None]
 
 def _print_summary(updates: dict[str, Any], round_num: int | None = None) -> None:
     """Print a one-line summary of an agent node's output."""
-    rd = f" R{round_num}" if round_num else ""
-
     if "learner_profile" in updates:
         p = updates["learner_profile"]
         print(
@@ -53,7 +53,7 @@ def _print_summary(updates: dict[str, Any], round_num: int | None = None) -> Non
                 file=sys.stderr,
             )
         else:
-            print(f"  └─ 片段数=0", file=sys.stderr)
+            print("  └─ 片段数=0", file=sys.stderr)
     elif "expert_a_draft" in updates:
         d = updates["expert_a_draft"]
         print(
@@ -81,7 +81,7 @@ def _print_summary(updates: dict[str, Any], round_num: int | None = None) -> Non
     elif "revision_history" in updates:
         rh = updates["revision_history"]
         if rh:
-            print(f"  └─ 本轮评审已记录", file=sys.stderr)
+            print("  └─ 本轮评审已记录", file=sys.stderr)
     elif "feedback_result" in updates:
         f = updates["feedback_result"]
         print(
@@ -91,9 +91,9 @@ def _print_summary(updates: dict[str, Any], round_num: int | None = None) -> Non
         )
     elif "final_answer" in updates:
         fa = updates["final_answer"]
-        topic = fa.get("topic", "")
-        sections = len(fa.get("sections", []))
-        print(f"  └─ 主题={topic} 章节数={sections}", file=sys.stderr)
+        title = fa.get("title", "")
+        sources_count = len(fa.get("sources", []))
+        print(f"  └─ 标题={title}  来源数={sources_count}", file=sys.stderr)
 
 
 def _call_node(
@@ -133,9 +133,24 @@ def _with_runtime_side_effects(
         round_tag = f" R{round_num}" if round_num > 1 else ""
 
         print(f"▸ [{label}]{round_tag} 开始...", file=sys.stderr)
+        start = time.monotonic()
         updates = _call_node(node, state, runtime)
+        duration_ms = round((time.monotonic() - start) * 1000)
+
+        # Enrich events with metadata that only the workflow wrapper knows.
+        raw_events = updates.get("events")
+        if isinstance(raw_events, list):
+            for evt in raw_events:
+                if isinstance(evt, dict):
+                    if evt.get("round") is None:
+                        evt["round"] = round_num
+                    if evt.get("timestamp") is None:
+                        evt["timestamp"] = datetime.now(UTC).isoformat()
+                    if evt.get("duration_ms") is None:
+                        evt["duration_ms"] = duration_ms
+
         _print_summary(updates, round_num)
-        print(f"  [{label}]{round_tag} 完成 ✓", file=sys.stderr)
+        print(f"  [{label}]{round_tag} 完成 ✓  ({duration_ms}ms)", file=sys.stderr)
 
         artifacts: list[dict[str, Any]] = []
         if artifact_root is not None:
