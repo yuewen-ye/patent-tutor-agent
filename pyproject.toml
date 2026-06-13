@@ -37,4 +37,8 @@ target-version = "py311"
 asyncio_mode = "auto"
 pythonpath = ["."]
 testpaths = ["backend/tests"]
+markers = [
+    "unit: Tests using fake/mock LLM clients — fast, deterministic, no external API calls.",
+    "integration: Tests that call real LLM APIs (requires valid .env API keys).",
+]
 

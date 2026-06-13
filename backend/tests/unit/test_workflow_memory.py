@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.store.memory import InMemoryStore
 
 from backend.app.core.llm import LLMMessage
 from backend.app.graph.workflow import run_workflow
+
+pytestmark = pytest.mark.unit
 
 
 class MemoryQueueLLMClient:

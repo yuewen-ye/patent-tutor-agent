@@ -48,7 +48,7 @@ This is a **multi-Agent patent tutoring system** using LangGraph for orchestrati
 
 ### LLM Provider Layer (`backend/app/core/llm.py`)
 
-All model calls go through `call_llm()` → `call_llm_json()`, using httpx + tenacity for OpenAI-compatible API calls. Three providers: `deepseek`, `qwen`, `kimi`.
+All model calls go through `call_llm()` → `call_llm_json()`, using httpx + tenacity for OpenAI-compatible API calls. Three providers: `deepseek`, `qwen`, `glm`.
 
 **Router hierarchy:**
 - `LLMClient` (Protocol) — single method `generate_json(messages, temperature, agent) -> object`

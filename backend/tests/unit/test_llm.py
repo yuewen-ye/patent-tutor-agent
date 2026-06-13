@@ -15,6 +15,8 @@ from backend.app.core.llm import (
     call_llm_json,
 )
 
+pytestmark = pytest.mark.unit
+
 
 def _json_response(content: str) -> httpx.Response:
     return httpx.Response(200, json={"choices": [{"message": {"content": content}}]})
@@ -60,7 +62,7 @@ def test_call_llm_posts_to_configured_openai_compatible_provider(monkeypatch) ->
             "qwen3.7-max",
             "https://dashscope.aliyuncs.com/compatible-mode/v1",
         ),
-        ("kimi", "KIMI_API_KEY", "moonshotai/Kimi-K2.5", "https://api-inference.modelscope.cn/v1"),
+        ("glm", "GLM_API_KEY", "glm-5.1", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
     ],
 )
 def test_call_llm_supports_three_configured_providers(
@@ -110,9 +112,9 @@ def test_call_llm_json_adds_json_mode_and_parses_response(monkeypatch) -> None:
 
 
 def test_call_llm_wraps_provider_error_body(monkeypatch) -> None:
-    monkeypatch.setenv("KIMI_API_KEY", "kimi-key")
-    monkeypatch.setenv("KIMI_MODEL", "moonshotai/Kimi-K2.5")
-    monkeypatch.setenv("KIMI_BASE_URL", "https://api-inference.modelscope.cn/v1")
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "deepseek-key")
+    monkeypatch.setenv("DEEPSEEK_MODEL", "deepseek-v4-flash")
+    monkeypatch.setenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
 
     client = httpx.Client(
         transport=httpx.MockTransport(
@@ -122,7 +124,7 @@ def test_call_llm_wraps_provider_error_body(monkeypatch) -> None:
 
     with pytest.raises(LLMProviderError, match="bad request detail"):
         call_llm(
-            provider="kimi", messages=[LLMMessage(role="user", content="x")], http_client=client
+            provider="deepseek", messages=[LLMMessage(role="user", content="x")], http_client=client
         )
 
 
@@ -148,10 +150,10 @@ def test_agent_llm_router_reads_agent_specific_provider_config(monkeypatch) -> N
         monkeypatch.setenv(env_name, "")
     monkeypatch.setenv("DEFAULT_LLM_PROVIDER", "deepseek")
     monkeypatch.setenv("DIAGNOSIS_PROVIDER", "qwen")
-    monkeypatch.setenv("EXPERT_B_PROVIDER", "kimi")
+    monkeypatch.setenv("EXPERT_B_PROVIDER", "glm")
 
     router = AgentLLMRouter.from_env()
 
     assert router.provider_for("diagnosis") == "qwen"
     assert router.provider_for("planner") == "deepseek"
-    assert router.provider_for("expert_b") == "kimi"
+    assert router.provider_for("expert_b") == "glm"

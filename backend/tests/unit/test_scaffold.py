@@ -1,8 +1,12 @@
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.unit
+
 
 def test_required_delivery_files_exist() -> None:
-    root = Path(__file__).resolve().parents[2]
+    root = Path(__file__).resolve().parents[3]
 
     assert (root / "README.md").is_file()
     assert (root / "pyproject.toml").is_file()
@@ -13,7 +17,7 @@ def test_required_delivery_files_exist() -> None:
 
 
 def test_monorepo_workspace_directories_exist() -> None:
-    root = Path(__file__).resolve().parents[2]
+    root = Path(__file__).resolve().parents[3]
 
     for relative_path in [
         "backend/app/api",

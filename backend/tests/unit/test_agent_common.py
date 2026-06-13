@@ -1,6 +1,9 @@
+import pytest
 from langchain_core.prompts import ChatPromptTemplate
 
 from backend.app.agents.common import messages_from_prompt
+
+pytestmark = pytest.mark.unit
 
 
 def test_messages_from_prompt_maps_langchain_roles_to_chat_api_roles() -> None:

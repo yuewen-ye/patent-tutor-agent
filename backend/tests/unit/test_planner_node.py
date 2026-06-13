@@ -1,6 +1,10 @@
+import pytest
+
 from backend.app.agents.planner.node import build_planner_node
 from backend.app.core.llm import LLMMessage
 from backend.app.schemas.state import StateDict
+
+pytestmark = pytest.mark.unit
 
 
 class PlannerLLMClient:

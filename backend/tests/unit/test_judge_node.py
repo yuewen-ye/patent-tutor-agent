@@ -1,6 +1,10 @@
+import pytest
+
 from backend.app.agents.judge.node import build_judge_node
 from backend.app.core.llm import LLMMessage
 from backend.app.schemas.state import StateDict
+
+pytestmark = pytest.mark.unit
 
 
 class JudgeLLMClient:

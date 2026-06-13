@@ -1,7 +1,11 @@
 from pathlib import Path
 
+import pytest
+
 from backend.app.core.llm import LLMMessage
 from backend.app.graph.workflow import build_workflow, export_workflow_mermaid, run_workflow
+
+pytestmark = pytest.mark.unit
 
 
 class QueueLLMClient:

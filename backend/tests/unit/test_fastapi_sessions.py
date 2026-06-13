@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from backend.app.core.llm import LLMMessage
 from backend.app.services.session_service import SessionService
 from backend.main import create_app
+
+pytestmark = pytest.mark.unit
 
 
 class QueueLLMClient:

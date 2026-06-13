@@ -1,11 +1,15 @@
 from pathlib import Path
 
+import pytest
 
+pytestmark = pytest.mark.unit
+
+ROOT = Path(__file__).resolve().parents[3]
 AGENT_MODULES = ["diagnosis", "planner", "expert_a", "expert_b", "judge", "feedback"]
 
 
 def test_each_agent_has_its_own_node_module() -> None:
-    agents_dir = Path("backend/app/agents")
+    agents_dir = ROOT / "backend/app/agents"
 
     assert not (agents_dir / "real_nodes.py").exists()
     for module in AGENT_MODULES:
@@ -13,7 +17,7 @@ def test_each_agent_has_its_own_node_module() -> None:
 
 
 def test_workflow_uses_agents_package_assembly() -> None:
-    source = Path("backend/app/graph/workflow.py").read_text(encoding="utf-8")
+    source = (ROOT / "backend/app/graph/workflow.py").read_text(encoding="utf-8")
 
     assert "backend.app.agents.real_nodes" not in source
     assert "from backend.app.agents import" in source

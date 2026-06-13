@@ -12,7 +12,7 @@ import httpx
 from dotenv import load_dotenv
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-LLMProvider = Literal["deepseek", "qwen", "kimi"]
+LLMProvider = Literal["deepseek", "qwen", "glm"]
 LLMRole = Literal["system", "user", "assistant"]
 AgentName = Literal["diagnosis", "planner", "expert_a", "expert_b", "judge", "feedback"]
 
@@ -32,12 +32,12 @@ DEFAULT_CONFIG: dict[LLMProvider, dict[str, str]] = {
         "model": "qwen3.7-max",
         "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
     },
-    "kimi": {
-        "api_key_env": "KIMI_API_KEY",
-        "model_env": "KIMI_MODEL",
-        "base_url_env": "KIMI_BASE_URL",
-        "model": "moonshotai/Kimi-K2.5",
-        "base_url": "https://api-inference.modelscope.cn/v1",
+    "glm": {
+        "api_key_env": "GLM_API_KEY",
+        "model_env": "GLM_MODEL",
+        "base_url_env": "GLM_BASE_URL",
+        "model": "glm-5.1",
+        "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
     },
 }
 AGENT_PROVIDER_ENV: dict[AgentName, str] = {

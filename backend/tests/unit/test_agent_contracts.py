@@ -1,4 +1,8 @@
+import pytest
+
 from backend.app.schemas.state import agent_output_json_schemas
+
+pytestmark = pytest.mark.unit
 
 
 def test_agent_output_json_schemas_follow_interface_spec() -> None:
