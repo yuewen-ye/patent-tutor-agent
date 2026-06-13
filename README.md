@@ -2,7 +2,7 @@
 
 知识产权管理与专利代理实务多 Agent 系统。仓库采用 **Monorepo 单仓库 + 前后端分离**：后端负责 FastAPI 服务、LangGraph 多 Agent 编排、统一模型调用和 RAG 知识库模块；前端负责后续 React 交互与 Agent 运行状态可视化。
 
-当前 MVP 已完成：LangGraph + LangChain 编排选型、DeepSeek/Qwen/Kimi 统一 `call_llm` 封装、Agent 级 provider 路由、五个 Agent 的 JSON Schema 合同、模拟知识库上下文、LangGraph Checkpointer/Store 记忆底座和可导出的 LangGraph workflow。
+当前 MVP 已完成：LangGraph + LangChain 编排选型、DeepSeek/Qwen/Kimi 统一 `call_llm` 封装、Agent 级 provider 路由、五个 Agent 的 JSON Schema 合同、模拟知识库上下文、LangGraph Checkpointer/Store 记忆底座、可导出的 LangGraph workflow，以及面向前端的 FastAPI 会话服务。
 
 ## 技术栈
 
@@ -25,12 +25,13 @@
 │   │   ├── agents/             # 诊断、规划、双专家、裁判、反馈 Agent 节点
 │   │   ├── core/               # LLM provider 配置、call_llm、AgentLLMRouter
 │   │   ├── graph/              # LangGraph StateGraph workflow
+│   │   ├── services/           # SessionService 与事件桥接
 │   │   ├── memory.py           # learner profile/history Store helper
 │   │   ├── rag/                # RAG 知识库接入占位，当前先使用模拟数据
 │   │   └── schemas/            # StateDict、WorkflowContext、Agent 输出模型与 JSON Schema
 │   ├── scripts/                # show_workflow.py / run_workflow.py
 │   ├── tests/                  # pytest 测试，含真实模型 API smoke
-│   └── main.py                 # 当前后端入口占位
+│   └── main.py                 # FastAPI 应用入口
 ├── frontend/                   # 前端应用，后续接入 API 与状态可视化
 ├── docs/                       # 竞赛方案、接口合同、架构决策和 workflow 图
 ├── AGENTS.md                   # 贡献者与 Agent 协作指南
@@ -53,6 +54,19 @@ uv run mypy .
 `show_workflow.py` 会编译 LangGraph 图并导出 `docs/architecture/workflow.mmd`。`run_workflow.py` 默认从 `.env` 读取模型路由，运行双专家并行与 Judge 修订循环，通过 `thread_id=session_id` 写入短期 checkpoint，并在提供 `--learner-id` 时读写长期 learner profile/history Store；同时把 Markdown 中间产物写入 `artifacts/sessions/{session_id}/`。也可用参数临时覆盖，例如 `--judge-provider qwen`、`--artifact-root artifacts`、`--max-debate-rounds 2`。
 
 调试 demo 的具体步骤见 `docs/demo-debugging.md`。
+
+## FastAPI 服务
+
+`uv run python backend/main.py` 会启动 FastAPI 应用，默认监听 `0.0.0.0:8000`。当前 P1 服务层提供：
+
+- `POST /sessions`: 创建会话并后台启动 LangGraph workflow，返回 `session_id` 与 `running` 状态。
+- `GET /sessions`: 列出内存中的会话快照。
+- `GET /sessions/{session_id}`: 返回当前 `StateDict` 快照和会话状态。
+- `GET /sessions/{session_id}/events/stream`: SSE 推送或回放 `AgentEvent`，最后发送会话完成状态。
+- `WS /sessions/{session_id}/events`: WebSocket 推送或回放同一事件流。
+- `GET /sessions/{session_id}/artifacts/{path}`: 读取该会话已落盘 Markdown artifact。
+
+服务层当前使用进程内 `SessionService`、`InMemorySaver` 和 `InMemoryStore`；跨进程持久化仍属于后续 P4/P5。
 
 ## 模型与配置
 

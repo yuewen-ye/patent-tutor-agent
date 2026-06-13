@@ -10,7 +10,7 @@
 | Artifact 产物落盘 | ✅ 完成 | `_with_artifacts` 包装 + manifest.json |
 | CLI Demo | ✅ 完成 | `run_workflow.py` + `show_workflow.py` |
 | 测试 | ✅ 完成 | 覆盖 workflow/LLM/contracts/记忆系统 |
-| FastAPI 服务层 | ❌ 待实现 | `backend/app/api/` 为空占位 |
+| FastAPI 服务层 | ✅ 完成 | 已实现会话 REST API、SSE/WebSocket 事件流、artifact 读取与后台 workflow 运行 |
 | RAG 知识库 | ❌ 待实现 | `retrieve_context` 为 mock 数据 |
 | 前端 | ❌ 待实现 | `frontend/` 为空占位 |
 | 记忆系统 | 🟡 基础完成 | 已接入 LangGraph Checkpointer + Store；BKT 暂不实现 |
@@ -37,7 +37,7 @@ P4 (持久化 + 错误韧性) ──────────→ 可与 P1/P2/P5 
 
 **目标**：将 CLI demo 变为可对外服务的 API，使前端可以创建会话、查询状态、接收实时事件。
 
-**当前入口**：`backend/scripts/run_workflow.py`（同步 CLI，一次性输出 stdout）
+**当前入口**：`backend/scripts/run_workflow.py`（同步 CLI，一次性输出 stdout）；`backend/main.py`（FastAPI 服务入口）
 
 **目标架构**：
 
@@ -60,20 +60,20 @@ GET  /sessions/{id}/artifacts/{path}  → 拉取已落盘的 .md 产物文件
 | 自动重连 | 需手动实现 | 浏览器内置 |
 | 适用场景 | 需要前端发送中途指令 | 纯进度展示 |
 
-**推荐**：Agent 状态动画使用 **SSE**（FastAPI 原生支持 `EventSourceResponse`，前端一行 `new EventSource(url)` 即可），聊天界面保留 WebSocket 用于双向通信场景（前端发送取消/追问指令）。
+**推荐**：Agent 状态动画使用 **SSE**（当前用 Starlette `StreamingResponse` 输出 `text/event-stream`，前端一行 `new EventSource(url)` 即可），聊天界面保留 WebSocket 用于双向通信场景（前端发送取消/追问指令）。
 
 ### 任务拆解
 
 | # | 任务 | 涉及文件 | 说明 |
 |---|---|---|---|
-| 1.1 | 实现 `SessionService` | `backend/app/services/session_service.py`（新建） | 封装 `run_workflow()` 为异步，管理运行中的会话引用，提供 `create/get/list` |
-| 1.2 | 实现 `POST /sessions` | `backend/app/api/sessions.py`（新建） | 接收 `{user_input, provider_overrides?}`，调用 `SessionService.create()`，返回 `{session_id, status: "running"}` |
-| 1.3 | 实现 `GET /sessions/{id}` | 同上 | 返回 StateDict JSON 快照（所有非 None 字段） |
-| 1.4 | 实现事件流推送 | `backend/app/api/events.py`（新建） | 方案 A（WebSocket）: `ws://.../events`；方案 B（SSE）: `GET .../events/stream` 返回 `EventSourceResponse`，使用 `asyncio.Queue` + async generator 桥接 workflow 事件到 HTTP 流 |
-| 1.5 | 实现 `GET /sessions/{id}/artifacts/{path}` | `backend/app/api/artifacts.py`（新建） | 读取 `artifacts/sessions/{id}/{path}` 文件，返回原始 Markdown 内容（`Content-Type: text/markdown`） |
-| 1.6 | 异步化 `run_workflow()` | `backend/app/graph/workflow.py` | 将 `workflow.invoke()` 改为 `workflow.ainvoke()`，支持 `asyncio` 事件循环 |
-| 1.7 | 事件桥接 | `backend/app/services/event_bridge.py`（新建） | 在 workflow 执行过程中，每产生新 `AgentEvent` 就写入 `asyncio.Queue`，由 SSE/WS handler 消费 |
-| 1.8 | 重构 `backend/main.py` | `backend/main.py` | 挂载路由，启动 uvicorn，加载 `.env` |
+| 1.1 | ✅ 实现 `SessionService` | `backend/app/services/session_service.py` | 封装 workflow 后台运行，管理运行中的会话引用，提供 `create/get/list` |
+| 1.2 | ✅ 实现 `POST /sessions` | `backend/app/api/sessions.py` | 接收 `{user_input, provider_overrides?}`，调用 `SessionService.create_session()`，返回 `{session_id, status: "running"}` |
+| 1.3 | ✅ 实现 `GET /sessions/{id}` | 同上 | 返回 StateDict JSON 快照（所有非 None 字段）与会话状态 |
+| 1.4 | ✅ 实现事件流推送 | `backend/app/api/events.py` | 已提供 WebSocket 与 SSE；使用事件桥接服务回放/推送 workflow 事件 |
+| 1.5 | ✅ 实现 `GET /sessions/{id}/artifacts/{path}` | `backend/app/api/artifacts.py` | 读取 `artifacts/sessions/{id}/{path}` 文件，返回原始 Markdown 内容（`Content-Type: text/markdown`），并阻止路径穿越 |
+| 1.6 | ✅ 异步化 workflow 运行 | `backend/app/graph/workflow.py` | 保留同步 `run_workflow()`，新增 `arun_workflow()` 使用 `workflow.ainvoke()` 支持 API 后台运行 |
+| 1.7 | ✅ 事件桥接 | `backend/app/services/event_bridge.py` | workflow 产生 `AgentEvent` 后写入线程安全桥接器，由 SSE/WS handler 消费，并支持完成后回放 |
+| 1.8 | ✅ 重构 `backend/main.py` | `backend/main.py` | 挂载路由，启动 uvicorn，加载 `.env` |
 
 ### 前端数据流说明
 
