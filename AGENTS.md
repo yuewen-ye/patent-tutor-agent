@@ -218,3 +218,17 @@ Pull requests should include: purpose, changed modules, verification steps, link
 - After code or documentation changes, create a local commit with a structured body; do not push unless the user explicitly asks.
 - Ask before creating or switching branches when branch strategy is unclear.
 - Preserve unrelated working tree changes; stage only files relevant to the current task.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues, operated via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+All five labels use defaults: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout: root `CONTEXT.md` + `docs/adr/`. See `docs/agents/domain.md`.
