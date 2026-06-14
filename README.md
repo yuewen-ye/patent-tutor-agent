@@ -6,7 +6,15 @@
 
 ## 从零到 LangGraph Studio
 
-### 1. 克隆并安装
+### 1. 安装 uv（Python 包管理器）
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+重启终端或执行 `source ~/.cargo/env` 使 `uv` 生效。
+
+### 2. 克隆项目并安装依赖
 
 ```bash
 git clone https://github.com/yuewen-ye/patent-tutor-agent.git
@@ -14,7 +22,9 @@ cd patent-tutor-agent
 uv sync
 ```
 
-### 2. 配置 API Key
+`uv sync` 会自动安装所有依赖，包括 `langgraph-cli`（LangGraph Studio 命令行工具）。
+
+### 3. 配置 API Key
 
 ```bash
 cp .env.example .env
@@ -41,7 +51,7 @@ JUDGE_PROVIDER=deepseek
 FEEDBACK_PROVIDER=deepseek
 ```
 
-### 3. 启动 LangGraph Studio
+### 4. 启动 LangGraph Studio
 
 ```bash
 uv run langgraph dev --no-browser --host 0.0.0.0 --port 8124
@@ -55,11 +65,11 @@ uv run langgraph dev --no-browser --host 0.0.0.0 --port 8124
 - 📚 API Docs: http://0.0.0.0:8124/docs
 ```
 
-### 4. 本地访问（本机运行）
+### 5. 本地访问（本机运行）
 
 直接浏览器打开 Studio UI 链接。
 
-### 5. 远程访问（SSH 隧道）
+### 6. 远程访问（SSH 隧道）
 
 如果服务运行在远程服务器，在你本地机器执行：
 
