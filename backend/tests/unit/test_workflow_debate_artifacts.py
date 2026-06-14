@@ -111,6 +111,13 @@ class DebateQueueLLMClient:
                     "profile_update_hint": "继续观察案例判断能力",
                 },
             ],
+            "finalize": [
+                {
+                    "title": "专利新颖性学习建议",
+                    "content": "整合后的教学内容",
+                    "sources": ["第二十二条"],
+                },
+            ],
         }
 
     def generate_json(
@@ -157,7 +164,7 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     assert agents.count("expert_a") == 2  # two rounds
     assert agents.count("expert_b") == 2
     assert agents.count("judge") == 2
-    assert agents[-1] == "feedback"
+    assert agents[-1] == "finalize"
     assert completed["debate_round"] == 2
     assert completed["judge_report"]["decision"] == "accept"
     assert completed["expert_a_draft"]["teaching_content"].startswith("第二轮 A")

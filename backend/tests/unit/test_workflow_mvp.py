@@ -73,6 +73,15 @@ class QueueLLMClient:
                     "profile_update_hint": "继续观察",
                 }
             ],
+            "finalize": [
+                {
+                    "title": "个性化知识产权学习建议",
+                    "content": "整合后的教学内容",
+                    "sources": ["第二十二条"],
+                    "judge_summary": None,
+                    "next_questions": None,
+                }
+            ],
         }
 
     def generate_json(
@@ -106,9 +115,9 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm() -> None:
     )
 
     completed = completed_state(state)
-    # Now: route(1) + diagnosis(1) + planner(1) + expert_a(1) + expert_b(1) + judge(1) + feedback(1) = 7
-    # retrieve_context node replaced by tool_agent (uses generate_with_tools, not in calls)
-    assert len(llm_client.calls) == 7
+    # Now: route + diagnosis + planner + expert_a + expert_b + judge + feedback + finalize = 8
+    # retrieve_context replaced by tool_agent (uses generate_with_tools, not in calls)
+    assert len(llm_client.calls) == 8
     assert completed["session_id"] == "demo-session"
     assert completed["learner_profile"]["knowledge_level"] == "beginner"
     assert len(completed["learning_path"]) == 1
@@ -141,7 +150,7 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm() -> None:
     assert "tool_agent" in llm_client.agents
     assert "expert_a" in llm_client.agents
     assert "expert_b" in llm_client.agents
-    assert llm_client.agents[-2:] == ["judge", "feedback"]
+    assert llm_client.agents[-3:] == ["judge", "feedback", "finalize"]
 
 
 def test_workflow_compiles_and_exports_mermaid(tmp_path: Path) -> None:

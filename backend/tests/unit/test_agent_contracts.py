@@ -16,6 +16,8 @@ def test_agent_output_json_schemas_follow_interface_spec() -> None:
         "judge",
         "feedback",
         "finalize",
+        "route",
+        "chat_answer",
     }
     assert schemas["diagnosis"]["additionalProperties"] is False
     assert schemas["diagnosis"]["properties"]["knowledge_level"]["enum"] == [

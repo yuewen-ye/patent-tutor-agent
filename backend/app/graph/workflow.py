@@ -14,7 +14,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.runtime import Runtime
 from langgraph.store.memory import InMemoryStore
 
-from backend.app.agents import Node, build_agent_nodes, finalize_node
+from backend.app.agents import Node, build_agent_nodes
 from backend.app.artifacts import attach_markdown_artifact, write_field_artifact, write_manifest
 from backend.app.core.llm import AgentLLMRouter, DefaultLLMClient, LLMClient
 from backend.app.schemas.context import WorkflowContext
@@ -309,9 +309,7 @@ def build_workflow(
         revise_experts_node, None, update_sink, event_sink, node_label="revise_experts",
     )))
     builder.add_node("feedback", _wrap("feedback"))
-    builder.add_node("finalize", cast(Any, _with_runtime_side_effects(
-        finalize_node, root_path, update_sink, event_sink, node_label="finalize",
-    )))
+    builder.add_node("finalize", _wrap("finalize"))
 
     # ── Edges ──
 
