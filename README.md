@@ -54,15 +54,15 @@ FEEDBACK_PROVIDER=deepseek
 ### 4. 启动 LangGraph Studio
 
 ```bash
-uv run langgraph dev --no-browser --host 0.0.0.0 --port 8124
+uv run langgraph dev --no-browser --host 127.0.0.1 --port 8124
 ```
 
 启动后会输出：
 
 ```
-- 🚀 API: http://0.0.0.0:8124
-- 🎨 Studio UI: https://smith.langchain.com/studio/?baseUrl=http://0.0.0.0:8124
-- 📚 API Docs: http://0.0.0.0:8124/docs
+- 🚀 API: http://127.0.0.1:8124
+- 🎨 Studio UI: https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:8124
+- 📚 API Docs: http://127.0.0.1:8124/docs
 ```
 
 ### 5. 本地访问（本机运行）
@@ -204,7 +204,7 @@ uv run python backend/scripts/run_workflow.py \
 uv run python backend/scripts/show_workflow.py
 
 # LangGraph Studio
-uv run langgraph dev --no-browser --host 0.0.0.0 --port 8124
+uv run langgraph dev --no-browser --host 127.0.0.1 --port 8124
 ```
 
 ## 模型与配置
