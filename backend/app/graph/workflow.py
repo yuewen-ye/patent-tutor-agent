@@ -234,6 +234,7 @@ def build_workflow(
     store: Any | None = None,
     update_sink: WorkflowUpdateSink | None = None,
     event_sink: WorkflowEventSink | None = None,
+    use_default_checkpointing: bool = True,
 ) -> Any:
     builder = StateGraph(StateDict, context_schema=WorkflowContext)
     nodes: dict[str, Node] = build_agent_nodes(llm_client or AgentLLMRouter.from_env())
@@ -301,10 +302,14 @@ def build_workflow(
     builder.add_edge("feedback", "finalize")
     builder.add_edge("finalize", END)
 
-    return builder.compile(
-        checkpointer=checkpointer if checkpointer is not None else InMemorySaver(),
-        store=store if store is not None else InMemoryStore(),
-    )
+    _cp = checkpointer
+    _st = store
+    if use_default_checkpointing:
+        if _cp is None:
+            _cp = InMemorySaver()
+        if _st is None:
+            _st = InMemoryStore()
+    return builder.compile(checkpointer=_cp, store=_st)
 
 
 def run_workflow(

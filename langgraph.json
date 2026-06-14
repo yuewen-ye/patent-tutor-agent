@@ -1,0 +1,8 @@
+{
+  "python_version": "3.13",
+  "dependencies": ["."],
+  "graphs": {
+    "patent-tutor": "backend/app/builder/langgraph_api.py:graph"
+  },
+  "env": ".env"
+}
