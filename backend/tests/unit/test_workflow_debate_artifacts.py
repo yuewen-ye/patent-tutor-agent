@@ -19,6 +19,9 @@ class DebateQueueLLMClient:
         self.agents: list[str | None] = []
         self.messages_by_agent: dict[str, list[str]] = {}
         self._queues: dict[str, list[object]] = {
+            "route": [
+                {"intent": "teach", "confidence": 0.95, "reason": "系统学习请求"},
+            ],
             "diagnosis": [
                 {
                     "education_background": "patent_exam_candidate",
@@ -123,6 +126,11 @@ class DebateQueueLLMClient:
                 return queue.pop(0)
         raise RuntimeError(f"No queued response for agent={agent}")
 
+    def generate_with_tools(self, messages, tools, temperature, agent=None):
+        from backend.app.core.llm import LLMResponseWithTools
+        self.agents.append(agent)
+        return LLMResponseWithTools(content="RAG context provided.", tool_calls=[])
+
 
 def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     tmp_path: Path,
@@ -141,15 +149,15 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     # diagnosis and planner are sequential; expert_a/expert_b run in parallel
     # so within each round their order is non-deterministic.
     agents = llm_client.agents
-    assert agents[0] == "diagnosis"
-    assert agents[1] == "planner"
-    # Round-1 experts + judge
-    assert set(agents[2:5]) == {"expert_a", "expert_b", "judge"}
-    assert agents[4] == "judge"  # judge always last in its round
-    # Round-2 experts + judge
-    assert set(agents[5:8]) == {"expert_a", "expert_b", "judge"}
-    assert agents[7] == "judge"
-    assert agents[8] == "feedback"
+    # New workflow: route, diagnosis, planner, tool_agent, then experts, then judge
+    assert "route" in agents
+    assert "diagnosis" in agents
+    assert "planner" in agents
+    assert "tool_agent" in agents  # tool_agent uses generate_with_tools
+    assert agents.count("expert_a") == 2  # two rounds
+    assert agents.count("expert_b") == 2
+    assert agents.count("judge") == 2
+    assert agents[-1] == "feedback"
     assert completed["debate_round"] == 2
     assert completed["judge_report"]["decision"] == "accept"
     assert completed["expert_a_draft"]["teaching_content"].startswith("第二轮 A")

@@ -13,8 +13,11 @@ from dotenv import load_dotenv
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 LLMProvider = Literal["deepseek", "qwen", "glm"]
-LLMRole = Literal["system", "user", "assistant"]
-AgentName = Literal["diagnosis", "planner", "expert_a", "expert_b", "judge", "feedback"]
+LLMRole = Literal["system", "user", "assistant", "tool"]
+AgentName = Literal[
+    "diagnosis", "planner", "expert_a", "expert_b", "judge", "feedback",
+    "route", "tool_agent", "chat_answer",
+]
 
 DEFAULT_PROVIDER: LLMProvider = "deepseek"
 DEFAULT_CONFIG: dict[LLMProvider, dict[str, str]] = {
@@ -47,6 +50,9 @@ AGENT_PROVIDER_ENV: dict[AgentName, str] = {
     "expert_b": "EXPERT_B_PROVIDER",
     "judge": "JUDGE_PROVIDER",
     "feedback": "FEEDBACK_PROVIDER",
+    "route": "ROUTE_PROVIDER",
+    "tool_agent": "TOOL_AGENT_PROVIDER",
+    "chat_answer": "CHAT_ANSWER_PROVIDER",
 }
 
 
@@ -66,11 +72,46 @@ class LLMProviderConfig:
     retry_times: int
 
 
+@dataclass(frozen=True)
+class ToolCall:
+    """A tool call requested by the LLM."""
+
+    id: str
+    name: str
+    arguments: dict[str, object]
+
+
+@dataclass(frozen=True)
+class ToolDefinition:
+    """Definition of a tool that can be called by the LLM."""
+
+    name: str
+    description: str
+    parameters: dict[str, object]  # JSON Schema for the tool's parameters
+
+
+@dataclass(frozen=True)
+class LLMResponseWithTools:
+    """Response from an LLM call that supports tool calling."""
+
+    content: str | None
+    tool_calls: list[ToolCall]
+
+
 class LLMClient(Protocol):
     def generate_json(
         self, messages: list[LLMMessage], temperature: float, agent: AgentName | None = None
     ) -> object:
         """Generate and parse a JSON response from a chat model."""
+
+    def generate_with_tools(
+        self,
+        messages: list[LLMMessage],
+        tools: list[ToolDefinition],
+        temperature: float,
+        agent: AgentName | None = None,
+    ) -> LLMResponseWithTools:
+        """Generate a response with tool-calling capability. Does NOT use json_mode."""
 
 
 class LLMConfigurationError(RuntimeError):
@@ -148,6 +189,29 @@ def _build_chat_body(
     }
     if json_mode:
         body["response_format"] = {"type": "json_object"}
+    return body
+
+
+def _build_chat_body_with_tools(
+    config: LLMProviderConfig,
+    messages: list[LLMMessage],
+    tools: list[ToolDefinition],
+    temperature: float,
+    stream: bool,
+) -> dict[str, object]:
+    body: dict[str, object] = {
+        "model": config.model,
+        "messages": [message.__dict__ for message in messages],
+        "temperature": temperature,
+        "stream": stream,
+        "tools": [
+            {
+                "type": "function",
+                "function": {"name": t.name, "description": t.description, "parameters": t.parameters},
+            }
+            for t in tools
+        ],
+    }
     return body
 
 
@@ -249,6 +313,85 @@ def call_llm_json(
         ) from exc
 
 
+def _post_chat_completion_with_tools(
+    config: LLMProviderConfig,
+    messages: list[LLMMessage],
+    tools: list[ToolDefinition],
+    temperature: float,
+    http_client: httpx.Client | None,
+) -> LLMResponseWithTools:
+    client = http_client or httpx.Client(timeout=config.timeout_seconds)
+    close_client = http_client is None
+
+    body = _build_chat_body_with_tools(
+        config=config, messages=messages, tools=tools,
+        temperature=temperature, stream=False,
+    )
+
+    try:
+        response = client.post(
+            f"{config.base_url}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {config.api_key}",
+                "Content-Type": "application/json",
+            },
+            json=body,
+        )
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise LLMProviderError(
+                f"{config.provider} tools API request failed: {response.status_code} {response.text}",
+                status_code=response.status_code,
+            ) from exc
+        payload = response.json()
+        choice = payload["choices"][0]
+        message = choice.get("message", {})
+        content = message.get("content")
+        raw_tool_calls = message.get("tool_calls") or []
+
+        tool_calls: list[ToolCall] = []
+        for tc in raw_tool_calls:
+            func = tc.get("function", {})
+            try:
+                args = json.loads(func.get("arguments", "{}"))
+            except json.JSONDecodeError:
+                args = {}
+            tool_calls.append(
+                ToolCall(id=tc.get("id", ""), name=func.get("name", ""), arguments=args)
+            )
+
+        return LLMResponseWithTools(
+            content=content if isinstance(content, str) and content.strip() else None,
+            tool_calls=tool_calls,
+        )
+    except (KeyError, IndexError, json.JSONDecodeError) as exc:
+        raise LLMProviderError(
+            f"{config.provider} returned an invalid tools chat response."
+        ) from exc
+    finally:
+        if close_client:
+            client.close()
+
+
+def call_llm_tools(
+    *,
+    provider: LLMProvider = DEFAULT_PROVIDER,
+    messages: list[LLMMessage],
+    tools: list[ToolDefinition],
+    temperature: float = 0.5,
+    http_client: httpx.Client | None = None,
+) -> LLMResponseWithTools:
+    config = load_provider_config(provider)
+    retrying = retry(
+        stop=stop_after_attempt(config.retry_times),
+        wait=wait_exponential(multiplier=0.5, min=0.5, max=4),
+        retry=retry_if_exception(_is_retryable_error),
+        reraise=True,
+    )(_post_chat_completion_with_tools)
+    return retrying(config, messages, tools, temperature, http_client)
+
+
 class DefaultLLMClient:
     """Adapter used when all Agent nodes should use one provider."""
 
@@ -269,6 +412,15 @@ class DefaultLLMClient:
         self, messages: list[LLMMessage], temperature: float, agent: AgentName | None = None
     ) -> object:
         return call_llm_json(provider=self.provider, messages=messages, temperature=temperature)
+
+    def generate_with_tools(
+        self,
+        messages: list[LLMMessage],
+        tools: list[ToolDefinition],
+        temperature: float,
+        agent: AgentName | None = None,
+    ) -> LLMResponseWithTools:
+        return call_llm_tools(provider=self.provider, messages=messages, tools=tools, temperature=temperature)
 
 
 class AgentLLMRouter:
@@ -309,5 +461,19 @@ class AgentLLMRouter:
         return call_llm_json(
             provider=self.provider_for(agent),
             messages=messages,
+            temperature=temperature,
+        )
+
+    def generate_with_tools(
+        self,
+        messages: list[LLMMessage],
+        tools: list[ToolDefinition],
+        temperature: float,
+        agent: AgentName | None = None,
+    ) -> LLMResponseWithTools:
+        return call_llm_tools(
+            provider=self.provider_for(agent),
+            messages=messages,
+            tools=tools,
             temperature=temperature,
         )

@@ -94,6 +94,12 @@ def _print_summary(updates: dict[str, Any], round_num: int | None = None) -> Non
         title = fa.get("title", "")
         sources_count = len(fa.get("sources", []))
         print(f"  └─ 标题={title}  来源数={sources_count}", file=sys.stderr)
+    elif "intent" in updates:
+        print(f"  └─ 意图={updates['intent']}", file=sys.stderr)
+    elif "chat_answer" in updates:
+        ca = updates["chat_answer"]
+        content_preview = str(ca.get("content", ""))[:80]
+        print(f"  └─ chat: {content_preview}...", file=sys.stderr)
 
 
 def _call_node(
@@ -115,6 +121,7 @@ _ARTIFACT_FIELDS = (
     "judge_report",
     "feedback_result",
     "final_answer",
+    "chat_answer",
 )
 
 
@@ -227,6 +234,34 @@ def revise_experts_node(
     }
 
 
+def _route_after_route(state: StateDict) -> Literal["diagnosis", "tool_agent"]:
+    intent = state.get("intent", "teach")
+    if intent == "chat":
+        print("▸ [路由] intent=chat → 快速问答路径", file=sys.stderr)
+        return "tool_agent"
+    # teach and diagnose both go through diagnosis first
+    print(f"▸ [路由] intent={intent} → diagnosis", file=sys.stderr)
+    return "diagnosis"
+
+
+def _route_after_diagnosis(state: StateDict) -> Literal["planner", "__end__"]:
+    intent = state.get("intent", "teach")
+    if intent == "diagnose":
+        print("▸ [路由] intent=diagnose → END", file=sys.stderr)
+        return "__end__"
+    print("▸ [路由] intent=teach → 继续学习路径", file=sys.stderr)
+    return "planner"
+
+
+def _route_after_tool_agent(state: StateDict) -> Literal["expert_a", "chat_answer"]:
+    intent = state.get("intent", "teach")
+    if intent == "chat":
+        print("▸ [路由] intent=chat → chat_answer", file=sys.stderr)
+        return "chat_answer"
+    print("▸ [路由] intent=teach → experts", file=sys.stderr)
+    return "expert_a"
+
+
 def build_workflow(
     llm_client: LLMClient | None = None,
     artifact_root: str | Path | None = None,
@@ -240,56 +275,58 @@ def build_workflow(
     nodes: dict[str, Node] = build_agent_nodes(llm_client or AgentLLMRouter.from_env())
     root_path = Path(artifact_root) if artifact_root is not None else None
 
-    builder.add_node(
-        "diagnosis",
-        cast(
-            Any,
-            _with_runtime_side_effects(nodes["diagnosis"], root_path, update_sink, event_sink, node_label="diagnosis"),
-        ),
-    )
-    builder.add_node(
-        "planner",
-        cast(Any, _with_runtime_side_effects(nodes["planner"], root_path, update_sink, event_sink, node_label="planner")),
-    )
-    builder.add_node(
-        "retrieve_context",
-        cast(
-            Any,
-            _with_runtime_side_effects(
-                nodes["retrieve_context"], root_path, update_sink, event_sink, node_label="retrieve_context"
-            ),
-        ),
-    )
-    builder.add_node(
-        "expert_a",
-        cast(Any, _with_runtime_side_effects(nodes["expert_a"], root_path, update_sink, event_sink, node_label="expert_a")),
-    )
-    builder.add_node(
-        "expert_b",
-        cast(Any, _with_runtime_side_effects(nodes["expert_b"], root_path, update_sink, event_sink, node_label="expert_b")),
-    )
-    builder.add_node(
-        "judge",
-        cast(Any, _with_runtime_side_effects(nodes["judge"], root_path, update_sink, event_sink, node_label="judge")),
-    )
-    builder.add_node(
-        "revise_experts",
-        cast(Any, _with_runtime_side_effects(revise_experts_node, None, update_sink, event_sink, node_label="revise_experts")),
-    )
-    builder.add_node(
-        "feedback",
-        cast(Any, _with_runtime_side_effects(nodes["feedback"], root_path, update_sink, event_sink, node_label="feedback")),
-    )
-    builder.add_node(
-        "finalize",
-        cast(Any, _with_runtime_side_effects(finalize_node, root_path, update_sink, event_sink, node_label="finalize")),
+    def _wrap(name: str, artifact: bool = True) -> Any:
+        return cast(Any, _with_runtime_side_effects(
+            nodes[name], root_path if artifact else None,
+            update_sink, event_sink, node_label=name,
+        ))
+
+    # ── All nodes ──
+    builder.add_node("route", _wrap("route"))
+    builder.add_node("diagnosis", _wrap("diagnosis"))
+    builder.add_node("planner", _wrap("planner"))
+    builder.add_node("retrieve_context", _wrap("retrieve_context"))
+    builder.add_node("tool_agent", _wrap("tool_agent"))
+    builder.add_node("chat_answer", _wrap("chat_answer"))
+    builder.add_node("expert_a", _wrap("expert_a"))
+    builder.add_node("expert_b", _wrap("expert_b"))
+    builder.add_node("judge", _wrap("judge"))
+    builder.add_node("revise_experts", cast(Any, _with_runtime_side_effects(
+        revise_experts_node, None, update_sink, event_sink, node_label="revise_experts",
+    )))
+    builder.add_node("feedback", _wrap("feedback"))
+    builder.add_node("finalize", cast(Any, _with_runtime_side_effects(
+        finalize_node, root_path, update_sink, event_sink, node_label="finalize",
+    )))
+
+    # ── Edges ──
+
+    # START → route
+    builder.add_edge(START, "route")
+
+    # Route splits: teach/diagnose → diagnosis, chat → tool_agent
+    builder.add_conditional_edges(
+        "route",
+        _route_after_route,
+        {"diagnosis": "diagnosis", "tool_agent": "tool_agent"},
     )
 
-    builder.add_edge(START, "diagnosis")
-    builder.add_edge("diagnosis", "planner")
-    builder.add_edge("planner", "retrieve_context")
-    builder.add_edge("retrieve_context", "expert_a")
-    builder.add_edge("retrieve_context", "expert_b")
+    # After diagnosis: teach → planner, diagnose → END
+    builder.add_conditional_edges(
+        "diagnosis",
+        _route_after_diagnosis,
+        {"planner": "planner", "__end__": END},
+    )
+
+    # ── Teach path: planner → tool_agent → experts → judge → debate loop → feedback → finalize ──
+    builder.add_edge("planner", "tool_agent")
+    # tool_agent routes: teach → experts, chat → chat_answer
+    builder.add_conditional_edges(
+        "tool_agent",
+        _route_after_tool_agent,
+        {"expert_a": "expert_a", "chat_answer": "chat_answer"},
+    )
+    builder.add_edge("tool_agent", "expert_b")  # teach: expert_b always parallel with expert_a
     builder.add_edge("expert_a", "judge")
     builder.add_edge("expert_b", "judge")
     builder.add_conditional_edges(
@@ -301,6 +338,9 @@ def build_workflow(
     builder.add_edge("revise_experts", "expert_b")
     builder.add_edge("feedback", "finalize")
     builder.add_edge("finalize", END)
+
+    # ── Chat path: tool_agent → chat_answer → END ──
+    builder.add_edge("chat_answer", END)
 
     _cp = checkpointer
     _st = store

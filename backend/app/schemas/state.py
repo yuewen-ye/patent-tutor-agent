@@ -16,6 +16,9 @@ AgentNode = Literal[
     "judge",
     "feedback",
     "finalize",
+    "route",
+    "tool_agent",
+    "chat_answer",
 ]
 ErrorPattern = Literal[
     "unknown",
@@ -51,10 +54,13 @@ class MarkdownArtifact(ContractModel):
         "judge_report",
         "feedback_report",
         "final_answer",
+        "route_decision",
+        "chat_answer",
     ]
     path: str
     created_by: Literal[
-        "diagnosis", "planner", "retrieve_context", "expert_a", "expert_b", "judge", "feedback", "finalize"
+        "diagnosis", "planner", "retrieve_context", "expert_a", "expert_b", "judge", "feedback", "finalize",
+        "route", "tool_agent", "chat_answer",
     ]
     title: str
     mime_type: Literal["text/markdown"] = "text/markdown"
@@ -184,6 +190,19 @@ class FinalAnswer(ContractModel):
     markdown_artifact: MarkdownArtifact | None = None
 
 
+class IntentResult(ContractModel):
+    intent: Literal["teach", "chat", "diagnose"]
+    confidence: float = Field(ge=0.0, le=1.0)
+    reason: str
+
+
+class ChatAnswer(ContractModel):
+    content: str
+    sources: list[str] = Field(default_factory=list)
+    title: str | None = None
+    markdown_artifact: MarkdownArtifact | None = None
+
+
 class WorkflowError(ContractModel):
     session_id: str
     node: str
@@ -216,6 +235,8 @@ class StateDict(TypedDict):
     debate_round: NotRequired[int]
     max_debate_rounds: NotRequired[int]
     revision_history: NotRequired[Annotated[list[dict[str, Any]], operator.add]]
+    intent: NotRequired[str]  # "teach" | "chat" | "diagnose"
+    chat_answer: NotRequired[dict[str, Any]]
 
 
 def _inline_array_item_schema(schema: dict[str, Any]) -> dict[str, Any]:
@@ -241,6 +262,8 @@ def agent_output_json_schemas() -> dict[str, dict[str, Any]]:
         "judge": JudgeReport.model_json_schema(mode="validation"),
         "feedback": FeedbackResult.model_json_schema(mode="validation"),
         "finalize": FinalAnswer.model_json_schema(mode="validation"),
+        "route": IntentResult.model_json_schema(mode="validation"),
+        "chat_answer": ChatAnswer.model_json_schema(mode="validation"),
     }
 
 

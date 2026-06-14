@@ -1,0 +1,121 @@
+"""TDD Phase 2 & 3: Tests for new state models and RAG tool."""
+
+from __future__ import annotations
+
+import pytest
+from pydantic import ValidationError
+
+from backend.app.schemas.state import (
+    AgentNode,
+    ChatAnswer,
+    IntentResult,
+    StateDict,
+    agent_output_json_schemas,
+)
+from backend.app.rag import rag_retrieve
+
+
+class TestIntentResult:
+    def test_valid_teach(self) -> None:
+        r = IntentResult(intent="teach", confidence=0.95, reason="用户请求系统学习")
+        assert r.intent == "teach"
+        assert r.confidence == 0.95
+
+    def test_valid_chat(self) -> None:
+        r = IntentResult(intent="chat", confidence=0.8, reason="单点问答")
+        assert r.intent == "chat"
+
+    def test_valid_diagnose(self) -> None:
+        r = IntentResult(intent="diagnose", confidence=0.7, reason="仅诊断")
+        assert r.intent == "diagnose"
+
+    def test_invalid_intent_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            IntentResult(intent="invalid", confidence=0.5, reason="")
+
+
+class TestChatAnswer:
+    def test_valid(self) -> None:
+        a = ChatAnswer(content="新颖性是指发明不属于现有技术。", sources=["专利法第22条"])
+        assert "新颖性" in a.content
+        assert len(a.sources) == 1
+
+    def test_empty_sources(self) -> None:
+        a = ChatAnswer(content="回答", sources=[])
+        assert a.sources == []
+
+    def test_missing_content_rejected(self) -> None:
+        with pytest.raises(ValidationError):
+            ChatAnswer(sources=[])
+
+
+class TestAgentNodeExtension:
+    def test_new_nodes_in_literal(self) -> None:
+        assert "route" in AgentNode.__args__  # type: ignore[attr-defined]
+        assert "tool_agent" in AgentNode.__args__  # type: ignore[attr-defined]
+        assert "chat_answer" in AgentNode.__args__  # type: ignore[attr-defined]
+
+    def test_existing_nodes_preserved(self) -> None:
+        for name in ("diagnosis", "planner", "expert_a", "expert_b", "judge", "feedback", "finalize"):
+            assert name in AgentNode.__args__  # type: ignore[attr-defined]
+
+
+class TestStateDictNewFields:
+    def test_intent_field(self) -> None:
+        s: StateDict = {
+            "session_id": "s1",
+            "user_input": "test",
+            "events": [],
+            "intent": "teach",
+        }
+        assert s["intent"] == "teach"
+
+    def test_chat_answer_field(self) -> None:
+        s: StateDict = {
+            "session_id": "s1",
+            "user_input": "test",
+            "events": [],
+            "chat_answer": {"content": "回答", "sources": []},
+        }
+        assert s["chat_answer"]["content"] == "回答"
+
+    def test_both_new_fields(self) -> None:
+        s: StateDict = {
+            "session_id": "s1",
+            "user_input": "test",
+            "events": [],
+            "intent": "chat",
+            "chat_answer": {"content": "回答", "sources": ["法条1"]},
+        }
+        assert s["intent"] == "chat"
+        assert s["chat_answer"]["content"] == "回答"
+
+
+class TestAgentOutputJsonSchemas:
+    def test_includes_route_schema(self) -> None:
+        schemas = agent_output_json_schemas()
+        assert "route" in schemas
+        route_schema = schemas["route"]
+        assert route_schema["type"] == "object"
+        assert "intent" in route_schema["properties"]
+
+    def test_includes_chat_answer_schema(self) -> None:
+        schemas = agent_output_json_schemas()
+        assert "chat_answer" in schemas
+
+
+class TestRagRetrieve:
+    def test_returns_list_of_chunks(self) -> None:
+        results = rag_retrieve("新颖性")
+        assert isinstance(results, list)
+        assert len(results) > 0
+        assert hasattr(results[0], "chunk_id")
+        assert hasattr(results[0], "text")
+
+    def test_accepts_top_k(self) -> None:
+        results = rag_retrieve("专利法", top_k=3)
+        assert isinstance(results, list)
+
+    def test_empty_query_still_returns_mock(self) -> None:
+        results = rag_retrieve("")
+        assert isinstance(results, list)
