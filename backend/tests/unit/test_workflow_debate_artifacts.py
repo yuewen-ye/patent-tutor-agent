@@ -7,6 +7,7 @@ import pytest
 
 from backend.app.core.llm import LLMMessage
 from backend.app.graph.workflow import run_workflow
+from backend.tests.helpers import completed_state
 
 pytestmark = pytest.mark.unit
 
@@ -135,6 +136,7 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
         artifact_root=tmp_path / "artifacts",
         max_debate_rounds=2,
     )
+    completed = completed_state(state)
 
     # diagnosis and planner are sequential; expert_a/expert_b run in parallel
     # so within each round their order is non-deterministic.
@@ -148,10 +150,10 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     assert set(agents[5:8]) == {"expert_a", "expert_b", "judge"}
     assert agents[7] == "judge"
     assert agents[8] == "feedback"
-    assert state["debate_round"] == 2
-    assert state["judge_report"]["decision"] == "accept"
-    assert state["expert_a_draft"]["teaching_content"].startswith("第二轮 A")
-    assert state["expert_b_draft"]["teaching_content"].startswith("第二轮 B")
+    assert completed["debate_round"] == 2
+    assert completed["judge_report"]["decision"] == "accept"
+    assert completed["expert_a_draft"]["teaching_content"].startswith("第二轮 A")
+    assert completed["expert_b_draft"]["teaching_content"].startswith("第二轮 B")
     assert "revision_requests" in llm_client.messages_by_agent["expert_a"][1]
     assert "revision_requests" in llm_client.messages_by_agent["expert_b"][1]
 
@@ -165,7 +167,7 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     assert isinstance(debate_event["duration_ms"], int)
     assert debate_event["error_code"] is None
 
-    artifact_paths = [Path(artifact["path"]) for artifact in state["artifacts"]]
+    artifact_paths = [Path(artifact["path"]) for artifact in completed["artifacts"]]
     assert Path("artifacts/sessions/demo-session/round-01/expert_a_draft.md") in artifact_paths
     assert Path("artifacts/sessions/demo-session/round-02/expert_a_draft.md") in artifact_paths
     assert Path("artifacts/sessions/demo-session/round-02/feedback_report.md") in artifact_paths
@@ -176,7 +178,7 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert manifest["session_id"] == "demo-session"
     assert manifest["status"] == "completed"
-    assert len(manifest["artifacts"]) == len(state["artifacts"])
+    assert len(manifest["artifacts"]) == len(completed["artifacts"])
 
     final_path = tmp_path / "artifacts" / "sessions" / "demo-session" / "final_answer.md"
     assert final_path.read_text(encoding="utf-8").startswith("# 个性化知识产权学习建议")

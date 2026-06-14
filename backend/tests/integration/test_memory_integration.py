@@ -12,6 +12,7 @@ from langgraph.store.memory import InMemoryStore
 from backend.app.core.llm import AgentLLMRouter, LLMConfigurationError, LLMProviderError
 from backend.app.graph.workflow import run_workflow
 from backend.app.schemas.state import StateDict
+from backend.tests.helpers import completed_state
 
 pytestmark = pytest.mark.integration
 
@@ -56,7 +57,8 @@ def test_first_session_writes_profile_and_history_to_store() -> None:
         checkpointer=checkpointer,
     )
 
-    profile = state["learner_profile"]
+    completed = completed_state(state)
+    profile = completed["learner_profile"]
     assert profile["knowledge_level"] in {"beginner", "intermediate", "advanced"}
     assert len(profile["weak_points"]) >= 1
 
@@ -65,7 +67,7 @@ def test_first_session_writes_profile_and_history_to_store() -> None:
     assert len(profiles) == 1
     assert len(histories) == 1
     assert profiles[0].value["weak_points"] == profile["weak_points"]
-    assert histories[0].value["session_id"] == state["session_id"]
+    assert histories[0].value["session_id"] == completed["session_id"]
 
 
 def test_second_session_injects_historical_profile_into_diagnosis() -> None:
@@ -89,7 +91,8 @@ def test_second_session_injects_historical_profile_into_diagnosis() -> None:
         checkpointer=checkpointer,
     )
 
-    profile2 = state2["learner_profile"]
+    completed2 = completed_state(state2)
+    profile2 = completed2["learner_profile"]
     assert profile2["knowledge_level"] in {"beginner", "intermediate", "advanced"}
 
     profiles = store.search(("learners", LEARNER_ID, "profile"), limit=5)

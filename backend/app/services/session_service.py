@@ -154,7 +154,7 @@ class SessionService:
         router = AgentLLMRouter.from_env()
         if not provider_overrides:
             return router
-        overrides = dict(router.agent_providers)
+        overrides: dict[AgentName, LLMProvider] = dict(router.agent_providers)
         overrides.update(provider_overrides)
         return AgentLLMRouter(
             default_provider=router.default_provider,

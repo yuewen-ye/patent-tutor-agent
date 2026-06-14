@@ -57,7 +57,16 @@ def build_judge_node(llm_client: LLMClient) -> Node:
                 )
                 + "你是审核裁判 Agent，只评估，不生成教学正文。"
                 + "decision 只能是 accept、accept_with_minor_revision 或 revise。"
-                + "如果需要大幅修订，必须输出 revise。",
+                + "评分与裁决标准：\n"
+                + "1. accuracy_score (1-5) —— 法条引用是否正确、概念定义是否精准、"
+                + "法律逻辑有无硬伤，有一项不满足即≤3；\n"
+                + "2. adaptation_score (1-5) —— 是否匹配学习者水平、案例是否贴合用户问题、"
+                + "是否回应了 weak_points，完全脱节即≤2；\n"
+                + "3. 裁决规则：accuracy_score=5 且 adaptation_score≥4 → accept；"
+                + "accuracy_score≥4 且 adaptation_score≥3 → accept_with_minor_revision；"
+                + "其余情况 → revise。\n"
+                + "如果 decision=revise，必须在 revision_requests 中逐条指明 target、"
+                + "issue 和 required_change。",
             ),
             (
                 "user",

@@ -13,6 +13,7 @@ import pytest
 
 from backend.app.core.llm import AgentLLMRouter, LLMConfigurationError, LLMProviderError
 from backend.app.graph.workflow import run_workflow
+from backend.tests.helpers import completed_state
 
 pytestmark = pytest.mark.integration
 
@@ -41,50 +42,51 @@ def test_workflow_runs_single_round_with_real_llm(tmp_path: Path) -> None:
         raise
 
     # -- state assertions --
-    assert state["session_id"] == "pytest-integration"
-    assert state["debate_round"] >= 1
-    assert state["max_debate_rounds"] == 1
+    completed = completed_state(state)
+    assert completed["session_id"] == "pytest-integration"
+    assert completed["debate_round"] >= 1
+    assert completed["max_debate_rounds"] == 1
 
     # learner profile was produced
-    profile = state["learner_profile"]
+    profile = completed["learner_profile"]
     assert profile["knowledge_level"] in {"beginner", "intermediate", "advanced"}
     assert len(profile["weak_points"]) >= 1
 
     # learning path has at least one node
-    assert len(state["learning_path"]) >= 1
-    assert state["learning_path"][0]["node_id"]
+    assert len(completed["learning_path"]) >= 1
+    assert completed["learning_path"][0]["node_id"]
 
     # retrieval context injected
-    assert len(state["retrieval_context"]) >= 1
+    assert len(completed["retrieval_context"]) >= 1
 
     # both experts contributed
-    assert state["expert_a_draft"]["expert"] == "expert_a"
-    assert state["expert_b_draft"]["expert"] == "expert_b"
-    assert state["expert_a_draft"]["teaching_content"]
-    assert state["expert_b_draft"]["teaching_content"]
+    assert completed["expert_a_draft"]["expert"] == "expert_a"
+    assert completed["expert_b_draft"]["expert"] == "expert_b"
+    assert completed["expert_a_draft"]["teaching_content"]
+    assert completed["expert_b_draft"]["teaching_content"]
 
     # judge rendered a decision
-    assert state["judge_report"]["decision"] in {
+    assert completed["judge_report"]["decision"] in {
         "accept",
         "accept_with_minor_revision",
         "revise",
     }
-    assert 1 <= state["judge_report"]["accuracy_score"] <= 5
-    assert 1 <= state["judge_report"]["adaptation_score"] <= 5
+    assert 1 <= completed["judge_report"]["accuracy_score"] <= 5
+    assert 1 <= completed["judge_report"]["adaptation_score"] <= 5
 
     # feedback produced
-    assert len(state["feedback_result"]["questionnaire"]) >= 1
-    assert state["feedback_result"]["next_action"]
+    assert len(completed["feedback_result"]["questionnaire"]) >= 1
+    assert completed["feedback_result"]["next_action"]
 
     # final answer assembled
-    assert state["final_answer"]["title"]
-    assert state["final_answer"]["content"]
-    assert len(state["final_answer"]["sources"]) >= 1
+    assert completed["final_answer"]["title"]
+    assert completed["final_answer"]["content"]
+    assert len(completed["final_answer"]["sources"]) >= 1
 
     # -- artifact assertions --
-    assert state["artifacts"]
+    assert completed["artifacts"]
 
-    artifact_paths = {a["path"] for a in state["artifacts"]}
+    artifact_paths = {a["path"] for a in completed["artifacts"]}
     expected_artifacts = [
         "artifacts/sessions/pytest-integration/round-01/learner_profile.md",
         "artifacts/sessions/pytest-integration/round-01/learning_path.md",

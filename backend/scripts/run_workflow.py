@@ -55,7 +55,7 @@ def main() -> None:
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
 
-    from backend.app.core.llm import AGENT_PROVIDER_ENV, AgentLLMRouter, LLMProvider
+    from backend.app.core.llm import AGENT_PROVIDER_ENV, AgentLLMRouter, AgentName, LLMProvider
     from backend.app.graph.workflow import run_workflow
 
     parser = argparse.ArgumentParser()
@@ -79,12 +79,12 @@ def main() -> None:
     args = parser.parse_args()
 
     router = AgentLLMRouter.from_env()
-    overrides = dict(router.agent_providers)
+    overrides: dict[AgentName, LLMProvider] = dict(router.agent_providers)
     for agent in AGENT_PROVIDER_ENV:
         value = getattr(args, f"{agent}_provider")
         if value:
             overrides[agent] = cast(LLMProvider, value)
-    default_provider = (
+    default_provider: LLMProvider = (
         cast(LLMProvider, args.provider) if args.provider else router.default_provider
     )
     router = AgentLLMRouter(default_provider=default_provider, agent_providers=overrides)

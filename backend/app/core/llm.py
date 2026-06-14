@@ -252,6 +252,8 @@ def call_llm_json(
 class DefaultLLMClient:
     """Adapter used when all Agent nodes should use one provider."""
 
+    provider: LLMProvider
+
     def __init__(self, provider: LLMProvider = DEFAULT_PROVIDER) -> None:
         self.provider = provider
 
@@ -271,6 +273,9 @@ class DefaultLLMClient:
 
 class AgentLLMRouter:
     """Routes each Agent node to its configured provider, falling back to the default provider."""
+
+    default_provider: LLMProvider
+    agent_providers: dict[AgentName, LLMProvider]
 
     def __init__(
         self,

@@ -4,6 +4,7 @@ import pytest
 
 from backend.app.core.llm import LLMMessage
 from backend.app.graph.workflow import build_workflow, export_workflow_mermaid, run_workflow
+from backend.tests.helpers import completed_state
 
 pytestmark = pytest.mark.unit
 
@@ -93,16 +94,17 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm() -> None:
         llm_client=llm_client,
     )
 
+    completed = completed_state(state)
     assert len(llm_client.calls) == 6
-    assert state["session_id"] == "demo-session"
-    assert state["learner_profile"]["knowledge_level"] == "beginner"
-    assert len(state["learning_path"]) == 1
-    assert len(state["retrieval_context"]) == 1
-    assert state["expert_a_draft"]["style"] == "conservative_precise"
-    assert state["expert_b_draft"]["style"] == "vivid_teaching"
-    assert state["judge_report"]["decision"] == "accept_with_minor_revision"
-    assert state["feedback_result"]["next_action"] == "做一道练习题"
-    assert state["final_answer"]["sources"] == ["第二十二条"]
+    assert completed["session_id"] == "demo-session"
+    assert completed["learner_profile"]["knowledge_level"] == "beginner"
+    assert len(completed["learning_path"]) == 1
+    assert len(completed["retrieval_context"]) == 1
+    assert completed["expert_a_draft"]["style"] == "conservative_precise"
+    assert completed["expert_b_draft"]["style"] == "vivid_teaching"
+    assert completed["judge_report"]["decision"] == "accept_with_minor_revision"
+    assert completed["feedback_result"]["next_action"] == "做一道练习题"
+    assert completed["final_answer"]["sources"] == ["第二十二条"]
 
     completed_events = [event for event in state["events"] if event["status"] == "completed"]
     event_names = [event["node"] for event in completed_events]

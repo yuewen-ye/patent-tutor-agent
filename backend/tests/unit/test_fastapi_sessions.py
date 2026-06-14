@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from backend.app.core.llm import LLMMessage
 from backend.app.services.session_service import SessionService
 from backend.main import create_app
+from backend.tests.helpers import completed_state
 
 pytestmark = pytest.mark.unit
 
@@ -90,6 +91,7 @@ def test_session_api_creates_background_workflow_and_returns_snapshot(tmp_path: 
     session_id = body["session_id"]
 
     state = service.wait_for_completion(session_id, timeout=5)
+    completed = completed_state(state)
 
     fetched = client.get(f"/sessions/{session_id}")
     assert fetched.status_code == 200
@@ -97,7 +99,7 @@ def test_session_api_creates_background_workflow_and_returns_snapshot(tmp_path: 
     assert snapshot["session_id"] == session_id
     assert snapshot["status"] == "completed"
     assert snapshot["state"]["final_answer"]["sources"] == ["第二十二条"]
-    assert snapshot["state"]["final_answer"] == state["final_answer"]
+    assert snapshot["state"]["final_answer"] == completed["final_answer"]
 
 
 def test_session_events_stream_replays_agent_events_and_completion(tmp_path: Path) -> None:
