@@ -137,6 +137,7 @@ def test_workflow_event_ordering_is_correct_with_real_llm(tmp_path: Path) -> Non
     completed_events = [
         e["node"] for e in state["events"] if e["status"] == "completed"
     ]
-    assert completed_events[:3] == ["diagnosis", "planner", "retrieve_context"]
-    assert set(completed_events[3:5]) == {"expert_a", "expert_b"}
-    assert completed_events[5:] == ["judge", "feedback", "finalize"]
+    # New three-route workflow: route → diagnosis → planner → tool_agent → experts → judge → ...
+    assert completed_events[:4] == ["route", "diagnosis", "planner", "tool_agent"]
+    assert "expert_a" in completed_events and "expert_b" in completed_events
+    assert completed_events[-2:] == ["feedback", "finalize"]

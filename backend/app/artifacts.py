@@ -19,6 +19,7 @@ ArtifactKind = Literal[
     "judge_report",
     "feedback_report",
     "final_answer",
+    "chat_answer",
 ]
 
 _CREATED_BY = {
@@ -30,6 +31,7 @@ _CREATED_BY = {
     "judge_report": "judge",
     "feedback_result": "feedback",
     "final_answer": "finalize",
+    "chat_answer": "chat_answer",
 }
 _KIND_BY_FIELD: dict[str, ArtifactKind] = {
     "learner_profile": "learner_profile_report",
@@ -40,6 +42,7 @@ _KIND_BY_FIELD: dict[str, ArtifactKind] = {
     "judge_report": "judge_report",
     "feedback_result": "feedback_report",
     "final_answer": "final_answer",
+    "chat_answer": "chat_answer",
 }
 _TITLE_BY_FIELD = {
     "learner_profile": "学习者画像报告",
@@ -50,6 +53,7 @@ _TITLE_BY_FIELD = {
     "judge_report": "审核裁判报告",
     "feedback_result": "反馈分析报告",
     "final_answer": "个性化知识产权学习建议",
+    "chat_answer": "快速问答回答",
 }
 _FILE_BY_FIELD = {
     "learner_profile": "learner_profile.md",
@@ -60,6 +64,7 @@ _FILE_BY_FIELD = {
     "judge_report": "judge_report.md",
     "feedback_result": "feedback_report.md",
     "final_answer": "final_answer.md",
+    "chat_answer": "chat_answer.md",
 }
 _ROUND_FIELDS = {
     "learner_profile",

@@ -60,6 +60,9 @@ AGENT_PROVIDER_ENV: dict[AgentName, str] = {
 class LLMMessage:
     role: LLMRole
     content: str
+    tool_call_id: str | None = None
+    tool_calls: list[dict[str, object]] | None = None
+    name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -183,7 +186,7 @@ def _build_chat_body(
 ) -> dict[str, object]:
     body: dict[str, object] = {
         "model": config.model,
-        "messages": [message.__dict__ for message in messages],
+        "messages": [{"role": m.role, "content": m.content} for m in messages],
         "temperature": temperature,
         "stream": stream,
     }
@@ -199,9 +202,19 @@ def _build_chat_body_with_tools(
     temperature: float,
     stream: bool,
 ) -> dict[str, object]:
+    def _serialize_message(m: LLMMessage) -> dict[str, object]:
+        d: dict[str, object] = {"role": m.role, "content": m.content}
+        if m.tool_call_id is not None:
+            d["tool_call_id"] = m.tool_call_id
+        if m.tool_calls is not None:
+            d["tool_calls"] = m.tool_calls
+        if m.name is not None:
+            d["name"] = m.name
+        return d
+
     body: dict[str, object] = {
         "model": config.model,
-        "messages": [message.__dict__ for message in messages],
+        "messages": [_serialize_message(m) for m in messages],
         "temperature": temperature,
         "stream": stream,
         "tools": [

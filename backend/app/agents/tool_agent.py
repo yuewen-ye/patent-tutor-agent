@@ -73,7 +73,20 @@ def build_tool_agent_node(llm_client: LLMClient) -> Node:
 
             # Process tool calls
             if result.tool_calls:
-                messages.append(LLMMessage(role="assistant", content=content))
+                # Build assistant message with tool_calls
+                assistant_tool_calls = [
+                    {
+                        "id": tc.id,
+                        "type": "function",
+                        "function": {"name": tc.name, "arguments": json.dumps(tc.arguments, ensure_ascii=False)},
+                    }
+                    for tc in result.tool_calls
+                ]
+                messages.append(LLMMessage(
+                    role="assistant",
+                    content=content or "",
+                    tool_calls=assistant_tool_calls,
+                ))
                 for tc in result.tool_calls:
                     if tc.name == "rag_retrieve":
                         chunks = rag_retrieve(**{k: v for k, v in tc.arguments.items() if isinstance(v, (str, int))})  # type: ignore[arg-type]
@@ -82,6 +95,7 @@ def build_tool_agent_node(llm_client: LLMClient) -> Node:
                         messages.append(LLMMessage(
                             role="tool",
                             content=json.dumps(chunk_dicts, ensure_ascii=False),
+                            tool_call_id=tc.id,
                         ))
             else:
                 # No tool call — LLM has enough info, exit loop

@@ -253,13 +253,18 @@ def _route_after_diagnosis(state: StateDict) -> Literal["planner", "__end__"]:
     return "planner"
 
 
-def _route_after_tool_agent(state: StateDict) -> Literal["expert_a", "chat_answer"]:
+def _route_after_tool_agent(state: StateDict) -> Literal["fan_out_experts", "chat_answer"]:
     intent = state.get("intent", "teach")
     if intent == "chat":
         print("▸ [路由] intent=chat → chat_answer", file=sys.stderr)
         return "chat_answer"
     print("▸ [路由] intent=teach → experts", file=sys.stderr)
-    return "expert_a"
+    return "fan_out_experts"
+
+
+def _fan_out_experts_node(state: StateDict) -> dict[str, Any]:
+    """Pass-through node that triggers parallel expert_a + expert_b."""
+    return {}
 
 
 def build_workflow(
@@ -288,6 +293,7 @@ def build_workflow(
     builder.add_node("retrieve_context", _wrap("retrieve_context"))
     builder.add_node("tool_agent", _wrap("tool_agent"))
     builder.add_node("chat_answer", _wrap("chat_answer"))
+    builder.add_node("fan_out_experts", _fan_out_experts_node)
     builder.add_node("expert_a", _wrap("expert_a"))
     builder.add_node("expert_b", _wrap("expert_b"))
     builder.add_node("judge", _wrap("judge"))
@@ -320,13 +326,15 @@ def build_workflow(
 
     # ── Teach path: planner → tool_agent → experts → judge → debate loop → feedback → finalize ──
     builder.add_edge("planner", "tool_agent")
-    # tool_agent routes: teach → experts, chat → chat_answer
+    # tool_agent routes: teach → fan_out_experts, chat → chat_answer
     builder.add_conditional_edges(
         "tool_agent",
         _route_after_tool_agent,
-        {"expert_a": "expert_a", "chat_answer": "chat_answer"},
+        {"fan_out_experts": "fan_out_experts", "chat_answer": "chat_answer"},
     )
-    builder.add_edge("tool_agent", "expert_b")  # teach: expert_b always parallel with expert_a
+    # fan_out_experts → parallel expert_a + expert_b
+    builder.add_edge("fan_out_experts", "expert_a")
+    builder.add_edge("fan_out_experts", "expert_b")
     builder.add_edge("expert_a", "judge")
     builder.add_edge("expert_b", "judge")
     builder.add_conditional_edges(
