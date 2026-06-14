@@ -11,7 +11,6 @@ from backend.app.agents.feedback import build_feedback_node
 from backend.app.agents.finalize import build_finalize_node
 from backend.app.agents.judge import build_judge_node
 from backend.app.agents.planner import build_planner_node
-from backend.app.agents.retrieve_context import retrieve_context_node
 from backend.app.agents.route import build_route_node
 from backend.app.agents.tool_agent import build_tool_agent_node
 from backend.app.core.llm import LLMClient
@@ -21,7 +20,6 @@ def build_agent_nodes(llm_client: LLMClient) -> dict[str, Node]:
     return {
         "diagnosis": build_diagnosis_node(llm_client),
         "planner": build_planner_node(llm_client),
-        "retrieve_context": retrieve_context_node,
         "expert_a": build_expert_a_node(llm_client),
         "expert_b": build_expert_b_node(llm_client),
         "judge": build_judge_node(llm_client),

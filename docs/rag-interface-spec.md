@@ -45,7 +45,7 @@
 tool_agent 通过 `rag_retrieve()` 函数调用 RAG：
 
 ```python
-def rag_retrieve(query: str, top_k: int = 5) -> list[RetrievalChunk]:
+def rag_retrieve(query: str,  top_k: int =5) -> list[RetrievalChunk]:
     """检索专利法律知识库。
 
     Args:

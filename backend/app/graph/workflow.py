@@ -298,7 +298,6 @@ def build_workflow(
     builder.add_node("route", _wrap("route"))
     builder.add_node("diagnosis", _wrap("diagnosis"))
     builder.add_node("planner", _wrap("planner"))
-    builder.add_node("retrieve_context", _wrap("retrieve_context"))
     builder.add_node("tool_agent", _wrap("tool_agent"))
     builder.add_node("chat_answer", _wrap("chat_answer"))
     builder.add_node("fan_out_experts", _fan_out_experts_node)
