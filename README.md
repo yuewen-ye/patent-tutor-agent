@@ -30,9 +30,13 @@ uv sync
 cp .env.example .env
 ```
 
-编辑 `.env`，至少填一个 provider 的 API Key：
+编辑 `.env`，至少填一个 provider 的 API Key 和 LangSmith API Key：
 
 ```env
+# LangSmith — LangGraph Studio 连接需要（在 https://smith.langchain.com 获取）
+LANGSMITH_API_KEY=lsv2_pt_...
+
+# LLM Provider — 至少填一个
 DEEPSEEK_API_KEY=sk-your-key-here
 DEFAULT_LLM_PROVIDER=deepseek
 ```
