@@ -280,6 +280,13 @@ def build_workflow(
     nodes: dict[str, Node] = build_agent_nodes(llm_client or AgentLLMRouter.from_env())
     root_path = Path(artifact_root) if artifact_root is not None else None
 
+    def _ensure_session_id(state: StateDict) -> dict[str, Any]:
+        """Auto-generate session_id if not provided (e.g. from LangGraph Studio)."""
+        if not state.get("session_id"):
+            import uuid
+            return {"session_id": str(uuid.uuid4())[:8]}
+        return {}
+
     def _wrap(name: str, artifact: bool = True) -> Any:
         return cast(Any, _with_runtime_side_effects(
             nodes[name], root_path if artifact else None,
@@ -287,6 +294,7 @@ def build_workflow(
         ))
 
     # ── All nodes ──
+    builder.add_node("_init", _ensure_session_id)
     builder.add_node("route", _wrap("route"))
     builder.add_node("diagnosis", _wrap("diagnosis"))
     builder.add_node("planner", _wrap("planner"))
@@ -307,8 +315,9 @@ def build_workflow(
 
     # ── Edges ──
 
-    # START → route
-    builder.add_edge(START, "route")
+    # START → _init → route
+    builder.add_edge(START, "_init")
+    builder.add_edge("_init", "route")
 
     # Route splits: teach/diagnose → diagnosis, chat → tool_agent
     builder.add_conditional_edges(
