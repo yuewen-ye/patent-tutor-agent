@@ -153,7 +153,7 @@ def _validate_provider(value: str, source: str) -> LLMProvider:
 
 
 def load_provider_config(provider: LLMProvider) -> LLMProviderConfig:
-    load_dotenv()
+    load_dotenv(encoding="utf-8")
     normalize_socks_proxy_env()
     defaults = DEFAULT_CONFIG[provider]
     api_key = os.getenv(defaults["api_key_env"], "")
@@ -415,7 +415,7 @@ class DefaultLLMClient:
 
     @classmethod
     def from_env(cls) -> Self:
-        load_dotenv()
+        load_dotenv(encoding="utf-8")
         provider = _validate_provider(
             os.getenv("DEFAULT_LLM_PROVIDER", DEFAULT_PROVIDER), "DEFAULT_LLM_PROVIDER"
         )
@@ -452,7 +452,7 @@ class AgentLLMRouter:
 
     @classmethod
     def from_env(cls) -> Self:
-        load_dotenv()
+        load_dotenv(encoding="utf-8")
         default_provider = _validate_provider(
             os.getenv("DEFAULT_LLM_PROVIDER", DEFAULT_PROVIDER), "DEFAULT_LLM_PROVIDER"
         )

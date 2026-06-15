@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(encoding="utf-8")
 
 from backend.app.graph.workflow import build_workflow  # noqa: E402
 
