@@ -86,8 +86,14 @@ FEEDBACK_PROVIDER=deepseek
 
 ### 4. 启动 LangGraph Studio
 
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\langgraph-dev.ps1
+```
+
+macOS / Linux / Git Bash:
+
 ```bash
-uv run langgraph dev --no-browser --host 127.0.0.1 --port 8124
+bash scripts/langgraph-dev.sh
 ```
 
 启动后会输出：
@@ -241,7 +247,7 @@ uv run python backend/scripts/run_workflow.py \
 uv run python backend/scripts/show_workflow.py
 
 # LangGraph Studio
-uv run langgraph dev --no-browser --host 127.0.0.1 --port 8124
+powershell -ExecutionPolicy Bypass -File .\scripts\langgraph-dev.ps1
 ```
 
 ## 模型与配置
