@@ -10,7 +10,6 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 AgentNode = Literal[
     "diagnosis",
     "planner",
-    "retrieve_context",
     "expert_a",
     "expert_b",
     "judge",
