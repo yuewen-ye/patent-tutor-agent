@@ -8,11 +8,29 @@
 
 ### 1. 安装 uv（Python 包管理器）
 
+**macOS / Linux：**
+
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 重启终端或执行 `source ~/.cargo/env` 使 `uv` 生效。
+
+**Windows：**
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+或使用包管理器：
+
+```powershell
+pip install uv          # 通过 pip
+scoop install uv        # 通过 Scoop
+choco install uv        # 通过 Chocolatey
+```
+
+安装后**重新打开终端**使 PATH 生效。
 
 ### 2. 克隆项目并安装依赖
 
@@ -26,8 +44,19 @@ uv sync
 
 ### 3. 配置 API Key
 
+**macOS / Linux：**
 ```bash
 cp .env.example .env
+```
+
+**Windows（CMD）：**
+```cmd
+copy .env.example .env
+```
+
+**Windows（PowerShell）：**
+```powershell
+Copy-Item .env.example .env
 ```
 
 编辑 `.env`，至少填一个 provider 的 API Key 和 LangSmith API Key：
@@ -77,9 +106,13 @@ uv run langgraph dev --no-browser --host 127.0.0.1 --port 8124
 
 如果服务运行在远程服务器，在你本地机器执行：
 
+**macOS / Linux / Windows（PowerShell / Git Bash / WSL）：**
+
 ```bash
 ssh -L 8124:localhost:8124 wangbin@<服务器IP>
 ```
+
+> Windows 10+ 自带 OpenSSH 客户端，在 PowerShell 或 CMD 中可直接使用 `ssh` 命令。
 
 然后浏览器打开：
 
@@ -87,7 +120,7 @@ ssh -L 8124:localhost:8124 wangbin@<服务器IP>
 https://smith.langchain.com/studio/?baseUrl=http://localhost:8124
 ```
 
-### 6. Studio 里做什么
+### 7. Studio 里做什么
 
 | 功能 | 操作 |
 |------|------|
