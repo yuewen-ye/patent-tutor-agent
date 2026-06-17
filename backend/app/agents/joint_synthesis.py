@@ -89,14 +89,27 @@ def build_joint_synthesis_node(llm_client: LLMClient) -> Node:
                 "unresolvedInSynthesis": "unresolved_in_synthesis",
             },
         )
-        # Defensive: coerce string transition_notes into dict format
+        # Defensive: normalize LLM output format quirks
+        _SOURCE_ALIASES = {
+            "A+B": "A+B融合", "AB": "A+B融合", "a+b": "A+B融合",
+            "B过渡": "B-过渡", "B-过渡": "B-过渡", "B_TRANSITION": "B-过渡",
+        }
         if isinstance(normalized, dict):
+            # Coerce string transition_notes into dict format
             tn = normalized.get("transition_notes")
             if isinstance(tn, list):
                 normalized["transition_notes"] = [
                     {"text": item} if isinstance(item, str) else item
                     for item in tn
                 ]
+            # Normalize section source values
+            sections = normalized.get("sections")
+            if isinstance(sections, list):
+                for sec in sections:
+                    if isinstance(sec, dict):
+                        src = sec.get("source")
+                        if isinstance(src, str) and src in _SOURCE_ALIASES:
+                            sec["source"] = _SOURCE_ALIASES[src]
         synthesis = JointSynthesis.model_validate(normalized)
         return {
             "joint_synthesis_output": synthesis.model_dump(),
