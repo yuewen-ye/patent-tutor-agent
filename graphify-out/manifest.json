@@ -365,9 +365,9 @@
     "semantic_hash": "e43c2497d15861b3f3068be5056fbec7"
   },
   "/home/wangbin/Dev/patent-tutor-agent/AGENTS.md": {
-    "mtime": 1781694480.6592116,
-    "ast_hash": "bb3056942f6e1df48389f60737108446",
-    "semantic_hash": "bb3056942f6e1df48389f60737108446"
+    "mtime": 1781697932.8492944,
+    "ast_hash": "88b752b635529ce06f941a24e3450848",
+    "semantic_hash": ""
   },
   "/home/wangbin/Dev/patent-tutor-agent/README.md": {
     "mtime": 1781694480.6592116,
@@ -375,7 +375,7 @@
     "semantic_hash": "68ef5bd335040bacf91414487863142e"
   },
   "/home/wangbin/Dev/patent-tutor-agent/CLAUDE.md": {
-    "mtime": 1781439054.3039463,
+    "mtime": 1781697930.2123418,
     "ast_hash": "5c27369b226fcf2be8a6cfe52224e767",
     "semantic_hash": "5c27369b226fcf2be8a6cfe52224e767"
   },
@@ -635,7 +635,7 @@
     "semantic_hash": "2e6f681586cb7b93747a19cda7933adf"
   },
   "/home/wangbin/Dev/patent-tutor-agent/graphify-out/converted/\u7ade\u8d5b\u65b9\u6848\u6c47\u62a5_293993d0.md": {
-    "mtime": 1781696653.889582,
+    "mtime": 1781698945.1215417,
     "ast_hash": "5c710e6b053e827947fed0f6238775fd",
     "semantic_hash": "5c710e6b053e827947fed0f6238775fd"
   },
