@@ -57,11 +57,104 @@ class QueueLLMClient:
                     "risks": [],
                 }
             ],
+            "cross_review_a": [
+                {
+                    "reviewer": "expert_a",
+                    "target": "expert_b",
+                    "review_opinions": [
+                        {
+                            "category": "🔴",
+                            "location": "核心段落",
+                            "target_wrote": "新颖性就是...",
+                            "problem": "遗漏抵触申请要件",
+                            "suggestion": "补充抵触申请说明",
+                            "basis": "专利法第22条第2款",
+                        }
+                    ],
+                    "positive_confirmation": "B的引用均检索验证",
+                    "overall_assessment": "可理解性好，需补充法律要件",
+                }
+            ],
+            "cross_review_b": [
+                {
+                    "reviewer": "expert_b",
+                    "target": "expert_a",
+                    "review_opinions": [
+                        {
+                            "category": "🟡",
+                            "location": "概念解释",
+                            "target_wrote": "新颖性要求...",
+                            "problem": "对初学者太抽象",
+                            "suggestion": "增加日常类比",
+                            "basis": None,
+                        }
+                    ],
+                    "positive_confirmation": "A的法条引用准确",
+                    "overall_assessment": "法律准确，可读性可改善",
+                }
+            ],
+            "expert_a_revise": [
+                {
+                    "agent": "expert_a",
+                    "revisions": [
+                        {
+                            "review_id": 1,
+                            "review_category": "🟡",
+                            "review_summary": "表述太抽象",
+                            "response": "已增加一句话概括",
+                            "status": "accepted",
+                        }
+                    ],
+                    "unresolved_disputes": [],
+                    "modified_paragraphs": ["核心理解"],
+                    "modification_tags": ["[经B审查修正]"],
+                }
+            ],
+            "expert_b_revise": [
+                {
+                    "agent": "expert_b",
+                    "revisions": [
+                        {
+                            "review_id": 1,
+                            "review_category": "🔴",
+                            "review_summary": "遗漏抵触申请要件",
+                            "response": "已补充",
+                            "status": "accepted",
+                        }
+                    ],
+                    "unresolved_disputes": [],
+                    "modified_paragraphs": ["核心概念"],
+                    "modification_tags": ["[经A审查修正]"],
+                }
+            ],
+            "joint_synthesis": [
+                {
+                    "node_id": "novelty",
+                    "title": "新颖性判断标准",
+                    "sections": [
+                        {
+                            "heading": "法条依据",
+                            "content": "专利法第22条第2款...",
+                            "source": "A",
+                            "note": None,
+                        },
+                        {
+                            "heading": "通俗解释",
+                            "content": "新颖性是指...",
+                            "source": "B",
+                            "note": None,
+                        },
+                    ],
+                    "transition_notes": [],
+                    "unresolved_in_synthesis": [],
+                }
+            ],
             "judge": [
                 {
                     "decision": "accept_with_minor_revision",
                     "accuracy_score": 5,
                     "adaptation_score": 4,
+                    "completeness_score": 4,
                     "disputes": [],
                     "rationale": "可以合并",
                 }
@@ -82,6 +175,7 @@ class QueueLLMClient:
                     "next_questions": None,
                 }
             ],
+            # lightweight_review not queued — not called when decision=accept
         }
 
     def generate_json(
@@ -115,18 +209,25 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm() -> None:
     )
 
     completed = completed_state(state)
-    # Now: route + diagnosis + planner + expert_a + expert_b + judge + feedback + finalize = 8
-    # retrieve_context replaced by tool_agent (uses generate_with_tools, not in calls)
-    assert len(llm_client.calls) == 8
+    # P0.1: route + diagnosis + planner + expert_a + expert_b +
+    #       cross_review_a + cross_review_b + expert_a_revise + expert_b_revise +
+    #       joint_synthesis + judge + feedback + finalize = 13 generate_json calls
+    # tool_agent uses generate_with_tools, not in calls
+    assert len(llm_client.calls) == 13
     assert completed["session_id"] == "demo-session"
     assert completed["learner_profile"]["knowledge_level"] == "beginner"
     assert len(completed["learning_path"]) == 1
     assert completed["expert_a_draft"]["style"] == "conservative_precise"
     assert completed["expert_b_draft"]["style"] == "vivid_teaching"
+    # P0.1: New state fields
+    assert completed["cross_review_a"]["reviewer"] == "expert_a"
+    assert completed["cross_review_b"]["reviewer"] == "expert_b"
+    assert completed["revision_record_a"]["agent"] == "expert_a"
+    assert completed["revision_record_b"]["agent"] == "expert_b"
+    assert completed["joint_synthesis_output"]["title"] == "新颖性判断标准"
     assert completed["judge_report"]["decision"] == "accept_with_minor_revision"
     assert completed["feedback_result"]["next_action"] == "做一道练习题"
-    # Sources may be empty since tool_agent mock provides no RAG chunks
-    assert "第二十二条" in str(completed["final_answer"].get("sources", [])) or completed["final_answer"].get("sources") == []
+    assert "第二十二条" in str(completed["final_answer"].get("sources", []))
 
     completed_events = [event for event in state["events"] if event["status"] == "completed"]
     event_names = [event["node"] for event in completed_events]
@@ -137,6 +238,11 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm() -> None:
         "tool_agent",
         "expert_a",
         "expert_b",
+        "cross_review_a",
+        "cross_review_b",
+        "expert_a",
+        "expert_b",
+        "joint_synthesis",
         "judge",
         "feedback",
         "finalize",
@@ -144,12 +250,14 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm() -> None:
     assert all(event["round"] == 1 for event in completed_events)
     assert all(isinstance(event["timestamp"], str) and event["timestamp"] for event in completed_events)
     assert all(isinstance(event["duration_ms"], int) for event in completed_events)
-    # New workflow: route → diagnosis → planner → tool_agent → experts → judge → feedback
+    # Verify agent call order
     assert llm_client.agents[:3] == ["route", "diagnosis", "planner"]
-    # tool_agent (generate_with_tools) then expert_a, expert_b (parallel)
     assert "tool_agent" in llm_client.agents
     assert "expert_a" in llm_client.agents
     assert "expert_b" in llm_client.agents
+    assert "cross_review_a" in llm_client.agents
+    assert "cross_review_b" in llm_client.agents
+    assert "joint_synthesis" in llm_client.agents
     assert llm_client.agents[-3:] == ["judge", "feedback", "finalize"]
 
 
@@ -163,6 +271,13 @@ def test_workflow_compiles_and_exports_mermaid(tmp_path: Path) -> None:
     assert "expert_b" in mermaid
     assert "judge" in mermaid
     assert "feedback" in mermaid
+    # P0.1: New nodes
+    assert "cross_review_a" in mermaid
+    assert "cross_review_b" in mermaid
+    assert "expert_a_revise" in mermaid
+    assert "expert_b_revise" in mermaid
+    assert "joint_synthesis" in mermaid
+    assert "lightweight_review" in mermaid
 
     output_path = tmp_path / "workflow.mmd"
     output_path.write_text(mermaid, encoding="utf-8")

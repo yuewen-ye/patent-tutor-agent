@@ -73,7 +73,7 @@ def main() -> None:
     parser.add_argument("--session-id", default="local-llm-smoke")
     parser.add_argument("--learner-id", help="Optional learner id for LangGraph Store memory.")
     parser.add_argument("--artifact-root", default="artifacts")
-    parser.add_argument("--max-debate-rounds", type=int, default=2)
+    parser.add_argument("--max-debate-rounds", type=int, default=3)
     parser.add_argument("--user-input", default="我想学习专利新颖性和创造性的区别")
     parser.add_argument("--json", action="store_true", help="Print the full final StateDict JSON to stdout.")
     args = parser.parse_args()

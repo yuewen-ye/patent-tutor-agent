@@ -18,6 +18,12 @@ _COMPLETED_STATE_KEYS = (
     "artifacts",
     "debate_round",
     "max_debate_rounds",
+    # P0.1: Five-stage expert collaboration chain fields
+    "cross_review_a",
+    "cross_review_b",
+    "revision_record_a",
+    "revision_record_b",
+    "joint_synthesis_output",
 )
 
 

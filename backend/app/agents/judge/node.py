@@ -79,24 +79,32 @@ def build_judge_node(llm_client: LLMClient) -> Node:
                 schema_note(
                     "JudgeReport",
                     '{"decision":"accept_with_minor_revision","accuracy_score":5,'
-                    '"adaptation_score":4,"disputes":[],"rationale":"理由"}',
+                    '"adaptation_score":4,"completeness_score":4,"disputes":[],"rationale":"理由"}',
                 )
-                + "你是审核裁判 Agent，只评估，不生成教学正文。"
+                + "你是审核裁判 Agent，审核联合合成稿（JointSynthesis），只评估，不生成教学正文。"
                 + "decision 只能是 accept、accept_with_minor_revision 或 revise。"
-                + "评分与裁决标准：\n"
-                + "1. accuracy_score (1-5) —— 法条引用是否正确、概念定义是否精准、"
-                + "法律逻辑有无硬伤，有一项不满足即≤3；\n"
-                + "2. adaptation_score (1-5) —— 是否匹配学习者水平、案例是否贴合用户问题、"
-                + "是否回应了 weak_points，完全脱节即≤2；\n"
-                + "3. 裁决规则：accuracy_score=5 且 adaptation_score≥4 → accept；"
-                + "accuracy_score≥4 且 adaptation_score≥3 → accept_with_minor_revision；"
-                + "其余情况 → revise。\n"
+                + "\n审核三维度：\n"
+                + "1. accuracy_score (1-5) —— 🔴 事实准确性：逐条核验法条引用是否准确、概念定义是否精准、"
+                + "法律逻辑有无硬伤。与法条/审查指南原文矛盾 → ≤3\n"
+                + "2. completeness_score (1-5) —— 🟡 完整性：检查联合合成稿是否覆盖了该知识点必须包含的要素，"
+                + "包括法条原文、要件拆解、判断流程、边界例外、常见错误\n"
+                + "3. adaptation_score (1-5) —— 🔵 适配性：是否匹配学习者画像、案例是否贴合用户问题、"
+                + "是否回应了 weak_points。完全脱节 → ≤2\n"
+                + "裁决规则：accuracy_score=5 且 completeness_score≥4 且 adaptation_score≥4 → accept；"
+                + "accuracy_score≥4 且 adaptation_score≥3 且 completeness_score≥3 → accept_with_minor_revision；"
+                + "其余情况 → revise。"
                 + "如果 decision=revise，必须在 revision_requests 中逐条指明 target（只能填 expert_a、"
                 + "expert_b 或 both）、issue 和 required_change。",
             ),
             (
                 "user",
-                "专家 A：{expert_a_draft}\n专家 B：{expert_b_draft}\n请审核并裁决。",
+                "联合合成稿：{joint_synthesis_output}\n"
+                "用户问题：{user_input}\n"
+                "检索上下文：{retrieval_context}\n"
+                "学习者画像：{learner_profile}\n"
+                "学习路径：{learning_path}\n"
+                "当前辩论轮次：{debate_round}\n"
+                "请审核联合合成稿并裁决。",
             ),
         ]
     )
@@ -105,8 +113,12 @@ def build_judge_node(llm_client: LLMClient) -> Node:
         raw = llm_client.generate_json(
             messages_from_prompt(
                 prompt,
-                expert_a_draft=state.get("expert_a_draft", {}),
-                expert_b_draft=state.get("expert_b_draft", {}),
+                joint_synthesis_output=state.get("joint_synthesis_output", {}),
+                user_input=state["user_input"],
+                retrieval_context=state.get("retrieval_context", []),
+                learner_profile=state.get("learner_profile", {}),
+                learning_path=state.get("learning_path", []),
+                debate_round=state.get("debate_round", 1),
             ),
             temperature=0.0,
             agent="judge",
@@ -114,7 +126,7 @@ def build_judge_node(llm_client: LLMClient) -> Node:
         report = JudgeReport.model_validate(_normalize_judge_report(raw))
         return {
             "judge_report": report.model_dump(),
-            "events": [completed_event("judge", "reviewed expert drafts with LLM")],
+            "events": [completed_event("judge", "reviewed joint synthesis with LLM")],
         }
 
     return judge_node

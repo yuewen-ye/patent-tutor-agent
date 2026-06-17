@@ -20,6 +20,8 @@ ArtifactKind = Literal[
     "feedback_report",
     "final_answer",
     "chat_answer",
+    "cross_review",
+    "joint_synthesis",
 ]
 
 _CREATED_BY = {
@@ -32,6 +34,12 @@ _CREATED_BY = {
     "feedback_result": "feedback",
     "final_answer": "finalize",
     "chat_answer": "chat_answer",
+    "cross_review_a": "cross_review_a",
+    "cross_review_b": "cross_review_b",
+    "revision_record_a": "expert_a",
+    "revision_record_b": "expert_b",
+    "joint_synthesis_output": "joint_synthesis",
+    "lightweight_review_result": "lightweight_review",
 }
 _KIND_BY_FIELD: dict[str, ArtifactKind] = {
     "learner_profile": "learner_profile_report",
@@ -43,6 +51,12 @@ _KIND_BY_FIELD: dict[str, ArtifactKind] = {
     "feedback_result": "feedback_report",
     "final_answer": "final_answer",
     "chat_answer": "chat_answer",
+    "cross_review_a": "cross_review",
+    "cross_review_b": "cross_review",
+    "revision_record_a": "expert_draft",
+    "revision_record_b": "expert_draft",
+    "joint_synthesis_output": "joint_synthesis",
+    "lightweight_review_result": "judge_report",
 }
 _TITLE_BY_FIELD = {
     "learner_profile": "学习者画像报告",
@@ -54,6 +68,12 @@ _TITLE_BY_FIELD = {
     "feedback_result": "反馈分析报告",
     "final_answer": "个性化知识产权学习建议",
     "chat_answer": "快速问答回答",
+    "cross_review_a": "专家 A 对 B 的交叉审查",
+    "cross_review_b": "专家 B 对 A 的交叉审查",
+    "revision_record_a": "专家 A 修订记录",
+    "revision_record_b": "专家 B 修订记录",
+    "joint_synthesis_output": "专家联合合成稿",
+    "lightweight_review_result": "轻量互审报告",
 }
 _FILE_BY_FIELD = {
     "learner_profile": "learner_profile.md",
@@ -65,6 +85,12 @@ _FILE_BY_FIELD = {
     "feedback_result": "feedback_report.md",
     "final_answer": "final_answer.md",
     "chat_answer": "chat_answer.md",
+    "cross_review_a": "cross_review_a.md",
+    "cross_review_b": "cross_review_b.md",
+    "revision_record_a": "revision_record_a.md",
+    "revision_record_b": "revision_record_b.md",
+    "joint_synthesis_output": "joint_synthesis.md",
+    "lightweight_review_result": "lightweight_review.md",
 }
 _ROUND_FIELDS = {
     "learner_profile",
@@ -74,6 +100,12 @@ _ROUND_FIELDS = {
     "expert_b_draft",
     "judge_report",
     "feedback_result",
+    "cross_review_a",
+    "cross_review_b",
+    "revision_record_a",
+    "revision_record_b",
+    "joint_synthesis_output",
+    "lightweight_review_result",
 }
 
 

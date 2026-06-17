@@ -18,6 +18,13 @@ def test_agent_output_json_schemas_follow_interface_spec() -> None:
         "finalize",
         "route",
         "chat_answer",
+        # P0.1: New node schemas
+        "cross_review_a",
+        "cross_review_b",
+        "revision_record_a",
+        "revision_record_b",
+        "joint_synthesis",
+        "lightweight_review",
     }
     assert schemas["diagnosis"]["additionalProperties"] is False
     assert schemas["diagnosis"]["properties"]["knowledge_level"]["enum"] == [

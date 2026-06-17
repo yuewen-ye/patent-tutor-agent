@@ -16,7 +16,9 @@ LLMProvider = Literal["deepseek", "qwen", "glm"]
 LLMRole = Literal["system", "user", "assistant", "tool"]
 AgentName = Literal[
     "diagnosis", "planner", "expert_a", "expert_b", "judge", "feedback",
-    "route", "tool_agent", "chat_answer",
+    "route", "tool_agent", "chat_answer", "finalize",
+    "expert_a_revise", "expert_b_revise", "cross_review_a", "cross_review_b",
+    "joint_synthesis", "lightweight_review",
 ]
 
 DEFAULT_PROVIDER: LLMProvider = "deepseek"
@@ -53,6 +55,13 @@ AGENT_PROVIDER_ENV: dict[AgentName, str] = {
     "route": "ROUTE_PROVIDER",
     "tool_agent": "TOOL_AGENT_PROVIDER",
     "chat_answer": "CHAT_ANSWER_PROVIDER",
+    "finalize": "FINALIZE_PROVIDER",
+    "expert_a_revise": "EXPERT_A_PROVIDER",
+    "expert_b_revise": "EXPERT_B_PROVIDER",
+    "cross_review_a": "EXPERT_A_PROVIDER",
+    "cross_review_b": "EXPERT_B_PROVIDER",
+    "joint_synthesis": "JOINT_SYNTHESIS_PROVIDER",
+    "lightweight_review": "LIGHTWEIGHT_REVIEW_PROVIDER",
 }
 
 

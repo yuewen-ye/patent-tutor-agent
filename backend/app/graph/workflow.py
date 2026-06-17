@@ -100,6 +100,38 @@ def _print_summary(updates: dict[str, Any], round_num: int | None = None) -> Non
         ca = updates["chat_answer"]
         content_preview = str(ca.get("content", ""))[:80]
         print(f"  └─ chat: {content_preview}...", file=sys.stderr)
+    elif "cross_review_a" in updates:
+        cr = updates["cross_review_a"]
+        opinions = len(cr.get("review_opinions", []))
+        print(
+            f"  └─ A审B  审查意见={opinions}条  评估={cr.get('overall_assessment', '?')[:60]}",
+            file=sys.stderr,
+        )
+    elif "cross_review_b" in updates:
+        cr = updates["cross_review_b"]
+        opinions = len(cr.get("review_opinions", []))
+        print(
+            f"  └─ B审A  审查意见={opinions}条  评估={cr.get('overall_assessment', '?')[:60]}",
+            file=sys.stderr,
+        )
+    elif "revision_record_a" in updates:
+        rr = updates["revision_record_a"]
+        revs = len(rr.get("revisions", []))
+        accepted = sum(1 for r in rr.get("revisions", []) if r.get("status") == "accepted")
+        print(f"  └─ A修订  回应={revs}条  接受={accepted}", file=sys.stderr)
+    elif "revision_record_b" in updates:
+        rr = updates["revision_record_b"]
+        revs = len(rr.get("revisions", []))
+        accepted = sum(1 for r in rr.get("revisions", []) if r.get("status") == "accepted")
+        print(f"  └─ B修订  回应={revs}条  接受={accepted}", file=sys.stderr)
+    elif "joint_synthesis_output" in updates:
+        js = updates["joint_synthesis_output"]
+        sections = len(js.get("sections", []))
+        print(f"  └─ 联合合成  章节={sections}  标题={js.get('title', '?')}", file=sys.stderr)
+    elif "lightweight_review_result" in updates:
+        lr = updates["lightweight_review_result"]
+        verdict = lr.get("verdict", "?")
+        print(f"  └─ 轻量互审  裁决={verdict}", file=sys.stderr)
 
 
 def _call_node(
@@ -122,6 +154,12 @@ _ARTIFACT_FIELDS = (
     "feedback_result",
     "final_answer",
     "chat_answer",
+    "cross_review_a",
+    "cross_review_b",
+    "revision_record_a",
+    "revision_record_b",
+    "joint_synthesis_output",
+    "lightweight_review_result",
 )
 
 
@@ -196,16 +234,16 @@ def _with_runtime_side_effects(
     return wrapped
 
 
-def _route_after_judge(state: StateDict) -> Literal["revise_experts", "feedback"]:
+def _route_after_judge(state: StateDict) -> Literal["lightweight_review", "feedback"]:
     decision = str(state.get("judge_report", {}).get("decision", ""))
     debate_round = int(state.get("debate_round", 1))
-    max_debate_rounds = int(state.get("max_debate_rounds", 2))
+    max_debate_rounds = int(state.get("max_debate_rounds", 3))
     if decision == "revise" and debate_round < max_debate_rounds:
         print(
-            f"▸ [路由] judge 要求修订 → 进入第 {debate_round + 1} 轮辩论",
+            f"▸ [路由] judge 要求修订 → 进入轻量互审（第 {debate_round + 1} 轮）",
             file=sys.stderr,
         )
-        return "revise_experts"
+        return "lightweight_review"
     print(f"▸ [路由] judge 决策={decision} → 进入反馈环节", file=sys.stderr)
     return "feedback"
 
@@ -213,18 +251,21 @@ def _route_after_judge(state: StateDict) -> Literal["revise_experts", "feedback"
 def revise_experts_node(
     state: StateDict, runtime: Runtime[WorkflowContext] | None = None
 ) -> dict[str, Any]:
+    """Increment debate round and record revision history for lightweight review loop."""
     next_round = int(state.get("debate_round", 1)) + 1
     judge_report = state.get("judge_report", {})
+    lightweight_result = state.get("lightweight_review_result", {})
     revision_record = {
         "round": next_round,
         "judge_decision": judge_report.get("decision"),
         "revision_requests": judge_report.get("revision_requests", []),
         "rationale": judge_report.get("rationale"),
+        "lightweight_verdict": lightweight_result.get("verdict"),
     }
     event = AgentEvent(
         node="judge",
         status="debate_round",
-        message=f"judge requested expert revision round {next_round}",
+        message=f"judge requested lightweight revision round {next_round}",
         round=next_round,
     ).model_dump()
     return {
@@ -300,13 +341,20 @@ def build_workflow(
     builder.add_node("planner", _wrap("planner"))
     builder.add_node("tool_agent", _wrap("tool_agent"))
     builder.add_node("chat_answer", _wrap("chat_answer"))
+    # P0.1: Five-stage expert collaboration chain
     builder.add_node("fan_out_experts", _fan_out_experts_node)
     builder.add_node("expert_a", _wrap("expert_a"))
     builder.add_node("expert_b", _wrap("expert_b"))
+    builder.add_node("cross_review_a", _wrap("cross_review_a"))
+    builder.add_node("cross_review_b", _wrap("cross_review_b"))
+    builder.add_node("expert_a_revise", _wrap("expert_a_revise"))
+    builder.add_node("expert_b_revise", _wrap("expert_b_revise"))
+    builder.add_node("joint_synthesis", _wrap("joint_synthesis"))
     builder.add_node("judge", _wrap("judge"))
     builder.add_node("revise_experts", cast(Any, _with_runtime_side_effects(
         revise_experts_node, None, update_sink, event_sink, node_label="revise_experts",
     )))
+    builder.add_node("lightweight_review", _wrap("lightweight_review"))
     builder.add_node("feedback", _wrap("feedback"))
     builder.add_node("finalize", _wrap("finalize"))
 
@@ -330,26 +378,45 @@ def build_workflow(
         {"planner": "planner", "__end__": END},
     )
 
-    # ── Teach path: planner → tool_agent → experts → judge → debate loop → feedback → finalize ──
+    # ── Teach path: 5-stage expert collaboration chain ──
     builder.add_edge("planner", "tool_agent")
-    # tool_agent routes: teach → fan_out_experts, chat → chat_answer
     builder.add_conditional_edges(
         "tool_agent",
         _route_after_tool_agent,
         {"fan_out_experts": "fan_out_experts", "chat_answer": "chat_answer"},
     )
-    # fan_out_experts → parallel expert_a + expert_b
+
+    # Stage 1: Parallel independent generation
     builder.add_edge("fan_out_experts", "expert_a")
     builder.add_edge("fan_out_experts", "expert_b")
-    builder.add_edge("expert_a", "judge")
-    builder.add_edge("expert_b", "judge")
+
+    # Stage 2: Cross-review (A reviews B, B reviews A)
+    builder.add_edge("expert_a", "cross_review_a")
+    builder.add_edge("expert_b", "cross_review_b")
+
+    # Stage 3: Revision (each expert responds to the other's review)
+    builder.add_edge("cross_review_a", "expert_a_revise")
+    builder.add_edge("cross_review_b", "expert_b_revise")
+
+    # Stage 4: Joint synthesis (runs after both revises complete)
+    builder.add_edge("expert_a_revise", "joint_synthesis")
+    builder.add_edge("expert_b_revise", "joint_synthesis")
+
+    # Stage 5: Judge reviews joint synthesis
+    builder.add_edge("joint_synthesis", "judge")
+
+    # Judge routing: lightweight_review (revise) or feedback (accept/force exit)
     builder.add_conditional_edges(
         "judge",
         _route_after_judge,
-        {"revise_experts": "revise_experts", "feedback": "feedback"},
+        {"lightweight_review": "lightweight_review", "feedback": "feedback"},
     )
-    builder.add_edge("revise_experts", "expert_a")
-    builder.add_edge("revise_experts", "expert_b")
+
+    # Lightweight review loop: lightweight_review → revise_experts → joint_synthesis → judge
+    builder.add_edge("lightweight_review", "revise_experts")
+    builder.add_edge("revise_experts", "joint_synthesis")
+
+    # Feedback → Finalize → END
     builder.add_edge("feedback", "finalize")
     builder.add_edge("finalize", END)
 
@@ -371,7 +438,7 @@ def run_workflow(
     user_input: str,
     llm_client: LLMClient | None = None,
     artifact_root: str | Path | None = None,
-    max_debate_rounds: int = 2,
+    max_debate_rounds: int = 3,
     learner_id: str | None = None,
     checkpointer: Any | None = None,
     store: Any | None = None,
@@ -414,7 +481,7 @@ async def arun_workflow(
     user_input: str,
     llm_client: LLMClient | None = None,
     artifact_root: str | Path | None = None,
-    max_debate_rounds: int = 2,
+    max_debate_rounds: int = 3,
     learner_id: str | None = None,
     checkpointer: Any | None = None,
     store: Any | None = None,
