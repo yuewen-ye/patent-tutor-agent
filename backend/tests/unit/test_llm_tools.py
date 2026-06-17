@@ -8,20 +8,16 @@ from __future__ import annotations
 import json
 
 import httpx
-import pytest
 
 from backend.app.core.llm import (
     AgentLLMRouter,
     AgentName,
     DefaultLLMClient,
-    LLMConfigurationError,
     LLMMessage,
-    LLMProviderError,
     LLMResponseWithTools,
     ToolCall,
     ToolDefinition,
     call_llm_tools,
-    load_provider_config,
 )
 
 
@@ -138,7 +134,7 @@ class TestCallLlmToolsWithMockTransport:
         messages = [LLMMessage(role="user", content="test query")]
 
         with httpx.Client(transport=httpx.MockTransport(handler)) as client:
-            result = call_llm_tools(
+            _result = call_llm_tools(
                 provider="deepseek",
                 messages=messages,
                 tools=tools,

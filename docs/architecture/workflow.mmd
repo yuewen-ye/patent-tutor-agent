@@ -5,9 +5,13 @@ config:
 ---
 graph TD;
 	__start__([<p>__start__</p>]):::first
+	_init(_init)
+	route(route)
 	diagnosis(diagnosis)
 	planner(planner)
-	retrieve_context(retrieve_context)
+	tool_agent(tool_agent)
+	chat_answer(chat_answer)
+	fan_out_experts(fan_out_experts)
 	expert_a(expert_a)
 	expert_b(expert_b)
 	judge(judge)
@@ -15,18 +19,25 @@ graph TD;
 	feedback(feedback)
 	finalize(finalize)
 	__end__([<p>__end__</p>]):::last
-	__start__ --> diagnosis;
-	diagnosis --> planner;
+	__start__ --> _init;
+	_init --> route;
+	diagnosis -.-> __end__;
+	diagnosis -.-> planner;
 	expert_a --> judge;
 	expert_b --> judge;
+	fan_out_experts --> expert_a;
+	fan_out_experts --> expert_b;
 	feedback --> finalize;
 	judge -.-> feedback;
 	judge -.-> revise_experts;
-	planner --> retrieve_context;
-	retrieve_context --> expert_a;
-	retrieve_context --> expert_b;
+	planner --> tool_agent;
 	revise_experts --> expert_a;
 	revise_experts --> expert_b;
+	route -.-> diagnosis;
+	route -.-> tool_agent;
+	tool_agent -.-> chat_answer;
+	tool_agent -.-> fan_out_experts;
+	chat_answer --> __end__;
 	finalize --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0

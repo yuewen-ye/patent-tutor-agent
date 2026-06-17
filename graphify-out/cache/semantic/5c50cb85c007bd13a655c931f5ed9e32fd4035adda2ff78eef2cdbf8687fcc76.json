@@ -1,0 +1,1 @@
+{"nodes": [{"id": "judge_normalization", "label": "Judge output normalization", "file_type": "rationale", "source_file": "backend/tests/unit/test_judge_node.py", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

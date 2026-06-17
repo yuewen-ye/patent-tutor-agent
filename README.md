@@ -179,9 +179,6 @@ https://smith.langchain.com/studio/?baseUrl=http://localhost:8124
 │   ├── scripts/                # show_workflow.py / run_workflow.py
 │   ├── tests/                  # pytest 测试，含真实模型 API smoke
 │   └── main.py                 # FastAPI 应用入口
-├── workflows/                  # YAML 工作流定义（非技术人员可编辑）
-│   ├── patent-tutoring.yaml    # 双专家辩论教学流程
-│   └── patent-draft-review.yaml # 专利申请审查流程
 ├── docs/                       # 接口合同、架构决策和 workflow 图
 ├── langgraph.json              # LangGraph Studio 配置
 ├── .env.example                # 环境变量模板

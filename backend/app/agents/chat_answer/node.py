@@ -6,7 +6,7 @@ import json as _json
 from typing import Any
 
 from backend.app.agents.common import Node
-from backend.app.core.llm import LLMClient, LLMMessage, LLMRole
+from backend.app.core.llm import LLMClient, LLMMessage
 from backend.app.schemas.state import ChatAnswer, completed_event
 
 _CHAT_SYSTEM = """你是一个专利知识助手。根据检索到的法律知识和用户的问题，生成一个简洁、准确的回答。

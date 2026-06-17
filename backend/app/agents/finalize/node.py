@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from backend.app.agents.common import Node, LLMMessage, LLMRole
+from backend.app.agents.common import Node, LLMMessage
 from backend.app.core.llm import LLMClient
 from backend.app.schemas.state import FinalAnswer, StateDict, completed_event
 
@@ -27,7 +27,6 @@ def build_finalize_node(llm_client: LLMClient) -> Node:
         expert_a = state.get("expert_a_draft", {})
         expert_b = state.get("expert_b_draft", {})
         judge_report = state.get("judge_report", {})
-        feedback_result = state.get("feedback_result", {})
 
         import json as _json
 

@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from langchain_core.prompts import ChatPromptTemplate
 
-from backend.app.agents.common import Node, messages_from_prompt, schema_note
+from backend.app.agents.common import Node
 from backend.app.core.llm import LLMClient
 from backend.app.schemas.state import IntentResult, completed_event
 
@@ -24,12 +23,11 @@ _ROUTE_EXAMPLE = """{"intent": "teach", "confidence": 0.9, "reason": "用户请�
 
 
 def build_route_node(llm_client: LLMClient) -> Node:
-    import json as _json
 
     def route_node(state: dict[str, Any]) -> dict[str, Any]:
         user_input = state.get("user_input", "")
 
-        from backend.app.core.llm import LLMMessage, LLMRole
+        from backend.app.core.llm import LLMMessage
         messages = [
             LLMMessage(role="system", content=_ROUTE_SYSTEM),
             LLMMessage(role="user", content=f"用户输入：{user_input}"),

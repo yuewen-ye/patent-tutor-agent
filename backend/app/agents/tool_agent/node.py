@@ -13,7 +13,7 @@ from backend.app.core.llm import (
     ToolDefinition,
 )
 from backend.app.rag import rag_retrieve
-from backend.app.schemas.state import RetrievalChunk, completed_event
+from backend.app.schemas.state import completed_event
 
 MAX_TOOL_ROUNDS = 5
 
