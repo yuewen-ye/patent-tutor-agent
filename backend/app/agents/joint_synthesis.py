@@ -80,16 +80,24 @@ def build_joint_synthesis_node(llm_client: LLMClient) -> Node:
             temperature=0.3,
             agent="joint_synthesis",
         )
-        synthesis = JointSynthesis.model_validate(
-            normalize_key_aliases(
-                raw,
-                {
-                    "nodeId": "node_id",
-                    "transitionNotes": "transition_notes",
-                    "unresolvedInSynthesis": "unresolved_in_synthesis",
-                },
-            )
+        # Normalize key aliases and LLM output format quirks
+        normalized = normalize_key_aliases(
+            raw,
+            {
+                "nodeId": "node_id",
+                "transitionNotes": "transition_notes",
+                "unresolvedInSynthesis": "unresolved_in_synthesis",
+            },
         )
+        # Defensive: coerce string transition_notes into dict format
+        if isinstance(normalized, dict):
+            tn = normalized.get("transition_notes")
+            if isinstance(tn, list):
+                normalized["transition_notes"] = [
+                    {"text": item} if isinstance(item, str) else item
+                    for item in tn
+                ]
+        synthesis = JointSynthesis.model_validate(normalized)
         return {
             "joint_synthesis_output": synthesis.model_dump(),
             "events": [

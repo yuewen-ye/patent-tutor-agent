@@ -48,6 +48,8 @@ def build_finalize_node(llm_client: LLMClient) -> Node:
             {
                 "nextStudyQuestions": "next_questions",
                 "next_study_questions": "next_questions",
+                "questions": "next_questions",
+                "follow_up_questions": "next_questions",
                 "judgeSummary": "judge_summary",
             },
         )
