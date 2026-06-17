@@ -19,3 +19,4 @@ artifacts/
 .langgraph_api/
 graphify-out/cache/
 graphify-out/.graphify_*
+graphify-out/manifest.json
