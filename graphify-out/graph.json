@@ -215,1273 +215,1327 @@
   },
   "nodes": [
     {
+      "label": "node.py",
+      "file_type": "code",
+      "source_file": "finalize/node.py",
+      "source_location": "L1",
+      "id": "finalize_node_py",
+      "community": 135,
+      "norm_label": "node.py"
+    },
+    {
+      "label": "build_finalize_node()",
+      "file_type": "code",
+      "source_file": "finalize/node.py",
+      "source_location": "L23",
+      "id": "finalize_node_build_finalize_node",
+      "community": 135,
+      "norm_label": "build_finalize_node()"
+    },
+    {
+      "label": "Workflow finalization node \u2014 merges expert drafts into a unified teaching answer",
+      "file_type": "rationale",
+      "source_file": "finalize/node.py",
+      "source_location": "L1",
+      "id": "finalize_node_rationale_1",
+      "community": 135,
+      "norm_label": "workflow finalization node \u2014 merges expert drafts into a unified teaching answer"
+    },
+    {
+      "label": "joint_synthesis.py",
+      "file_type": "code",
+      "source_file": "joint_synthesis.py",
+      "source_location": "L1",
+      "id": "joint_synthesis_py",
+      "community": 0,
+      "norm_label": "joint_synthesis.py"
+    },
+    {
+      "label": "build_joint_synthesis_node()",
+      "file_type": "code",
+      "source_file": "joint_synthesis.py",
+      "source_location": "L33",
+      "id": "agents_joint_synthesis_build_joint_synthesis_node",
+      "community": 0,
+      "norm_label": "build_joint_synthesis_node()"
+    },
+    {
+      "label": "Joint synthesis agent node \u2014 merges Expert A and B revised drafts into one outpu",
+      "file_type": "rationale",
+      "source_file": "joint_synthesis.py",
+      "source_location": "L1",
+      "id": "agents_joint_synthesis_rationale_1",
+      "community": 0,
+      "norm_label": "joint synthesis agent node \u2014 merges expert a and b revised drafts into one outpu"
+    },
+    {
       "label": "agent-interface-spec.md",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L1",
-      "id": "agent_interface_spec_md",
       "community": 50,
-      "norm_label": "agent-interface-spec.md"
+      "norm_label": "agent-interface-spec.md",
+      "id": "agent_interface_spec_md"
     },
     {
       "label": "Agent \u95f4\u63a5\u53e3\u89c4\u8303",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L1",
-      "id": "docs_agent_interface_spec_agent_\u95f4\u63a5\u53e3\u89c4\u8303",
       "community": 50,
-      "norm_label": "agent \u95f4\u63a5\u53e3\u89c4\u8303"
+      "norm_label": "agent \u95f4\u63a5\u53e3\u89c4\u8303",
+      "id": "docs_agent_interface_spec_agent_\u95f4\u63a5\u53e3\u89c4\u8303"
     },
     {
       "label": "1. \u6587\u6863\u76ee\u6807",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L8",
-      "id": "docs_agent_interface_spec_1_\u6587\u6863\u76ee\u6807",
       "community": 50,
-      "norm_label": "1. \u6587\u6863\u76ee\u6807"
+      "norm_label": "1. \u6587\u6863\u76ee\u6807",
+      "id": "docs_agent_interface_spec_1_\u6587\u6863\u76ee\u6807"
     },
     {
       "label": "1.1 \u5f53\u524d\u5de5\u4f5c\u6d41 \u2705",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L12",
-      "id": "docs_agent_interface_spec_1_1_\u5f53\u524d\u5de5\u4f5c\u6d41",
       "community": 50,
-      "norm_label": "1.1 \u5f53\u524d\u5de5\u4f5c\u6d41 \u2705"
+      "norm_label": "1.1 \u5f53\u524d\u5de5\u4f5c\u6d41 \u2705",
+      "id": "docs_agent_interface_spec_1_1_\u5f53\u524d\u5de5\u4f5c\u6d41"
     },
     {
       "label": "code:text (START \u2192 route \u2500\u2500\u252c\u2500\u2500 diagnose: diagnosis \u2192 END)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L14",
-      "id": "docs_agent_interface_spec_codeblock_1",
       "community": 50,
-      "norm_label": "code:text (start \u2192 route \u2500\u2500\u252c\u2500\u2500 diagnose: diagnosis \u2192 end)"
+      "norm_label": "code:text (start \u2192 route \u2500\u2500\u252c\u2500\u2500 diagnose: diagnosis \u2192 end)",
+      "id": "docs_agent_interface_spec_codeblock_1"
     },
     {
       "label": "1.2 \u76ee\u6807\u5de5\u4f5c\u6d41\uff08P0.1 \u5df2\u5b8c\u6210\uff0cP0.2-P0.6 \u5f85\u5b9e\u73b0\uff09\u2705 P0.1",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L29",
-      "id": "docs_agent_interface_spec_1_2_\u76ee\u6807\u5de5\u4f5c\u6d41_p0_1_\u5df2\u5b8c\u6210_p0_2_p0_6_\u5f85\u5b9e\u73b0_p0_1",
       "community": 50,
-      "norm_label": "1.2 \u76ee\u6807\u5de5\u4f5c\u6d41(p0.1 \u5df2\u5b8c\u6210,p0.2-p0.6 \u5f85\u5b9e\u73b0)\u2705 p0.1"
+      "norm_label": "1.2 \u76ee\u6807\u5de5\u4f5c\u6d41(p0.1 \u5df2\u5b8c\u6210,p0.2-p0.6 \u5f85\u5b9e\u73b0)\u2705 p0.1",
+      "id": "docs_agent_interface_spec_1_2_\u76ee\u6807\u5de5\u4f5c\u6d41_p0_1_\u5df2\u5b8c\u6210_p0_2_p0_6_\u5f85\u5b9e\u73b0_p0_1"
     },
     {
       "label": "code:text (START \u2192 route \u2500\u2500\u252c\u2500\u2500 diagnose: diagnosis \u2192 END)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L31",
-      "id": "docs_agent_interface_spec_codeblock_2",
       "community": 50,
-      "norm_label": "code:text (start \u2192 route \u2500\u2500\u252c\u2500\u2500 diagnose: diagnosis \u2192 end)"
+      "norm_label": "code:text (start \u2192 route \u2500\u2500\u252c\u2500\u2500 diagnose: diagnosis \u2192 end)",
+      "id": "docs_agent_interface_spec_codeblock_2"
     },
     {
       "label": "2. Agent \u4e0e\u670d\u52a1\u8fb9\u754c",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L66",
-      "id": "docs_agent_interface_spec_2_agent_\u4e0e\u670d\u52a1\u8fb9\u754c",
       "community": 50,
-      "norm_label": "2. agent \u4e0e\u670d\u52a1\u8fb9\u754c"
+      "norm_label": "2. agent \u4e0e\u670d\u52a1\u8fb9\u754c",
+      "id": "docs_agent_interface_spec_2_agent_\u4e0e\u670d\u52a1\u8fb9\u754c"
     },
     {
       "label": "3. \u5168\u5c40\u72b6\u6001 StateDict",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L86",
-      "id": "docs_agent_interface_spec_3_\u5168\u5c40\u72b6\u6001_statedict",
       "community": 50,
-      "norm_label": "3. \u5168\u5c40\u72b6\u6001 statedict"
+      "norm_label": "3. \u5168\u5c40\u72b6\u6001 statedict",
+      "id": "docs_agent_interface_spec_3_\u5168\u5c40\u72b6\u6001_statedict"
     },
     {
       "label": "3.1 \u5f53\u524d\u5df2\u5b9e\u73b0\u5b57\u6bb5 \u2705",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L90",
-      "id": "docs_agent_interface_spec_3_1_\u5f53\u524d\u5df2\u5b9e\u73b0\u5b57\u6bb5",
       "community": 50,
-      "norm_label": "3.1 \u5f53\u524d\u5df2\u5b9e\u73b0\u5b57\u6bb5 \u2705"
+      "norm_label": "3.1 \u5f53\u524d\u5df2\u5b9e\u73b0\u5b57\u6bb5 \u2705",
+      "id": "docs_agent_interface_spec_3_1_\u5f53\u524d\u5df2\u5b9e\u73b0\u5b57\u6bb5"
     },
     {
       "label": "3.2 P0 \u65b0\u589e\u5b57\u6bb5\uff08P0.1 \u2705\uff0cP0.2-P0.6 [P0 \u5f85\u5b9e\u73b0]\uff09",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L117",
-      "id": "docs_agent_interface_spec_3_2_p0_\u65b0\u589e\u5b57\u6bb5_p0_1_p0_2_p0_6_p0_\u5f85\u5b9e\u73b0",
       "community": 50,
-      "norm_label": "3.2 p0 \u65b0\u589e\u5b57\u6bb5(p0.1 \u2705,p0.2-p0.6 [p0 \u5f85\u5b9e\u73b0])"
+      "norm_label": "3.2 p0 \u65b0\u589e\u5b57\u6bb5(p0.1 \u2705,p0.2-p0.6 [p0 \u5f85\u5b9e\u73b0])",
+      "id": "docs_agent_interface_spec_3_2_p0_\u65b0\u589e\u5b57\u6bb5_p0_1_p0_2_p0_6_p0_\u5f85\u5b9e\u73b0"
     },
     {
       "label": "4. \u901a\u7528\u5bf9\u8c61",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L133",
-      "id": "docs_agent_interface_spec_4_\u901a\u7528\u5bf9\u8c61",
       "community": 50,
-      "norm_label": "4. \u901a\u7528\u5bf9\u8c61"
+      "norm_label": "4. \u901a\u7528\u5bf9\u8c61",
+      "id": "docs_agent_interface_spec_4_\u901a\u7528\u5bf9\u8c61"
     },
     {
       "label": "4.1 AgentEvent \u2705",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L135",
-      "id": "docs_agent_interface_spec_4_1_agentevent",
       "community": 50,
-      "norm_label": "4.1 agentevent \u2705"
+      "norm_label": "4.1 agentevent \u2705",
+      "id": "docs_agent_interface_spec_4_1_agentevent"
     },
     {
       "label": "code:json ({)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L139",
-      "id": "docs_agent_interface_spec_codeblock_3",
       "community": 50,
-      "norm_label": "code:json ({)"
+      "norm_label": "code:json ({)",
+      "id": "docs_agent_interface_spec_codeblock_3"
     },
     {
       "label": "4.2 MarkdownArtifact \u2705",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L155",
-      "id": "docs_agent_interface_spec_4_2_markdownartifact",
       "community": 50,
-      "norm_label": "4.2 markdownartifact \u2705"
+      "norm_label": "4.2 markdownartifact \u2705",
+      "id": "docs_agent_interface_spec_4_2_markdownartifact"
     },
     {
       "label": "code:json ({)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L159",
-      "id": "docs_agent_interface_spec_codeblock_4",
       "community": 50,
-      "norm_label": "code:json ({)"
+      "norm_label": "code:json ({)",
+      "id": "docs_agent_interface_spec_codeblock_4"
     },
     {
       "label": "5. Markdown \u4ea7\u7269\u76ee\u5f55\u89c4\u8303 \u2705",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L176",
-      "id": "docs_agent_interface_spec_5_markdown_\u4ea7\u7269\u76ee\u5f55\u89c4\u8303",
       "community": 50,
-      "norm_label": "5. markdown \u4ea7\u7269\u76ee\u5f55\u89c4\u8303 \u2705"
+      "norm_label": "5. markdown \u4ea7\u7269\u76ee\u5f55\u89c4\u8303 \u2705",
+      "id": "docs_agent_interface_spec_5_markdown_\u4ea7\u7269\u76ee\u5f55\u89c4\u8303"
     },
     {
       "label": "code:text (artifacts/)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L180",
-      "id": "docs_agent_interface_spec_codeblock_5",
       "community": 50,
-      "norm_label": "code:text (artifacts/)"
+      "norm_label": "code:text (artifacts/)",
+      "id": "docs_agent_interface_spec_codeblock_5"
     },
     {
       "label": "6. Agent \u8f93\u51fa\u5408\u540c",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L215",
-      "id": "docs_agent_interface_spec_6_agent_\u8f93\u51fa\u5408\u540c",
       "community": 51,
-      "norm_label": "6. agent \u8f93\u51fa\u5408\u540c"
+      "norm_label": "6. agent \u8f93\u51fa\u5408\u540c",
+      "id": "docs_agent_interface_spec_6_agent_\u8f93\u51fa\u5408\u540c"
     },
     {
       "label": "6.1 \u5b66\u60c5\u8bca\u65ad Agent\uff1aLearnerProfile",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L217",
-      "id": "docs_agent_interface_spec_6_1_\u5b66\u60c5\u8bca\u65ad_agent_learnerprofile",
       "community": 51,
-      "norm_label": "6.1 \u5b66\u60c5\u8bca\u65ad agent:learnerprofile"
+      "norm_label": "6.1 \u5b66\u60c5\u8bca\u65ad agent:learnerprofile",
+      "id": "docs_agent_interface_spec_6_1_\u5b66\u60c5\u8bca\u65ad_agent_learnerprofile"
     },
     {
       "label": "code:json ({)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L224",
-      "id": "docs_agent_interface_spec_codeblock_6",
       "community": 51,
-      "norm_label": "code:json ({)"
+      "norm_label": "code:json ({)",
+      "id": "docs_agent_interface_spec_codeblock_6"
     },
     {
       "label": "code:json ({)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L240",
-      "id": "docs_agent_interface_spec_codeblock_7",
       "community": 51,
-      "norm_label": "code:json ({)"
+      "norm_label": "code:json ({)",
+      "id": "docs_agent_interface_spec_codeblock_7"
     },
     {
       "label": "6.2 \u8def\u5f84\u89c4\u5212 Agent\uff1aLearningPathItem[]",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L306",
-      "id": "docs_agent_interface_spec_6_2_\u8def\u5f84\u89c4\u5212_agent_learningpathitem",
       "community": 51,
-      "norm_label": "6.2 \u8def\u5f84\u89c4\u5212 agent:learningpathitem[]"
+      "norm_label": "6.2 \u8def\u5f84\u89c4\u5212 agent:learningpathitem[]",
+      "id": "docs_agent_interface_spec_6_2_\u8def\u5f84\u89c4\u5212_agent_learningpathitem"
     },
     {
       "label": "code:json ({)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L313",
-      "id": "docs_agent_interface_spec_codeblock_8",
       "community": 51,
-      "norm_label": "code:json ({)"
+      "norm_label": "code:json ({)",
+      "id": "docs_agent_interface_spec_codeblock_8"
     },
     {
       "label": "code:json ({)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L333",
-      "id": "docs_agent_interface_spec_codeblock_9",
       "community": 51,
-      "norm_label": "code:json ({)"
+      "norm_label": "code:json ({)",
+      "id": "docs_agent_interface_spec_codeblock_9"
     },
     {
       "label": "code:json ({)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L350",
-      "id": "docs_agent_interface_spec_codeblock_10",
       "community": 51,
-      "norm_label": "code:json ({)"
+      "norm_label": "code:json ({)",
+      "id": "docs_agent_interface_spec_codeblock_10"
     },
     {
       "label": "code:block11 (f(n) = g(n) + h(n))",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L419",
-      "id": "docs_agent_interface_spec_codeblock_11",
       "community": 51,
-      "norm_label": "code:block11 (f(n) = g(n) + h(n))"
+      "norm_label": "code:block11 (f(n) = g(n) + h(n))",
+      "id": "docs_agent_interface_spec_codeblock_11"
     },
     {
       "label": "6.3 RAG \u68c0\u7d22\u670d\u52a1\uff1aRetrievalChunk[]",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L432",
-      "id": "docs_agent_interface_spec_6_3_rag_\u68c0\u7d22\u670d\u52a1_retrievalchunk",
       "community": 51,
-      "norm_label": "6.3 rag \u68c0\u7d22\u670d\u52a1:retrievalchunk[]"
+      "norm_label": "6.3 rag \u68c0\u7d22\u670d\u52a1:retrievalchunk[]",
+      "id": "docs_agent_interface_spec_6_3_rag_\u68c0\u7d22\u670d\u52a1_retrievalchunk"
     },
     {
       "label": "code:json ({)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L437",
-      "id": "docs_agent_interface_spec_codeblock_12",
       "community": 51,
-      "norm_label": "code:json ({)"
+      "norm_label": "code:json ({)",
+      "id": "docs_agent_interface_spec_codeblock_12"
     },
     {
       "label": "6.4 \u9886\u57df\u4e13\u5bb6 Agent\uff1aExpertDraft + \u4ea4\u53c9\u5ba1\u67e5 + \u4fee\u8ba2 + \u8054\u5408\u5408\u6210",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L466",
-      "id": "docs_agent_interface_spec_6_4_\u9886\u57df\u4e13\u5bb6_agent_expertdraft_\u4ea4\u53c9\u5ba1\u67e5_\u4fee\u8ba2_\u8054\u5408\u5408\u6210",
       "community": 51,
-      "norm_label": "6.4 \u9886\u57df\u4e13\u5bb6 agent:expertdraft + \u4ea4\u53c9\u5ba1\u67e5 + \u4fee\u8ba2 + \u8054\u5408\u5408\u6210"
+      "norm_label": "6.4 \u9886\u57df\u4e13\u5bb6 agent:expertdraft + \u4ea4\u53c9\u5ba1\u67e5 + \u4fee\u8ba2 + \u8054\u5408\u5408\u6210",
+      "id": "docs_agent_interface_spec_6_4_\u9886\u57df\u4e13\u5bb6_agent_expertdraft_\u4ea4\u53c9\u5ba1\u67e5_\u4fee\u8ba2_\u8054\u5408\u5408\u6210"
     },
     {
       "label": "6.4.1 \u9636\u6bb5\u4e00\uff1a\u72ec\u7acb\u751f\u6210 ExpertDraft \u2705",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L468",
-      "id": "docs_agent_interface_spec_6_4_1_\u9636\u6bb5\u4e00_\u72ec\u7acb\u751f\u6210_expertdraft",
       "community": 51,
-      "norm_label": "6.4.1 \u9636\u6bb5\u4e00:\u72ec\u7acb\u751f\u6210 expertdraft \u2705"
+      "norm_label": "6.4.1 \u9636\u6bb5\u4e00:\u72ec\u7acb\u751f\u6210 expertdraft \u2705",
+      "id": "docs_agent_interface_spec_6_4_1_\u9636\u6bb5\u4e00_\u72ec\u7acb\u751f\u6210_expertdraft"
     },
     {
       "label": "code:json ({)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L476",
-      "id": "docs_agent_interface_spec_codeblock_13",
       "community": 51,
-      "norm_label": "code:json ({)"
+      "norm_label": "code:json ({)",
+      "id": "docs_agent_interface_spec_codeblock_13"
     },
     {
       "label": "6.4.2 \u9636\u6bb5\u4e8c\uff1a\u4ea4\u53c9\u5ba1\u67e5 CrossReview \u2705",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L494",
-      "id": "docs_agent_interface_spec_6_4_2_\u9636\u6bb5\u4e8c_\u4ea4\u53c9\u5ba1\u67e5_crossreview",
       "community": 51,
-      "norm_label": "6.4.2 \u9636\u6bb5\u4e8c:\u4ea4\u53c9\u5ba1\u67e5 crossreview \u2705"
+      "norm_label": "6.4.2 \u9636\u6bb5\u4e8c:\u4ea4\u53c9\u5ba1\u67e5 crossreview \u2705",
+      "id": "docs_agent_interface_spec_6_4_2_\u9636\u6bb5\u4e8c_\u4ea4\u53c9\u5ba1\u67e5_crossreview"
     },
     {
       "label": "code:json ({)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L518",
-      "id": "docs_agent_interface_spec_codeblock_14",
       "community": 51,
-      "norm_label": "code:json ({)"
+      "norm_label": "code:json ({)",
+      "id": "docs_agent_interface_spec_codeblock_14"
     },
     {
       "label": "6.4.3 \u9636\u6bb5\u4e09\uff1a\u6536\u5230\u5ba1\u67e5\u540e\u4fee\u8ba2 RevisionRecord \u2705",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L543",
-      "id": "docs_agent_interface_spec_6_4_3_\u9636\u6bb5\u4e09_\u6536\u5230\u5ba1\u67e5\u540e\u4fee\u8ba2_revisionrecord",
       "community": 51,
-      "norm_label": "6.4.3 \u9636\u6bb5\u4e09:\u6536\u5230\u5ba1\u67e5\u540e\u4fee\u8ba2 revisionrecord \u2705"
+      "norm_label": "6.4.3 \u9636\u6bb5\u4e09:\u6536\u5230\u5ba1\u67e5\u540e\u4fee\u8ba2 revisionrecord \u2705",
+      "id": "docs_agent_interface_spec_6_4_3_\u9636\u6bb5\u4e09_\u6536\u5230\u5ba1\u67e5\u540e\u4fee\u8ba2_revisionrecord"
     },
     {
       "label": "code:json ({)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L547",
-      "id": "docs_agent_interface_spec_codeblock_15",
       "community": 51,
-      "norm_label": "code:json ({)"
+      "norm_label": "code:json ({)",
+      "id": "docs_agent_interface_spec_codeblock_15"
     },
     {
       "label": "6.4.4 \u9636\u6bb5\u56db\uff1a\u8054\u5408\u5408\u6210 JointSynthesis \u2705",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L585",
-      "id": "docs_agent_interface_spec_6_4_4_\u9636\u6bb5\u56db_\u8054\u5408\u5408\u6210_jointsynthesis",
       "community": 51,
-      "norm_label": "6.4.4 \u9636\u6bb5\u56db:\u8054\u5408\u5408\u6210 jointsynthesis \u2705"
+      "norm_label": "6.4.4 \u9636\u6bb5\u56db:\u8054\u5408\u5408\u6210 jointsynthesis \u2705",
+      "id": "docs_agent_interface_spec_6_4_4_\u9636\u6bb5\u56db_\u8054\u5408\u5408\u6210_jointsynthesis"
     },
     {
       "label": "code:json ({)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L589",
-      "id": "docs_agent_interface_spec_codeblock_16",
       "community": 51,
-      "norm_label": "code:json ({)"
+      "norm_label": "code:json ({)",
+      "id": "docs_agent_interface_spec_codeblock_16"
     },
     {
       "label": "6.5 \u5ba1\u6838\u88c1\u5224 Agent\uff1aJudgeReport",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L637",
-      "id": "docs_agent_interface_spec_6_5_\u5ba1\u6838\u88c1\u5224_agent_judgereport",
       "community": 51,
-      "norm_label": "6.5 \u5ba1\u6838\u88c1\u5224 agent:judgereport"
+      "norm_label": "6.5 \u5ba1\u6838\u88c1\u5224 agent:judgereport",
+      "id": "docs_agent_interface_spec_6_5_\u5ba1\u6838\u88c1\u5224_agent_judgereport"
     },
     {
       "label": "code:json ({)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L644",
-      "id": "docs_agent_interface_spec_codeblock_17",
       "community": 51,
-      "norm_label": "code:json ({)"
+      "norm_label": "code:json ({)",
+      "id": "docs_agent_interface_spec_codeblock_17"
     },
     {
       "label": "code:block18 (\u7ef4\u5ea6\u4e00\uff1a\ud83d\udd34 \u4e8b\u5b9e\u51c6\u786e\u6027)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L693",
-      "id": "docs_agent_interface_spec_codeblock_18",
       "community": 51,
-      "norm_label": "code:block18 (\u7ef4\u5ea6\u4e00:\ud83d\udd34 \u4e8b\u5b9e\u51c6\u786e\u6027)"
+      "norm_label": "code:block18 (\u7ef4\u5ea6\u4e00:\ud83d\udd34 \u4e8b\u5b9e\u51c6\u786e\u6027)",
+      "id": "docs_agent_interface_spec_codeblock_18"
     },
     {
       "label": "code:block19 (\u274c \u5ba1\u6838\u4e0d\u901a\u8fc7 \u2014 \u7b2c{N}\u8f6e)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L719",
-      "id": "docs_agent_interface_spec_codeblock_19",
       "community": 51,
-      "norm_label": "code:block19 (\u274c \u5ba1\u6838\u4e0d\u901a\u8fc7 \u2014 \u7b2c{n}\u8f6e)"
+      "norm_label": "code:block19 (\u274c \u5ba1\u6838\u4e0d\u901a\u8fc7 \u2014 \u7b2c{n}\u8f6e)",
+      "id": "docs_agent_interface_spec_codeblock_19"
     },
     {
       "label": "6.6 \u53cd\u9988\u5206\u6790 Agent\uff1aFeedbackResult",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L744",
-      "id": "docs_agent_interface_spec_6_6_\u53cd\u9988\u5206\u6790_agent_feedbackresult",
       "community": 51,
-      "norm_label": "6.6 \u53cd\u9988\u5206\u6790 agent:feedbackresult"
+      "norm_label": "6.6 \u53cd\u9988\u5206\u6790 agent:feedbackresult",
+      "id": "docs_agent_interface_spec_6_6_\u53cd\u9988\u5206\u6790_agent_feedbackresult"
     },
     {
       "label": "code:json ({)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L751",
-      "id": "docs_agent_interface_spec_codeblock_20",
       "community": 51,
-      "norm_label": "code:json ({)"
+      "norm_label": "code:json ({)",
+      "id": "docs_agent_interface_spec_codeblock_20"
     },
     {
       "label": "code:json ({)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L772",
-      "id": "docs_agent_interface_spec_codeblock_21",
       "community": 51,
-      "norm_label": "code:json ({)"
+      "norm_label": "code:json ({)",
+      "id": "docs_agent_interface_spec_codeblock_21"
     },
     {
       "label": "6.7 BKT \u8d1d\u53f6\u65af\u77e5\u8bc6\u8ffd\u8e2a [P0.4 \u5f85\u5b9e\u73b0]",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L792",
-      "id": "docs_agent_interface_spec_6_7_bkt_\u8d1d\u53f6\u65af\u77e5\u8bc6\u8ffd\u8e2a_p0_4_\u5f85\u5b9e\u73b0",
       "community": 51,
-      "norm_label": "6.7 bkt \u8d1d\u53f6\u65af\u77e5\u8bc6\u8ffd\u8e2a [p0.4 \u5f85\u5b9e\u73b0]"
+      "norm_label": "6.7 bkt \u8d1d\u53f6\u65af\u77e5\u8bc6\u8ffd\u8e2a [p0.4 \u5f85\u5b9e\u73b0]",
+      "id": "docs_agent_interface_spec_6_7_bkt_\u8d1d\u53f6\u65af\u77e5\u8bc6\u8ffd\u8e2a_p0_4_\u5f85\u5b9e\u73b0"
     },
     {
       "label": "code:json ({)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L796",
-      "id": "docs_agent_interface_spec_codeblock_22",
       "community": 51,
-      "norm_label": "code:json ({)"
+      "norm_label": "code:json ({)",
+      "id": "docs_agent_interface_spec_codeblock_22"
     },
     {
       "label": "code:block23 (\u89c2\u5bdf\u5230\u6b63\u786e\u56de\u7b54\uff1a)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L811",
-      "id": "docs_agent_interface_spec_codeblock_23",
       "community": 51,
-      "norm_label": "code:block23 (\u89c2\u5bdf\u5230\u6b63\u786e\u56de\u7b54:)"
+      "norm_label": "code:block23 (\u89c2\u5bdf\u5230\u6b63\u786e\u56de\u7b54:)",
+      "id": "docs_agent_interface_spec_codeblock_23"
     },
     {
       "label": "6.8 \u6c47\u603b\u8282\u70b9\uff1aFinalAnswer \u2705",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L826",
-      "id": "docs_agent_interface_spec_6_8_\u6c47\u603b\u8282\u70b9_finalanswer",
       "community": 51,
-      "norm_label": "6.8 \u6c47\u603b\u8282\u70b9:finalanswer \u2705"
+      "norm_label": "6.8 \u6c47\u603b\u8282\u70b9:finalanswer \u2705",
+      "id": "docs_agent_interface_spec_6_8_\u6c47\u603b\u8282\u70b9_finalanswer"
     },
     {
       "label": "code:json ({)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L832",
-      "id": "docs_agent_interface_spec_codeblock_24",
       "community": 51,
-      "norm_label": "code:json ({)"
+      "norm_label": "code:json ({)",
+      "id": "docs_agent_interface_spec_codeblock_24"
     },
     {
       "label": "6.9 \u610f\u56fe\u8def\u7531 Agent\uff1aIntentResult \u2705",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L849",
-      "id": "docs_agent_interface_spec_6_9_\u610f\u56fe\u8def\u7531_agent_intentresult",
       "community": 51,
-      "norm_label": "6.9 \u610f\u56fe\u8def\u7531 agent:intentresult \u2705"
+      "norm_label": "6.9 \u610f\u56fe\u8def\u7531 agent:intentresult \u2705",
+      "id": "docs_agent_interface_spec_6_9_\u610f\u56fe\u8def\u7531_agent_intentresult"
     },
     {
       "label": "code:json ({)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L854",
-      "id": "docs_agent_interface_spec_codeblock_25",
       "community": 51,
-      "norm_label": "code:json ({)"
+      "norm_label": "code:json ({)",
+      "id": "docs_agent_interface_spec_codeblock_25"
     },
     {
       "label": "6.10 \u5feb\u901f\u56de\u7b54 Agent\uff1aChatAnswer \u2705",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L864",
-      "id": "docs_agent_interface_spec_6_10_\u5feb\u901f\u56de\u7b54_agent_chatanswer",
       "community": 51,
-      "norm_label": "6.10 \u5feb\u901f\u56de\u7b54 agent:chatanswer \u2705"
+      "norm_label": "6.10 \u5feb\u901f\u56de\u7b54 agent:chatanswer \u2705",
+      "id": "docs_agent_interface_spec_6_10_\u5feb\u901f\u56de\u7b54_agent_chatanswer"
     },
     {
       "label": "code:json ({)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L869",
-      "id": "docs_agent_interface_spec_codeblock_26",
       "community": 51,
-      "norm_label": "code:json ({)"
+      "norm_label": "code:json ({)",
+      "id": "docs_agent_interface_spec_codeblock_26"
     },
     {
       "label": "7. \u8def\u7531\u89c4\u8303",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L877",
-      "id": "docs_agent_interface_spec_7_\u8def\u7531\u89c4\u8303",
       "community": 50,
-      "norm_label": "7. \u8def\u7531\u89c4\u8303"
+      "norm_label": "7. \u8def\u7531\u89c4\u8303",
+      "id": "docs_agent_interface_spec_7_\u8def\u7531\u89c4\u8303"
     },
     {
       "label": "7.1 \u610f\u56fe\u8def\u7531 \u2705",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L879",
-      "id": "docs_agent_interface_spec_7_1_\u610f\u56fe\u8def\u7531",
       "community": 50,
-      "norm_label": "7.1 \u610f\u56fe\u8def\u7531 \u2705"
+      "norm_label": "7.1 \u610f\u56fe\u8def\u7531 \u2705",
+      "id": "docs_agent_interface_spec_7_1_\u610f\u56fe\u8def\u7531"
     },
     {
       "label": "code:text (route \u2192 diagnosis     when intent=teach or intent=diagnose)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L881",
-      "id": "docs_agent_interface_spec_codeblock_27",
       "community": 50,
-      "norm_label": "code:text (route \u2192 diagnosis     when intent=teach or intent=diagnose)"
+      "norm_label": "code:text (route \u2192 diagnosis     when intent=teach or intent=diagnose)",
+      "id": "docs_agent_interface_spec_codeblock_27"
     },
     {
       "label": "7.2 \u8bca\u65ad\u540e\u8def\u7531 \u2705",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L886",
-      "id": "docs_agent_interface_spec_7_2_\u8bca\u65ad\u540e\u8def\u7531",
       "community": 50,
-      "norm_label": "7.2 \u8bca\u65ad\u540e\u8def\u7531 \u2705"
+      "norm_label": "7.2 \u8bca\u65ad\u540e\u8def\u7531 \u2705",
+      "id": "docs_agent_interface_spec_7_2_\u8bca\u65ad\u540e\u8def\u7531"
     },
     {
       "label": "code:text (diagnosis \u2192 planner   when intent=teach)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L888",
-      "id": "docs_agent_interface_spec_codeblock_28",
       "community": 50,
-      "norm_label": "code:text (diagnosis \u2192 planner   when intent=teach)"
+      "norm_label": "code:text (diagnosis \u2192 planner   when intent=teach)",
+      "id": "docs_agent_interface_spec_codeblock_28"
     },
     {
       "label": "7.3 \u5de5\u5177\u8c03\u7528\u540e\u8def\u7531 \u2705",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L893",
-      "id": "docs_agent_interface_spec_7_3_\u5de5\u5177\u8c03\u7528\u540e\u8def\u7531",
       "community": 50,
-      "norm_label": "7.3 \u5de5\u5177\u8c03\u7528\u540e\u8def\u7531 \u2705"
+      "norm_label": "7.3 \u5de5\u5177\u8c03\u7528\u540e\u8def\u7531 \u2705",
+      "id": "docs_agent_interface_spec_7_3_\u5de5\u5177\u8c03\u7528\u540e\u8def\u7531"
     },
     {
       "label": "code:text (tool_agent \u2192 fan_out_experts   when intent=teach)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L895",
-      "id": "docs_agent_interface_spec_codeblock_29",
       "community": 50,
-      "norm_label": "code:text (tool_agent \u2192 fan_out_experts   when intent=teach)"
+      "norm_label": "code:text (tool_agent \u2192 fan_out_experts   when intent=teach)",
+      "id": "docs_agent_interface_spec_codeblock_29"
     },
     {
       "label": "7.4 \u8fa9\u8bba\u95ed\u73af\u8def\u7531\uff08\u5f53\u524d\uff09 \u2705",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L900",
-      "id": "docs_agent_interface_spec_7_4_\u8fa9\u8bba\u95ed\u73af\u8def\u7531_\u5f53\u524d",
       "community": 50,
-      "norm_label": "7.4 \u8fa9\u8bba\u95ed\u73af\u8def\u7531(\u5f53\u524d) \u2705"
+      "norm_label": "7.4 \u8fa9\u8bba\u95ed\u73af\u8def\u7531(\u5f53\u524d) \u2705",
+      "id": "docs_agent_interface_spec_7_4_\u8fa9\u8bba\u95ed\u73af\u8def\u7531_\u5f53\u524d"
     },
     {
       "label": "code:text (judge -> feedback                    when decision in accept)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L902",
-      "id": "docs_agent_interface_spec_codeblock_30",
       "community": 50,
-      "norm_label": "code:text (judge -> feedback                    when decision in accept)"
+      "norm_label": "code:text (judge -> feedback                    when decision in accept)",
+      "id": "docs_agent_interface_spec_codeblock_30"
     },
     {
       "label": "7.5 \u8fa9\u8bba\u95ed\u73af\u8def\u7531\uff08P0.1 \u540e\uff09 \u2705 \u5f53\u524d\u5b9e\u73b0",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L919",
-      "id": "docs_agent_interface_spec_7_5_\u8fa9\u8bba\u95ed\u73af\u8def\u7531_p0_1_\u540e_\u5f53\u524d\u5b9e\u73b0",
       "community": 50,
-      "norm_label": "7.5 \u8fa9\u8bba\u95ed\u73af\u8def\u7531(p0.1 \u540e) \u2705 \u5f53\u524d\u5b9e\u73b0"
+      "norm_label": "7.5 \u8fa9\u8bba\u95ed\u73af\u8def\u7531(p0.1 \u540e) \u2705 \u5f53\u524d\u5b9e\u73b0",
+      "id": "docs_agent_interface_spec_7_5_\u8fa9\u8bba\u95ed\u73af\u8def\u7531_p0_1_\u540e_\u5f53\u524d\u5b9e\u73b0"
     },
     {
       "label": "code:text (# \u9636\u6bb5\u4e00\u2192\u4e8c\uff1a\u72ec\u7acb\u751f\u6210\u540e\u8fdb\u5165\u4ea4\u53c9\u5ba1\u67e5)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L921",
-      "id": "docs_agent_interface_spec_codeblock_31",
       "community": 50,
-      "norm_label": "code:text (# \u9636\u6bb5\u4e00\u2192\u4e8c:\u72ec\u7acb\u751f\u6210\u540e\u8fdb\u5165\u4ea4\u53c9\u5ba1\u67e5)"
+      "norm_label": "code:text (# \u9636\u6bb5\u4e00\u2192\u4e8c:\u72ec\u7acb\u751f\u6210\u540e\u8fdb\u5165\u4ea4\u53c9\u5ba1\u67e5)",
+      "id": "docs_agent_interface_spec_codeblock_31"
     },
     {
       "label": "7.6 \u52a8\u6001\u91cd\u89c4\u5212\u8def\u7531 [P0.6 \u5f85\u5b9e\u73b0]",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L950",
-      "id": "docs_agent_interface_spec_7_6_\u52a8\u6001\u91cd\u89c4\u5212\u8def\u7531_p0_6_\u5f85\u5b9e\u73b0",
       "community": 50,
-      "norm_label": "7.6 \u52a8\u6001\u91cd\u89c4\u5212\u8def\u7531 [p0.6 \u5f85\u5b9e\u73b0]"
+      "norm_label": "7.6 \u52a8\u6001\u91cd\u89c4\u5212\u8def\u7531 [p0.6 \u5f85\u5b9e\u73b0]",
+      "id": "docs_agent_interface_spec_7_6_\u52a8\u6001\u91cd\u89c4\u5212\u8def\u7531_p0_6_\u5f85\u5b9e\u73b0"
     },
     {
       "label": "code:text (feedback -> pathfinder (replan)    when recommend_reroute=tr)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L952",
-      "id": "docs_agent_interface_spec_codeblock_32",
       "community": 50,
-      "norm_label": "code:text (feedback -> pathfinder (replan)    when recommend_reroute=tr)"
+      "norm_label": "code:text (feedback -> pathfinder (replan)    when recommend_reroute=tr)",
+      "id": "docs_agent_interface_spec_codeblock_32"
     },
     {
       "label": "8. \u6821\u9a8c\u4e0e\u6d4b\u8bd5\u8981\u6c42",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L958",
-      "id": "docs_agent_interface_spec_8_\u6821\u9a8c\u4e0e\u6d4b\u8bd5\u8981\u6c42",
       "community": 50,
-      "norm_label": "8. \u6821\u9a8c\u4e0e\u6d4b\u8bd5\u8981\u6c42"
+      "norm_label": "8. \u6821\u9a8c\u4e0e\u6d4b\u8bd5\u8981\u6c42",
+      "id": "docs_agent_interface_spec_8_\u6821\u9a8c\u4e0e\u6d4b\u8bd5\u8981\u6c42"
     },
     {
       "label": "9. \u9519\u8bef\u4e0e\u964d\u7ea7",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L967",
-      "id": "docs_agent_interface_spec_9_\u9519\u8bef\u4e0e\u964d\u7ea7",
       "community": 50,
-      "norm_label": "9. \u9519\u8bef\u4e0e\u964d\u7ea7"
+      "norm_label": "9. \u9519\u8bef\u4e0e\u964d\u7ea7",
+      "id": "docs_agent_interface_spec_9_\u9519\u8bef\u4e0e\u964d\u7ea7"
     },
     {
       "label": "code:json ({)",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L971",
-      "id": "docs_agent_interface_spec_codeblock_33",
       "community": 50,
-      "norm_label": "code:json ({)"
+      "norm_label": "code:json ({)",
+      "id": "docs_agent_interface_spec_codeblock_33"
     },
     {
       "label": "10. \u53d8\u66f4\u89c4\u5219",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L991",
-      "id": "docs_agent_interface_spec_10_\u53d8\u66f4\u89c4\u5219",
       "community": 50,
-      "norm_label": "10. \u53d8\u66f4\u89c4\u5219"
+      "norm_label": "10. \u53d8\u66f4\u89c4\u5219",
+      "id": "docs_agent_interface_spec_10_\u53d8\u66f4\u89c4\u5219"
     },
     {
       "label": "\u9644\u5f55 A\uff1a\u5f53\u524d\u5b9e\u73b0 vs P0 \u76ee\u6807\u5bf9\u7167\u8868",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L999",
-      "id": "docs_agent_interface_spec_\u9644\u5f55_a_\u5f53\u524d\u5b9e\u73b0_vs_p0_\u76ee\u6807\u5bf9\u7167\u8868",
       "community": 50,
-      "norm_label": "\u9644\u5f55 a:\u5f53\u524d\u5b9e\u73b0 vs p0 \u76ee\u6807\u5bf9\u7167\u8868"
+      "norm_label": "\u9644\u5f55 a:\u5f53\u524d\u5b9e\u73b0 vs p0 \u76ee\u6807\u5bf9\u7167\u8868",
+      "id": "docs_agent_interface_spec_\u9644\u5f55_a_\u5f53\u524d\u5b9e\u73b0_vs_p0_\u76ee\u6807\u5bf9\u7167\u8868"
     },
     {
       "label": "\u9644\u5f55 B\uff1aAgent \u7cfb\u7edf\u63d0\u793a\u8bcd\u6587\u4ef6\u7d22\u5f15",
       "file_type": "document",
       "source_file": "agent-interface-spec.md",
       "source_location": "L1017",
-      "id": "docs_agent_interface_spec_\u9644\u5f55_b_agent_\u7cfb\u7edf\u63d0\u793a\u8bcd\u6587\u4ef6\u7d22\u5f15",
       "community": 50,
-      "norm_label": "\u9644\u5f55 b:agent \u7cfb\u7edf\u63d0\u793a\u8bcd\u6587\u4ef6\u7d22\u5f15"
+      "norm_label": "\u9644\u5f55 b:agent \u7cfb\u7edf\u63d0\u793a\u8bcd\u6587\u4ef6\u7d22\u5f15",
+      "id": "docs_agent_interface_spec_\u9644\u5f55_b_agent_\u7cfb\u7edf\u63d0\u793a\u8bcd\u6587\u4ef6\u7d22\u5f15"
     },
     {
       "label": "implementation-plan.md",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L1",
-      "id": "implementation_plan_md",
       "community": 9,
-      "norm_label": "implementation-plan.md"
+      "norm_label": "implementation-plan.md",
+      "id": "implementation_plan_md"
     },
     {
       "label": "\u9879\u76ee\u5b9e\u65bd\u8ba1\u5212",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L1",
-      "id": "docs_implementation_plan_\u9879\u76ee\u5b9e\u65bd\u8ba1\u5212",
       "community": 9,
-      "norm_label": "\u9879\u76ee\u5b9e\u65bd\u8ba1\u5212"
+      "norm_label": "\u9879\u76ee\u5b9e\u65bd\u8ba1\u5212",
+      "id": "docs_implementation_plan_\u9879\u76ee\u5b9e\u65bd\u8ba1\u5212"
     },
     {
       "label": "\u5f53\u524d\u72b6\u6001\u603b\u89c8",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L3",
-      "id": "docs_implementation_plan_\u5f53\u524d\u72b6\u6001\u603b\u89c8",
       "community": 9,
-      "norm_label": "\u5f53\u524d\u72b6\u6001\u603b\u89c8"
+      "norm_label": "\u5f53\u524d\u72b6\u6001\u603b\u89c8",
+      "id": "docs_implementation_plan_\u5f53\u524d\u72b6\u6001\u603b\u89c8"
     },
     {
       "label": "P0 \u2014 \u5de5\u4f5c\u6d41\u5b8c\u5584\uff08\u5bf9\u6807 agents_analysis \u5b8c\u6574\u8bbe\u8ba1\uff09",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L25",
-      "id": "docs_implementation_plan_p0_\u5de5\u4f5c\u6d41\u5b8c\u5584_\u5bf9\u6807_agents_analysis_\u5b8c\u6574\u8bbe\u8ba1",
       "community": 13,
-      "norm_label": "p0 \u2014 \u5de5\u4f5c\u6d41\u5b8c\u5584(\u5bf9\u6807 agents_analysis \u5b8c\u6574\u8bbe\u8ba1)"
+      "norm_label": "p0 \u2014 \u5de5\u4f5c\u6d41\u5b8c\u5584(\u5bf9\u6807 agents_analysis \u5b8c\u6574\u8bbe\u8ba1)",
+      "id": "docs_implementation_plan_p0_\u5de5\u4f5c\u6d41\u5b8c\u5584_\u5bf9\u6807_agents_analysis_\u5b8c\u6574\u8bbe\u8ba1"
     },
     {
       "label": "code:block1 (\u5f53\u524d MVP                              \u76ee\u6807\uff08agents_analysis\uff09)",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L31",
-      "id": "docs_implementation_plan_codeblock_1",
       "community": 13,
-      "norm_label": "code:block1 (\u5f53\u524d mvp                              \u76ee\u6807(agents_analysis))"
+      "norm_label": "code:block1 (\u5f53\u524d mvp                              \u76ee\u6807(agents_analysis))",
+      "id": "docs_implementation_plan_codeblock_1"
     },
     {
       "label": "P0.1 \u2014 \u4e13\u5bb6\u534f\u4f5c\u94fe\uff1a\u4ea4\u53c9\u5ba1\u67e5 \u2192 \u4fee\u8ba2 \u2192 \u8054\u5408\u5408\u6210 \u2192 \u8f7b\u91cf\u4e92\u5ba1",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L45",
-      "id": "docs_implementation_plan_p0_1_\u4e13\u5bb6\u534f\u4f5c\u94fe_\u4ea4\u53c9\u5ba1\u67e5_\u4fee\u8ba2_\u8054\u5408\u5408\u6210_\u8f7b\u91cf\u4e92\u5ba1",
       "community": 13,
-      "norm_label": "p0.1 \u2014 \u4e13\u5bb6\u534f\u4f5c\u94fe:\u4ea4\u53c9\u5ba1\u67e5 \u2192 \u4fee\u8ba2 \u2192 \u8054\u5408\u5408\u6210 \u2192 \u8f7b\u91cf\u4e92\u5ba1"
+      "norm_label": "p0.1 \u2014 \u4e13\u5bb6\u534f\u4f5c\u94fe:\u4ea4\u53c9\u5ba1\u67e5 \u2192 \u4fee\u8ba2 \u2192 \u8054\u5408\u5408\u6210 \u2192 \u8f7b\u91cf\u4e92\u5ba1",
+      "id": "docs_implementation_plan_p0_1_\u4e13\u5bb6\u534f\u4f5c\u94fe_\u4ea4\u53c9\u5ba1\u67e5_\u4fee\u8ba2_\u8054\u5408\u5408\u6210_\u8f7b\u91cf\u4e92\u5ba1"
     },
     {
       "label": "code:block2 (\u9636\u6bb5\u4e00\uff1a\u5e76\u884c\u72ec\u7acb\u751f\u6210\uff08\u5f53\u524d\u5df2\u5b9e\u73b0\uff09)",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L49",
-      "id": "docs_implementation_plan_codeblock_2",
       "community": 13,
-      "norm_label": "code:block2 (\u9636\u6bb5\u4e00:\u5e76\u884c\u72ec\u7acb\u751f\u6210(\u5f53\u524d\u5df2\u5b9e\u73b0))"
+      "norm_label": "code:block2 (\u9636\u6bb5\u4e00:\u5e76\u884c\u72ec\u7acb\u751f\u6210(\u5f53\u524d\u5df2\u5b9e\u73b0))",
+      "id": "docs_implementation_plan_codeblock_2"
     },
     {
       "label": "P0.2 \u2014 \u77e5\u8bc6\u56fe\u8c31 + A* \u8def\u5f84\u641c\u7d22\uff08\u66ff\u6362 LLM \u8def\u5f84\u751f\u6210\uff09",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L95",
-      "id": "docs_implementation_plan_p0_2_\u77e5\u8bc6\u56fe\u8c31_a_\u8def\u5f84\u641c\u7d22_\u66ff\u6362_llm_\u8def\u5f84\u751f\u6210",
       "community": 13,
-      "norm_label": "p0.2 \u2014 \u77e5\u8bc6\u56fe\u8c31 + a* \u8def\u5f84\u641c\u7d22(\u66ff\u6362 llm \u8def\u5f84\u751f\u6210)"
+      "norm_label": "p0.2 \u2014 \u77e5\u8bc6\u56fe\u8c31 + a* \u8def\u5f84\u641c\u7d22(\u66ff\u6362 llm \u8def\u5f84\u751f\u6210)",
+      "id": "docs_implementation_plan_p0_2_\u77e5\u8bc6\u56fe\u8c31_a_\u8def\u5f84\u641c\u7d22_\u66ff\u6362_llm_\u8def\u5f84\u751f\u6210"
     },
     {
       "label": "code:block3 (\u77e5\u8bc6\u56fe\u8c31\u8282\u70b9\u7ed3\u6784\uff1a)",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L101",
-      "id": "docs_implementation_plan_codeblock_3",
       "community": 13,
-      "norm_label": "code:block3 (\u77e5\u8bc6\u56fe\u8c31\u8282\u70b9\u7ed3\u6784:)"
+      "norm_label": "code:block3 (\u77e5\u8bc6\u56fe\u8c31\u8282\u70b9\u7ed3\u6784:)",
+      "id": "docs_implementation_plan_codeblock_3"
     },
     {
       "label": "P0.3 \u2014 \u4e94\u7ef4\u5b66\u4e60\u8005\u753b\u50cf",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L141",
-      "id": "docs_implementation_plan_p0_3_\u4e94\u7ef4\u5b66\u4e60\u8005\u753b\u50cf",
       "community": 13,
-      "norm_label": "p0.3 \u2014 \u4e94\u7ef4\u5b66\u4e60\u8005\u753b\u50cf"
+      "norm_label": "p0.3 \u2014 \u4e94\u7ef4\u5b66\u4e60\u8005\u753b\u50cf",
+      "id": "docs_implementation_plan_p0_3_\u4e94\u7ef4\u5b66\u4e60\u8005\u753b\u50cf"
     },
     {
       "label": "code:block4 (\u7ef4\u5ea6 1: knowledge\uff08\u77e5\u8bc6\u638c\u63e1\u5ea6\uff09)",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L147",
-      "id": "docs_implementation_plan_codeblock_4",
       "community": 13,
-      "norm_label": "code:block4 (\u7ef4\u5ea6 1: knowledge(\u77e5\u8bc6\u638c\u63e1\u5ea6))"
+      "norm_label": "code:block4 (\u7ef4\u5ea6 1: knowledge(\u77e5\u8bc6\u638c\u63e1\u5ea6))",
+      "id": "docs_implementation_plan_codeblock_4"
     },
     {
       "label": "P0.4 \u2014 BKT \u8d1d\u53f6\u65af\u77e5\u8bc6\u8ffd\u8e2a",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L179",
-      "id": "docs_implementation_plan_p0_4_bkt_\u8d1d\u53f6\u65af\u77e5\u8bc6\u8ffd\u8e2a",
       "community": 13,
-      "norm_label": "p0.4 \u2014 bkt \u8d1d\u53f6\u65af\u77e5\u8bc6\u8ffd\u8e2a"
+      "norm_label": "p0.4 \u2014 bkt \u8d1d\u53f6\u65af\u77e5\u8bc6\u8ffd\u8e2a",
+      "id": "docs_implementation_plan_p0_4_bkt_\u8d1d\u53f6\u65af\u77e5\u8bc6\u8ffd\u8e2a"
     },
     {
       "label": "code:block5 (\u56db\u4e2a BKT \u53c2\u6570\uff1a)",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L185",
-      "id": "docs_implementation_plan_codeblock_5",
       "community": 13,
-      "norm_label": "code:block5 (\u56db\u4e2a bkt \u53c2\u6570:)"
+      "norm_label": "code:block5 (\u56db\u4e2a bkt \u53c2\u6570:)",
+      "id": "docs_implementation_plan_codeblock_5"
     },
     {
       "label": "P0.5 \u2014 \u5404 Agent \u72ec\u7acb RAG \u68c0\u7d22",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L212",
-      "id": "docs_implementation_plan_p0_5_\u5404_agent_\u72ec\u7acb_rag_\u68c0\u7d22",
       "community": 13,
-      "norm_label": "p0.5 \u2014 \u5404 agent \u72ec\u7acb rag \u68c0\u7d22"
+      "norm_label": "p0.5 \u2014 \u5404 agent \u72ec\u7acb rag \u68c0\u7d22",
+      "id": "docs_implementation_plan_p0_5_\u5404_agent_\u72ec\u7acb_rag_\u68c0\u7d22"
     },
     {
       "label": "code:block6 (diagnosis:  \u68c0\u7d22\u5b66\u4e60\u98ce\u683c\u8bca\u65ad\u9898\u5e93\u3001BKT \u5148\u9a8c\u6570\u636e)",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L218",
-      "id": "docs_implementation_plan_codeblock_6",
       "community": 13,
-      "norm_label": "code:block6 (diagnosis:  \u68c0\u7d22\u5b66\u4e60\u98ce\u683c\u8bca\u65ad\u9898\u5e93\u3001bkt \u5148\u9a8c\u6570\u636e)"
+      "norm_label": "code:block6 (diagnosis:  \u68c0\u7d22\u5b66\u4e60\u98ce\u683c\u8bca\u65ad\u9898\u5e93\u3001bkt \u5148\u9a8c\u6570\u636e)",
+      "id": "docs_implementation_plan_codeblock_6"
     },
     {
       "label": "P0.6 \u2014 \u52a8\u6001\u91cd\u89c4\u5212",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L235",
-      "id": "docs_implementation_plan_p0_6_\u52a8\u6001\u91cd\u89c4\u5212",
       "community": 13,
-      "norm_label": "p0.6 \u2014 \u52a8\u6001\u91cd\u89c4\u5212"
+      "norm_label": "p0.6 \u2014 \u52a8\u6001\u91cd\u89c4\u5212",
+      "id": "docs_implementation_plan_p0_6_\u52a8\u6001\u91cd\u89c4\u5212"
     },
     {
       "label": "code:block7 (feedback \u8f93\u51fa\u53d8\u5316\u5411\u91cf \u0394\uff1a)",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L241",
-      "id": "docs_implementation_plan_codeblock_7",
       "community": 13,
-      "norm_label": "code:block7 (feedback \u8f93\u51fa\u53d8\u5316\u5411\u91cf \u03b4:)"
+      "norm_label": "code:block7 (feedback \u8f93\u51fa\u53d8\u5316\u5411\u91cf \u03b4:)",
+      "id": "docs_implementation_plan_codeblock_7"
     },
     {
       "label": "P0 \u4efb\u52a1\u4f18\u5148\u7ea7",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L264",
-      "id": "docs_implementation_plan_p0_\u4efb\u52a1\u4f18\u5148\u7ea7",
       "community": 13,
-      "norm_label": "p0 \u4efb\u52a1\u4f18\u5148\u7ea7"
+      "norm_label": "p0 \u4efb\u52a1\u4f18\u5148\u7ea7",
+      "id": "docs_implementation_plan_p0_\u4efb\u52a1\u4f18\u5148\u7ea7"
     },
     {
       "label": "code:block8 (\u7b2c\u4e00\u4f18\u5148\uff1a\u2705 P0.1 \u4e13\u5bb6\u534f\u4f5c\u94fe\uff08\u6838\u5fc3\u5dee\u5f02\u5316\u80fd\u529b\uff09\u2014\u2014 \u5df2\u5b8c\u6210)",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L266",
-      "id": "docs_implementation_plan_codeblock_8",
       "community": 13,
-      "norm_label": "code:block8 (\u7b2c\u4e00\u4f18\u5148:\u2705 p0.1 \u4e13\u5bb6\u534f\u4f5c\u94fe(\u6838\u5fc3\u5dee\u5f02\u5316\u80fd\u529b)\u2014\u2014 \u5df2\u5b8c\u6210)"
+      "norm_label": "code:block8 (\u7b2c\u4e00\u4f18\u5148:\u2705 p0.1 \u4e13\u5bb6\u534f\u4f5c\u94fe(\u6838\u5fc3\u5dee\u5f02\u5316\u80fd\u529b)\u2014\u2014 \u5df2\u5b8c\u6210)",
+      "id": "docs_implementation_plan_codeblock_8"
     },
     {
       "label": "P0 \u6d89\u53ca\u7684 StateDict \u6269\u5c55",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L275",
-      "id": "docs_implementation_plan_p0_\u6d89\u53ca\u7684_statedict_\u6269\u5c55",
       "community": 13,
-      "norm_label": "p0 \u6d89\u53ca\u7684 statedict \u6269\u5c55"
+      "norm_label": "p0 \u6d89\u53ca\u7684 statedict \u6269\u5c55",
+      "id": "docs_implementation_plan_p0_\u6d89\u53ca\u7684_statedict_\u6269\u5c55"
     },
     {
       "label": "code:block9 (\u5f53\u524d StateDict \u5b57\u6bb5           P0 \u540e\u65b0\u589e                        \u72b6\u6001)",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L277",
-      "id": "docs_implementation_plan_codeblock_9",
       "community": 13,
-      "norm_label": "code:block9 (\u5f53\u524d statedict \u5b57\u6bb5           p0 \u540e\u65b0\u589e                        \u72b6\u6001)"
+      "norm_label": "code:block9 (\u5f53\u524d statedict \u5b57\u6bb5           p0 \u540e\u65b0\u589e                        \u72b6\u6001)",
+      "id": "docs_implementation_plan_codeblock_9"
     },
     {
       "label": "\u9636\u6bb5\u5212\u5206",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L295",
-      "id": "docs_implementation_plan_\u9636\u6bb5\u5212\u5206",
       "community": 9,
-      "norm_label": "\u9636\u6bb5\u5212\u5206"
+      "norm_label": "\u9636\u6bb5\u5212\u5206",
+      "id": "docs_implementation_plan_\u9636\u6bb5\u5212\u5206"
     },
     {
       "label": "code:block10 (P1 (FastAPI + WebSocket/SSE) \u2500\u2500\u2192 P3 (\u524d\u7aef\u770b\u677f))",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L297",
-      "id": "docs_implementation_plan_codeblock_10",
       "community": 9,
-      "norm_label": "code:block10 (p1 (fastapi + websocket/sse) \u2500\u2500\u2192 p3 (\u524d\u7aef\u770b\u677f))"
+      "norm_label": "code:block10 (p1 (fastapi + websocket/sse) \u2500\u2500\u2192 p3 (\u524d\u7aef\u770b\u677f))",
+      "id": "docs_implementation_plan_codeblock_10"
     },
     {
       "label": "P1 \u2014 FastAPI + WebSocket/SSE \u670d\u52a1\u5316",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L309",
-      "id": "docs_implementation_plan_p1_fastapi_websocket_sse_\u670d\u52a1\u5316",
       "community": 130,
-      "norm_label": "p1 \u2014 fastapi + websocket/sse \u670d\u52a1\u5316"
+      "norm_label": "p1 \u2014 fastapi + websocket/sse \u670d\u52a1\u5316",
+      "id": "docs_implementation_plan_p1_fastapi_websocket_sse_\u670d\u52a1\u5316"
     },
     {
       "label": "code:block11 (POST /sessions              \u2192 \u521b\u5efa\u4f1a\u8bdd\uff0c\u542f\u52a8 LangGraph workflow\uff0c\u8fd4\u56de )",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L317",
-      "id": "docs_implementation_plan_codeblock_11",
       "community": 130,
-      "norm_label": "code:block11 (post /sessions              \u2192 \u521b\u5efa\u4f1a\u8bdd,\u542f\u52a8 langgraph workflow,\u8fd4\u56de )"
+      "norm_label": "code:block11 (post /sessions              \u2192 \u521b\u5efa\u4f1a\u8bdd,\u542f\u52a8 langgraph workflow,\u8fd4\u56de )",
+      "id": "docs_implementation_plan_codeblock_11"
     },
     {
       "label": "\u6d41\u5f0f\u63a8\u9001\u65b9\u6848\u5bf9\u6bd4",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L326",
-      "id": "docs_implementation_plan_\u6d41\u5f0f\u63a8\u9001\u65b9\u6848\u5bf9\u6bd4",
       "community": 130,
-      "norm_label": "\u6d41\u5f0f\u63a8\u9001\u65b9\u6848\u5bf9\u6bd4"
+      "norm_label": "\u6d41\u5f0f\u63a8\u9001\u65b9\u6848\u5bf9\u6bd4",
+      "id": "docs_implementation_plan_\u6d41\u5f0f\u63a8\u9001\u65b9\u6848\u5bf9\u6bd4"
     },
     {
       "label": "\u4efb\u52a1\u62c6\u89e3",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L338",
-      "id": "docs_implementation_plan_\u4efb\u52a1\u62c6\u89e3",
       "community": 130,
-      "norm_label": "\u4efb\u52a1\u62c6\u89e3"
+      "norm_label": "\u4efb\u52a1\u62c6\u89e3",
+      "id": "docs_implementation_plan_\u4efb\u52a1\u62c6\u89e3"
     },
     {
       "label": "\u524d\u7aef\u6570\u636e\u6d41\u8bf4\u660e",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L351",
-      "id": "docs_implementation_plan_\u524d\u7aef\u6570\u636e\u6d41\u8bf4\u660e",
       "community": 130,
-      "norm_label": "\u524d\u7aef\u6570\u636e\u6d41\u8bf4\u660e"
+      "norm_label": "\u524d\u7aef\u6570\u636e\u6d41\u8bf4\u660e",
+      "id": "docs_implementation_plan_\u524d\u7aef\u6570\u636e\u6d41\u8bf4\u660e"
     },
     {
       "label": "code:block12 (\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500)",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L355",
-      "id": "docs_implementation_plan_codeblock_12",
       "community": 130,
-      "norm_label": "code:block12 (\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500)"
+      "norm_label": "code:block12 (\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500)",
+      "id": "docs_implementation_plan_codeblock_12"
     },
     {
       "label": "P2 \u2014 RAG \u77e5\u8bc6\u5e93\u63a5\u5165",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L403",
-      "id": "docs_implementation_plan_p2_rag_\u77e5\u8bc6\u5e93\u63a5\u5165",
       "community": 132,
-      "norm_label": "p2 \u2014 rag \u77e5\u8bc6\u5e93\u63a5\u5165"
+      "norm_label": "p2 \u2014 rag \u77e5\u8bc6\u5e93\u63a5\u5165",
+      "id": "docs_implementation_plan_p2_rag_\u77e5\u8bc6\u5e93\u63a5\u5165"
     },
     {
       "label": "\u4efb\u52a1\u62c6\u89e3",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L409",
-      "id": "docs_implementation_plan_\u4efb\u52a1\u62c6\u89e3_409",
       "community": 132,
-      "norm_label": "\u4efb\u52a1\u62c6\u89e3"
+      "norm_label": "\u4efb\u52a1\u62c6\u89e3",
+      "id": "docs_implementation_plan_\u4efb\u52a1\u62c6\u89e3_409"
     },
     {
       "label": "\u68c0\u7d22\u94fe\u8def",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L422",
-      "id": "docs_implementation_plan_\u68c0\u7d22\u94fe\u8def",
       "community": 132,
-      "norm_label": "\u68c0\u7d22\u94fe\u8def"
+      "norm_label": "\u68c0\u7d22\u94fe\u8def",
+      "id": "docs_implementation_plan_\u68c0\u7d22\u94fe\u8def"
     },
     {
       "label": "code:block13 (user_input (\"\u6211\u60f3\u5b66\u4e60\u4e13\u5229\u65b0\u9896\u6027\"))",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L424",
-      "id": "docs_implementation_plan_codeblock_13",
       "community": 132,
-      "norm_label": "code:block13 (user_input (\"\u6211\u60f3\u5b66\u4e60\u4e13\u5229\u65b0\u9896\u6027\"))"
+      "norm_label": "code:block13 (user_input (\"\u6211\u60f3\u5b66\u4e60\u4e13\u5229\u65b0\u9896\u6027\"))",
+      "id": "docs_implementation_plan_codeblock_13"
     },
     {
       "label": "P3 \u2014 \u524d\u7aef\u770b\u677f MVP",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L444",
-      "id": "docs_implementation_plan_p3_\u524d\u7aef\u770b\u677f_mvp",
       "community": 133,
-      "norm_label": "p3 \u2014 \u524d\u7aef\u770b\u677f mvp"
+      "norm_label": "p3 \u2014 \u524d\u7aef\u770b\u677f mvp",
+      "id": "docs_implementation_plan_p3_\u524d\u7aef\u770b\u677f_mvp"
     },
     {
       "label": "\u4efb\u52a1\u62c6\u89e3",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L450",
-      "id": "docs_implementation_plan_\u4efb\u52a1\u62c6\u89e3_450",
       "community": 133,
-      "norm_label": "\u4efb\u52a1\u62c6\u89e3"
+      "norm_label": "\u4efb\u52a1\u62c6\u89e3",
+      "id": "docs_implementation_plan_\u4efb\u52a1\u62c6\u89e3_450"
     },
     {
       "label": "\u524d\u7aef\u4f9d\u8d56 P1 \u7684\u63a5\u53e3",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L463",
-      "id": "docs_implementation_plan_\u524d\u7aef\u4f9d\u8d56_p1_\u7684\u63a5\u53e3",
       "community": 133,
-      "norm_label": "\u524d\u7aef\u4f9d\u8d56 p1 \u7684\u63a5\u53e3"
+      "norm_label": "\u524d\u7aef\u4f9d\u8d56 p1 \u7684\u63a5\u53e3",
+      "id": "docs_implementation_plan_\u524d\u7aef\u4f9d\u8d56_p1_\u7684\u63a5\u53e3"
     },
     {
       "label": "code:block14 (POST   /sessions              \u2192 \u804a\u5929\u754c\u9762\u3001\u8bca\u65ad/\u53cd\u9988\u95ee\u5377)",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L465",
-      "id": "docs_implementation_plan_codeblock_14",
       "community": 133,
-      "norm_label": "code:block14 (post   /sessions              \u2192 \u804a\u5929\u754c\u9762\u3001\u8bca\u65ad/\u53cd\u9988\u95ee\u5377)"
+      "norm_label": "code:block14 (post   /sessions              \u2192 \u804a\u5929\u754c\u9762\u3001\u8bca\u65ad/\u53cd\u9988\u95ee\u5377)",
+      "id": "docs_implementation_plan_codeblock_14"
     },
     {
       "label": "P4 \u2014 \u6570\u636e\u6301\u4e45\u5316 + \u9519\u8bef\u97e7\u6027",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L475",
-      "id": "docs_implementation_plan_p4_\u6570\u636e\u6301\u4e45\u5316_\u9519\u8bef\u97e7\u6027",
       "community": 131,
-      "norm_label": "p4 \u2014 \u6570\u636e\u6301\u4e45\u5316 + \u9519\u8bef\u97e7\u6027"
+      "norm_label": "p4 \u2014 \u6570\u636e\u6301\u4e45\u5316 + \u9519\u8bef\u97e7\u6027",
+      "id": "docs_implementation_plan_p4_\u6570\u636e\u6301\u4e45\u5316_\u9519\u8bef\u97e7\u6027"
     },
     {
       "label": "LangGraph \u5185\u7f6e\u673a\u5236",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L481",
-      "id": "docs_implementation_plan_langgraph_\u5185\u7f6e\u673a\u5236",
       "community": 131,
-      "norm_label": "langgraph \u5185\u7f6e\u673a\u5236"
+      "norm_label": "langgraph \u5185\u7f6e\u673a\u5236",
+      "id": "docs_implementation_plan_langgraph_\u5185\u7f6e\u673a\u5236"
     },
     {
       "label": "\u4efb\u52a1\u62c6\u89e3",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L490",
-      "id": "docs_implementation_plan_\u4efb\u52a1\u62c6\u89e3_490",
       "community": 131,
-      "norm_label": "\u4efb\u52a1\u62c6\u89e3"
+      "norm_label": "\u4efb\u52a1\u62c6\u89e3",
+      "id": "docs_implementation_plan_\u4efb\u52a1\u62c6\u89e3_490"
     },
     {
       "label": "LangGraph \u9519\u8bef\u5904\u7406\u6a21\u5f0f\uff08\u66ff\u4ee3\u624b\u5199 try/except\uff09",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L502",
-      "id": "docs_implementation_plan_langgraph_\u9519\u8bef\u5904\u7406\u6a21\u5f0f_\u66ff\u4ee3\u624b\u5199_try_except",
       "community": 131,
-      "norm_label": "langgraph \u9519\u8bef\u5904\u7406\u6a21\u5f0f(\u66ff\u4ee3\u624b\u5199 try/except)"
+      "norm_label": "langgraph \u9519\u8bef\u5904\u7406\u6a21\u5f0f(\u66ff\u4ee3\u624b\u5199 try/except)",
+      "id": "docs_implementation_plan_langgraph_\u9519\u8bef\u5904\u7406\u6a21\u5f0f_\u66ff\u4ee3\u624b\u5199_try_except"
     },
     {
       "label": "code:python (from langgraph.errors import NodeError)",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L504",
-      "id": "docs_implementation_plan_codeblock_15",
       "community": 131,
-      "norm_label": "code:python (from langgraph.errors import nodeerror)"
+      "norm_label": "code:python (from langgraph.errors import nodeerror)",
+      "id": "docs_implementation_plan_codeblock_15"
     },
     {
       "label": "P5 \u2014 \u8bb0\u5fc6\u7cfb\u7edf",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L529",
-      "id": "docs_implementation_plan_p5_\u8bb0\u5fc6\u7cfb\u7edf",
       "community": 65,
-      "norm_label": "p5 \u2014 \u8bb0\u5fc6\u7cfb\u7edf"
+      "norm_label": "p5 \u2014 \u8bb0\u5fc6\u7cfb\u7edf",
+      "id": "docs_implementation_plan_p5_\u8bb0\u5fc6\u7cfb\u7edf"
     },
     {
       "label": "LangGraph \u8bb0\u5fc6\u7cfb\u7edf\u67b6\u6784\uff08v1.0+\uff09",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L535",
-      "id": "docs_implementation_plan_langgraph_\u8bb0\u5fc6\u7cfb\u7edf\u67b6\u6784_v1_0",
       "community": 65,
-      "norm_label": "langgraph \u8bb0\u5fc6\u7cfb\u7edf\u67b6\u6784(v1.0+)"
+      "norm_label": "langgraph \u8bb0\u5fc6\u7cfb\u7edf\u67b6\u6784(v1.0+)",
+      "id": "docs_implementation_plan_langgraph_\u8bb0\u5fc6\u7cfb\u7edf\u67b6\u6784_v1_0"
     },
     {
       "label": "code:block16 (\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500)",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L539",
-      "id": "docs_implementation_plan_codeblock_16",
       "community": 65,
-      "norm_label": "code:block16 (\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500)"
+      "norm_label": "code:block16 (\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500)",
+      "id": "docs_implementation_plan_codeblock_16"
     },
     {
       "label": "Store \u6838\u5fc3\u6982\u5ff5",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L567",
-      "id": "docs_implementation_plan_store_\u6838\u5fc3\u6982\u5ff5",
       "community": 65,
-      "norm_label": "store \u6838\u5fc3\u6982\u5ff5"
+      "norm_label": "store \u6838\u5fc3\u6982\u5ff5",
+      "id": "docs_implementation_plan_store_\u6838\u5fc3\u6982\u5ff5"
     },
     {
       "label": "Store \u8bbf\u95ee\u65b9\u5f0f",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L577",
-      "id": "docs_implementation_plan_store_\u8bbf\u95ee\u65b9\u5f0f",
       "community": 143,
-      "norm_label": "store \u8bbf\u95ee\u65b9\u5f0f"
+      "norm_label": "store \u8bbf\u95ee\u65b9\u5f0f",
+      "id": "docs_implementation_plan_store_\u8bbf\u95ee\u65b9\u5f0f"
     },
     {
       "label": "code:python (from dataclasses import dataclass)",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L581",
-      "id": "docs_implementation_plan_codeblock_17",
       "community": 143,
-      "norm_label": "code:python (from dataclasses import dataclass)"
+      "norm_label": "code:python (from dataclasses import dataclass)",
+      "id": "docs_implementation_plan_codeblock_17"
     },
     {
       "label": "code:python (graph.invoke()",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L623",
-      "id": "docs_implementation_plan_codeblock_18",
       "community": 143,
-      "norm_label": "code:python (graph.invoke()"
+      "norm_label": "code:python (graph.invoke()",
+      "id": "docs_implementation_plan_codeblock_18"
     },
     {
       "label": "\u8bb0\u5fc6\u7cfb\u7edf\u5206\u6bb5\u8bbe\u8ba1",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L631",
-      "id": "docs_implementation_plan_\u8bb0\u5fc6\u7cfb\u7edf\u5206\u6bb5\u8bbe\u8ba1",
       "community": 65,
-      "norm_label": "\u8bb0\u5fc6\u7cfb\u7edf\u5206\u6bb5\u8bbe\u8ba1"
+      "norm_label": "\u8bb0\u5fc6\u7cfb\u7edf\u5206\u6bb5\u8bbe\u8ba1",
+      "id": "docs_implementation_plan_\u8bb0\u5fc6\u7cfb\u7edf\u5206\u6bb5\u8bbe\u8ba1"
     },
     {
       "label": "code:block19 (\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500)",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L633",
-      "id": "docs_implementation_plan_codeblock_19",
       "community": 65,
-      "norm_label": "code:block19 (\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500)"
+      "norm_label": "code:block19 (\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500)",
+      "id": "docs_implementation_plan_codeblock_19"
     },
     {
       "label": "Store Namespace \u8bbe\u8ba1",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L667",
-      "id": "docs_implementation_plan_store_namespace_\u8bbe\u8ba1",
       "community": 65,
-      "norm_label": "store namespace \u8bbe\u8ba1"
+      "norm_label": "store namespace \u8bbe\u8ba1",
+      "id": "docs_implementation_plan_store_namespace_\u8bbe\u8ba1"
     },
     {
       "label": "code:block20 ((\"learners\", \"{learner_id}\", \"profile\")   \u2192 \u5386\u53f2\u753b\u50cf\u5217\u8868)",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L669",
-      "id": "docs_implementation_plan_codeblock_20",
       "community": 65,
-      "norm_label": "code:block20 ((\"learners\", \"{learner_id}\", \"profile\")   \u2192 \u5386\u53f2\u753b\u50cf\u5217\u8868)"
+      "norm_label": "code:block20 ((\"learners\", \"{learner_id}\", \"profile\")   \u2192 \u5386\u53f2\u753b\u50cf\u5217\u8868)",
+      "id": "docs_implementation_plan_codeblock_20"
     },
     {
       "label": "\u4efb\u52a1\u62c6\u89e3",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L686",
-      "id": "docs_implementation_plan_\u4efb\u52a1\u62c6\u89e3_686",
       "community": 65,
-      "norm_label": "\u4efb\u52a1\u62c6\u89e3"
+      "norm_label": "\u4efb\u52a1\u62c6\u89e3",
+      "id": "docs_implementation_plan_\u4efb\u52a1\u62c6\u89e3_686"
     },
     {
       "label": "BKT \u540e\u7eed\u6570\u636e\u6d41\uff08\u6682\u4e0d\u5b9e\u73b0\uff09",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L700",
-      "id": "docs_implementation_plan_bkt_\u540e\u7eed\u6570\u636e\u6d41_\u6682\u4e0d\u5b9e\u73b0",
       "community": 65,
-      "norm_label": "bkt \u540e\u7eed\u6570\u636e\u6d41(\u6682\u4e0d\u5b9e\u73b0)"
+      "norm_label": "bkt \u540e\u7eed\u6570\u636e\u6d41(\u6682\u4e0d\u5b9e\u73b0)",
+      "id": "docs_implementation_plan_bkt_\u540e\u7eed\u6570\u636e\u6d41_\u6682\u4e0d\u5b9e\u73b0"
     },
     {
       "label": "code:block21 (\u4f1a\u8bdd 1 (learner_id = \"alice\"):)",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L702",
-      "id": "docs_implementation_plan_codeblock_21",
       "community": 65,
-      "norm_label": "code:block21 (\u4f1a\u8bdd 1 (learner_id = \"alice\"):)"
+      "norm_label": "code:block21 (\u4f1a\u8bdd 1 (learner_id = \"alice\"):)",
+      "id": "docs_implementation_plan_codeblock_21"
     },
     {
       "label": "Store \u8bed\u4e49\u641c\u7d22\u7684\u540e\u7eed\u5e94\u7528",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L742",
-      "id": "docs_implementation_plan_store_\u8bed\u4e49\u641c\u7d22\u7684\u540e\u7eed\u5e94\u7528",
       "community": 65,
-      "norm_label": "store \u8bed\u4e49\u641c\u7d22\u7684\u540e\u7eed\u5e94\u7528"
+      "norm_label": "store \u8bed\u4e49\u641c\u7d22\u7684\u540e\u7eed\u5e94\u7528",
+      "id": "docs_implementation_plan_store_\u8bed\u4e49\u641c\u7d22\u7684\u540e\u7eed\u5e94\u7528"
     },
     {
       "label": "code:block22 (# \u641c\u7d22\u4e0e\u5f53\u524d\u5b66\u4e60\u76ee\u6807\u6700\u76f8\u5173\u7684\u5386\u53f2\u753b\u50cf)",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L744",
-      "id": "docs_implementation_plan_codeblock_22",
       "community": 65,
-      "norm_label": "code:block22 (# \u641c\u7d22\u4e0e\u5f53\u524d\u5b66\u4e60\u76ee\u6807\u6700\u76f8\u5173\u7684\u5386\u53f2\u753b\u50cf)"
+      "norm_label": "code:block22 (# \u641c\u7d22\u4e0e\u5f53\u524d\u5b66\u4e60\u76ee\u6807\u6700\u76f8\u5173\u7684\u5386\u53f2\u753b\u50cf)",
+      "id": "docs_implementation_plan_codeblock_22"
     },
     {
       "label": "\u4e0e\u65e7\u7248\u8bbe\u8ba1\u7684\u5173\u952e\u5dee\u5f02",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L751",
-      "id": "docs_implementation_plan_\u4e0e\u65e7\u7248\u8bbe\u8ba1\u7684\u5173\u952e\u5dee\u5f02",
       "community": 65,
-      "norm_label": "\u4e0e\u65e7\u7248\u8bbe\u8ba1\u7684\u5173\u952e\u5dee\u5f02"
+      "norm_label": "\u4e0e\u65e7\u7248\u8bbe\u8ba1\u7684\u5173\u952e\u5dee\u5f02",
+      "id": "docs_implementation_plan_\u4e0e\u65e7\u7248\u8bbe\u8ba1\u7684\u5173\u952e\u5dee\u5f02"
     },
     {
       "label": "\u524d\u7aef\u53d7\u5f71\u54cd\u89c6\u56fe",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L761",
-      "id": "docs_implementation_plan_\u524d\u7aef\u53d7\u5f71\u54cd\u89c6\u56fe",
       "community": 65,
-      "norm_label": "\u524d\u7aef\u53d7\u5f71\u54cd\u89c6\u56fe"
+      "norm_label": "\u524d\u7aef\u53d7\u5f71\u54cd\u89c6\u56fe",
+      "id": "docs_implementation_plan_\u524d\u7aef\u53d7\u5f71\u54cd\u89c6\u56fe"
     },
     {
       "label": "code:block23 (\u5b66\u4e60\u8def\u5f84\u56fe   \u2192 planner \u5229\u7528 BKT \u540e\uff0c\u5df2\u638c\u63e1\u8282\u70b9\u6807\u8bb0 \u2713\uff0c\u63a8\u8350\u8282\u70b9\u9ad8\u4eae)",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L763",
-      "id": "docs_implementation_plan_codeblock_23",
       "community": 65,
-      "norm_label": "code:block23 (\u5b66\u4e60\u8def\u5f84\u56fe   \u2192 planner \u5229\u7528 bkt \u540e,\u5df2\u638c\u63e1\u8282\u70b9\u6807\u8bb0 \u2713,\u63a8\u8350\u8282\u70b9\u9ad8\u4eae)"
+      "norm_label": "code:block23 (\u5b66\u4e60\u8def\u5f84\u56fe   \u2192 planner \u5229\u7528 bkt \u540e,\u5df2\u638c\u63e1\u8282\u70b9\u6807\u8bb0 \u2713,\u63a8\u8350\u8282\u70b9\u9ad8\u4eae)",
+      "id": "docs_implementation_plan_codeblock_23"
     },
     {
       "label": "\u4f9d\u8d56\u5173\u7cfb\u603b\u56fe",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L772",
-      "id": "docs_implementation_plan_\u4f9d\u8d56\u5173\u7cfb\u603b\u56fe",
       "community": 9,
-      "norm_label": "\u4f9d\u8d56\u5173\u7cfb\u603b\u56fe"
+      "norm_label": "\u4f9d\u8d56\u5173\u7cfb\u603b\u56fe",
+      "id": "docs_implementation_plan_\u4f9d\u8d56\u5173\u7cfb\u603b\u56fe"
     },
     {
       "label": "code:block24 (\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510)",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L774",
-      "id": "docs_implementation_plan_codeblock_24",
       "community": 9,
-      "norm_label": "code:block24 (\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510)"
+      "norm_label": "code:block24 (\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510)",
+      "id": "docs_implementation_plan_codeblock_24"
     },
     {
       "label": "\u5efa\u8bae\u6267\u884c\u987a\u5e8f",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L818",
-      "id": "docs_implementation_plan_\u5efa\u8bae\u6267\u884c\u987a\u5e8f",
       "community": 9,
-      "norm_label": "\u5efa\u8bae\u6267\u884c\u987a\u5e8f"
+      "norm_label": "\u5efa\u8bae\u6267\u884c\u987a\u5e8f",
+      "id": "docs_implementation_plan_\u5efa\u8bae\u6267\u884c\u987a\u5e8f"
     },
     {
       "label": "code:block25 (\u7b2c 0 \u6b65: P0 (\u5de5\u4f5c\u6d41\u5b8c\u5584)                    \u2190 \u8fdb\u884c\u4e2d\uff0c\u7ea6 5-7 \u5929)",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L820",
-      "id": "docs_implementation_plan_codeblock_25",
       "community": 9,
-      "norm_label": "code:block25 (\u7b2c 0 \u6b65: p0 (\u5de5\u4f5c\u6d41\u5b8c\u5584)                    \u2190 \u8fdb\u884c\u4e2d,\u7ea6 5-7 \u5929)"
+      "norm_label": "code:block25 (\u7b2c 0 \u6b65: p0 (\u5de5\u4f5c\u6d41\u5b8c\u5584)                    \u2190 \u8fdb\u884c\u4e2d,\u7ea6 5-7 \u5929)",
+      "id": "docs_implementation_plan_codeblock_25"
     },
     {
       "label": "\u9644\u5f55\uff1aLangGraph \u751f\u4ea7\u90e8\u7f72\uff08`langgraph dev` / `langgraph up`\uff09",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L837",
-      "id": "docs_implementation_plan_\u9644\u5f55_langgraph_\u751f\u4ea7\u90e8\u7f72_langgraph_dev_langgraph_up",
-      "community": 144,
-      "norm_label": "\u9644\u5f55:langgraph \u751f\u4ea7\u90e8\u7f72(`langgraph dev` / `langgraph up`)"
+      "community": 9,
+      "norm_label": "\u9644\u5f55:langgraph \u751f\u4ea7\u90e8\u7f72(`langgraph dev` / `langgraph up`)",
+      "id": "docs_implementation_plan_\u9644\u5f55_langgraph_\u751f\u4ea7\u90e8\u7f72_langgraph_dev_langgraph_up"
     },
     {
       "label": "code:json (// langgraph.json\uff08\u9879\u76ee\u6839\u76ee\u5f55\uff09)",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L841",
-      "id": "docs_implementation_plan_codeblock_26",
-      "community": 144,
-      "norm_label": "code:json (// langgraph.json(\u9879\u76ee\u6839\u76ee\u5f55))"
+      "community": 9,
+      "norm_label": "code:json (// langgraph.json(\u9879\u76ee\u6839\u76ee\u5f55))",
+      "id": "docs_implementation_plan_codeblock_26"
     },
     {
       "label": "code:bash (langgraph dev   # \u542f\u52a8\u5f00\u53d1\u670d\u52a1\u5668\uff08\u5185\u5b58\u6a21\u5f0f\uff09)",
       "file_type": "document",
       "source_file": "implementation-plan.md",
       "source_location": "L852",
-      "id": "docs_implementation_plan_codeblock_27",
-      "community": 144,
-      "norm_label": "code:bash (langgraph dev   # \u542f\u52a8\u5f00\u53d1\u670d\u52a1\u5668(\u5185\u5b58\u6a21\u5f0f))"
+      "community": 9,
+      "norm_label": "code:bash (langgraph dev   # \u542f\u52a8\u5f00\u53d1\u670d\u52a1\u5668(\u5185\u5b58\u6a21\u5f0f))",
+      "id": "docs_implementation_plan_codeblock_27"
     },
     {
       "label": "langgraph.json",
@@ -1893,7 +1947,7 @@
       "file_type": "code",
       "source_file": "backend/tests/integration/test_providers_integration.py",
       "source_location": "L1",
-      "community": 78,
+      "community": 3,
       "norm_label": "test_providers_integration.py",
       "id": "backend_tests_integration_test_providers_integration_py"
     },
@@ -1902,7 +1956,7 @@
       "file_type": "code",
       "source_file": "backend/tests/integration/test_providers_integration.py",
       "source_location": "L22",
-      "community": 78,
+      "community": 3,
       "norm_label": "test_provider_returns_valid_json()",
       "id": "integration_test_providers_integration_test_provider_returns_valid_json"
     },
@@ -1911,7 +1965,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/integration/test_providers_integration.py",
       "source_location": "L1",
-      "community": 78,
+      "community": 3,
       "norm_label": "smoke-test each llm provider individually with real api calls.  requires valid .",
       "id": "integration_test_providers_integration_rationale_1"
     },
@@ -2370,7 +2424,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm.py",
       "source_location": "L1",
-      "community": 134,
+      "community": 81,
       "norm_label": "test_llm.py",
       "id": "backend_tests_unit_test_llm_py"
     },
@@ -2379,7 +2433,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm.py",
       "source_location": "L21",
-      "community": 134,
+      "community": 81,
       "norm_label": "_json_response()",
       "id": "unit_test_llm_json_response"
     },
@@ -2388,7 +2442,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm.py",
       "source_location": "L25",
-      "community": 134,
+      "community": 81,
       "norm_label": "test_call_llm_posts_to_configured_openai_compatible_provider()",
       "id": "unit_test_llm_test_call_llm_posts_to_configured_openai_compatible_provider"
     },
@@ -2397,7 +2451,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm.py",
       "source_location": "L68",
-      "community": 134,
+      "community": 81,
       "norm_label": "test_call_llm_supports_three_configured_providers()",
       "id": "unit_test_llm_test_call_llm_supports_three_configured_providers"
     },
@@ -2406,7 +2460,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm.py",
       "source_location": "L94",
-      "community": 134,
+      "community": 81,
       "norm_label": "test_call_llm_json_adds_json_mode_and_parses_response()",
       "id": "unit_test_llm_test_call_llm_json_adds_json_mode_and_parses_response"
     },
@@ -2415,7 +2469,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm.py",
       "source_location": "L114",
-      "community": 134,
+      "community": 81,
       "norm_label": "test_call_llm_wraps_provider_error_body()",
       "id": "unit_test_llm_test_call_llm_wraps_provider_error_body"
     },
@@ -2424,7 +2478,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm.py",
       "source_location": "L131",
-      "community": 134,
+      "community": 81,
       "norm_label": "test_call_llm_normalizes_socks_proxy()",
       "id": "unit_test_llm_test_call_llm_normalizes_socks_proxy"
     },
@@ -2433,7 +2487,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm.py",
       "source_location": "L148",
-      "community": 134,
+      "community": 81,
       "norm_label": "test_agent_llm_router_reads_agent_specific_provider_config()",
       "id": "unit_test_llm_test_agent_llm_router_reads_agent_specific_provider_config"
     },
@@ -2649,7 +2703,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L95",
-      "community": 134,
+      "community": 81,
       "norm_label": "testcallllmtoolswithmocktransport",
       "id": "unit_test_llm_tools_testcallllmtoolswithmocktransport"
     },
@@ -2658,7 +2712,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L96",
-      "community": 134,
+      "community": 81,
       "norm_label": ".test_sends_tools_not_response_format()",
       "id": "unit_test_llm_tools_testcallllmtoolswithmocktransport_test_sends_tools_not_response_format"
     },
@@ -2667,7 +2721,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L150",
-      "community": 134,
+      "community": 81,
       "norm_label": ".test_parses_tool_calls_from_response()",
       "id": "unit_test_llm_tools_testcallllmtoolswithmocktransport_test_parses_tool_calls_from_response"
     },
@@ -2676,7 +2730,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L203",
-      "community": 134,
+      "community": 81,
       "norm_label": ".test_no_tool_calls_in_response()",
       "id": "unit_test_llm_tools_testcallllmtoolswithmocktransport_test_no_tool_calls_in_response"
     },
@@ -2685,7 +2739,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L243",
-      "community": 73,
+      "community": 81,
       "norm_label": "testllmclientgeneratewithtools",
       "id": "unit_test_llm_tools_testllmclientgeneratewithtools"
     },
@@ -2694,7 +2748,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L244",
-      "community": 73,
+      "community": 81,
       "norm_label": ".test_default_llm_client_has_method()",
       "id": "unit_test_llm_tools_testllmclientgeneratewithtools_test_default_llm_client_has_method"
     },
@@ -2703,7 +2757,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L250",
-      "community": 73,
+      "community": 81,
       "norm_label": ".test_agent_router_has_method()",
       "id": "unit_test_llm_tools_testllmclientgeneratewithtools_test_agent_router_has_method"
     },
@@ -2748,7 +2802,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L97",
-      "community": 134,
+      "community": 81,
       "norm_label": "verify the request body has 'tools' not 'response_format'.",
       "id": "unit_test_llm_tools_rationale_97"
     },
@@ -2757,7 +2811,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L151",
-      "community": 134,
+      "community": 81,
       "norm_label": "verify tool_calls are correctly parsed from the response.",
       "id": "unit_test_llm_tools_rationale_151"
     },
@@ -2766,7 +2820,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L204",
-      "community": 134,
+      "community": 81,
       "norm_label": "response without tool_calls \u2014 returns empty list.",
       "id": "unit_test_llm_tools_rationale_204"
     },
@@ -2775,7 +2829,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L245",
-      "community": 73,
+      "community": 81,
       "norm_label": "defaultllmclient implements generate_with_tools.",
       "id": "unit_test_llm_tools_rationale_245"
     },
@@ -2784,7 +2838,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L251",
-      "community": 73,
+      "community": 81,
       "norm_label": "agentllmrouter implements generate_with_tools.",
       "id": "unit_test_llm_tools_rationale_251"
     },
@@ -2802,7 +2856,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_workflow_memory.py",
       "source_location": "L1",
-      "community": 80,
+      "community": 81,
       "norm_label": "test_workflow_memory.py",
       "id": "backend_tests_unit_test_workflow_memory_py"
     },
@@ -2811,7 +2865,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_workflow_memory.py",
       "source_location": "L15",
-      "community": 80,
+      "community": 81,
       "norm_label": "memoryqueuellmclient",
       "id": "unit_test_workflow_memory_memoryqueuellmclient"
     },
@@ -2820,7 +2874,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_workflow_memory.py",
       "source_location": "L16",
-      "community": 80,
+      "community": 81,
       "norm_label": ".__init__()",
       "id": "unit_test_workflow_memory_memoryqueuellmclient_init"
     },
@@ -2829,7 +2883,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_workflow_memory.py",
       "source_location": "L132",
-      "community": 80,
+      "community": 81,
       "norm_label": ".generate_json()",
       "id": "unit_test_workflow_memory_memoryqueuellmclient_generate_json"
     },
@@ -2838,7 +2892,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_workflow_memory.py",
       "source_location": "L141",
-      "community": 80,
+      "community": 81,
       "norm_label": ".generate_with_tools()",
       "id": "unit_test_workflow_memory_memoryqueuellmclient_generate_with_tools"
     },
@@ -2847,7 +2901,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_workflow_memory.py",
       "source_location": "L146",
-      "community": 80,
+      "community": 81,
       "norm_label": "test_workflow_uses_checkpointer_and_store_for_learner_memory()",
       "id": "unit_test_workflow_memory_test_workflow_uses_checkpointer_and_store_for_learner_memory"
     },
@@ -2919,7 +2973,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L1",
-      "community": 0,
+      "community": 81,
       "norm_label": "test_new_agent_nodes.py",
       "id": "backend_tests_unit_test_new_agent_nodes_py"
     },
@@ -2928,7 +2982,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L18",
-      "community": 0,
+      "community": 81,
       "norm_label": "fakellmclient",
       "id": "unit_test_new_agent_nodes_fakellmclient"
     },
@@ -2937,7 +2991,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L21",
-      "community": 0,
+      "community": 81,
       "norm_label": ".__init__()",
       "id": "unit_test_new_agent_nodes_fakellmclient_init"
     },
@@ -2946,7 +3000,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L25",
-      "community": 0,
+      "community": 81,
       "norm_label": ".generate_json()",
       "id": "unit_test_new_agent_nodes_fakellmclient_generate_json"
     },
@@ -2955,7 +3009,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L31",
-      "community": 0,
+      "community": 81,
       "norm_label": ".generate_with_tools()",
       "id": "unit_test_new_agent_nodes_fakellmclient_generate_with_tools"
     },
@@ -2964,7 +3018,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L41",
-      "community": 0,
+      "community": 81,
       "norm_label": "testroutenode",
       "id": "unit_test_new_agent_nodes_testroutenode"
     },
@@ -2973,7 +3027,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L42",
-      "community": 0,
+      "community": 81,
       "norm_label": ".test_classifies_teach()",
       "id": "unit_test_new_agent_nodes_testroutenode_test_classifies_teach"
     },
@@ -2982,7 +3036,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L53",
-      "community": 0,
+      "community": 81,
       "norm_label": ".test_classifies_chat()",
       "id": "unit_test_new_agent_nodes_testroutenode_test_classifies_chat"
     },
@@ -2991,7 +3045,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L61",
-      "community": 0,
+      "community": 81,
       "norm_label": ".test_classifies_diagnose()",
       "id": "unit_test_new_agent_nodes_testroutenode_test_classifies_diagnose"
     },
@@ -3000,7 +3054,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L69",
-      "community": 0,
+      "community": 81,
       "norm_label": ".test_temperature_is_zero()",
       "id": "unit_test_new_agent_nodes_testroutenode_test_temperature_is_zero"
     },
@@ -3009,7 +3063,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L78",
-      "community": 118,
+      "community": 81,
       "norm_label": "testtoolagentnode",
       "id": "unit_test_new_agent_nodes_testtoolagentnode"
     },
@@ -3018,7 +3072,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L79",
-      "community": 118,
+      "community": 81,
       "norm_label": ".test_no_tool_call_returns_directly()",
       "id": "unit_test_new_agent_nodes_testtoolagentnode_test_no_tool_call_returns_directly"
     },
@@ -3027,7 +3081,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L94",
-      "community": 118,
+      "community": 81,
       "norm_label": ".test_tool_call_then_answer()",
       "id": "unit_test_new_agent_nodes_testtoolagentnode_test_tool_call_then_answer"
     },
@@ -3036,7 +3090,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L125",
-      "community": 118,
+      "community": 81,
       "norm_label": ".test_max_rounds_capped()",
       "id": "unit_test_new_agent_nodes_testtoolagentnode_test_max_rounds_capped"
     },
@@ -3045,7 +3099,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L149",
-      "community": 0,
+      "community": 81,
       "norm_label": "testchatanswernode",
       "id": "unit_test_new_agent_nodes_testchatanswernode"
     },
@@ -3054,7 +3108,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L150",
-      "community": 0,
+      "community": 81,
       "norm_label": ".test_generates_answer()",
       "id": "unit_test_new_agent_nodes_testchatanswernode_test_generates_answer"
     },
@@ -3063,7 +3117,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L1",
-      "community": 0,
+      "community": 81,
       "norm_label": "tdd phase 4: tests for route, tool_agent, chat_answer nodes.",
       "id": "unit_test_new_agent_nodes_rationale_1"
     },
@@ -3072,7 +3126,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L19",
-      "community": 0,
+      "community": 81,
       "norm_label": "returns predetermined json responses.",
       "id": "unit_test_new_agent_nodes_rationale_19"
     },
@@ -3081,7 +3135,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L80",
-      "community": 118,
+      "community": 81,
       "norm_label": "when llm returns content without tool_calls, exit immediately.",
       "id": "unit_test_new_agent_nodes_rationale_80"
     },
@@ -3090,7 +3144,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L95",
-      "community": 118,
+      "community": 81,
       "norm_label": "llm calls tool first, then returns content.",
       "id": "unit_test_new_agent_nodes_rationale_95"
     },
@@ -3099,7 +3153,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L126",
-      "community": 118,
+      "community": 81,
       "norm_label": "after 5 rounds, force exit.",
       "id": "unit_test_new_agent_nodes_rationale_126"
     },
@@ -4062,7 +4116,7 @@
       "file_type": "code",
       "source_file": "backend/app/agents/lightweight_review.py",
       "source_location": "L1",
-      "community": 140,
+      "community": 135,
       "norm_label": "lightweight_review.py",
       "id": "backend_app_agents_lightweight_review_py"
     },
@@ -4071,7 +4125,7 @@
       "file_type": "code",
       "source_file": "backend/app/agents/lightweight_review.py",
       "source_location": "L31",
-      "community": 140,
+      "community": 135,
       "norm_label": "build_lightweight_review_node()",
       "id": "agents_lightweight_review_build_lightweight_review_node"
     },
@@ -4080,7 +4134,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/agents/lightweight_review.py",
       "source_location": "L1",
-      "community": 140,
+      "community": 135,
       "norm_label": "lightweight review agent node \u2014 quick peer review of changed paragraphs only.",
       "id": "agents_lightweight_review_rationale_1"
     },
@@ -4110,60 +4164,6 @@
       "community": 135,
       "norm_label": "agent node assembly for the langgraph workflow.",
       "id": "agents_init_rationale_1"
-    },
-    {
-      "label": "joint_synthesis.py",
-      "file_type": "code",
-      "source_file": "backend/app/agents/joint_synthesis.py",
-      "source_location": "L1",
-      "community": 83,
-      "norm_label": "joint_synthesis.py",
-      "id": "backend_app_agents_joint_synthesis_py"
-    },
-    {
-      "label": "build_joint_synthesis_node()",
-      "file_type": "code",
-      "source_file": "backend/app/agents/joint_synthesis.py",
-      "source_location": "L33",
-      "community": 83,
-      "norm_label": "build_joint_synthesis_node()",
-      "id": "agents_joint_synthesis_build_joint_synthesis_node"
-    },
-    {
-      "label": "Joint synthesis agent node \u2014 merges Expert A and B revised drafts into one outpu",
-      "file_type": "rationale",
-      "source_file": "backend/app/agents/joint_synthesis.py",
-      "source_location": "L1",
-      "community": 83,
-      "norm_label": "joint synthesis agent node \u2014 merges expert a and b revised drafts into one outpu",
-      "id": "agents_joint_synthesis_rationale_1"
-    },
-    {
-      "label": "node.py",
-      "file_type": "code",
-      "source_file": "backend/app/agents/finalize/node.py",
-      "source_location": "L1",
-      "community": 135,
-      "norm_label": "node.py",
-      "id": "backend_app_agents_finalize_node_py"
-    },
-    {
-      "label": "build_finalize_node()",
-      "file_type": "code",
-      "source_file": "backend/app/agents/finalize/node.py",
-      "source_location": "L23",
-      "community": 135,
-      "norm_label": "build_finalize_node()",
-      "id": "finalize_node_build_finalize_node"
-    },
-    {
-      "label": "Workflow finalization node \u2014 merges expert drafts into a unified teaching answer",
-      "file_type": "rationale",
-      "source_file": "backend/app/agents/finalize/node.py",
-      "source_location": "L1",
-      "community": 135,
-      "norm_label": "workflow finalization node \u2014 merges expert drafts into a unified teaching answer",
-      "id": "finalize_node_rationale_1"
     },
     {
       "label": "__init__.py",
@@ -4422,7 +4422,7 @@
       "file_type": "code",
       "source_file": "backend/app/agents/expert_a/cross_review.py",
       "source_location": "L1",
-      "community": 141,
+      "community": 83,
       "norm_label": "cross_review.py",
       "id": "backend_app_agents_expert_a_cross_review_py"
     },
@@ -4431,7 +4431,7 @@
       "file_type": "code",
       "source_file": "backend/app/agents/expert_a/cross_review.py",
       "source_location": "L36",
-      "community": 141,
+      "community": 83,
       "norm_label": "build_expert_a_cross_review_node()",
       "id": "expert_a_cross_review_build_expert_a_cross_review_node"
     },
@@ -4440,7 +4440,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/agents/expert_a/cross_review.py",
       "source_location": "L1",
-      "community": 141,
+      "community": 83,
       "norm_label": "expert a cross-review node \u2014 reviews expert b's draft for legal accuracy.",
       "id": "expert_a_cross_review_rationale_1"
     },
@@ -4494,7 +4494,7 @@
       "file_type": "code",
       "source_file": "backend/app/agents/tool_agent/node.py",
       "source_location": "L1",
-      "community": 118,
+      "community": 81,
       "norm_label": "node.py",
       "id": "backend_app_agents_tool_agent_node_py"
     },
@@ -4503,7 +4503,7 @@
       "file_type": "code",
       "source_file": "backend/app/agents/tool_agent/node.py",
       "source_location": "L51",
-      "community": 118,
+      "community": 81,
       "norm_label": "build_tool_agent_node()",
       "id": "tool_agent_node_build_tool_agent_node"
     },
@@ -4512,7 +4512,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/agents/tool_agent/node.py",
       "source_location": "L1",
-      "community": 118,
+      "community": 81,
       "norm_label": "tool agent node: react loop with rag_retrieve tool calling.",
       "id": "tool_agent_node_rationale_1"
     },
@@ -4530,7 +4530,7 @@
       "file_type": "code",
       "source_file": "backend/app/agents/chat_answer/node.py",
       "source_location": "L1",
-      "community": 135,
+      "community": 81,
       "norm_label": "node.py",
       "id": "backend_app_agents_chat_answer_node_py"
     },
@@ -4539,7 +4539,7 @@
       "file_type": "code",
       "source_file": "backend/app/agents/chat_answer/node.py",
       "source_location": "L24",
-      "community": 135,
+      "community": 81,
       "norm_label": "build_chat_answer_node()",
       "id": "chat_answer_node_build_chat_answer_node"
     },
@@ -4548,7 +4548,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/agents/chat_answer/node.py",
       "source_location": "L1",
-      "community": 135,
+      "community": 81,
       "norm_label": "chat answer node: generates a direct answer from tool_agent context.",
       "id": "chat_answer_node_rationale_1"
     },
@@ -4620,7 +4620,7 @@
       "file_type": "code",
       "source_file": "backend/app/agents/route/node.py",
       "source_location": "L1",
-      "community": 0,
+      "community": 81,
       "norm_label": "node.py",
       "id": "backend_app_agents_route_node_py"
     },
@@ -4629,7 +4629,7 @@
       "file_type": "code",
       "source_file": "backend/app/agents/route/node.py",
       "source_location": "L25",
-      "community": 0,
+      "community": 81,
       "norm_label": "build_route_node()",
       "id": "route_node_build_route_node"
     },
@@ -4638,7 +4638,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/agents/route/node.py",
       "source_location": "L1",
-      "community": 0,
+      "community": 81,
       "norm_label": "route node: classifies user intent as teach/chat/diagnose.",
       "id": "route_node_rationale_1"
     },
@@ -5178,7 +5178,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L1",
-      "community": 78,
+      "community": 3,
       "norm_label": "llm.py",
       "id": "backend_app_core_llm_py"
     },
@@ -5187,7 +5187,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L69",
-      "community": 134,
+      "community": 81,
       "norm_label": "llmmessage",
       "id": "core_llm_llmmessage"
     },
@@ -5196,7 +5196,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L78",
-      "community": 78,
+      "community": 3,
       "norm_label": "llmproviderconfig",
       "id": "core_llm_llmproviderconfig"
     },
@@ -5304,7 +5304,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L141",
-      "community": 78,
+      "community": 3,
       "norm_label": "normalize_socks_proxy_env()",
       "id": "core_llm_normalize_socks_proxy_env"
     },
@@ -5313,7 +5313,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L157",
-      "community": 78,
+      "community": 3,
       "norm_label": "_validate_provider()",
       "id": "core_llm_validate_provider"
     },
@@ -5322,7 +5322,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L164",
-      "community": 78,
+      "community": 3,
       "norm_label": "load_provider_config()",
       "id": "core_llm_load_provider_config"
     },
@@ -5331,7 +5331,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L181",
-      "community": 78,
+      "community": 3,
       "norm_label": "_is_retryable_error()",
       "id": "core_llm_is_retryable_error"
     },
@@ -5340,7 +5340,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L189",
-      "community": 78,
+      "community": 3,
       "norm_label": "_build_chat_body()",
       "id": "core_llm_build_chat_body"
     },
@@ -5349,7 +5349,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L207",
-      "community": 78,
+      "community": 3,
       "norm_label": "_build_chat_body_with_tools()",
       "id": "core_llm_build_chat_body_with_tools"
     },
@@ -5358,7 +5358,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L240",
-      "community": 78,
+      "community": 3,
       "norm_label": "_post_chat_completion()",
       "id": "core_llm_post_chat_completion"
     },
@@ -5367,7 +5367,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L286",
-      "community": 134,
+      "community": 81,
       "norm_label": "call_llm()",
       "id": "core_llm_call_llm"
     },
@@ -5376,7 +5376,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L304",
-      "community": 78,
+      "community": 3,
       "norm_label": "_strip_json_fence()",
       "id": "core_llm_strip_json_fence"
     },
@@ -5385,7 +5385,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L315",
-      "community": 78,
+      "community": 3,
       "norm_label": "call_llm_json()",
       "id": "core_llm_call_llm_json"
     },
@@ -5394,7 +5394,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L338",
-      "community": 78,
+      "community": 3,
       "norm_label": "_post_chat_completion_with_tools()",
       "id": "core_llm_post_chat_completion_with_tools"
     },
@@ -5403,7 +5403,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L399",
-      "community": 134,
+      "community": 3,
       "norm_label": "call_llm_tools()",
       "id": "core_llm_call_llm_tools"
     },
@@ -5412,7 +5412,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L417",
-      "community": 73,
+      "community": 81,
       "norm_label": "defaultllmclient",
       "id": "core_llm_defaultllmclient"
     },
@@ -5421,7 +5421,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L422",
-      "community": 73,
+      "community": 81,
       "norm_label": ".__init__()",
       "id": "core_llm_defaultllmclient_init"
     },
@@ -5430,7 +5430,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L426",
-      "community": 78,
+      "community": 3,
       "norm_label": "from_env()",
       "id": "core_llm_from_env"
     },
@@ -5439,7 +5439,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L433",
-      "community": 78,
+      "community": 3,
       "norm_label": ".generate_json()",
       "id": "core_llm_defaultllmclient_generate_json"
     },
@@ -5448,7 +5448,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L438",
-      "community": 73,
+      "community": 81,
       "norm_label": ".generate_with_tools()",
       "id": "core_llm_defaultllmclient_generate_with_tools"
     },
@@ -5457,7 +5457,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L448",
-      "community": 73,
+      "community": 3,
       "norm_label": "agentllmrouter",
       "id": "core_llm_agentllmrouter"
     },
@@ -5475,7 +5475,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L475",
-      "community": 73,
+      "community": 3,
       "norm_label": ".provider_for()",
       "id": "core_llm_agentllmrouter_provider_for"
     },
@@ -5484,7 +5484,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L480",
-      "community": 73,
+      "community": 3,
       "norm_label": ".generate_json()",
       "id": "core_llm_agentllmrouter_generate_json"
     },
@@ -5493,7 +5493,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L489",
-      "community": 73,
+      "community": 3,
       "norm_label": ".generate_with_tools()",
       "id": "core_llm_agentllmrouter_generate_with_tools"
     },
@@ -5502,7 +5502,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L1",
-      "community": 78,
+      "community": 3,
       "norm_label": "unified openai-compatible llm calls for deepseek, qwen, and glm.",
       "id": "core_llm_rationale_1"
     },
@@ -5574,7 +5574,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L418",
-      "community": 73,
+      "community": 81,
       "norm_label": "adapter used when all agent nodes should use one provider.",
       "id": "core_llm_rationale_418"
     },
@@ -5583,7 +5583,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L449",
-      "community": 73,
+      "community": 3,
       "norm_label": "routes each agent node to its configured provider, falling back to the default p",
       "id": "core_llm_rationale_449"
     },
@@ -10650,7 +10650,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L409",
-      "community": 73,
+      "community": 81,
       "norm_label": "adapter used when all agent nodes should use one provider.",
       "id": "core_llm_rationale_409"
     },
@@ -10659,7 +10659,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L440",
-      "community": 73,
+      "community": 3,
       "norm_label": "routes each agent node to its configured provider, falling back to the default p",
       "id": "core_llm_rationale_440"
     },
@@ -12111,12 +12111,85 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "finalize/node.py",
+      "source_location": "L23",
+      "weight": 1.0,
+      "source": "finalize_node_py",
+      "target": "finalize_node_build_finalize_node",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "finalize/node.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "finalize_node_rationale_1",
+      "target": "finalize_node_py",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/app/agents/__init__.py",
+      "source_location": "L30",
+      "weight": 1.0,
+      "source": "agents_init_build_agent_nodes",
+      "target": "finalize_node_build_finalize_node"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "joint_synthesis.py",
+      "source_location": "L33",
+      "weight": 1.0,
+      "source": "joint_synthesis_py",
+      "target": "agents_joint_synthesis_build_joint_synthesis_node",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "joint_synthesis.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "agents_joint_synthesis_rationale_1",
+      "target": "joint_synthesis_py",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/app/agents/joint_synthesis.py",
+      "source_location": "L38",
+      "weight": 1.0,
+      "source": "agents_joint_synthesis_build_joint_synthesis_node",
+      "target": "agents_common_schema_note"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/app/agents/__init__.py",
+      "source_location": "L42",
+      "weight": 1.0,
+      "source": "agents_init_build_agent_nodes",
+      "target": "agents_joint_synthesis_build_joint_synthesis_node"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "agent-interface-spec.md",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "agent_interface_spec_md",
-      "target": "docs_agent_interface_spec_agent_\u95f4\u63a5\u53e3\u89c4\u8303",
-      "confidence_score": 1.0
+      "target": "docs_agent_interface_spec_agent_\u95f4\u63a5\u53e3\u89c4\u8303"
     },
     {
       "relation": "contains",
@@ -12254,9 +12327,9 @@
       "source_file": "agent-interface-spec.md",
       "source_location": "L29",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_agent_interface_spec_1_\u6587\u6863\u76ee\u6807",
-      "target": "docs_agent_interface_spec_1_2_\u76ee\u6807\u5de5\u4f5c\u6d41_p0_1_\u5df2\u5b8c\u6210_p0_2_p0_6_\u5f85\u5b9e\u73b0_p0_1",
-      "confidence_score": 1.0
+      "target": "docs_agent_interface_spec_1_2_\u76ee\u6807\u5de5\u4f5c\u6d41_p0_1_\u5df2\u5b8c\u6210_p0_2_p0_6_\u5f85\u5b9e\u73b0_p0_1"
     },
     {
       "relation": "contains",
@@ -12274,9 +12347,9 @@
       "source_file": "agent-interface-spec.md",
       "source_location": "L31",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_agent_interface_spec_1_2_\u76ee\u6807\u5de5\u4f5c\u6d41_p0_1_\u5df2\u5b8c\u6210_p0_2_p0_6_\u5f85\u5b9e\u73b0_p0_1",
-      "target": "docs_agent_interface_spec_codeblock_2",
-      "confidence_score": 1.0
+      "target": "docs_agent_interface_spec_codeblock_2"
     },
     {
       "relation": "contains",
@@ -12294,9 +12367,9 @@
       "source_file": "agent-interface-spec.md",
       "source_location": "L117",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_agent_interface_spec_3_\u5168\u5c40\u72b6\u6001_statedict",
-      "target": "docs_agent_interface_spec_3_2_p0_\u65b0\u589e\u5b57\u6bb5_p0_1_p0_2_p0_6_p0_\u5f85\u5b9e\u73b0",
-      "confidence_score": 1.0
+      "target": "docs_agent_interface_spec_3_2_p0_\u65b0\u589e\u5b57\u6bb5_p0_1_p0_2_p0_6_p0_\u5f85\u5b9e\u73b0"
     },
     {
       "relation": "contains",
@@ -12534,9 +12607,9 @@
       "source_file": "agent-interface-spec.md",
       "source_location": "L494",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_agent_interface_spec_6_4_\u9886\u57df\u4e13\u5bb6_agent_expertdraft_\u4ea4\u53c9\u5ba1\u67e5_\u4fee\u8ba2_\u8054\u5408\u5408\u6210",
-      "target": "docs_agent_interface_spec_6_4_2_\u9636\u6bb5\u4e8c_\u4ea4\u53c9\u5ba1\u67e5_crossreview",
-      "confidence_score": 1.0
+      "target": "docs_agent_interface_spec_6_4_2_\u9636\u6bb5\u4e8c_\u4ea4\u53c9\u5ba1\u67e5_crossreview"
     },
     {
       "relation": "contains",
@@ -12544,9 +12617,9 @@
       "source_file": "agent-interface-spec.md",
       "source_location": "L543",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_agent_interface_spec_6_4_\u9886\u57df\u4e13\u5bb6_agent_expertdraft_\u4ea4\u53c9\u5ba1\u67e5_\u4fee\u8ba2_\u8054\u5408\u5408\u6210",
-      "target": "docs_agent_interface_spec_6_4_3_\u9636\u6bb5\u4e09_\u6536\u5230\u5ba1\u67e5\u540e\u4fee\u8ba2_revisionrecord",
-      "confidence_score": 1.0
+      "target": "docs_agent_interface_spec_6_4_3_\u9636\u6bb5\u4e09_\u6536\u5230\u5ba1\u67e5\u540e\u4fee\u8ba2_revisionrecord"
     },
     {
       "relation": "contains",
@@ -12554,9 +12627,9 @@
       "source_file": "agent-interface-spec.md",
       "source_location": "L585",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_agent_interface_spec_6_4_\u9886\u57df\u4e13\u5bb6_agent_expertdraft_\u4ea4\u53c9\u5ba1\u67e5_\u4fee\u8ba2_\u8054\u5408\u5408\u6210",
-      "target": "docs_agent_interface_spec_6_4_4_\u9636\u6bb5\u56db_\u8054\u5408\u5408\u6210_jointsynthesis",
-      "confidence_score": 1.0
+      "target": "docs_agent_interface_spec_6_4_4_\u9636\u6bb5\u56db_\u8054\u5408\u5408\u6210_jointsynthesis"
     },
     {
       "relation": "contains",
@@ -12574,9 +12647,9 @@
       "source_file": "agent-interface-spec.md",
       "source_location": "L518",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_agent_interface_spec_6_4_2_\u9636\u6bb5\u4e8c_\u4ea4\u53c9\u5ba1\u67e5_crossreview",
-      "target": "docs_agent_interface_spec_codeblock_14",
-      "confidence_score": 1.0
+      "target": "docs_agent_interface_spec_codeblock_14"
     },
     {
       "relation": "contains",
@@ -12584,9 +12657,9 @@
       "source_file": "agent-interface-spec.md",
       "source_location": "L547",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_agent_interface_spec_6_4_3_\u9636\u6bb5\u4e09_\u6536\u5230\u5ba1\u67e5\u540e\u4fee\u8ba2_revisionrecord",
-      "target": "docs_agent_interface_spec_codeblock_15",
-      "confidence_score": 1.0
+      "target": "docs_agent_interface_spec_codeblock_15"
     },
     {
       "relation": "contains",
@@ -12594,9 +12667,9 @@
       "source_file": "agent-interface-spec.md",
       "source_location": "L589",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_agent_interface_spec_6_4_4_\u9636\u6bb5\u56db_\u8054\u5408\u5408\u6210_jointsynthesis",
-      "target": "docs_agent_interface_spec_codeblock_16",
-      "confidence_score": 1.0
+      "target": "docs_agent_interface_spec_codeblock_16"
     },
     {
       "relation": "contains",
@@ -12744,9 +12817,9 @@
       "source_file": "agent-interface-spec.md",
       "source_location": "L919",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_agent_interface_spec_7_\u8def\u7531\u89c4\u8303",
-      "target": "docs_agent_interface_spec_7_5_\u8fa9\u8bba\u95ed\u73af\u8def\u7531_p0_1_\u540e_\u5f53\u524d\u5b9e\u73b0",
-      "confidence_score": 1.0
+      "target": "docs_agent_interface_spec_7_5_\u8fa9\u8bba\u95ed\u73af\u8def\u7531_p0_1_\u540e_\u5f53\u524d\u5b9e\u73b0"
     },
     {
       "relation": "contains",
@@ -12804,9 +12877,9 @@
       "source_file": "agent-interface-spec.md",
       "source_location": "L921",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "docs_agent_interface_spec_7_5_\u8fa9\u8bba\u95ed\u73af\u8def\u7531_p0_1_\u540e_\u5f53\u524d\u5b9e\u73b0",
-      "target": "docs_agent_interface_spec_codeblock_31",
-      "confidence_score": 1.0
+      "target": "docs_agent_interface_spec_codeblock_31"
     },
     {
       "relation": "contains",
@@ -12834,9 +12907,9 @@
       "source_file": "implementation-plan.md",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "implementation_plan_md",
-      "target": "docs_implementation_plan_\u9879\u76ee\u5b9e\u65bd\u8ba1\u5212",
-      "confidence_score": 1.0
+      "target": "docs_implementation_plan_\u9879\u76ee\u5b9e\u65bd\u8ba1\u5212"
     },
     {
       "relation": "contains",
@@ -18789,17 +18862,6 @@
       "context": "call",
       "confidence": "INFERRED",
       "confidence_score": 0.8,
-      "source_file": "backend/app/agents/joint_synthesis.py",
-      "source_location": "L38",
-      "weight": 1.0,
-      "source": "agents_joint_synthesis_build_joint_synthesis_node",
-      "target": "agents_common_schema_note"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
       "source_file": "backend/app/agents/feedback/node.py",
       "source_location": "L22",
       "weight": 1.0,
@@ -19071,17 +19133,6 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "backend/app/agents/__init__.py",
-      "source_location": "L30",
-      "weight": 1.0,
-      "source": "agents_init_build_agent_nodes",
-      "target": "finalize_node_build_finalize_node"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "backend/app/agents/__init__.py",
       "source_location": "L38",
       "weight": 1.0,
       "source": "agents_init_build_agent_nodes",
@@ -19125,62 +19176,11 @@
       "context": "call",
       "confidence": "INFERRED",
       "confidence_score": 0.8,
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": "L42",
-      "weight": 1.0,
-      "source": "agents_init_build_agent_nodes",
-      "target": "agents_joint_synthesis_build_joint_synthesis_node"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
       "source_file": "backend/app/graph/workflow.py",
       "source_location": "L280",
       "weight": 1.0,
       "source": "graph_workflow_build_workflow",
       "target": "agents_init_build_agent_nodes"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "backend/app/agents/joint_synthesis.py",
-      "source_location": "L33",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "backend_app_agents_joint_synthesis_py",
-      "target": "agents_joint_synthesis_build_joint_synthesis_node"
-    },
-    {
-      "relation": "rationale_for",
-      "confidence": "EXTRACTED",
-      "source_file": "backend/app/agents/joint_synthesis.py",
-      "source_location": "L1",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "agents_joint_synthesis_rationale_1",
-      "target": "backend_app_agents_joint_synthesis_py"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "backend/app/agents/finalize/node.py",
-      "source_location": "L25",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "backend_app_agents_finalize_node_py",
-      "target": "finalize_node_build_finalize_node"
-    },
-    {
-      "relation": "rationale_for",
-      "confidence": "EXTRACTED",
-      "source_file": "backend/app/agents/finalize/node.py",
-      "source_location": "L1",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "finalize_node_rationale_1",
-      "target": "backend_app_agents_finalize_node_py"
     },
     {
       "relation": "contains",
@@ -27493,5 +27493,5 @@
       "source_file": "backend/tests/integration/test_workflow_integration.py"
     }
   ],
-  "built_at_commit": "463182d7ad5767921fac1f9b2957b49f007e3b5c"
+  "built_at_commit": "b7a7f622b1648e126ccf327bb8cd3e8ad0860676"
 }
