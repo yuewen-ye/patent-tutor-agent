@@ -54,6 +54,26 @@ def build_expert_a_revise_node(llm_client: LLMClient) -> Node:
         ]
     )
 
+    def _normalize_revision(raw_obj: object) -> object:
+        """Normalize LLM output: extract modified_paragraphs from individual
+        revision items up to the record level, and remove from items."""
+        if not isinstance(raw_obj, dict):
+            return raw_obj
+        normalized = dict(raw_obj)
+        # Collect modified_paragraphs from individual revision items
+        all_modified: list[str] = []
+        revisions = normalized.get("revisions")
+        if isinstance(revisions, list):
+            for rev in revisions:
+                if isinstance(rev, dict) and "modified_paragraphs" in rev:
+                    paragraphs = rev.pop("modified_paragraphs")
+                    if isinstance(paragraphs, list):
+                        all_modified.extend(str(p) for p in paragraphs)
+        # Only set at record level if not already present
+        if all_modified and not normalized.get("modified_paragraphs"):
+            normalized["modified_paragraphs"] = all_modified
+        return normalized
+
     def expert_a_revise_node(state: StateDict) -> dict[str, Any]:
         raw = llm_client.generate_json(
             messages_from_prompt(
@@ -65,7 +85,7 @@ def build_expert_a_revise_node(llm_client: LLMClient) -> Node:
             temperature=0.4,
             agent="expert_a_revise",
         )
-        record = RevisionRecord.model_validate(
+        normalized = _normalize_revision(
             normalize_key_aliases(
                 raw,
                 {
@@ -78,6 +98,7 @@ def build_expert_a_revise_node(llm_client: LLMClient) -> Node:
                 },
             )
         )
+        record = RevisionRecord.model_validate(normalized)
         return {
             "revision_record_a": record.model_dump(),
             "events": [completed_event("expert_a", "revised draft based on expert B review")],

@@ -51,6 +51,12 @@ class TestTeachRoute:
         assert "learning_path" in state
         assert "expert_a_draft" in state
         assert "expert_b_draft" in state
+        # P0.1: New state fields
+        assert "cross_review_a" in state
+        assert "cross_review_b" in state
+        assert "revision_record_a" in state
+        assert "revision_record_b" in state
+        assert "joint_synthesis_output" in state
         assert "judge_report" in state
         assert state["judge_report"]["decision"] in {
             "accept", "accept_with_minor_revision", "revise",

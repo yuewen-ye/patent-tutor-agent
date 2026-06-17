@@ -13,22 +13,24 @@ import pytest
 
 from backend.app.core.llm import AgentLLMRouter, LLMConfigurationError, LLMProviderError
 from backend.app.graph.workflow import run_workflow
-from backend.tests.helpers import completed_state
+from backend.tests.helpers import completed_teach_state
 
 pytestmark = pytest.mark.integration
 
 
 def test_workflow_runs_single_round_with_real_llm(tmp_path: Path) -> None:
-    """Full workflow with max_debate_rounds=1 — minimal cost: 6 LLM calls."""
+    """Full 5-stage workflow with max_debate_rounds=1 — 13 LLM calls."""
     try:
         router = AgentLLMRouter.from_env()
     except LLMConfigurationError as exc:
         pytest.skip(f"No provider configured: {exc}")
 
+    user_input = "请系统地教我专利法中关于新颖性判断的全部标准，从法条原文、审查指南的细节到常见误区，一步一步给我讲解"
+
     try:
         state = run_workflow(
             session_id="pytest-integration",
-            user_input="我想学习专利新颖性的判断标准",
+            user_input=user_input,
             llm_client=router,
             artifact_root=tmp_path / "artifacts",
             max_debate_rounds=1,
@@ -41,8 +43,13 @@ def test_workflow_runs_single_round_with_real_llm(tmp_path: Path) -> None:
             pytest.skip(f"Provider auth failed (bad key?): {exc}")
         raise
 
+    # Verify teach path was used
+    intent = state.get("intent", "")
+    if intent != "teach":
+        pytest.skip(f"LLM routed to '{intent}' instead of 'teach' — routing flake")
+
     # -- state assertions --
-    completed = completed_state(state)
+    completed = completed_teach_state(state)
     assert completed["session_id"] == "pytest-integration"
     assert completed["debate_round"] >= 1
     assert completed["max_debate_rounds"] == 1
@@ -59,13 +66,29 @@ def test_workflow_runs_single_round_with_real_llm(tmp_path: Path) -> None:
     # retrieval context injected
     assert len(completed["retrieval_context"]) >= 1
 
-    # both experts contributed
+    # Stage 1: both experts generated drafts
     assert completed["expert_a_draft"]["expert"] == "expert_a"
     assert completed["expert_b_draft"]["expert"] == "expert_b"
     assert completed["expert_a_draft"]["teaching_content"]
     assert completed["expert_b_draft"]["teaching_content"]
 
-    # judge rendered a decision
+    # Stage 2: cross-reviews produced
+    assert completed["cross_review_a"]["reviewer"] == "expert_a"
+    assert completed["cross_review_b"]["reviewer"] == "expert_b"
+    assert len(completed["cross_review_a"]["review_opinions"]) >= 1
+    assert len(completed["cross_review_b"]["review_opinions"]) >= 1
+
+    # Stage 3: revision records produced
+    assert completed["revision_record_a"]["agent"] == "expert_a"
+    assert completed["revision_record_b"]["agent"] == "expert_b"
+    assert len(completed["revision_record_a"]["revisions"]) >= 1
+    assert len(completed["revision_record_b"]["revisions"]) >= 1
+
+    # Stage 4: joint synthesis produced
+    assert completed["joint_synthesis_output"]["title"]
+    assert len(completed["joint_synthesis_output"]["sections"]) >= 1
+
+    # Stage 5: judge rendered a decision
     assert completed["judge_report"]["decision"] in {
         "accept",
         "accept_with_minor_revision",
@@ -73,6 +96,7 @@ def test_workflow_runs_single_round_with_real_llm(tmp_path: Path) -> None:
     }
     assert 1 <= completed["judge_report"]["accuracy_score"] <= 5
     assert 1 <= completed["judge_report"]["adaptation_score"] <= 5
+    assert 1 <= completed["judge_report"]["completeness_score"] <= 5
 
     # feedback produced
     assert len(completed["feedback_result"]["questionnaire"]) >= 1
@@ -93,6 +117,11 @@ def test_workflow_runs_single_round_with_real_llm(tmp_path: Path) -> None:
         "artifacts/sessions/pytest-integration/round-01/retrieval_context.md",
         "artifacts/sessions/pytest-integration/round-01/expert_a_draft.md",
         "artifacts/sessions/pytest-integration/round-01/expert_b_draft.md",
+        "artifacts/sessions/pytest-integration/round-01/cross_review_a.md",
+        "artifacts/sessions/pytest-integration/round-01/cross_review_b.md",
+        "artifacts/sessions/pytest-integration/round-01/revision_record_a.md",
+        "artifacts/sessions/pytest-integration/round-01/revision_record_b.md",
+        "artifacts/sessions/pytest-integration/round-01/joint_synthesis.md",
         "artifacts/sessions/pytest-integration/round-01/judge_report.md",
         "artifacts/sessions/pytest-integration/round-01/feedback_report.md",
         "artifacts/sessions/pytest-integration/final_answer.md",
@@ -123,7 +152,7 @@ def test_workflow_event_ordering_is_correct_with_real_llm(tmp_path: Path) -> Non
     try:
         state = run_workflow(
             session_id="pytest-events",
-            user_input="请用案例解释什么是抵触申请",
+            user_input="请系统性地教我专利审查指南中关于抵触申请的完整规定，包括定义、判断方法、与现有技术的区别",
             llm_client=router,
             artifact_root=tmp_path / "artifacts",
             max_debate_rounds=1,
@@ -134,10 +163,17 @@ def test_workflow_event_ordering_is_correct_with_real_llm(tmp_path: Path) -> Non
             pytest.skip(f"Provider unavailable: {exc}")
         raise
 
+    intent = state.get("intent", "")
+    if intent != "teach":
+        pytest.skip(f"LLM routed to '{intent}' instead of 'teach' — routing flake")
+
     completed_events = [
         e["node"] for e in state["events"] if e["status"] == "completed"
     ]
-    # New three-route workflow: route → diagnosis → planner → tool_agent → experts → judge → ...
+    # P0.1 5-stage workflow: route → diagnosis → planner → tool_agent → ...
     assert completed_events[:4] == ["route", "diagnosis", "planner", "tool_agent"]
     assert "expert_a" in completed_events and "expert_b" in completed_events
+    assert "cross_review_a" in completed_events and "cross_review_b" in completed_events
+    assert "joint_synthesis" in completed_events
+    # feedback and finalize are the last two LLM nodes
     assert completed_events[-2:] == ["feedback", "finalize"]

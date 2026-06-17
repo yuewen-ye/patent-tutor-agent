@@ -7,7 +7,7 @@ import pytest
 
 from backend.app.core.llm import LLMMessage
 from backend.app.graph.workflow import run_workflow
-from backend.tests.helpers import completed_state
+from backend.tests.helpers import completed_teach_state
 
 pytestmark = pytest.mark.unit
 
@@ -220,7 +220,7 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
         artifact_root=tmp_path / "artifacts",
         max_debate_rounds=2,
     )
-    completed = completed_state(state)
+    completed = completed_teach_state(state)
 
     agents = llm_client.agents
     # P0.1: 5-stage workflow with lightweight review loop

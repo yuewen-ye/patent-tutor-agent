@@ -18,7 +18,10 @@ _COMPLETED_STATE_KEYS = (
     "artifacts",
     "debate_round",
     "max_debate_rounds",
-    # P0.1: Five-stage expert collaboration chain fields
+)
+
+# P0.1: Additional fields for the 5-stage teach-path workflow
+_TEACH_PATH_KEYS = (
     "cross_review_a",
     "cross_review_b",
     "revision_record_a",
@@ -37,3 +40,11 @@ def completed_state(state: StateDict) -> dict[str, Any]:
     for key in _COMPLETED_STATE_KEYS:
         assert key in state, f"Expected workflow to populate {key}"
     return cast(dict[str, Any], state)
+
+
+def completed_teach_state(state: StateDict) -> dict[str, Any]:
+    """Assert teach-path workflow completion including P0.1 fields."""
+    completed = completed_state(state)
+    for key in _TEACH_PATH_KEYS:
+        assert key in completed, f"Expected teach workflow to populate {key}"
+    return completed

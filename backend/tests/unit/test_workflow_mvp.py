@@ -4,7 +4,7 @@ import pytest
 
 from backend.app.core.llm import LLMMessage
 from backend.app.graph.workflow import build_workflow, export_workflow_mermaid, run_workflow
-from backend.tests.helpers import completed_state
+from backend.tests.helpers import completed_teach_state
 
 pytestmark = pytest.mark.unit
 
@@ -208,7 +208,7 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm() -> None:
         llm_client=llm_client,
     )
 
-    completed = completed_state(state)
+    completed = completed_teach_state(state)
     # P0.1: route + diagnosis + planner + expert_a + expert_b +
     #       cross_review_a + cross_review_b + expert_a_revise + expert_b_revise +
     #       joint_synthesis + judge + feedback + finalize = 13 generate_json calls

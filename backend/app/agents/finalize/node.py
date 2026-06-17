@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from backend.app.agents.common import Node, LLMMessage
+from backend.app.agents.common import Node, LLMMessage, normalize_key_aliases
 from backend.app.core.llm import LLMClient
 from backend.app.schemas.state import FinalAnswer, StateDict, completed_event
 
@@ -42,7 +42,16 @@ def build_finalize_node(llm_client: LLMClient) -> Node:
         ]
 
         raw = llm_client.generate_json(messages=messages, temperature=0.3, agent="finalize")
-        validated = FinalAnswer.model_validate(raw)
+        # Normalize known LLM key variants before validation
+        normalized = normalize_key_aliases(
+            raw,
+            {
+                "nextStudyQuestions": "next_questions",
+                "next_study_questions": "next_questions",
+                "judgeSummary": "judge_summary",
+            },
+        )
+        validated = FinalAnswer.model_validate(normalized)
 
         return {
             "final_answer": validated.model_dump(),
