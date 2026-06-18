@@ -234,18 +234,57 @@ def _with_runtime_side_effects(
     return wrapped
 
 
-def _route_after_judge(state: StateDict) -> Literal["lightweight_review", "feedback"]:
+def _route_after_judge(state: StateDict) -> Literal["revise_experts", "feedback"]:
     decision = str(state.get("judge_report", {}).get("decision", ""))
     debate_round = int(state.get("debate_round", 1))
     max_debate_rounds = int(state.get("max_debate_rounds", 3))
     if decision == "revise" and debate_round < max_debate_rounds:
         print(
-            f"▸ [路由] judge 要求修订 → 进入轻量互审（第 {debate_round + 1} 轮）",
+            f"▸ [路由] judge 要求修订 → 进入目标专家修订（第 {debate_round + 1} 轮）",
             file=sys.stderr,
         )
-        return "lightweight_review"
+        return "revise_experts"
     print(f"▸ [路由] judge 决策={decision} → 进入反馈环节", file=sys.stderr)
     return "feedback"
+
+
+def _route_after_revise_experts(
+    state: StateDict,
+) -> list[Literal["expert_a_revise", "expert_b_revise"]]:
+    judge_report = state.get("judge_report", {})
+    requests = judge_report.get("revision_requests", [])
+    selected: set[Literal["expert_a_revise", "expert_b_revise"]] = set()
+    if isinstance(requests, list):
+        for request in requests:
+            if not isinstance(request, dict):
+                continue
+            match request.get("target"):
+                case "expert_a":
+                    selected.add("expert_a_revise")
+                case "expert_b":
+                    selected.add("expert_b_revise")
+                case "both":
+                    selected.update({"expert_a_revise", "expert_b_revise"})
+                case _:
+                    selected.update({"expert_a_revise", "expert_b_revise"})
+    if not selected:
+        selected.update({"expert_a_revise", "expert_b_revise"})
+    ordered: list[Literal["expert_a_revise", "expert_b_revise"]] = []
+    if "expert_a_revise" in selected:
+        ordered.append("expert_a_revise")
+    if "expert_b_revise" in selected:
+        ordered.append("expert_b_revise")
+    return ordered
+
+
+def _route_after_joint_synthesis(state: StateDict) -> Literal["lightweight_review", "judge"]:
+    judge_report = state.get("judge_report", {})
+    debate_round = int(state.get("debate_round", 1))
+    if judge_report.get("decision") == "revise" and debate_round > 1:
+        print("▸ [路由] 修订稿已合成 → 进入轻量互审", file=sys.stderr)
+        return "lightweight_review"
+    print("▸ [路由] 联合合成稿 → judge", file=sys.stderr)
+    return "judge"
 
 
 def revise_experts_node(
@@ -263,9 +302,9 @@ def revise_experts_node(
         "lightweight_verdict": lightweight_result.get("verdict"),
     }
     event = AgentEvent(
-        node="judge",
+        node="revise_experts",
         status="debate_round",
-        message=f"judge requested lightweight revision round {next_round}",
+        message=f"judge requested targeted revision round {next_round}",
         round=next_round,
     ).model_dump()
     return {
@@ -402,19 +441,24 @@ def build_workflow(
     builder.add_edge("expert_a_revise", "joint_synthesis")
     builder.add_edge("expert_b_revise", "joint_synthesis")
 
-    # Stage 5: Judge reviews joint synthesis
-    builder.add_edge("joint_synthesis", "judge")
+    builder.add_conditional_edges(
+        "joint_synthesis",
+        _route_after_joint_synthesis,
+        {"lightweight_review": "lightweight_review", "judge": "judge"},
+    )
 
-    # Judge routing: lightweight_review (revise) or feedback (accept/force exit)
     builder.add_conditional_edges(
         "judge",
         _route_after_judge,
-        {"lightweight_review": "lightweight_review", "feedback": "feedback"},
+        {"revise_experts": "revise_experts", "feedback": "feedback"},
     )
 
-    # Lightweight review loop: lightweight_review → revise_experts → joint_synthesis → judge
-    builder.add_edge("lightweight_review", "revise_experts")
-    builder.add_edge("revise_experts", "joint_synthesis")
+    builder.add_conditional_edges(
+        "revise_experts",
+        _route_after_revise_experts,
+        {"expert_a_revise": "expert_a_revise", "expert_b_revise": "expert_b_revise"},
+    )
+    builder.add_edge("lightweight_review", "judge")
 
     # Feedback → Finalize → END
     builder.add_edge("feedback", "finalize")

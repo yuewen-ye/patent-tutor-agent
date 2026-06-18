@@ -26,7 +26,8 @@ source 标注含义：
 - "B-过渡"：B 提供的段落间过渡文字
 
 注意：
-- 如果有 lightweight_review_result 说明这是修订轮次，需要在现有合成稿基础上局部修正，而非重新合成
+- 如果有 judge_report.decision=revise，说明这是修订轮次，需要按 revision_requests 在现有合成稿基础上局部修正，而非重新合成
+- 如果有 lightweight_review_result，必须确认轻量互审指出的问题已经处理
 - 关注 unresolved_disputes 中的问题，标注解决方案"""
 
 
@@ -55,6 +56,7 @@ def build_joint_synthesis_node(llm_client: LLMClient) -> Node:
                 "专家 B 修订记录：\n{revision_record_b}\n\n"
                 "学习者画像：{learner_profile}\n\n"
                 "现有联合合成稿（如有）：{existing_synthesis}\n"
+                "Judge 打回意见（如有）：{judge_report}\n"
                 "轻量互审结果（如有）：{lightweight_review}\n\n"
                 "请整合为联合合成稿。",
             ),
@@ -75,6 +77,7 @@ def build_joint_synthesis_node(llm_client: LLMClient) -> Node:
                 revision_record_b=state.get("revision_record_b", {}),
                 learner_profile=state.get("learner_profile", {}),
                 existing_synthesis=existing if existing else {},
+                judge_report=state.get("judge_report", {}),
                 lightweight_review=lightweight if lightweight else {},
             ),
             temperature=0.3,

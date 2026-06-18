@@ -192,35 +192,51 @@ https://smith.langchain.com/studio/?baseUrl=http://localhost:8124
 当前实现**三路由工作流**——根据用户意图自动分流：
 
 ```text
-START → route ──┬── diagnose: diagnosis → END
-                 ├── chat: tool_agent ──(rag_retrieve 工具)──→ chat_answer → END
-                 └── teach: diagnosis → planner → tool_agent → expert_a ∥ expert_b → judge
-                                                                    ↑__________↓ (辩论循环)
-                                                                    revise_experts
-                                                                          ↓
-                                                               feedback → finalize → END
+START → _init → route ──┬── diagnose: diagnosis → END
+                         ├── chat: tool_agent ──(rag_retrieve 工具)──→ chat_answer → END
+                         └── teach: diagnosis → planner → tool_agent
+                                      ↓
+                                  expert_a ∥ expert_b
+                                      ↓
+                         cross_review_a ∥ cross_review_b
+                                      ↓
+                         expert_a_revise ∥ expert_b_revise
+                                      ↓
+                                joint_synthesis → judge
+                                      ↑             │
+                                      │             ├── accept/minor → feedback → finalize → END
+                                      │             └── revise → revise_experts
+                                      │                            ↓
+                                      └── targeted expert revise → joint_synthesis → lightweight_review
+                                                                                         ↓
+                                                                                       judge
 ```
 
 | 路由 | 触发条件 | 路径 | LLM 调用次数 | 典型耗时 |
 |------|---------|------|-------------|---------|
-| **teach** | "系统学习"、"学习路径"、"规划" | 诊断→规划→RAG→双专家辩论→裁判→反馈 | ~7-9 次 | 2-4 分钟 |
-| **chat** | 单点问答、定义、对比 | RAG(可选)→直接回答 | ~2-4 次 | 5-30 秒 |
+| **teach** | "系统学习"、"学习路径"、"规划" | 诊断→规划→RAG→双专家协作→裁判→反馈 | ~10-14 次 | 2-5 分钟 |
+| **chat** | 单点问答、定义、对比 | RAG(可选)→直接回答 | ~1-2 次 | 5-30 秒 |
 | **diagnose** | "诊断"、"薄弱点"、"评估" | 诊断→结束 | ~1 次 | 2-5 秒 |
 
 ### Agent 节点职责
 
 | 节点 | 类型 | 职责 | Provider 环境变量 |
 |------|------|------|-----------------|
-| `route` | LLM 调用 | 分类用户意图 teach/chat/diagnose | `ROUTE_PROVIDER` |
+| `route` | LLM 调用 + 本地兜底 | 分类用户意图 teach/chat/diagnose；明显学习/诊断请求会覆盖误路由 | `ROUTE_PROVIDER` |
 | `diagnosis` | LLM 调用 | 学情诊断，识别学习背景/水平/薄弱点 | `DIAGNOSIS_PROVIDER` |
 | `planner` | LLM 调用 | 生成个性化学习路径 | `PLANNER_PROVIDER` |
 | `tool_agent` | LLM + Tool 调用 | ReAct 循环，自主调用 rag_retrieve 检索法条 | `TOOL_AGENT_PROVIDER` |
 | `expert_a` | LLM 调用 | 保守严谨、法条优先的教学草稿 | `EXPERT_A_PROVIDER` |
 | `expert_b` | LLM 调用 | 生动灵活、面向案例的教学草稿 | `EXPERT_B_PROVIDER` |
-| `judge` | LLM 调用 | 审核裁判，只评估不写正文 | `JUDGE_PROVIDER` |
+| `cross_review_a` / `cross_review_b` | LLM 调用 | 专家交叉审查对方草稿 | `EXPERT_A_PROVIDER` / `EXPERT_B_PROVIDER` |
+| `expert_a_revise` / `expert_b_revise` | LLM 调用 | 按交叉审查或 Judge 打回意见定向修订 | `EXPERT_A_PROVIDER` / `EXPERT_B_PROVIDER` |
+| `joint_synthesis` | LLM 调用 | 合成一份带来源标注的联合教学稿 | `JOINT_SYNTHESIS_PROVIDER` |
+| `judge` | LLM 调用 | 审核联合稿，只评估不写正文 | `JUDGE_PROVIDER` |
+| `revise_experts` | 无 LLM | 增加辩论轮次，并按 Judge target 分派修订专家 | — |
+| `lightweight_review` | LLM 调用 | 对打回后的修订稿做轻量复审 | `LIGHTWEIGHT_REVIEW_PROVIDER` |
 | `feedback` | LLM 调用 | 生成问卷、下一步动作、画像更新建议 | `FEEDBACK_PROVIDER` |
-| `chat_answer` | LLM 调用 | chat 路径生成快速回答 | `CHAT_ANSWER_PROVIDER` |
-| `finalize` | 无 LLM | 汇总最终答案 | — |
+| `chat_answer` | LLM 调用或复用 | chat 路径优先复用 tool_agent 的最终回答，必要时补答 | `CHAT_ANSWER_PROVIDER` |
+| `finalize` | LLM 调用 | 将联合稿、裁判意见和反馈整理为最终答案 | `DEFAULT_LLM_PROVIDER` |
 
 接口合同以 `docs/agent-interface-spec.md` 和 `backend/app/schemas/state.py` 为准。
 

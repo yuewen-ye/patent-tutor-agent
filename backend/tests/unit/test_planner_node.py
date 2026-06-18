@@ -1,7 +1,7 @@
 import pytest
 
 from backend.app.agents.planner.node import build_planner_node
-from backend.app.core.llm import LLMMessage
+from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinition
 from backend.app.schemas.state import StateDict
 
 pytestmark = pytest.mark.unit
@@ -17,6 +17,15 @@ class PlannerLLMClient:
     ) -> object:
         self.calls.append((messages, agent))
         return self.response
+
+    def generate_with_tools(
+        self,
+        messages: list[LLMMessage],
+        tools: list[ToolDefinition],
+        temperature: float,
+        agent: str | None = None,
+    ) -> LLMResponseWithTools:
+        raise AssertionError("planner node must not call tools")
 
 
 def test_planner_normalizes_model_generated_node_ids_to_slug() -> None:

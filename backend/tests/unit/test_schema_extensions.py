@@ -31,7 +31,7 @@ class TestIntentResult:
 
     def test_invalid_intent_rejected(self) -> None:
         with pytest.raises(ValidationError):
-            IntentResult(intent="invalid", confidence=0.5, reason="")
+            IntentResult.model_validate({"intent": "invalid", "confidence": 0.5, "reason": ""})
 
 
 class TestChatAnswer:
@@ -46,7 +46,7 @@ class TestChatAnswer:
 
     def test_missing_content_rejected(self) -> None:
         with pytest.raises(ValidationError):
-            ChatAnswer(sources=[])
+            ChatAnswer.model_validate({"sources": []})
 
 
 class TestAgentNodeExtension:
@@ -54,6 +54,9 @@ class TestAgentNodeExtension:
         assert "route" in AgentNode.__args__  # type: ignore[attr-defined]
         assert "tool_agent" in AgentNode.__args__  # type: ignore[attr-defined]
         assert "chat_answer" in AgentNode.__args__  # type: ignore[attr-defined]
+        assert "expert_a_revise" in AgentNode.__args__  # type: ignore[attr-defined]
+        assert "expert_b_revise" in AgentNode.__args__  # type: ignore[attr-defined]
+        assert "revise_experts" in AgentNode.__args__  # type: ignore[attr-defined]
 
     def test_existing_nodes_preserved(self) -> None:
         for name in ("diagnosis", "planner", "expert_a", "expert_b", "judge", "feedback", "finalize"):
@@ -78,6 +81,15 @@ class TestStateDictNewFields:
             "chat_answer": {"content": "回答", "sources": []},
         }
         assert s["chat_answer"]["content"] == "回答"
+
+    def test_tool_agent_answer_field(self) -> None:
+        s: StateDict = {
+            "session_id": "s1",
+            "user_input": "test",
+            "events": [],
+            "tool_agent_answer": "可直接复用的回答",
+        }
+        assert s["tool_agent_answer"] == "可直接复用的回答"
 
     def test_both_new_fields(self) -> None:
         s: StateDict = {

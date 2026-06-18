@@ -12,16 +12,27 @@
 ### 1.1 当前工作流 ✅
 
 ```text
-START → route ──┬── diagnose: diagnosis → END
-                 ├── chat: tool_agent ──(rag_retrieve tool)──→ chat_answer → END
-                 └── teach: diagnosis → planner → tool_agent → expert_a ∥ expert_b → judge
-                                                                    ↑__________↓ (辩论循环)
-                                                                    revise_experts
-                                                                          ↓
-                                                               feedback → finalize → END
+START → _init → route ──┬── diagnose: diagnosis → END
+                         ├── chat: tool_agent ──(rag_retrieve tool)──→ chat_answer → END
+                         └── teach: diagnosis → planner → tool_agent
+                                      ↓
+                                  expert_a ∥ expert_b
+                                      ↓
+                         cross_review_a ∥ cross_review_b
+                                      ↓
+                         expert_a_revise ∥ expert_b_revise
+                                      ↓
+                                joint_synthesis → judge
+                                      ↑             │
+                                      │             ├── accept/minor → feedback → finalize → END
+                                      │             └── revise → revise_experts
+                                      │                            ↓
+                                      └── targeted expert revise → joint_synthesis → lightweight_review
+                                                                                         ↓
+                                                                                       judge
 ```
 
-- `route` 节点分类用户意图为 teach/chat/diagnose
+- `route` 节点分类用户意图为 teach/chat/diagnose；明显学习/诊断请求有本地兜底，避免真实 provider 误路由
 - `tool_agent` 节点以 ReAct 循环调用 `rag_retrieve` 工具（最多 5 轮），LLM 自主决定是否检索
 - `chat_answer` 节点生成直接回答（chat 路径，无辩论）
 - teach 路径保留完整诊断→规划→辩论→反馈流程
@@ -48,18 +59,19 @@ START → route ──┬── diagnose: diagnosis → END
                                  /           \
                           通过/轻微修改      修订且轮次<3
                                ↓                ↓
-                           feedback       lightweight_review
-                               ↓           (只审变更段落±1)
-                           finalize            ↓
-                               ↓         重新联合合成 → judge (轮次+1)
-                              END              ↓
+                           feedback       revise_experts
+                               ↓                ↓
+                           finalize       定向专家修订
+                               ↓                ↓
+                              END        重新联合合成 → lightweight_review → judge
+                                                (轮次+1)
                                          轮次≥3 → 标注未解决问题 → feedback → finalize → END
 ```
 
 核心变化：
-- 专家增加交叉审查→修订→联合合成三个阶段（当前只有独立生成）
-- Judge 审核对象从两份独立草稿变为一份联合合成稿
-- 新增轻量互审机制（Judge 打回后只审变更段落）
+- 专家已增加交叉审查→修订→联合合成三个阶段。
+- Judge 审核对象已从两份独立草稿变为一份联合合成稿。
+- Judge 打回后，先由 `revise_experts` 按目标分派专家修订，再联合合成并进入轻量互审。
 - 辩论轮次从默认 2 轮升级为 3 轮
 - planner 从 LLM 生成路径升级为 A* 知识图谱搜索
 
@@ -67,7 +79,7 @@ START → route ──┬── diagnose: diagnosis → END
 
 | 角色 | 节点 | 责任 | 产出字段 | Provider 环境变量 | 状态 |
 | --- | --- | --- | --- | --- | --- |
-| 意图路由 Agent | `route` | 分类用户意图：teach/chat/diagnose | `intent` | `ROUTE_PROVIDER` | ✅ |
+| 意图路由 Agent | `route` | 分类用户意图：teach/chat/diagnose；明显学习/诊断请求有本地兜底 | `intent` | `ROUTE_PROVIDER` | ✅ |
 | 学情诊断 Agent | `diagnosis` | 识别五维学习者画像 | `learner_profile` | `DIAGNOSIS_PROVIDER` | ✅（画像为简化版，五维版 [P0.3]） |
 | 路径规划 Agent | `planner` | LLM 生成学习路径（当前）/ A* 知识图谱搜索（P0.2） | `learning_path` | `PLANNER_PROVIDER` | ✅（当前 LLM 版） |
 | 工具调用 Agent | `tool_agent` | ReAct 循环调用 RAG 工具 + 各 Agent 独立 RAG 检索（P0.5） | `retrieval_context` | `TOOL_AGENT_PROVIDER` | ✅ |
@@ -75,7 +87,7 @@ START → route ──┬── diagnose: diagnosis → END
 | 领域专家 B | `expert_b` + `cross_review_b` + `expert_b_revise` | 生动灵活、面向案例：生成→审查A→修订；联合合成阶段提供血肉 | `expert_b_draft`、`cross_review_b`、`revision_record_b` | `EXPERT_B_PROVIDER` | ✅（五阶段协作完整） |
 | 审核裁判 Agent | `judge` | 审核联合合成稿（三维度评分），只评估和提出修订建议 | `judge_report` | `JUDGE_PROVIDER` | ✅（审联合合成稿，含 completeness_score） |
 | 反馈分析 Agent | `feedback` | 生成问卷、下一步动作、画像变化向量 Δ | `feedback_result`、`profile_delta` | `FEEDBACK_PROVIDER` | ✅（当前无 Δ 输出 [P0.3]） |
-| 快速回答 Agent | `chat_answer` | chat 路径生成直接回答 | `chat_answer` | `CHAT_ANSWER_PROVIDER` | ✅ |
+| 快速回答 Agent | `chat_answer` | chat 路径优先复用 `tool_agent_answer`，否则生成直接回答 | `chat_answer` | `CHAT_ANSWER_PROVIDER` | ✅ |
 | 汇总节点 | `finalize` | 将联合合成稿格式化为最终答案 | `final_answer` | — | ✅ |
 | 联合合成节点 | `joint_synthesis` | 专家 A+B 协作整合为一份输出，标注 [A]/[B]/[A+B融合] | `joint_synthesis_output` | `JOINT_SYNTHESIS_PROVIDER` | ✅ |
 | 轻量互审节点 | `lightweight_review` | Judge 打回后只审变更段落±1，输出 LightweightReview | `lightweight_review_result` | `LIGHTWEIGHT_REVIEW_PROVIDER` | ✅ |
@@ -98,6 +110,7 @@ START → route ──┬── diagnose: diagnosis → END
 | `learner_profile` | `LearnerProfile` | 否 | `diagnosis` | `planner`、`expert_b`、`feedback` |
 | `learning_path` | array[`LearningPathItem`] | 否 | `planner` | RAG、专家、前端 |
 | `retrieval_context` | array[`RetrievalChunk`] | 否 | `tool_agent` | `expert_a`、`expert_b`、`judge`、`chat_answer`、`finalize` |
+| `tool_agent_answer` | string | 否 | `tool_agent` | `chat_answer` |
 | `expert_a_draft` | `ExpertDraft` | 否 | `expert_a` | `judge`、`finalize` |
 | `expert_b_draft` | `ExpertDraft` | 否 | `expert_b` | `judge`、`finalize` |
 | `judge_report` | `JudgeReport` | 否 | `judge` | `feedback`、`finalize`、修订路由 |
@@ -169,9 +182,9 @@ START → route ──┬── diagnose: diagnosis → END
 }
 ```
 
-`kind` 允许值：`learner_profile_report`、`learning_path_plan`、`retrieval_context`、`expert_draft`、`judge_report`、`feedback_report`、`final_answer`、`route_decision`、`chat_answer`、`cross_review`、`joint_synthesis` `[P0.1]`。
+`kind` 允许值：`learner_profile_report`、`learning_path_plan`、`retrieval_context`、`expert_draft`、`judge_report`、`feedback_report`、`final_answer`、`route_decision`、`chat_answer`、`cross_review`、`joint_synthesis`、`lightweight_review`、`revision_record` `[P0.1]`。
 
-`created_by` 允许值：`diagnosis`、`planner`、`expert_a`、`expert_b`、`judge`、`feedback`、`finalize`、`route`、`tool_agent`、`chat_answer`、`joint_synthesis` `[P0.1]`。
+`created_by` 允许值：`diagnosis`、`planner`、`expert_a`、`expert_b`、`expert_a_revise`、`expert_b_revise`、`judge`、`feedback`、`finalize`、`route`、`tool_agent`、`chat_answer`、`joint_synthesis`、`lightweight_review`、`revise_experts` `[P0.1]`。
 
 ## 5. Markdown 产物目录规范 ✅
 
@@ -682,7 +695,7 @@ CrossReview 输出格式：
 | --- | --- | --- |
 | `accept` | 可直接进入反馈和汇总 | `feedback` |
 | `accept_with_minor_revision` | 只需 finalize 轻量整合 | `feedback` |
-| `revise` | 需要专家按裁判建议重写 | `revise_experts`（当前）/ `lightweight_review`（P0.1），若达到轮次上限则进入 `feedback` |
+| `revise` | 需要专家按裁判建议重写 | `revise_experts`，若达到轮次上限则进入 `feedback` |
 
 Judge 不得写教学正文，只能写争议、裁决、理由和修订请求。节点内置 `_normalize_judge_report()` 和 `_normalize_target()` 处理 LLM 输出的非标准值。
 
@@ -863,7 +876,7 @@ LLM 调用：是（temperature=0.3）。
 
 ### 6.10 快速回答 Agent：ChatAnswer ✅
 
-读取：`user_input`、`retrieval_context`（由 tool_agent 填充）。
+读取：`user_input`、`retrieval_context`（由 tool_agent 填充）、可选 `tool_agent_answer`。
 写入：`chat_answer`、`events`。
 
 ```json
@@ -897,7 +910,7 @@ tool_agent → fan_out_experts   when intent=teach
 tool_agent → chat_answer       when intent=chat
 ```
 
-### 7.4 辩论闭环路由（当前） ✅
+### 7.4 辩论闭环路由（基础版） ✅
 
 ```text
 judge -> feedback                    when decision in accept|accept_with_minor_revision
@@ -934,14 +947,17 @@ expert_a (revise) + expert_b (revise) → joint_synthesis
 # 阶段四→五：联合合成后进入裁判审核
 joint_synthesis → judge
 
-# 阶段五路由：
+# 阶段五路由
 judge -> feedback                         when decision in accept|accept_with_minor_revision
-judge -> lightweight_review               when decision=revise and debate_round < max_debate_rounds
+judge -> revise_experts                   when decision=revise and debate_round < max_debate_rounds
 judge -> feedback                         when decision=revise and debate_round >= max_debate_rounds
 
-# 轻量互审→重新联合合成→裁判
-lightweight_review -> joint_synthesis
-joint_synthesis -> judge                  (debate_round incremented)
+# Judge 目标修订
+revise_experts -> expert_a_revise         when any revision_request.target in expert_a|both
+revise_experts -> expert_b_revise         when any revision_request.target in expert_b|both
+expert_a_revise/expert_b_revise -> joint_synthesis
+joint_synthesis -> lightweight_review     revised synthesis only
+lightweight_review -> judge
 
 # 反馈→汇总→结束
 feedback -> finalize -> END

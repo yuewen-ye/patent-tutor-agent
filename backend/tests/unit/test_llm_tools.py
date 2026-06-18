@@ -6,6 +6,7 @@ RED phase — these tests define the expected behavior before implementation.
 from __future__ import annotations
 
 import json
+from typing import Any
 
 import httpx
 
@@ -51,7 +52,9 @@ class TestToolDefinition:
             },
         )
         assert td.name == "rag_retrieve"
-        assert "query" in td.parameters["properties"]
+        properties = td.parameters["properties"]
+        assert isinstance(properties, dict)
+        assert "query" in properties
 
     def test_to_openai_format(self) -> None:
         """ToolDefinition should serialize to OpenAI-compatible tool dict."""
@@ -60,7 +63,7 @@ class TestToolDefinition:
             description="Search patent law knowledge base",
             parameters={"type": "object", "properties": {}, "required": []},
         )
-        result = {
+        result: dict[str, Any] = {
             "type": "function",
             "function": {
                 "name": td.name,

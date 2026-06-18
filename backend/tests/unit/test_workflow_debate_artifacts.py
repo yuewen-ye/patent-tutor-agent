@@ -90,7 +90,6 @@ class DebateQueueLLMClient:
                     "overall_assessment": "法律准确但缺少可代入场景",
                 },
             ],
-            # Stage 3: Revision (single response each)
             "expert_a_revise": [
                 {
                     "agent": "expert_a",
@@ -102,6 +101,18 @@ class DebateQueueLLMClient:
                     "unresolved_disputes": [],
                     "modified_paragraphs": ["核心理解"],
                     "modification_tags": ["[经B审查修正]"],
+                },
+                {
+                    "agent": "expert_a",
+                    "revisions": [
+                        {"review_id": 1, "review_category": "judge",
+                         "review_summary": "法条回扣和案例适配不足",
+                         "response": "已按裁判意见补充法条和案例",
+                         "status": "accepted"},
+                    ],
+                    "unresolved_disputes": [],
+                    "modified_paragraphs": ["裁判修订段落A"],
+                    "modification_tags": ["[经Judge打回修正]"],
                 },
             ],
             "expert_b_revise": [
@@ -115,6 +126,18 @@ class DebateQueueLLMClient:
                     "unresolved_disputes": [],
                     "modified_paragraphs": ["核心概念"],
                     "modification_tags": ["[经A审查修正]"],
+                },
+                {
+                    "agent": "expert_b",
+                    "revisions": [
+                        {"review_id": 1, "review_category": "judge",
+                         "review_summary": "法条回扣和案例适配不足",
+                         "response": "已按裁判意见补充案例解释",
+                         "status": "accepted"},
+                    ],
+                    "unresolved_disputes": [],
+                    "modified_paragraphs": ["裁判修订段落B"],
+                    "modification_tags": ["[经Judge打回修正]"],
                 },
             ],
             # Stage 4: Joint synthesis (2 responses: first pass + lightweight revision)
@@ -234,15 +257,22 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     # Stage 2: Cross-review (single call each)
     assert "cross_review_a" in agents
     assert "cross_review_b" in agents
-    # Stage 3: Revise (single call each)
     assert "expert_a_revise" in agents
     assert "expert_b_revise" in agents
+    assert agents.count("expert_a_revise") == 2
+    assert agents.count("expert_b_revise") == 2
     # Stage 4: Joint synthesis (2 calls: first + lightweight revision)
     assert agents.count("joint_synthesis") == 2
     # Stage 5: Judge + lightweight review loop
     assert agents.count("judge") == 2  # revise, then accept
     assert "lightweight_review" in agents
     assert agents[-1] == "finalize"
+    first_judge = agents.index("judge")
+    second_joint_synthesis = len(agents) - 1 - agents[::-1].index("joint_synthesis")
+    lightweight_review = agents.index("lightweight_review")
+    second_judge = len(agents) - 1 - agents[::-1].index("judge")
+    assert first_judge < agents.index("expert_a_revise", first_judge)
+    assert second_joint_synthesis < lightweight_review < second_judge
     assert completed["debate_round"] == 2
     assert completed["judge_report"]["decision"] == "accept"
     # New state fields populated
@@ -254,7 +284,7 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     debate_events = [event for event in state["events"] if event["status"] == "debate_round"]
     assert len(debate_events) == 1
     debate_event = debate_events[0]
-    assert debate_event["node"] == "judge"
+    assert debate_event["node"] == "revise_experts"
     assert debate_event["round"] == 2
     assert isinstance(debate_event["timestamp"], str) and debate_event["timestamp"]
     assert isinstance(debate_event["duration_ms"], int)
@@ -264,8 +294,8 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     assert Path("artifacts/sessions/demo-session/round-01/expert_a_draft.md") in artifact_paths
     assert Path("artifacts/sessions/demo-session/round-01/cross_review_a.md") in artifact_paths
     assert Path("artifacts/sessions/demo-session/round-01/joint_synthesis.md") in artifact_paths
-    assert Path("artifacts/sessions/demo-session/round-01/lightweight_review.md") in artifact_paths
     assert Path("artifacts/sessions/demo-session/round-02/joint_synthesis.md") in artifact_paths
+    assert Path("artifacts/sessions/demo-session/round-02/lightweight_review.md") in artifact_paths
     assert Path("artifacts/sessions/demo-session/final_answer.md") in artifact_paths
 
     manifest_path = tmp_path / "artifacts" / "sessions" / "demo-session" / "manifest.json"
@@ -276,3 +306,35 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
 
     final_path = tmp_path / "artifacts" / "sessions" / "demo-session" / "final_answer.md"
     assert final_path.read_text(encoding="utf-8").startswith("# 个性化知识产权学习建议")
+
+
+def test_workflow_reruns_only_targeted_expert_when_judge_targets_expert_a(
+    tmp_path: Path,
+) -> None:
+    llm_client = DebateQueueLLMClient()
+    first_judge = llm_client._queues["judge"][0]
+    assert isinstance(first_judge, dict)
+    first_judge["revision_requests"] = [
+        {
+            "target": "expert_a",
+            "issue": "A 的法条骨架仍不完整",
+            "required_change": "只要求专家 A 补充法条判断步骤。",
+            "basis": "judge",
+        }
+    ]
+    llm_client._queues["expert_b_revise"] = llm_client._queues["expert_b_revise"][:1]
+
+    state = run_workflow(
+        session_id="target-a-session",
+        user_input="我想学习专利新颖性",
+        llm_client=llm_client,
+        artifact_root=tmp_path / "artifacts",
+        max_debate_rounds=2,
+    )
+
+    completed = completed_teach_state(state)
+    agents = llm_client.agents
+    assert agents.count("expert_a_revise") == 2
+    assert agents.count("expert_b_revise") == 1
+    assert completed["debate_round"] == 2
+    assert completed["judge_report"]["decision"] == "accept"

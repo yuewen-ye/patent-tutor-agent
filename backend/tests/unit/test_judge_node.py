@@ -1,7 +1,7 @@
 import pytest
 
 from backend.app.agents.judge.node import build_judge_node
-from backend.app.core.llm import LLMMessage
+from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinition
 from backend.app.schemas.state import StateDict
 
 pytestmark = pytest.mark.unit
@@ -15,6 +15,15 @@ class JudgeLLMClient:
         self, messages: list[LLMMessage], temperature: float, agent: str | None = None
     ) -> object:
         return self.response
+
+    def generate_with_tools(
+        self,
+        messages: list[LLMMessage],
+        tools: list[ToolDefinition],
+        temperature: float,
+        agent: str | None = None,
+    ) -> LLMResponseWithTools:
+        raise AssertionError("judge node must not call tools")
 
 
 def test_judge_normalizes_major_revision_decision_to_revise() -> None:

@@ -10,7 +10,7 @@ from backend.app.agents.common import Node, messages_from_prompt, normalize_key_
 from backend.app.core.llm import LLMClient
 from backend.app.schemas.state import LightweightReview, StateDict, completed_event
 
-_LIGHTWEIGHT_REVIEW_SYSTEM = """你是轻量互审器。Judge 审核联合合成稿后打回修改，你只审查变更段落 + 前后各一段，判断变更是否解决了 Judge 提出的问题。
+_LIGHTWEIGHT_REVIEW_SYSTEM = """你是轻量互审器。Judge 审核联合合成稿后打回修改；专家修订与联合合成已经完成，你只审查修订后的变更段落 + 前后各一段，判断变更是否解决了 Judge 提出的问题。
 
 审查规则：
 1. 只关注变更段落——不重新审查全文
@@ -44,7 +44,7 @@ def build_lightweight_review_node(llm_client: LLMClient) -> Node:
             ),
             (
                 "user",
-                "联合合成稿（修改前）：\n{joint_synthesis}\n\n"
+                "修订后的联合合成稿：\n{joint_synthesis}\n\n"
                 "Judge 的打回意见：\n{judge_report}\n\n"
                 "当前辩论轮次：{debate_round}\n\n"
                 "请对变更段落进行轻量互审。",

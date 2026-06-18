@@ -20,8 +20,11 @@ AgentNode = Literal[
     "chat_answer",
     "cross_review_a",
     "cross_review_b",
+    "expert_a_revise",
+    "expert_b_revise",
     "joint_synthesis",
     "lightweight_review",
+    "revise_experts",
 ]
 ErrorPattern = Literal[
     "unknown",
@@ -65,7 +68,16 @@ class MarkdownArtifact(ContractModel):
     path: str
     created_by: Literal[
         "diagnosis", "planner", "retrieve_context", "expert_a", "expert_b", "judge", "feedback", "finalize",
-        "route", "tool_agent", "chat_answer", "cross_review_a", "cross_review_b", "joint_synthesis", "lightweight_review",
+        "route",
+        "tool_agent",
+        "chat_answer",
+        "cross_review_a",
+        "cross_review_b",
+        "expert_a_revise",
+        "expert_b_revise",
+        "joint_synthesis",
+        "lightweight_review",
+        "revise_experts",
     ]
     title: str
     mime_type: Literal["text/markdown"] = "text/markdown"
@@ -297,6 +309,7 @@ class StateDict(TypedDict):
     revision_history: NotRequired[Annotated[list[dict[str, Any]], operator.add]]
     intent: NotRequired[str]  # "teach" | "chat" | "diagnose"
     chat_answer: NotRequired[dict[str, Any]]
+    tool_agent_answer: NotRequired[str]
     # P0.1: Five-stage expert collaboration chain
     cross_review_a: NotRequired[dict[str, Any]]
     cross_review_b: NotRequired[dict[str, Any]]

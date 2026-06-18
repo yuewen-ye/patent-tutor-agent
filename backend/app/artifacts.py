@@ -36,8 +36,8 @@ _CREATED_BY = {
     "chat_answer": "chat_answer",
     "cross_review_a": "cross_review_a",
     "cross_review_b": "cross_review_b",
-    "revision_record_a": "expert_a",
-    "revision_record_b": "expert_b",
+    "revision_record_a": "expert_a_revise",
+    "revision_record_b": "expert_b_revise",
     "joint_synthesis_output": "joint_synthesis",
     "lightweight_review_result": "lightweight_review",
 }
