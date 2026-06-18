@@ -180,6 +180,7 @@ https://smith.langchain.com/studio/?baseUrl=http://localhost:8124
 │   ├── tests/                  # pytest 测试，含真实模型 API smoke
 │   └── main.py                 # FastAPI 应用入口
 ├── docs/                       # 接口合同、架构决策和 workflow 图
+├── graphify-out/               # graphify 知识图谱产物（JSON/HTML/Report），分支切换自动重建
 ├── langgraph.json              # LangGraph Studio 配置
 ├── .env.example                # 环境变量模板
 ├── AGENTS.md                   # 贡献者与 Agent 协作指南
@@ -292,6 +293,27 @@ RAG 检索以 `rag_retrieve()` 函数形式提供，位于 `backend/app/rag/retr
 - `GET /sessions/{session_id}/events/stream` — SSE 推送 AgentEvent
 - `WS /sessions/{session_id}/events` — WebSocket 推送事件流
 - `GET /sessions/{session_id}/artifacts/{path}` — 读取已落盘 Markdown artifact
+
+## 知识图谱
+
+本项目使用 [graphify](https://github.com/yuewen-ye/graphify) 生成代码知识图谱。产物位于 `graphify-out/`，包含社区检测、god nodes 和跨文件关系图：
+
+| 文件 | 说明 |
+|------|------|
+| `GRAPH_REPORT.md` | 图谱总览（god nodes + 社区结构），AI 导航代码库的入口 |
+| `graph.json` | 完整图数据（节点 + 边），供命令行查询 |
+| `graph.html` | 交互式可视化，浏览器直接打开 |
+
+常用命令：
+
+```bash
+graphify query "<问题>"        # 图谱问答
+graphify path "<A>" "<B>"     # 节点间最短路径
+graphify explain "<概念>"     # 概念解释
+graphify update .             # 修改代码后增量更新图谱（AST-only，无 API 费用）
+```
+
+> `.codegraph/` 是 OMO CodeGraph 外部工具的个人本地副本（符号链接），不入 git，与项目工作流无关。
 
 ## 依赖管理
 
