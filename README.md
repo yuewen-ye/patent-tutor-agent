@@ -313,8 +313,6 @@ graphify explain "<概念>"     # 概念解释
 graphify update .             # 修改代码后增量更新图谱（AST-only，无 API 费用）
 ```
 
-> `.codegraph/` 是 OMO CodeGraph 外部工具的个人本地副本（符号链接），不入 git，与项目工作流无关。
-
 ## 依赖管理
 
 本项目只维护 `pyproject.toml` 和 `uv.lock`。如需 `requirements.txt`：
