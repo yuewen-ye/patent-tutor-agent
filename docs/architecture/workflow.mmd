@@ -14,25 +14,36 @@ graph TD;
 	fan_out_experts(fan_out_experts)
 	expert_a(expert_a)
 	expert_b(expert_b)
+	cross_review_a(cross_review_a)
+	cross_review_b(cross_review_b)
+	expert_a_revise(expert_a_revise)
+	expert_b_revise(expert_b_revise)
+	joint_synthesis(joint_synthesis)
 	judge(judge)
 	revise_experts(revise_experts)
+	lightweight_review(lightweight_review)
 	feedback(feedback)
 	finalize(finalize)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> _init;
 	_init --> route;
+	cross_review_a --> expert_a_revise;
+	cross_review_b --> expert_b_revise;
 	diagnosis -.-> __end__;
 	diagnosis -.-> planner;
-	expert_a --> judge;
-	expert_b --> judge;
+	expert_a --> cross_review_a;
+	expert_a_revise --> joint_synthesis;
+	expert_b --> cross_review_b;
+	expert_b_revise --> joint_synthesis;
 	fan_out_experts --> expert_a;
 	fan_out_experts --> expert_b;
 	feedback --> finalize;
+	joint_synthesis --> judge;
 	judge -.-> feedback;
-	judge -.-> revise_experts;
+	judge -.-> lightweight_review;
+	lightweight_review --> revise_experts;
 	planner --> tool_agent;
-	revise_experts --> expert_a;
-	revise_experts --> expert_b;
+	revise_experts --> joint_synthesis;
 	route -.-> diagnosis;
 	route -.-> tool_agent;
 	tool_agent -.-> chat_answer;
