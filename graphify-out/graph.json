@@ -560,7 +560,7 @@
       "label": "\u4f9d\u8d56\u7ba1\u7406",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L318",
+      "source_location": "L316",
       "id": "patent_tutor_agent_readme_\u4f9d\u8d56\u7ba1\u7406",
       "community": 24,
       "norm_label": "\u4f9d\u8d56\u7ba1\u7406"
@@ -569,7 +569,7 @@
       "label": "code:bash (uv export --format requirements-txt --output-file requiremen)",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L322",
+      "source_location": "L320",
       "id": "patent_tutor_agent_readme_codeblock_20",
       "community": 24,
       "norm_label": "code:bash (uv export --format requirements-txt --output-file requiremen)"
@@ -578,7 +578,7 @@
       "label": "\u63d0\u4ea4\u89c4\u8303",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L326",
+      "source_location": "L324",
       "id": "patent_tutor_agent_readme_\u63d0\u4ea4\u89c4\u8303",
       "community": 24,
       "norm_label": "\u63d0\u4ea4\u89c4\u8303"
@@ -12726,9 +12726,9 @@
       "source_file": "README.md",
       "source_location": "L297",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "patent_tutor_agent_readme_patent_tutor_agent",
-      "target": "patent_tutor_agent_readme_\u77e5\u8bc6\u56fe\u8c31",
-      "confidence_score": 1.0
+      "target": "patent_tutor_agent_readme_\u77e5\u8bc6\u56fe\u8c31"
     },
     {
       "relation": "contains",
@@ -13016,9 +13016,9 @@
       "source_file": "README.md",
       "source_location": "L309",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "patent_tutor_agent_readme_\u77e5\u8bc6\u56fe\u8c31",
-      "target": "patent_tutor_agent_readme_codeblock_19",
-      "confidence_score": 1.0
+      "target": "patent_tutor_agent_readme_codeblock_19"
     },
     {
       "relation": "contains",
@@ -13036,9 +13036,9 @@
       "source_file": "README.md",
       "source_location": "L322",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "patent_tutor_agent_readme_\u4f9d\u8d56\u7ba1\u7406",
-      "target": "patent_tutor_agent_readme_codeblock_20",
-      "confidence_score": 1.0
+      "target": "patent_tutor_agent_readme_codeblock_20"
     },
     {
       "relation": "contains",
@@ -28901,5 +28901,5 @@
       "source_file": "backend/tests/integration/test_workflow_integration.py"
     }
   ],
-  "built_at_commit": "43fb81bbd026ace238272da8ecf1dcbfb8a33744"
+  "built_at_commit": "ae1d662ec63df44b1be16c1367cef97c6df669e4"
 }
