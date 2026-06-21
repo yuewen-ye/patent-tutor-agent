@@ -4,18 +4,291 @@
 
 | 模块 | 状态 | 说明 |
 |---|---|---|
-| LangGraph 编排层 | ✅ 完成 | 8 节点 workflow + 辩论闭环 + 条件路由 |
-| StateDict 合同 | ✅ 完成 | Pydantic 模型 + JSON Schema 导出 |
-| LLM Provider 路由 | ✅ 完成 | 三层架构，6 Agent 各自独立路由 |
-| Artifact 产物落盘 | ✅ 完成 | `_with_artifacts` 包装 + manifest.json |
-| CLI Demo | ✅ 完成 | `run_workflow.py` + `show_workflow.py` |
-| 测试 | ✅ 完成 | 覆盖 workflow/LLM/contracts/记忆系统 |
+| LangGraph 编排层 | ✅ 完成 | 三路由 workflow + 五阶段专家协作链（交叉审查→修订→联合合成→轻量互审） |
+| StateDict 合同 | ✅ 完成 | Pydantic 模型 + JSON Schema 导出（含 P0.1 新增 7 个 ContractModel） |
+| LLM Provider 路由 | ✅ 完成 | 三层架构，15 Agent 各自独立路由 |
+| Artifact 产物落盘 | ✅ 完成 | `_with_artifacts` 包装 + manifest.json + cross_review/joint_synthesis 产物 |
+| CLI Demo | ✅ 完成 | `run_workflow.py` + `show_workflow.py`（max_debate_rounds 默认 3） |
+| 测试 | ✅ 完成 | 覆盖 workflow/LLM/contracts/记忆系统/三路由/五阶段协作链 |
 | FastAPI 服务层 | ✅ 完成 | 已实现会话 REST API、SSE/WebSocket 事件流、artifact 读取与后台 workflow 运行 |
-| RAG 知识库 | ❌ 待实现 | `retrieve_context` 为 mock 数据 |
+| RAG 知识库 | ❌ 待实现 | `rag_retrieve()` 为 mock 数据（硬编码 3 条法条） |
 | 前端 | ❌ 待实现 | `frontend/` 为空占位 |
 | 记忆系统 | 🟡 基础完成 | 已接入 LangGraph Checkpointer + Store；BKT 暂不实现 |
 | 数据存储 | ❌ 待实现 | 无 SQLite/文件持久层 |
 | 错误韧性 | ❌ 待实现 | WorkflowError schema 已定义，未接线 |
+| 工作流完善 | 🟡 部分完成 | ✅ P0.1 专家协作链已完成；❌ P0.2-P0.6 待实现（知识图谱、五维画像、BKT、独立RAG、动态重规划） |
+
+> **设计对标文档**：`docs/agents_analysis/` 包含 5 个 Agent 的完整角色规格（PROTOCOL + ABILITIES + SOUL），描述了系统最终需要达到的效果。当前 MVP 实现了核心骨架，但以下关键设计尚未落地。
+
+---
+
+## P0 — 工作流完善（对标 agents_analysis 完整设计）
+
+**目标**：将当前简化的 MVP 工作流升级为 `docs/agents_analysis/` 中描述的完整专家协作模型。这是 FastAPI 包装前的核心完善工作。
+
+**当前状态 vs 目标状态对比**：
+
+```
+当前 MVP                              目标（agents_analysis）
+─────────────────────────            ───────────────────────────
+专家独立生成草稿                     专家独立生成草稿 ✅（不变）
+专家不互看对方草稿                   ✅ 专家交叉审查（A 审 B，B 审 A）
+无联合合成阶段                       ✅ 专家联合合成（A+B 协作整合为一份输出）
+Judge 审两份独立草稿                  ✅ Judge 审联合合成稿
+无轻量互审机制                       ✅ Judge 打回后轻量互审（只审变更段落）
+LLM 生成学习路径                     A* 算法在知识图谱上搜索路径 [P0.2]
+简化画像（5 字段）                   五维画像 [P0.3]
+无 BKT                               BKT 贝叶斯知识追踪 [P0.4]
+planner 独立调用 RAG                 每个 Agent 独立调用 RAG [P0.5]
+```
+
+### P0.1 — 专家协作链：交叉审查 → 修订 → 联合合成 → 轻量互审
+
+这是 **最核心的差异**。当前专家 A 和 B 只生成草稿→Judge 审核→修订循环。目标模型是五阶段协作：
+
+```
+阶段一：并行独立生成（当前已实现）
+  expert_a + expert_b 各自生成初稿，不互看
+
+阶段二：交叉审查（待实现）
+  expert_a 收到 expert_b 的初稿 → 逐条审查
+    审查类别：🔴事实错误 🟡过度简化 🟢关键遗漏 🔵适配性
+    每条审查意见：位置 + 引述原文 + 问题 + 修正建议 + 法条依据
+  expert_b 收到 expert_a 的初稿 → 逐条审查
+    审查类别：🟡过度抽象 🔵适配性建议 🟢场景缺失 🌉关联断层
+    每条审查意见：位置 + 引述原文 + 影响 + 改写方案 + 画像依据
+
+阶段三：收到对方审查意见后修订（待实现）
+  expert_a：逐条回应 B 的审查 → 同意→修改原文；不同意→标注理由；不确定→标裁判裁决
+  expert_b：逐条回应 A 的审查 → 同上
+  输出：修订稿 + 修订记录表（含状态标记 ✅/❌坚持/⚡需裁判）
+
+阶段四：联合合成（待实现）
+  expert_a + expert_b 同时收到双方的修订稿
+  协作整合为一份最终输出：
+    - expert_a 提供法律骨架（法条、要件、判断流程、边界例外、常见错误）
+    - expert_b 提供血肉（场景引入、人话翻译、举一反三、记忆口诀、考试提示）
+    - 每段标注来源：[A] / [B] / [A+B融合]
+    - 不创造任何一方修订稿中没有的新内容
+
+阶段五：Judge 审核联合合成稿 + 打回循环（部分实现）
+  Judge 审核联合合成稿（当前是审两份独立草稿）
+  打回 → 双专家按分工修正 → 轻量互审（只审变更段落±1）→ 重新联合合成 → 再次提交
+  最多 3 轮（当前 2 轮）
+```
+
+**涉及的代码变更**：
+
+| # | 任务 | 涉及文件 | 说明 | 状态 |
+|---|---|---|---|---|
+| P0.1.1 | 新增 `expert_a` 交叉审查节点 | `backend/app/agents/expert_a/cross_review.py` | 审查 prompt（四类别标记体系🔴🟡🟢🔵），接收 B 的草稿，输出 CrossReview | ✅ |
+| P0.1.2 | 新增 `expert_b` 交叉审查节点 | `backend/app/agents/expert_b/cross_review.py` | 审查 prompt（🟡🌉🟢🔵），输出含改写方案的 CrossReview | ✅ |
+| P0.1.3 | 新增 `expert_a` 修订节点 | `backend/app/agents/expert_a/revise.py` | 接收 B 的审查意见，逐条回应，输出 RevisionRecord | ✅ |
+| P0.1.4 | 新增 `expert_b` 修订节点 | `backend/app/agents/expert_b/revise.py` | 接收 A 的审查意见，逐条回应，输出 RevisionRecord | ✅ |
+| P0.1.5 | 新增联合合成节点 | `backend/app/agents/joint_synthesis.py` | 接收双方修订稿，协作整合为 JointSynthesis（标注 [A]/[B]/[A+B融合]） | ✅ |
+| P0.1.6 | 新增轻量互审节点 | `backend/app/agents/lightweight_review.py` | Judge 打回后，只审变更段落+前后各一段，输出 LightweightReview | ✅ |
+| P0.1.7 | 重构工作流图 | `backend/app/graph/workflow.py` | 五阶段协作链接入 teach 路径：generation→cross_review→revise→joint_synthesis→judge+lightweight_review | ✅ |
+| P0.1.8 | 扩展 StateDict + 新增 Pydantic 模型 | `backend/app/schemas/state.py` | 新增 CrossReview 等 7 个 ContractModel + 6 个 StateDict 字段 + completeness_score | ✅ |
+| P0.1.9 | 扩展 Judge + Finalize | `backend/app/agents/judge/node.py` + `finalize/node.py` | Judge 审核联合合成稿（三维度评分）；Finalize 格式化联合合成稿 | ✅ |
+| P0.1.10 | 扩展 max_debate_rounds | `backend/app/graph/workflow.py` + `session_service.py` + `run_workflow.py` | 从默认 2 轮改为 3 轮 | ✅ |
+
+### P0.2 — 知识图谱 + A* 路径搜索（替换 LLM 路径生成）
+
+**当前**：`planner` 节点用 LLM `generate_json()` 直接生成 `learning_path`。
+
+**目标**：构建有向无环知识图谱 G=(V,E)，在图上用 A* 启发式搜索生成 3 条候选路径。
+
+```
+知识图谱节点结构：
+{
+  "node_id": "patent_22_2",
+  "title": "专利法第22条第2款 — 新颖性",
+  "module": "专利授权条件",
+  "difficulty": 3,           // 1(入门)-5(高阶)
+  "estimated_time_min": 25,
+  "prerequisites": ["patent_22_1"],        // 硬前置
+  "related": ["patent_23", "guideline_ch4_s3"],  // 软关联
+  "keywords": ["新颖性", "现有技术", "抵触申请"],
+  "content_ref": "vector_db://chunk_0451"
+}
+
+A* 启发函数：f(n) = g(n) + h(n)
+  g(n) = Σ(节点的预估时间 × 认知负荷系数)   // 从起点到 n 的累积代价
+  h(n) = min_distance_to_targets(n) × avg_time × avg_load  // 到目标的估计
+
+认知负荷系数动态调整：
+  - 学习者情感="困惑/焦虑" → ×1.3
+  - 视觉型学习者 + 纯文本节点 → ×1.15
+  - 连续3个高难度节点 → 从第4个起 ×1.2
+
+输出 3 条候选路径：
+  1. 效率优先（最小化总时间）
+  2. 平稳优先（最小化难度跃迁方差）
+  3. 深度优先（纳入更多软依赖节点）
+路径评分权重由学习风格决定（active→效率↑，reflective→平稳↑，sequential→深度↑）
+```
+
+**涉及的代码变更**：
+
+| # | 任务 | 涉及文件 | 说明 |
+|---|---|---|---|
+| P0.2.1 | 知识图谱数据文件 | `data/knowledge_graph.yaml`（新建） | 手工构建专利法知识图谱（法条节点+前置依赖+难度评级） |
+| P0.2.2 | 知识图谱加载器 | `backend/app/knowledge_graph/loader.py`（新建） | 解析 YAML → 内存图结构 |
+| P0.2.3 | A* 路径搜索 | `backend/app/knowledge_graph/pathfinder.py`（新建） | 实现 A* + 认知负荷系数 + 3 条候选路径生成 |
+| P0.2.4 | 重写 planner 节点 | `backend/app/agents/planner/node.py` | 替换 LLM 调用为 A* 搜索调用（LLM 仅用于解释路径选择理由） |
+| P0.2.5 | 动态重规划 | `backend/app/knowledge_graph/replanner.py`（新建） | 反馈 Agent 发出 `recommend_reroute=true` 时触发，从当前节点重新搜索 |
+
+### P0.3 — 五维学习者画像
+
+**当前**：`LearnerProfile` 含 `education_background`、`knowledge_level`（三档）、`learning_style`（自由字符串）、`weak_points`、`learning_goal`。
+
+**目标**：五维画像模型，每维有结构化子字段：
+
+```
+维度 1: knowledge（知识掌握度）
+  每个知识节点的 BKT P(L) 概率值 + 置信区间 + 观测次数
+  格式: {"<node_id>": {"p_learned": 0.73, "confidence_interval": [0.58, 0.88], "observations_count": 5}}
+
+维度 2: cognition（认知能力层级）
+  布鲁姆分类法六层分布：remember/understand/apply/analyze/evaluate/create
+  格式: {"remember": 0.8, "understand": 0.6, "apply": 0.3, "analyze": 0.1, "evaluate": 0.05, "create": 0.05}
+
+维度 3: style（学习风格）
+  Felder-Silverman 四轴：perception(sensing/intuitive), input(visual/verbal),
+                        processing(active/reflective), understanding(sequential/global)
+  格式: {"perception": "sensing", "input": "visual", "processing": "active", "understanding": "sequential"}
+
+维度 4: progress（进度状态）
+  已完成节点列表、当前节点、每节点耗时
+  格式: {"completed_nodes": [...], "current_node": "...", "avg_time_per_node_sec": 420}
+
+维度 5: affect（情感倾向）
+  离散标签 + 置信度 + 信号列表
+  格式: {"primary_state": "focused", "confidence": 0.7, "signals": ["prolonged_pause_at_node_002"]}
+```
+
+**涉及的代码变更**：
+
+| # | 任务 | 涉及文件 | 说明 |
+|---|---|---|---|
+| P0.3.1 | 重定义 `LearnerProfile` | `backend/app/schemas/state.py` | 扩展为五维结构（knowledge/cognition/style/progress/affect） |
+| P0.3.2 | 更新 `diagnosis` 节点 | `backend/app/agents/diagnosis/node.py` | prompt 改为输出五维画像 |
+| P0.3.3 | 更新 `feedback` 节点 | `backend/app/agents/feedback/node.py` | 输出变化向量 Δ 而非简单 profile_update_hint |
+| P0.3.4 | 新增学习者画像 API 模型 | `backend/app/schemas/state.py` | 新增 `LearnerProfileV2`、`ProfileDelta` 等模型 |
+
+### P0.4 — BKT 贝叶斯知识追踪
+
+**当前**：BKT 完全不存在。`BKTUpdate` 模型在 `state.py` 中仅为占位符。
+
+**目标**：对每个知识点 k 维护 4 参数 BKT 模型，每次交互后更新后验概率。
+
+```
+四个 BKT 参数：
+  P(L₀)_k：学习者初始掌握 k 的概率（先验，默认为 0.5）
+  P(T)_k：从"未掌握"到"掌握"的迁移概率（学习率）
+  P(G)_k：猜测概率（未掌握但答对）
+  P(S)_k：滑落概率（已掌握但答错）
+
+贝叶斯更新公式：
+  观察到正确回答：P(L|correct) = P(L) × (1-P(S)) / [P(L)×(1-P(S)) + (1-P(L))×P(G)]
+  观察到错误回答：P(L|wrong)   = P(L) × P(S) / [P(L)×P(S) + (1-P(L))×(1-P(G))]
+
+非答题交互的更新：
+  - 浏览时长异常短 + 答对 → P(L) 上调
+  - 反复回看 + 答错 → P(L) 微调
+  - 主动提问 → 不更新 P(L)，但标记为"深度思考"
+```
+
+**涉及的代码变更**：
+
+| # | 任务 | 涉及文件 | 说明 |
+|---|---|---|---|
+| P0.4.1 | BKT 核心算法 | `backend/app/bkt/model.py`（新建） | 实现 4 参数 BKT 模型 + 贝叶斯更新 + 非答题交互启发式 |
+| P0.4.2 | BKT 初始先验 | `backend/app/bkt/priors.py`（新建） | 从领域专家标注或历史数据中加载 P(L₀) 先验 |
+| P0.4.3 | feedback 接入 BKT | `backend/app/agents/feedback/node.py` | 每轮学习后批量更新涉及知识点的 P(L) |
+| P0.4.4 | BKT 持久化 | `backend/app/memory.py` | 通过 Store namespace `("learners", id, "bkt")` 读写 |
+| P0.4.5 | planner 使用 BKT | `backend/app/knowledge_graph/pathfinder.py` | P(L)≥0.75 跳过该节点；P(L) 在 [0.3,0.7) 标记"建议复习" |
+
+### P0.5 — 各 Agent 独立 RAG 检索
+
+**当前**：仅 `tool_agent` 通过 ReAct 循环调用 `rag_retrieve()`。其他 Agent 依赖 `tool_agent` 写入 `retrieval_context`。
+
+**目标**：每个 Agent 根据自己的职责独立检索不同内容。
+
+```
+diagnosis:  检索学习风格诊断题库、BKT 先验数据
+planner:    检索知识图谱节点内容、依赖关系验证
+expert_a:   检索法条原文 → 审查指南 → 权威教材 → 典型案例
+expert_b:   检索真实案例/复审决定 → 常见误区 → 跨领域类比素材 → 考试真题
+judge:      独立检索法条原文/审查指南核验双专家的引用
+feedback:   检索问卷模板、BKT 参数校准数据
+```
+
+**涉及的代码变更**：
+
+| # | 任务 | 涉及文件 | 说明 |
+|---|---|---|---|
+| P0.5.1 | RAG 检索接口扩展 | `backend/app/rag/retriever.py` | 支持按 `doc_type`/`检索目标` 过滤（法条/指南/案例/误区/题库） |
+| P0.5.2 | 各 Agent 接入独立 RAG | 各 `node.py` | 将 RAG 调用从 tool_agent 独占改为各 Agent 按需调用 |
+| P0.5.3 | tool_agent 角色调整 | `backend/app/agents/tool_agent.py` | 从唯一 RAG 调用者变为 teach/chat 路径的检索协调者 |
+
+### P0.6 — 动态重规划
+
+**当前**：学习路径一旦 planner 生成后不再调整。
+
+**目标**：feedback 检测到画像变化超过阈值时触发路径重规划。
+
+```
+feedback 输出变化向量 Δ：
+  {
+    "significant_changes": ["knowledge.node_002.p_learned: +0.23"],
+    "low_confidence_nodes": ["node_007"],
+    "recommend_reroute": true
+  }
+
+→ recommender_reroute=true 时：
+  1. planner/重规划器对比当前路径预估时间 vs 实际耗时
+  2. 重新检查前置依赖的实际掌握状态（更新后的 P(L)）
+  3. 从当前节点开始重新搜索剩余路径（非全量重规划）
+  4. 输出调整后的剩余路径 + 调整原因
+```
+
+**涉及的代码变更**：
+
+| # | 任务 | 涉及文件 | 说明 |
+|---|---|---|---|
+| P0.6.1 | 变化检测逻辑 | `backend/app/agents/feedback/node.py` | 对比本轮前后画像，检测超阈值变化 |
+| P0.6.2 | 重规划节点 | `backend/app/knowledge_graph/replanner.py`（新建） | 增量路径重搜索 |
+| P0.6.3 | 工作流条件边 | `backend/app/graph/workflow.py` | feedback 输出 `recommend_reroute=true` → 路由到重规划节点 |
+
+### P0 任务优先级
+
+```
+第一优先：✅ P0.1 专家协作链（核心差异化能力）—— 已完成
+第二优先：P0.2 知识图谱 + A*（替换 LLM 路径生成，路径更可控）
+第三优先：P0.3 五维画像（为 BKT 提供数据基础）
+第四优先：P0.4 BKT（依赖 P0.3 的五维画像）
+第五优先：P0.5 独立 RAG（依赖 P2 RAG 知识库）
+第六优先：P0.6 动态重规划（依赖 P0.2 知识图谱 + P0.4 BKT）
+```
+
+### P0 涉及的 StateDict 扩展
+
+```
+当前 StateDict 字段           P0 后新增                        状态
+─────────────────────        ──────────────────────────       ────
+learner_profile              learner_profile_v2（五维）       [P0.3]
+learning_path                learning_path_candidates（3条候选） [P0.2]
+expert_a_draft               cross_review_a                   ✅ P0.1
+expert_b_draft               cross_review_b                   ✅ P0.1
+judge_report                 revision_record_a                ✅ P0.1
+feedback_result              revision_record_b                ✅ P0.1
+（无）                       joint_synthesis_output            ✅ P0.1
+（无）                       lightweight_review_result         ✅ P0.1
+（无）                       profile_delta（变化向量 Δ）       [P0.3]
+（无）                       recommend_reroute                [P0.6]
+（无）                       bkt_states                       [P0.4]
+```
 
 ---
 
@@ -500,6 +773,14 @@ Agent 状态动画 → 无变化（事件流不受影响）
 
 ```
                     ┌──────────────────────┐
+                    │       P0             │
+                    │   工作流完善          │
+                    │   (优先于 P1-P5)     │
+                    └──────────┬───────────┘
+                               │
+                               │ 完善后的工作流
+                               ▼
+                    ┌──────────────────────┐
                     │       P1             │
                     │  FastAPI + SSE/WS     │
                     └──────────┬───────────┘
@@ -528,19 +809,27 @@ Agent 状态动画 → 无变化（事件流不受影响）
        独立推进                    独立推进
 ```
 
+- **P0 是 P1-P5 的前置**：工作流完善后再进行 FastAPI 包装
 - **P1 阻塞 P3**：前端所有视图依赖 P1 的 API 和事件流
 - **P5 增强 P3**：学情看板和诊断问卷在 P5 完成后获得历史数据能力，但不是阻塞关系
 - **P4 是 P5 的基础**：Checkpointer 提供短期状态持久化，Store 提供长期记忆存储（生产环境共用 PostgreSQL）
-- **P2 独立**：可以随时启动，不影响其他阶段
+- **P2 独立**：可以随时启动，不影响其他阶段；但 P0.5（独立 RAG）依赖 P2
 
 ## 建议执行顺序
 
 ```
-第 1 步: P1 (FastAPI + SSE/WS)          ← 约 2-3 天，为一切提供 API 基础
-第 2 步: P3 (前端看板 MVP)              ← 约 3-4 天，P1 完成后立即启动
-第 3 步: P4 (持久化 + 错误韧性)         ← 约 2 天，可与 P3 并行
-第 4 步: P5 (记忆系统/Store)            ← 约 3-4 天，需要 P4 的 Checkpointer + Store 基础设施
-第 5 步: P2 (RAG 知识库)               ← 约 3-4 天，可随时插入
+第 0 步: P0 (工作流完善)                    ← 进行中，约 5-7 天
+           ├── ✅ P0.1 专家协作链 (已完成)
+           ├── P0.2 知识图谱+A*   (2-3 天)
+           ├── P0.3 五维画像      (1-2 天)
+           ├── P0.4 BKT          (2-3 天，依赖 P0.3)
+           ├── P0.5 独立 RAG      (1-2 天，依赖 P2)
+           └── P0.6 动态重规划    (1-2 天，依赖 P0.2+P0.4)
+第 1 步: P1 (FastAPI + SSE/WS)              ← P0 完成后，约 2-3 天
+第 2 步: P3 (前端看板 MVP)                  ← P1 完成后，约 3-4 天
+第 3 步: P4 (持久化 + 错误韧性)             ← 约 2 天，可与 P3 并行
+第 4 步: P5 (记忆系统/Store+BKT持久化)       ← 约 3-4 天，需要 P4 基础设施
+第 5 步: P2 (RAG 知识库)                    ← 约 3-4 天，可随时插入（P0.5 之前完成）
 ```
 
 ---

@@ -59,7 +59,7 @@ class SessionService:
         *,
         user_input: str,
         learner_id: str | None = None,
-        max_debate_rounds: int = 2,
+        max_debate_rounds: int = 3,
         provider_overrides: Mapping[AgentName, LLMProvider] | None = None,
     ) -> SessionRecord:
         session_id = uuid.uuid4().hex

@@ -16,6 +16,9 @@ class MemoryQueueLLMClient:
     def __init__(self, learning_goal: str, weak_point: str) -> None:
         self.messages_by_agent: dict[str, list[str]] = {}
         self.responses: list[object] = [
+            # route
+            {"intent": "teach", "confidence": 0.95, "reason": "系统学习请求"},
+            # diagnosis
             {
                 "education_background": "patent_exam_candidate",
                 "knowledge_level": "beginner",
@@ -23,6 +26,7 @@ class MemoryQueueLLMClient:
                 "weak_points": [weak_point],
                 "learning_goal": learning_goal,
             },
+            # planner
             [
                 {
                     "node_id": "novelty-basics",
@@ -32,6 +36,7 @@ class MemoryQueueLLMClient:
                     "prerequisites": [],
                 }
             ],
+            # expert_a
             {
                 "expert": "expert_a",
                 "style": "conservative_precise",
@@ -40,6 +45,7 @@ class MemoryQueueLLMClient:
                 "teaching_content": "严谨解释",
                 "risks": [],
             },
+            # expert_b
             {
                 "expert": "expert_b",
                 "style": "vivid_teaching",
@@ -48,17 +54,78 @@ class MemoryQueueLLMClient:
                 "teaching_content": "案例解释",
                 "risks": [],
             },
+            # cross_review_a
+            {
+                "reviewer": "expert_a",
+                "target": "expert_b",
+                "review_opinions": [
+                    {"category": "🟢", "location": "核心", "target_wrote": "x",
+                     "problem": "遗漏", "suggestion": "补充", "basis": "法22条"}
+                ],
+                "positive_confirmation": "引用存在",
+                "overall_assessment": "基本正确",
+            },
+            # cross_review_b
+            {
+                "reviewer": "expert_b",
+                "target": "expert_a",
+                "review_opinions": [
+                    {"category": "🟡", "location": "概念", "target_wrote": "x",
+                     "problem": "抽象", "suggestion": "加案例", "basis": None}
+                ],
+                "positive_confirmation": "准确",
+                "overall_assessment": "法律准确",
+            },
+            # expert_a_revise
+            {
+                "agent": "expert_a",
+                "revisions": [
+                    {"review_id": 1, "review_category": "🟡",
+                     "review_summary": "抽象", "response": "已改进", "status": "accepted"}
+                ],
+                "unresolved_disputes": [],
+                "modified_paragraphs": ["核心"],
+                "modification_tags": ["[经B审查修正]"],
+            },
+            # expert_b_revise
+            {
+                "agent": "expert_b",
+                "revisions": [
+                    {"review_id": 1, "review_category": "🟢",
+                     "review_summary": "遗漏", "response": "已补充", "status": "accepted"}
+                ],
+                "unresolved_disputes": [],
+                "modified_paragraphs": ["核心"],
+                "modification_tags": ["[经A审查修正]"],
+            },
+            # joint_synthesis
+            {
+                "title": "新颖性判断标准",
+                "sections": [
+                    {"heading": "法条", "content": "...", "source": "A", "note": None},
+                    {"heading": "解释", "content": "...", "source": "B", "note": None},
+                ],
+            },
+            # judge
             {
                 "decision": "accept",
                 "accuracy_score": 5,
                 "adaptation_score": 4,
+                "completeness_score": 4,
                 "disputes": [],
                 "rationale": "可以输出",
             },
+            # feedback
             {
                 "questionnaire": ["你能说出现有技术的含义吗？"],
                 "next_action": "继续做案例题",
                 "profile_update_hint": "保留薄弱点并继续观察案例判断能力",
+            },
+            # finalize
+            {
+                "title": "个性化知识产权学习建议",
+                "content": "整合",
+                "sources": ["第二十二条"],
             },
         ]
 
@@ -70,6 +137,10 @@ class MemoryQueueLLMClient:
                 "\n".join(message.content for message in messages)
             )
         return self.responses.pop(0)
+
+    def generate_with_tools(self, messages, tools, temperature, agent=None):
+        from backend.app.core.llm import LLMResponseWithTools
+        return LLMResponseWithTools(content="RAG context provided.", tool_calls=[])
 
 
 def test_workflow_uses_checkpointer_and_store_for_learner_memory() -> None:

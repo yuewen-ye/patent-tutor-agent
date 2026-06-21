@@ -8,13 +8,12 @@ from backend.app.agents.route import build_route_node
 from backend.app.agents.tool_agent import build_tool_agent_node
 from backend.app.agents.chat_answer import build_chat_answer_node
 from backend.app.core.llm import (
-    LLMClient,
     LLMMessage,
+    LLMProviderError,
     LLMResponseWithTools,
     ToolCall,
     ToolDefinition,
 )
-from backend.app.rag import rag_retrieve
 
 
 class FakeLLMClient:
@@ -28,6 +27,8 @@ class FakeLLMClient:
         self, messages: list[LLMMessage], temperature: float, agent: str | None = None
     ) -> object:
         self.calls.append({"method": "generate_json", "agent": agent, "temperature": temperature})
+        if isinstance(self.response, Exception):
+            raise self.response
         return self.response
 
     def generate_with_tools(
@@ -76,6 +77,20 @@ class TestRouteNode:
         node({"user_input": "test", "session_id": "s1", "events": []})
         assert client.calls[0]["temperature"] == 0.0
 
+    def test_local_learning_hint_overrides_chat_misroute(self) -> None:
+        client = FakeLLMClient({
+            "intent": "chat", "confidence": 0.8, "reason": "误判为单点问答",
+        })
+        node = build_route_node(client)
+        result = node({"user_input": "我想学习专利新颖性", "session_id": "s1", "events": []})
+        assert result["intent"] == "teach"
+
+    def test_local_learning_hint_recovers_from_provider_json_error(self) -> None:
+        client = FakeLLMClient(LLMProviderError("malformed route JSON"))
+        node = build_route_node(client)
+        result = node({"user_input": "我想继续深入了解抵触申请", "session_id": "s1", "events": []})
+        assert result["intent"] == "teach"
+
 
 class TestToolAgentNode:
     def test_no_tool_call_returns_directly(self) -> None:
@@ -92,6 +107,7 @@ class TestToolAgentNode:
         })
         assert len(client.calls) == 1
         assert "retrieval_context" in result
+        assert result["tool_agent_answer"] == "新颖性是专利授权的条件之一。"
 
     def test_tool_call_then_answer(self) -> None:
         """LLM calls tool first, then returns content."""
@@ -123,6 +139,7 @@ class TestToolAgentNode:
 
         assert call_count[0] == 2  # 1 tool call + 1 final answer
         assert "retrieval_context" in result
+        assert result["tool_agent_answer"] == "根据检索结果，新颖性是指..."
 
     def test_max_rounds_capped(self) -> None:
         """After 5 rounds, force exit."""
@@ -149,6 +166,22 @@ class TestToolAgentNode:
 
 
 class TestChatAnswerNode:
+    def test_reuses_tool_agent_answer_without_second_llm_call(self) -> None:
+        client = FakeLLMClient({
+            "content": "不应调用模型", "sources": [],
+        })
+        node = build_chat_answer_node(client)
+        result = node({
+            "user_input": "什么是抵触申请",
+            "session_id": "s1",
+            "events": [],
+            "retrieval_context": [{"citation": "专利法第22条", "text": "..."}],
+            "tool_agent_answer": "抵触申请是指在先申请影响在后申请的新颖性。",
+        })
+        assert client.calls == []
+        assert result["chat_answer"]["content"] == "抵触申请是指在先申请影响在后申请的新颖性。"
+        assert result["chat_answer"]["sources"] == ["专利法第22条"]
+
     def test_generates_answer(self) -> None:
         client = FakeLLMClient({
             "content": "抵触申请是指...", "sources": ["专利法第22条"],

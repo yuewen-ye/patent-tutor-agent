@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, cast
 
 from backend.app.agents.common import Node
 from backend.app.core.llm import (
@@ -13,7 +13,7 @@ from backend.app.core.llm import (
     ToolDefinition,
 )
 from backend.app.rag import rag_retrieve
-from backend.app.schemas.state import RetrievalChunk, completed_event
+from backend.app.schemas.state import completed_event
 
 MAX_TOOL_ROUNDS = 5
 
@@ -58,6 +58,7 @@ def build_tool_agent_node(llm_client: LLMClient) -> Node:
 
         all_chunks: list[dict[str, Any]] = []
         round_idx = 0
+        final_answer: str | None = None
 
         while round_idx < MAX_TOOL_ROUNDS:
             round_idx += 1
@@ -68,17 +69,20 @@ def build_tool_agent_node(llm_client: LLMClient) -> Node:
             # Collect assistant response
             if result.content:
                 content = result.content
+                final_answer = result.content
             else:
                 content = ""
 
             # Process tool calls
             if result.tool_calls:
-                # Build assistant message with tool_calls
-                assistant_tool_calls = [
+                assistant_tool_calls: list[dict[str, object]] = [
                     {
                         "id": tc.id,
                         "type": "function",
-                        "function": {"name": tc.name, "arguments": json.dumps(tc.arguments, ensure_ascii=False)},
+                        "function": {
+                            "name": tc.name,
+                            "arguments": json.dumps(tc.arguments, ensure_ascii=False),
+                        },
                     }
                     for tc in result.tool_calls
                 ]
@@ -89,7 +93,10 @@ def build_tool_agent_node(llm_client: LLMClient) -> Node:
                 ))
                 for tc in result.tool_calls:
                     if tc.name == "rag_retrieve":
-                        chunks = rag_retrieve(**{k: v for k, v in tc.arguments.items() if isinstance(v, (str, int))})  # type: ignore[arg-type]
+                        kwargs = {
+                            k: v for k, v in tc.arguments.items() if isinstance(v, str | int)
+                        }
+                        chunks = rag_retrieve(**cast(Any, kwargs))
                         chunk_dicts = [c.model_dump() for c in chunks]
                         all_chunks.extend(chunk_dicts)
                         messages.append(LLMMessage(
@@ -105,12 +112,15 @@ def build_tool_agent_node(llm_client: LLMClient) -> Node:
         existing = list(state.get("retrieval_context", []) or [])
         existing.extend(all_chunks)
 
-        return {
+        updates: dict[str, Any] = {
             "retrieval_context": existing,
             "events": [completed_event(
                 "tool_agent",
                 f"completed after {round_idx} round(s), retrieved {len(all_chunks)} chunks",
             )],
         }
+        if final_answer:
+            updates["tool_agent_answer"] = final_answer
+        return updates
 
     return tool_agent_node

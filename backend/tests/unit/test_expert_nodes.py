@@ -1,7 +1,7 @@
 import pytest
 
 from backend.app.agents.expert_b.node import build_expert_b_node
-from backend.app.core.llm import LLMMessage
+from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinition
 
 pytestmark = pytest.mark.unit
 
@@ -18,6 +18,15 @@ class CamelCaseExpertLLMClient:
             "teachingContent": "用案例解释新颖性。",
             "risks": [],
         }
+
+    def generate_with_tools(
+        self,
+        messages: list[LLMMessage],
+        tools: list[ToolDefinition],
+        temperature: float,
+        agent: str | None = None,
+    ) -> LLMResponseWithTools:
+        raise AssertionError("expert node must not call tools")
 
 
 def test_expert_b_accepts_known_provider_camel_case_keys_as_contract_fields() -> None:
