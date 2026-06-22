@@ -1,110 +1,105 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1180" viewBox="0 0 1800 1180">
   <defs>
-    <style>
-      text { font-family: "Noto Sans CJK SC", "WenQuanYi Micro Hei", "Microsoft YaHei", Arial, sans-serif; }
-      .title { font-size: 42px; font-weight: 700; fill: #102033; }
-      .subtitle { font-size: 22px; font-weight: 400; fill: #5f6f7f; }
-      .band { fill: #f5f7fb; stroke: #d7e0ea; stroke-width: 2; rx: 20; }
-      .box { fill: #ffffff; stroke: #6f86a3; stroke-width: 2.5; rx: 16; }
-      .store { fill: #eef7ff; stroke: #246b9f; }
-      .runtime { fill: #fff7e8; stroke: #bb7b23; }
-      .asset { fill: #effaf3; stroke: #2e7d4f; }
-      .agent { fill: #f4f0ff; stroke: #6c56b3; }
-      .warn { fill: #fff4f4; stroke: #b55252; }
-      .label { font-size: 24px; font-weight: 700; fill: #1f2d3a; }
-      .text { font-size: 19px; font-weight: 400; fill: #23313f; }
-      .small { font-size: 16px; font-weight: 400; fill: #46586a; }
-      .arrow { stroke: #41576d; stroke-width: 3; fill: none; marker-end: url(#arrow); }
-      .dash { stroke: #7a8794; stroke-width: 2.5; stroke-dasharray: 8 7; fill: none; marker-end: url(#arrow); }
-    </style>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="#41576d"/>
     </marker>
   </defs>
-
   <rect x="0" y="0" width="1800" height="1180" fill="#fbfcfe"/>
-  <text x="80" y="78" class="title">Patent Tutor Agent 记忆系统架构</text>
-  <text x="82" y="116" class="subtitle">LangGraph Store/Checkpointer 为主存储，Markdown 仅作为审阅投影与运行报告</text>
 
-  <rect x="70" y="150" width="1660" height="270" class="band"/>
-  <text x="100" y="195" class="label">请求入口与运行时上下文</text>
-  <rect x="110" y="230" width="330" height="140" class="box runtime"/>
-  <text x="135" y="270" class="label">API / CLI / Studio</text>
-  <text x="135" y="305" class="text">session_id / user_input</text>
-  <text x="135" y="335" class="text">learner_id 传入或生成</text>
-  <rect x="520" y="230" width="330" height="140" class="box runtime"/>
-  <text x="545" y="270" class="label">WorkflowContext</text>
-  <text x="545" y="305" class="text">learner_id hash/slug</text>
-  <text x="545" y="335" class="text">隐私边界与运行配置</text>
-  <rect x="930" y="230" width="330" height="140" class="box runtime"/>
-  <text x="955" y="270" class="label">LangGraph Workflow</text>
-  <text x="955" y="305" class="text">route / diagnosis / planner</text>
-  <text x="955" y="335" class="text">tool_agent / experts / judge</text>
-  <rect x="1340" y="230" width="330" height="140" class="box runtime"/>
-  <text x="1365" y="270" class="label">事件与产物包装器</text>
-  <text x="1365" y="305" class="text">events / artifacts</text>
-  <text x="1365" y="335" class="text">session_memory 投影</text>
+  <text x="80" y="78" font-family="Arial, sans-serif" font-size="42" font-weight="700" fill="#102033">Patent Tutor Agent Memory Architecture</text>
+  <text x="82" y="116" font-family="Arial, sans-serif" font-size="22" fill="#5f6f7f">LangGraph Store and Checkpointer are the source of truth; Markdown is a review projection.</text>
 
-  <path d="M440 300 L520 300" class="arrow"/>
-  <path d="M850 300 L930 300" class="arrow"/>
-  <path d="M1260 300 L1340 300" class="arrow"/>
+  <rect x="70" y="150" width="1660" height="270" fill="#f5f7fb" stroke="#d7e0ea" stroke-width="2" rx="20"/>
+  <text x="100" y="195" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Runtime Context</text>
 
-  <rect x="70" y="455" width="1660" height="335" class="band"/>
-  <text x="100" y="500" class="label">主存储层</text>
-  <rect x="110" y="535" width="390" height="180" class="box store"/>
-  <text x="135" y="575" class="label">Short-term Memory</text>
-  <text x="135" y="610" class="text">LangGraph Checkpointer</text>
-  <text x="135" y="640" class="text">thread_id = session_id</text>
-  <text x="135" y="670" class="small">SQLite 起步，Postgres 生产化</text>
-  <rect x="555" y="535" width="430" height="180" class="box store"/>
-  <text x="580" y="575" class="label">Learner Memory</text>
-  <text x="580" y="610" class="text">LangGraph Store namespaces</text>
-  <text x="580" y="640" class="text">profile / history / preference</text>
-  <text x="580" y="670" class="text">mastery / insight</text>
-  <rect x="1040" y="535" width="300" height="180" class="box asset"/>
-  <text x="1065" y="575" class="label">Artifacts</text>
-  <text x="1065" y="610" class="text">manifest.json</text>
-  <text x="1065" y="640" class="text">round-XX/*.md</text>
-  <text x="1065" y="670" class="text">final_answer.md</text>
-  <rect x="1400" y="535" width="280" height="180" class="box asset"/>
-  <text x="1425" y="575" class="label">Project Assets</text>
-  <text x="1425" y="610" class="text">memory/agents</text>
-  <text x="1425" y="640" class="text">memory/curriculum</text>
-  <text x="1425" y="670" class="small">Git 跟踪，脱敏</text>
+  <rect x="110" y="230" width="330" height="140" fill="#fff7e8" stroke="#bb7b23" stroke-width="2.5" rx="16"/>
+  <text x="135" y="270" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">API / CLI / Studio</text>
+  <text x="135" y="305" font-family="Arial, sans-serif" font-size="19" fill="#23313f">session_id / user_input</text>
+  <text x="135" y="335" font-family="Arial, sans-serif" font-size="19" fill="#23313f">learner_id</text>
 
-  <path d="M1095 370 L305 535" class="arrow"/>
-  <path d="M1095 370 L770 535" class="arrow"/>
-  <path d="M1505 370 L1190 535" class="arrow"/>
+  <rect x="520" y="230" width="330" height="140" fill="#fff7e8" stroke="#bb7b23" stroke-width="2.5" rx="16"/>
+  <text x="545" y="270" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">WorkflowContext</text>
+  <text x="545" y="305" font-family="Arial, sans-serif" font-size="19" fill="#23313f">learner_id hash / slug</text>
+  <text x="545" y="335" font-family="Arial, sans-serif" font-size="19" fill="#23313f">privacy boundary</text>
 
-  <rect x="70" y="825" width="1660" height="260" class="band"/>
-  <text x="100" y="870" class="label">服务层与后台任务</text>
-  <rect x="110" y="905" width="330" height="130" class="box agent"/>
-  <text x="135" y="943" class="label">Active Recall Service</text>
-  <text x="135" y="978" class="text">Store 查询 + 相关性选择</text>
-  <text x="135" y="1008" class="small">输出 MemorySelection，可单测</text>
-  <rect x="505" y="905" width="330" height="130" class="box agent"/>
-  <text x="530" y="943" class="label">Memory Writers</text>
-  <text x="530" y="978" class="text">feedback / chat 摘要写入</text>
-  <text x="530" y="1008" class="small">幂等 key + evidence</text>
-  <rect x="900" y="905" width="330" height="130" class="box agent"/>
-  <text x="925" y="943" class="label">Consolidation</text>
-  <text x="925" y="978" class="text">合并、纠错、supersede</text>
-  <text x="925" y="1008" class="small">learner 级锁 + 频率限制</text>
-  <rect x="1295" y="905" width="330" height="130" class="box agent"/>
-  <text x="1320" y="943" class="label">Markdown Projection</text>
-  <text x="1320" y="978" class="text">Store -> data/memory</text>
-  <text x="1320" y="1008" class="small">可删除重建，不是主存储</text>
+  <rect x="930" y="230" width="330" height="140" fill="#fff7e8" stroke="#bb7b23" stroke-width="2.5" rx="16"/>
+  <text x="955" y="270" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">LangGraph Workflow</text>
+  <text x="955" y="305" font-family="Arial, sans-serif" font-size="19" fill="#23313f">route / diagnosis / planner</text>
+  <text x="955" y="335" font-family="Arial, sans-serif" font-size="19" fill="#23313f">tool_agent / experts / judge</text>
 
-  <path d="M770 715 L275 905" class="arrow"/>
-  <path d="M770 715 L670 905" class="arrow"/>
-  <path d="M770 715 L1065 905" class="arrow"/>
-  <path d="M770 715 L1460 905" class="dash"/>
-  <path d="M1190 715 L1460 905" class="dash"/>
+  <rect x="1340" y="230" width="330" height="140" fill="#fff7e8" stroke="#bb7b23" stroke-width="2.5" rx="16"/>
+  <text x="1365" y="270" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Side-effect Wrapper</text>
+  <text x="1365" y="305" font-family="Arial, sans-serif" font-size="19" fill="#23313f">events / artifacts</text>
+  <text x="1365" y="335" font-family="Arial, sans-serif" font-size="19" fill="#23313f">session_memory projection</text>
 
-  <rect x="1280" y="740" width="400" height="70" class="box warn"/>
-  <text x="1305" y="770" class="label">安全规则</text>
-  <text x="1305" y="798" class="small">不保存 PII / API key / 完整对话；法条知识走 RAG</text>
+  <path d="M440 300 L520 300" stroke="#41576d" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M850 300 L930 300" stroke="#41576d" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1260 300 L1340 300" stroke="#41576d" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
 
-  <path d="M275 905 C275 790 960 455 1095 370" class="dash"/>
-  <text x="95" y="1128" class="small">核心优化：学习者长期记忆以 Store 为准；Artifacts 保持不可变审计；Markdown 只服务人工阅读、图谱抽取和调试。</text>
+  <rect x="70" y="455" width="1660" height="335" fill="#f5f7fb" stroke="#d7e0ea" stroke-width="2" rx="20"/>
+  <text x="100" y="500" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Source-of-Truth Storage</text>
+
+  <rect x="110" y="535" width="390" height="180" fill="#eef7ff" stroke="#246b9f" stroke-width="2.5" rx="16"/>
+  <text x="135" y="575" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Short-term Memory</text>
+  <text x="135" y="610" font-family="Arial, sans-serif" font-size="19" fill="#23313f">LangGraph Checkpointer</text>
+  <text x="135" y="640" font-family="Arial, sans-serif" font-size="19" fill="#23313f">thread_id = session_id</text>
+  <text x="135" y="670" font-family="Arial, sans-serif" font-size="16" fill="#46586a">SQLite first, Postgres later</text>
+
+  <rect x="555" y="535" width="430" height="180" fill="#eef7ff" stroke="#246b9f" stroke-width="2.5" rx="16"/>
+  <text x="580" y="575" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Learner Memory</text>
+  <text x="580" y="610" font-family="Arial, sans-serif" font-size="19" fill="#23313f">LangGraph Store namespaces</text>
+  <text x="580" y="640" font-family="Arial, sans-serif" font-size="19" fill="#23313f">profile / history / preference</text>
+  <text x="580" y="670" font-family="Arial, sans-serif" font-size="19" fill="#23313f">mastery / insight</text>
+
+  <rect x="1040" y="535" width="300" height="180" fill="#effaf3" stroke="#2e7d4f" stroke-width="2.5" rx="16"/>
+  <text x="1065" y="575" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Artifacts</text>
+  <text x="1065" y="610" font-family="Arial, sans-serif" font-size="19" fill="#23313f">manifest.json</text>
+  <text x="1065" y="640" font-family="Arial, sans-serif" font-size="19" fill="#23313f">round-XX/*.md</text>
+  <text x="1065" y="670" font-family="Arial, sans-serif" font-size="19" fill="#23313f">final_answer.md</text>
+
+  <rect x="1400" y="535" width="280" height="180" fill="#effaf3" stroke="#2e7d4f" stroke-width="2.5" rx="16"/>
+  <text x="1425" y="575" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Project Assets</text>
+  <text x="1425" y="610" font-family="Arial, sans-serif" font-size="19" fill="#23313f">memory/agents</text>
+  <text x="1425" y="640" font-family="Arial, sans-serif" font-size="19" fill="#23313f">memory/curriculum</text>
+  <text x="1425" y="670" font-family="Arial, sans-serif" font-size="16" fill="#46586a">Git tracked, no learner PII</text>
+
+  <path d="M1095 370 L305 535" stroke="#41576d" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1095 370 L770 535" stroke="#41576d" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1505 370 L1190 535" stroke="#41576d" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+
+  <rect x="1260" y="740" width="445" height="70" fill="#fff4f4" stroke="#b55252" stroke-width="2.5" rx="16"/>
+  <text x="1285" y="770" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Safety Rules</text>
+  <text x="1285" y="798" font-family="Arial, sans-serif" font-size="15" fill="#46586a">No PII, API keys, full transcripts; legal content goes to RAG</text>
+
+  <rect x="70" y="825" width="1660" height="260" fill="#f5f7fb" stroke="#d7e0ea" stroke-width="2" rx="20"/>
+  <text x="100" y="870" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Services and Background Jobs</text>
+
+  <rect x="110" y="905" width="330" height="130" fill="#f4f0ff" stroke="#6c56b3" stroke-width="2.5" rx="16"/>
+  <text x="135" y="943" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Active Recall Service</text>
+  <text x="135" y="978" font-family="Arial, sans-serif" font-size="19" fill="#23313f">Store search + ranking</text>
+  <text x="135" y="1008" font-family="Arial, sans-serif" font-size="16" fill="#46586a">returns MemorySelection</text>
+
+  <rect x="505" y="905" width="330" height="130" fill="#f4f0ff" stroke="#6c56b3" stroke-width="2.5" rx="16"/>
+  <text x="530" y="943" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Memory Writers</text>
+  <text x="530" y="978" font-family="Arial, sans-serif" font-size="19" fill="#23313f">feedback / chat summaries</text>
+  <text x="530" y="1008" font-family="Arial, sans-serif" font-size="16" fill="#46586a">idempotency key + evidence</text>
+
+  <rect x="900" y="905" width="330" height="130" fill="#f4f0ff" stroke="#6c56b3" stroke-width="2.5" rx="16"/>
+  <text x="925" y="943" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Consolidation</text>
+  <text x="925" y="978" font-family="Arial, sans-serif" font-size="19" fill="#23313f">merge / correct / supersede</text>
+  <text x="925" y="1008" font-family="Arial, sans-serif" font-size="16" fill="#46586a">learner lock + rate limit</text>
+
+  <rect x="1295" y="905" width="330" height="130" fill="#f4f0ff" stroke="#6c56b3" stroke-width="2.5" rx="16"/>
+  <text x="1320" y="943" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Markdown Projection</text>
+  <text x="1320" y="978" font-family="Arial, sans-serif" font-size="19" fill="#23313f">Store -> data/memory</text>
+  <text x="1320" y="1008" font-family="Arial, sans-serif" font-size="16" fill="#46586a">rebuildable, not source of truth</text>
+
+  <path d="M770 715 L275 905" stroke="#41576d" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M770 715 L670 905" stroke="#41576d" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M770 715 L1065 905" stroke="#41576d" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M770 715 L1460 905" stroke="#7a8794" stroke-width="2.5" stroke-dasharray="8 7" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1190 715 L1460 905" stroke="#7a8794" stroke-width="2.5" stroke-dasharray="8 7" fill="none" marker-end="url(#arrow)"/>
+  <path d="M275 905 C275 790 960 455 1095 370" stroke="#7a8794" stroke-width="2.5" stroke-dasharray="8 7" fill="none" marker-end="url(#arrow)"/>
+
+  <text x="95" y="1128" font-family="Arial, sans-serif" font-size="16" fill="#46586a">Core optimization: Store owns learner memory; artifacts remain immutable audit logs; Markdown only supports review, graph extraction, and debugging.</text>
 </svg>
