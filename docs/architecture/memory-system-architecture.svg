@@ -1,105 +1,162 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1180" viewBox="0 0 1800 1180">
+<svg xmlns="http://www.w3.org/2000/svg" width="2200" height="1500" viewBox="0 0 2200 1500">
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#41576d"/>
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#40566b"/>
     </marker>
   </defs>
-  <rect x="0" y="0" width="1800" height="1180" fill="#fbfcfe"/>
 
-  <text x="80" y="78" font-family="Arial, sans-serif" font-size="42" font-weight="700" fill="#102033">Patent Tutor Agent Memory Architecture</text>
-  <text x="82" y="116" font-family="Arial, sans-serif" font-size="22" fill="#5f6f7f">LangGraph Store and Checkpointer are the source of truth; Markdown is a review projection.</text>
+  <rect x="0" y="0" width="2200" height="1500" fill="#fbfcfe"/>
+  <text x="80" y="72" font-family="Arial, sans-serif" font-size="42" font-weight="700" fill="#102033">Patent Tutor Agent Mature Memory Architecture</text>
+  <text x="82" y="112" font-family="Arial, sans-serif" font-size="22" fill="#5f6f7f">Database-backed learner memory, node-level recall, evidence tracking, consolidation, and Markdown projection.</text>
 
-  <rect x="70" y="150" width="1660" height="270" fill="#f5f7fb" stroke="#d7e0ea" stroke-width="2" rx="20"/>
-  <text x="100" y="195" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Runtime Context</text>
+  <!-- Runtime -->
+  <rect x="70" y="145" width="2060" height="245" fill="#f5f7fb" stroke="#d7e0ea" stroke-width="2" rx="20"/>
+  <text x="100" y="190" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">1. Runtime and Workflow Surface</text>
 
-  <rect x="110" y="230" width="330" height="140" fill="#fff7e8" stroke="#bb7b23" stroke-width="2.5" rx="16"/>
-  <text x="135" y="270" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">API / CLI / Studio</text>
-  <text x="135" y="305" font-family="Arial, sans-serif" font-size="19" fill="#23313f">session_id / user_input</text>
-  <text x="135" y="335" font-family="Arial, sans-serif" font-size="19" fill="#23313f">learner_id</text>
+  <rect x="110" y="225" width="300" height="115" fill="#fff7e8" stroke="#bb7b23" stroke-width="2.5" rx="16"/>
+  <text x="135" y="260" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#1f2d3a">API / CLI / Studio</text>
+  <text x="135" y="292" font-family="Arial, sans-serif" font-size="18" fill="#23313f">session_id, user_input</text>
+  <text x="135" y="320" font-family="Arial, sans-serif" font-size="18" fill="#23313f">learner_id or login user</text>
 
-  <rect x="520" y="230" width="330" height="140" fill="#fff7e8" stroke="#bb7b23" stroke-width="2.5" rx="16"/>
-  <text x="545" y="270" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">WorkflowContext</text>
-  <text x="545" y="305" font-family="Arial, sans-serif" font-size="19" fill="#23313f">learner_id hash / slug</text>
-  <text x="545" y="335" font-family="Arial, sans-serif" font-size="19" fill="#23313f">privacy boundary</text>
+  <rect x="470" y="225" width="300" height="115" fill="#fff7e8" stroke="#bb7b23" stroke-width="2.5" rx="16"/>
+  <text x="495" y="260" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#1f2d3a">WorkflowContext</text>
+  <text x="495" y="292" font-family="Arial, sans-serif" font-size="18" fill="#23313f">learner_id_hash</text>
+  <text x="495" y="320" font-family="Arial, sans-serif" font-size="18" fill="#23313f">privacy and retention flags</text>
 
-  <rect x="930" y="230" width="330" height="140" fill="#fff7e8" stroke="#bb7b23" stroke-width="2.5" rx="16"/>
-  <text x="955" y="270" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">LangGraph Workflow</text>
-  <text x="955" y="305" font-family="Arial, sans-serif" font-size="19" fill="#23313f">route / diagnosis / planner</text>
-  <text x="955" y="335" font-family="Arial, sans-serif" font-size="19" fill="#23313f">tool_agent / experts / judge</text>
+  <rect x="830" y="225" width="390" height="115" fill="#fff7e8" stroke="#bb7b23" stroke-width="2.5" rx="16"/>
+  <text x="855" y="260" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#1f2d3a">LangGraph Workflow</text>
+  <text x="855" y="292" font-family="Arial, sans-serif" font-size="18" fill="#23313f">route, diagnosis, planner, tool_agent</text>
+  <text x="855" y="320" font-family="Arial, sans-serif" font-size="18" fill="#23313f">expert chain, judge, feedback, finalize</text>
 
-  <rect x="1340" y="230" width="330" height="140" fill="#fff7e8" stroke="#bb7b23" stroke-width="2.5" rx="16"/>
-  <text x="1365" y="270" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Side-effect Wrapper</text>
-  <text x="1365" y="305" font-family="Arial, sans-serif" font-size="19" fill="#23313f">events / artifacts</text>
-  <text x="1365" y="335" font-family="Arial, sans-serif" font-size="19" fill="#23313f">session_memory projection</text>
+  <rect x="1280" y="225" width="355" height="115" fill="#fff7e8" stroke="#bb7b23" stroke-width="2.5" rx="16"/>
+  <text x="1305" y="260" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#1f2d3a">Node Prompt Builder</text>
+  <text x="1305" y="292" font-family="Arial, sans-serif" font-size="18" fill="#23313f">agent role memory</text>
+  <text x="1305" y="320" font-family="Arial, sans-serif" font-size="18" fill="#23313f">active recall snippets</text>
 
-  <path d="M440 300 L520 300" stroke="#41576d" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
-  <path d="M850 300 L930 300" stroke="#41576d" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
-  <path d="M1260 300 L1340 300" stroke="#41576d" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <rect x="1695" y="225" width="355" height="115" fill="#fff7e8" stroke="#bb7b23" stroke-width="2.5" rx="16"/>
+  <text x="1720" y="260" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#1f2d3a">Side-effect Wrapper</text>
+  <text x="1720" y="292" font-family="Arial, sans-serif" font-size="18" fill="#23313f">events, artifacts, manifest</text>
+  <text x="1720" y="320" font-family="Arial, sans-serif" font-size="18" fill="#23313f">writes session summaries</text>
 
-  <rect x="70" y="455" width="1660" height="335" fill="#f5f7fb" stroke="#d7e0ea" stroke-width="2" rx="20"/>
-  <text x="100" y="500" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Source-of-Truth Storage</text>
+  <path d="M410 282 L470 282" stroke="#40566b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M770 282 L830 282" stroke="#40566b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1220 282 L1280 282" stroke="#40566b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1635 282 L1695 282" stroke="#40566b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
 
-  <rect x="110" y="535" width="390" height="180" fill="#eef7ff" stroke="#246b9f" stroke-width="2.5" rx="16"/>
-  <text x="135" y="575" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Short-term Memory</text>
-  <text x="135" y="610" font-family="Arial, sans-serif" font-size="19" fill="#23313f">LangGraph Checkpointer</text>
-  <text x="135" y="640" font-family="Arial, sans-serif" font-size="19" fill="#23313f">thread_id = session_id</text>
-  <text x="135" y="670" font-family="Arial, sans-serif" font-size="16" fill="#46586a">SQLite first, Postgres later</text>
+  <!-- Memory services -->
+  <rect x="70" y="430" width="2060" height="310" fill="#f7f3ff" stroke="#d9cef7" stroke-width="2" rx="20"/>
+  <text x="100" y="475" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">2. Memory Service Layer</text>
 
-  <rect x="555" y="535" width="430" height="180" fill="#eef7ff" stroke="#246b9f" stroke-width="2.5" rx="16"/>
-  <text x="580" y="575" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Learner Memory</text>
-  <text x="580" y="610" font-family="Arial, sans-serif" font-size="19" fill="#23313f">LangGraph Store namespaces</text>
-  <text x="580" y="640" font-family="Arial, sans-serif" font-size="19" fill="#23313f">profile / history / preference</text>
-  <text x="580" y="670" font-family="Arial, sans-serif" font-size="19" fill="#23313f">mastery / insight</text>
+  <rect x="110" y="510" width="300" height="155" fill="#f4f0ff" stroke="#6c56b3" stroke-width="2.5" rx="16"/>
+  <text x="135" y="546" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2d3a">MemoryWriter</text>
+  <text x="135" y="578" font-family="Arial, sans-serif" font-size="18" fill="#23313f">feedback and chat summary</text>
+  <text x="135" y="606" font-family="Arial, sans-serif" font-size="18" fill="#23313f">profile_delta, mastery events</text>
+  <text x="135" y="634" font-family="Arial, sans-serif" font-size="16" fill="#46586a">idempotency key + evidence</text>
 
-  <rect x="1040" y="535" width="300" height="180" fill="#effaf3" stroke="#2e7d4f" stroke-width="2.5" rx="16"/>
-  <text x="1065" y="575" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Artifacts</text>
-  <text x="1065" y="610" font-family="Arial, sans-serif" font-size="19" fill="#23313f">manifest.json</text>
-  <text x="1065" y="640" font-family="Arial, sans-serif" font-size="19" fill="#23313f">round-XX/*.md</text>
-  <text x="1065" y="670" font-family="Arial, sans-serif" font-size="19" fill="#23313f">final_answer.md</text>
+  <rect x="455" y="510" width="300" height="155" fill="#f4f0ff" stroke="#6c56b3" stroke-width="2.5" rx="16"/>
+  <text x="480" y="546" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2d3a">MemoryRetriever</text>
+  <text x="480" y="578" font-family="Arial, sans-serif" font-size="18" fill="#23313f">node_name + current topic</text>
+  <text x="480" y="606" font-family="Arial, sans-serif" font-size="18" fill="#23313f">select 3-8 snippets</text>
+  <text x="480" y="634" font-family="Arial, sans-serif" font-size="16" fill="#46586a">budget and freshness aware</text>
 
-  <rect x="1400" y="535" width="280" height="180" fill="#effaf3" stroke="#2e7d4f" stroke-width="2.5" rx="16"/>
-  <text x="1425" y="575" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Project Assets</text>
-  <text x="1425" y="610" font-family="Arial, sans-serif" font-size="19" fill="#23313f">memory/agents</text>
-  <text x="1425" y="640" font-family="Arial, sans-serif" font-size="19" fill="#23313f">memory/curriculum</text>
-  <text x="1425" y="670" font-family="Arial, sans-serif" font-size="16" fill="#46586a">Git tracked, no learner PII</text>
+  <rect x="800" y="510" width="300" height="155" fill="#f4f0ff" stroke="#6c56b3" stroke-width="2.5" rx="16"/>
+  <text x="825" y="546" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2d3a">Mastery Model</text>
+  <text x="825" y="578" font-family="Arial, sans-serif" font-size="18" fill="#23313f">skill_id, mastery_level</text>
+  <text x="825" y="606" font-family="Arial, sans-serif" font-size="18" fill="#23313f">confidence, last_practiced</text>
+  <text x="825" y="634" font-family="Arial, sans-serif" font-size="16" fill="#46586a">BKT-ready, not required first</text>
 
-  <path d="M1095 370 L305 535" stroke="#41576d" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
-  <path d="M1095 370 L770 535" stroke="#41576d" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
-  <path d="M1505 370 L1190 535" stroke="#41576d" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <rect x="1145" y="510" width="300" height="155" fill="#f4f0ff" stroke="#6c56b3" stroke-width="2.5" rx="16"/>
+  <text x="1170" y="546" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2d3a">Consolidator</text>
+  <text x="1170" y="578" font-family="Arial, sans-serif" font-size="18" fill="#23313f">merge, correct, supersede</text>
+  <text x="1170" y="606" font-family="Arial, sans-serif" font-size="18" fill="#23313f">raise or lower confidence</text>
+  <text x="1170" y="634" font-family="Arial, sans-serif" font-size="16" fill="#46586a">learner lock + schedule</text>
 
-  <rect x="1260" y="740" width="445" height="70" fill="#fff4f4" stroke="#b55252" stroke-width="2.5" rx="16"/>
-  <text x="1285" y="770" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Safety Rules</text>
-  <text x="1285" y="798" font-family="Arial, sans-serif" font-size="15" fill="#46586a">No PII, API keys, full transcripts; legal content goes to RAG</text>
+  <rect x="1490" y="510" width="300" height="155" fill="#f4f0ff" stroke="#6c56b3" stroke-width="2.5" rx="16"/>
+  <text x="1515" y="546" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2d3a">Privacy Guard</text>
+  <text x="1515" y="578" font-family="Arial, sans-serif" font-size="18" fill="#23313f">PII filter and retention</text>
+  <text x="1515" y="606" font-family="Arial, sans-serif" font-size="18" fill="#23313f">learner_id hashing</text>
+  <text x="1515" y="634" font-family="Arial, sans-serif" font-size="16" fill="#46586a">no secrets, no full transcript</text>
 
-  <rect x="70" y="825" width="1660" height="260" fill="#f5f7fb" stroke="#d7e0ea" stroke-width="2" rx="20"/>
-  <text x="100" y="870" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Services and Background Jobs</text>
+  <rect x="1835" y="510" width="245" height="155" fill="#f4f0ff" stroke="#6c56b3" stroke-width="2.5" rx="16"/>
+  <text x="1860" y="546" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2d3a">Projector</text>
+  <text x="1860" y="578" font-family="Arial, sans-serif" font-size="18" fill="#23313f">Store to Markdown</text>
+  <text x="1860" y="606" font-family="Arial, sans-serif" font-size="18" fill="#23313f">review and graph input</text>
+  <text x="1860" y="634" font-family="Arial, sans-serif" font-size="16" fill="#46586a">rebuildable output</text>
 
-  <rect x="110" y="905" width="330" height="130" fill="#f4f0ff" stroke="#6c56b3" stroke-width="2.5" rx="16"/>
-  <text x="135" y="943" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Active Recall Service</text>
-  <text x="135" y="978" font-family="Arial, sans-serif" font-size="19" fill="#23313f">Store search + ranking</text>
-  <text x="135" y="1008" font-family="Arial, sans-serif" font-size="16" fill="#46586a">returns MemorySelection</text>
+  <path d="M1458 340 L605 510" stroke="#40566b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1872 340 L260 510" stroke="#40566b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
 
-  <rect x="505" y="905" width="330" height="130" fill="#f4f0ff" stroke="#6c56b3" stroke-width="2.5" rx="16"/>
-  <text x="530" y="943" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Memory Writers</text>
-  <text x="530" y="978" font-family="Arial, sans-serif" font-size="19" fill="#23313f">feedback / chat summaries</text>
-  <text x="530" y="1008" font-family="Arial, sans-serif" font-size="16" fill="#46586a">idempotency key + evidence</text>
+  <!-- Database -->
+  <rect x="70" y="780" width="2060" height="410" fill="#eef7ff" stroke="#c9deef" stroke-width="2" rx="20"/>
+  <text x="100" y="825" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">3. Database-backed Source of Truth</text>
 
-  <rect x="900" y="905" width="330" height="130" fill="#f4f0ff" stroke="#6c56b3" stroke-width="2.5" rx="16"/>
-  <text x="925" y="943" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Consolidation</text>
-  <text x="925" y="978" font-family="Arial, sans-serif" font-size="19" fill="#23313f">merge / correct / supersede</text>
-  <text x="925" y="1008" font-family="Arial, sans-serif" font-size="16" fill="#46586a">learner lock + rate limit</text>
+  <rect x="110" y="860" width="360" height="270" fill="#e8f4ff" stroke="#246b9f" stroke-width="2.5" rx="16"/>
+  <text x="135" y="897" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#1f2d3a">Checkpointer DB</text>
+  <text x="135" y="930" font-family="Arial, sans-serif" font-size="18" fill="#23313f">SQLiteSaver / PostgresSaver</text>
+  <text x="135" y="960" font-family="Arial, sans-serif" font-size="18" fill="#23313f">thread_id = session_id</text>
+  <text x="135" y="990" font-family="Arial, sans-serif" font-size="18" fill="#23313f">state snapshots per node</text>
+  <text x="135" y="1020" font-family="Arial, sans-serif" font-size="18" fill="#23313f">resume interrupted workflow</text>
+  <text x="135" y="1055" font-family="Arial, sans-serif" font-size="16" fill="#46586a">short-term execution memory</text>
 
-  <rect x="1295" y="905" width="330" height="130" fill="#f4f0ff" stroke="#6c56b3" stroke-width="2.5" rx="16"/>
-  <text x="1320" y="943" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">Markdown Projection</text>
-  <text x="1320" y="978" font-family="Arial, sans-serif" font-size="19" fill="#23313f">Store -> data/memory</text>
-  <text x="1320" y="1008" font-family="Arial, sans-serif" font-size="16" fill="#46586a">rebuildable, not source of truth</text>
+  <rect x="520" y="860" width="520" height="270" fill="#e8f4ff" stroke="#246b9f" stroke-width="2.5" rx="16"/>
+  <text x="545" y="897" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#1f2d3a">Learner Store DB</text>
+  <text x="545" y="930" font-family="Arial, sans-serif" font-size="18" fill="#23313f">("learners", learner_id, "profile")</text>
+  <text x="545" y="960" font-family="Arial, sans-serif" font-size="18" fill="#23313f">("learners", learner_id, "history")</text>
+  <text x="545" y="990" font-family="Arial, sans-serif" font-size="18" fill="#23313f">("learners", learner_id, "preference")</text>
+  <text x="545" y="1020" font-family="Arial, sans-serif" font-size="18" fill="#23313f">("learners", learner_id, "mastery")</text>
+  <text x="545" y="1050" font-family="Arial, sans-serif" font-size="18" fill="#23313f">("learners", learner_id, "insight")</text>
+  <text x="545" y="1085" font-family="Arial, sans-serif" font-size="16" fill="#46586a">long-term learner memory</text>
 
-  <path d="M770 715 L275 905" stroke="#41576d" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
-  <path d="M770 715 L670 905" stroke="#41576d" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
-  <path d="M770 715 L1065 905" stroke="#41576d" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
-  <path d="M770 715 L1460 905" stroke="#7a8794" stroke-width="2.5" stroke-dasharray="8 7" fill="none" marker-end="url(#arrow)"/>
-  <path d="M1190 715 L1460 905" stroke="#7a8794" stroke-width="2.5" stroke-dasharray="8 7" fill="none" marker-end="url(#arrow)"/>
-  <path d="M275 905 C275 790 960 455 1095 370" stroke="#7a8794" stroke-width="2.5" stroke-dasharray="8 7" fill="none" marker-end="url(#arrow)"/>
+  <rect x="1090" y="860" width="420" height="270" fill="#e8f4ff" stroke="#246b9f" stroke-width="2.5" rx="16"/>
+  <text x="1115" y="897" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#1f2d3a">Evidence and Recall DB</text>
+  <text x="1115" y="930" font-family="Arial, sans-serif" font-size="18" fill="#23313f">memory_id, session_id</text>
+  <text x="1115" y="960" font-family="Arial, sans-serif" font-size="18" fill="#23313f">source field / artifact path</text>
+  <text x="1115" y="990" font-family="Arial, sans-serif" font-size="18" fill="#23313f">confidence, freshness</text>
+  <text x="1115" y="1020" font-family="Arial, sans-serif" font-size="18" fill="#23313f">superseded_by</text>
+  <text x="1115" y="1050" font-family="Arial, sans-serif" font-size="18" fill="#23313f">recall_trace per node</text>
+  <text x="1115" y="1085" font-family="Arial, sans-serif" font-size="16" fill="#46586a">auditability and debugging</text>
 
-  <text x="95" y="1128" font-family="Arial, sans-serif" font-size="16" fill="#46586a">Core optimization: Store owns learner memory; artifacts remain immutable audit logs; Markdown only supports review, graph extraction, and debugging.</text>
+  <rect x="1560" y="860" width="520" height="270" fill="#e8f4ff" stroke="#246b9f" stroke-width="2.5" rx="16"/>
+  <text x="1585" y="897" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#1f2d3a">Learning Domain Tables</text>
+  <text x="1585" y="930" font-family="Arial, sans-serif" font-size="18" fill="#23313f">skills: novelty, inventiveness, priority</text>
+  <text x="1585" y="960" font-family="Arial, sans-serif" font-size="18" fill="#23313f">prerequisite graph and review cadence</text>
+  <text x="1585" y="990" font-family="Arial, sans-serif" font-size="18" fill="#23313f">strategy_effectiveness by learner</text>
+  <text x="1585" y="1020" font-family="Arial, sans-serif" font-size="18" fill="#23313f">misconception taxonomy</text>
+  <text x="1585" y="1050" font-family="Arial, sans-serif" font-size="18" fill="#23313f">optional vector index metadata</text>
+  <text x="1585" y="1085" font-family="Arial, sans-serif" font-size="16" fill="#46586a">education-specific memory model</text>
+
+  <path d="M260 665 L780 860" stroke="#40566b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M605 665 L780 860" stroke="#40566b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M950 665 C1120 740 1530 760 1820 860" stroke="#40566b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1295 665 L1300 860" stroke="#40566b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1640 665 L1300 860" stroke="#40566b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1958 665 L1820 860" stroke="#40566b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- Projections -->
+  <rect x="70" y="1230" width="2060" height="190" fill="#effaf3" stroke="#d1eadb" stroke-width="2" rx="20"/>
+  <text x="100" y="1275" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">4. Human Review, Artifacts, and Knowledge Surfaces</text>
+
+  <rect x="110" y="1310" width="420" height="80" fill="#effaf3" stroke="#2e7d4f" stroke-width="2.5" rx="16"/>
+  <text x="135" y="1342" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2d3a">Artifacts</text>
+  <text x="135" y="1372" font-family="Arial, sans-serif" font-size="17" fill="#23313f">immutable session reports and final answers</text>
+
+  <rect x="585" y="1310" width="420" height="80" fill="#effaf3" stroke="#2e7d4f" stroke-width="2.5" rx="16"/>
+  <text x="610" y="1342" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2d3a">Markdown Projection</text>
+  <text x="610" y="1372" font-family="Arial, sans-serif" font-size="17" fill="#23313f">data/memory/learners/*, rebuildable</text>
+
+  <rect x="1060" y="1310" width="420" height="80" fill="#effaf3" stroke="#2e7d4f" stroke-width="2.5" rx="16"/>
+  <text x="1085" y="1342" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2d3a">RAG / Curriculum</text>
+  <text x="1085" y="1372" font-family="Arial, sans-serif" font-size="17" fill="#23313f">legal text and course knowledge, not learner memory</text>
+
+  <rect x="1535" y="1310" width="500" height="80" fill="#fff4f4" stroke="#b55252" stroke-width="2.5" rx="16"/>
+  <text x="1560" y="1342" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2d3a">Governance</text>
+  <text x="1560" y="1372" font-family="Arial, sans-serif" font-size="17" fill="#23313f">PII redaction, retention, export/delete, manual review</text>
+
+  <path d="M290 1130 L320 1310" stroke="#40566b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M780 1130 L795 1310" stroke="#40566b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1300 1130 L795 1310" stroke="#7a8794" stroke-width="2.5" stroke-dasharray="8 7" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1820 1130 L1270 1310" stroke="#40566b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1640 665 C2110 735 2105 1170 1785 1310" stroke="#7a8794" stroke-width="2.5" stroke-dasharray="8 7" fill="none" marker-end="url(#arrow)"/>
+
+  <text x="95" y="1460" font-family="Arial, sans-serif" font-size="17" fill="#46586a">Key rule: database-backed Store is the operational memory; Markdown and artifacts are derived surfaces for humans, audits, graph extraction, and debugging.</text>
 </svg>
