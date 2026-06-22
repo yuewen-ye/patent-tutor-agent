@@ -6,37 +6,37 @@
   </defs>
 
   <rect x="0" y="0" width="2200" height="1500" fill="#fbfcfe"/>
-  <text x="80" y="72" font-family="Noto Sans CJK SC" font-size="38" font-weight="700" fill="#102033">Patent Tutor Agent Mature Memory Architecture（专利导师 Agent 成熟记忆架构）</text>
-  <text x="82" y="112" font-family="Noto Sans CJK SC" font-size="19" fill="#5f6f7f">One physical database, multiple logical tables（一个物理数据库，多组逻辑表）.</text>
+  <text x="80" y="72" font-family="Arial, sans-serif" font-size="42" font-weight="700" fill="#102033">Patent Tutor Agent Mature Memory Architecture</text>
+  <text x="82" y="112" font-family="Arial, sans-serif" font-size="22" fill="#5f6f7f">One physical database, multiple logical tables: learner memory, checkpoints, evidence, mastery, and projections.</text>
 
   <!-- Runtime -->
   <rect x="70" y="145" width="2060" height="245" fill="#f5f7fb" stroke="#d7e0ea" stroke-width="2" rx="20"/>
-  <text x="100" y="190" font-family="Noto Sans CJK SC" font-size="19" font-weight="700" fill="#1f2d3a">1. Runtime and Workflow Surface（运行时与工作流入口）</text>
+  <text x="100" y="190" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">1. Runtime and Workflow Surface</text>
 
   <rect x="110" y="225" width="300" height="115" fill="#fff7e8" stroke="#bb7b23" stroke-width="2.5" rx="16"/>
-  <text x="135" y="260" font-family="Noto Sans CJK SC" font-size="20" font-weight="700" fill="#1f2d3a">API / CLI / Studio（入口）</text>
-  <text x="135" y="292" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">session_id, user_input（会话与输入）</text>
-  <text x="135" y="320" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">learner_id or login user（学习者）</text>
+  <text x="135" y="260" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#1f2d3a">API / CLI / Studio</text>
+  <text x="135" y="292" font-family="Arial, sans-serif" font-size="18" fill="#23313f">session_id, user_input</text>
+  <text x="135" y="320" font-family="Arial, sans-serif" font-size="18" fill="#23313f">learner_id or login user</text>
 
   <rect x="470" y="225" width="300" height="115" fill="#fff7e8" stroke="#bb7b23" stroke-width="2.5" rx="16"/>
-  <text x="495" y="260" font-family="Noto Sans CJK SC" font-size="20" font-weight="700" fill="#1f2d3a">WorkflowContext（上下文）</text>
-  <text x="495" y="292" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">learner_id_hash（匿名学习者 ID）</text>
-  <text x="495" y="320" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">privacy and retention flags（隐私/保留策略）</text>
+  <text x="495" y="260" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#1f2d3a">WorkflowContext</text>
+  <text x="495" y="292" font-family="Arial, sans-serif" font-size="18" fill="#23313f">learner_id_hash</text>
+  <text x="495" y="320" font-family="Arial, sans-serif" font-size="18" fill="#23313f">privacy and retention flags</text>
 
   <rect x="830" y="225" width="390" height="115" fill="#fff7e8" stroke="#bb7b23" stroke-width="2.5" rx="16"/>
-  <text x="855" y="260" font-family="Noto Sans CJK SC" font-size="20" font-weight="700" fill="#1f2d3a">LangGraph Workflow（工作流）</text>
-  <text x="855" y="292" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">route, diagnosis, planner, tool_agent</text>
-  <text x="855" y="320" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">expert chain, judge, feedback, finalize</text>
+  <text x="855" y="260" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#1f2d3a">LangGraph Workflow</text>
+  <text x="855" y="292" font-family="Arial, sans-serif" font-size="18" fill="#23313f">route, diagnosis, planner, tool_agent</text>
+  <text x="855" y="320" font-family="Arial, sans-serif" font-size="18" fill="#23313f">expert chain, judge, feedback, finalize</text>
 
   <rect x="1280" y="225" width="355" height="115" fill="#fff7e8" stroke="#bb7b23" stroke-width="2.5" rx="16"/>
-  <text x="1305" y="260" font-family="Noto Sans CJK SC" font-size="20" font-weight="700" fill="#1f2d3a">Node Prompt Builder（提示词构造）</text>
-  <text x="1305" y="292" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">agent role memory（角色记忆）</text>
-  <text x="1305" y="320" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">active recall snippets（主动召回片段）</text>
+  <text x="1305" y="260" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#1f2d3a">Node Prompt Builder</text>
+  <text x="1305" y="292" font-family="Arial, sans-serif" font-size="18" fill="#23313f">agent role memory</text>
+  <text x="1305" y="320" font-family="Arial, sans-serif" font-size="18" fill="#23313f">active recall snippets</text>
 
   <rect x="1695" y="225" width="355" height="115" fill="#fff7e8" stroke="#bb7b23" stroke-width="2.5" rx="16"/>
-  <text x="1720" y="260" font-family="Noto Sans CJK SC" font-size="20" font-weight="700" fill="#1f2d3a">Side-effect Wrapper（副作用包装）</text>
-  <text x="1720" y="292" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">events, artifacts, manifest（事件/产物）</text>
-  <text x="1720" y="320" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">writes session summaries（写入摘要）</text>
+  <text x="1720" y="260" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#1f2d3a">Side-effect Wrapper</text>
+  <text x="1720" y="292" font-family="Arial, sans-serif" font-size="18" fill="#23313f">events, artifacts, manifest</text>
+  <text x="1720" y="320" font-family="Arial, sans-serif" font-size="18" fill="#23313f">writes session summaries</text>
 
   <path d="M410 282 L470 282" stroke="#40566b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
   <path d="M770 282 L830 282" stroke="#40566b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
@@ -45,88 +45,87 @@
 
   <!-- Memory services -->
   <rect x="70" y="430" width="2060" height="310" fill="#f7f3ff" stroke="#d9cef7" stroke-width="2" rx="20"/>
-  <text x="100" y="475" font-family="Noto Sans CJK SC" font-size="19" font-weight="700" fill="#1f2d3a">2. Memory Service Layer（记忆服务层）</text>
+  <text x="100" y="475" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">2. Memory Service Layer</text>
 
   <rect x="110" y="510" width="300" height="155" fill="#f4f0ff" stroke="#6c56b3" stroke-width="2.5" rx="16"/>
-  <text x="135" y="546" font-family="Noto Sans CJK SC" font-size="19" font-weight="700" fill="#1f2d3a">MemoryWriter（记忆写入）</text>
-  <text x="135" y="578" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">feedback and chat summary（反馈/聊天摘要）</text>
-  <text x="135" y="606" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">profile_delta, mastery events（画像/掌握度）</text>
-  <text x="135" y="634" font-family="Noto Sans CJK SC" font-size="13" fill="#46586a">idempotency key + evidence（幂等键+证据）</text>
+  <text x="135" y="546" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2d3a">MemoryWriter</text>
+  <text x="135" y="578" font-family="Arial, sans-serif" font-size="18" fill="#23313f">feedback and chat summary</text>
+  <text x="135" y="606" font-family="Arial, sans-serif" font-size="18" fill="#23313f">profile_delta, mastery events</text>
+  <text x="135" y="634" font-family="Arial, sans-serif" font-size="16" fill="#46586a">idempotency key + evidence</text>
 
   <rect x="455" y="510" width="300" height="155" fill="#f4f0ff" stroke="#6c56b3" stroke-width="2.5" rx="16"/>
-  <text x="480" y="546" font-family="Noto Sans CJK SC" font-size="19" font-weight="700" fill="#1f2d3a">MemoryRetriever（记忆召回）</text>
-  <text x="480" y="578" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">node_name + current topic（节点+主题）</text>
-  <text x="480" y="606" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">select 3-8 snippets（选 3-8 条片段）</text>
-  <text x="480" y="634" font-family="Noto Sans CJK SC" font-size="13" fill="#46586a">budget and freshness aware（预算/新鲜度）</text>
+  <text x="480" y="546" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2d3a">MemoryRetriever</text>
+  <text x="480" y="578" font-family="Arial, sans-serif" font-size="18" fill="#23313f">node_name + current topic</text>
+  <text x="480" y="606" font-family="Arial, sans-serif" font-size="18" fill="#23313f">select 3-8 snippets</text>
+  <text x="480" y="634" font-family="Arial, sans-serif" font-size="16" fill="#46586a">budget and freshness aware</text>
 
   <rect x="800" y="510" width="300" height="155" fill="#f4f0ff" stroke="#6c56b3" stroke-width="2.5" rx="16"/>
-  <text x="825" y="546" font-family="Noto Sans CJK SC" font-size="19" font-weight="700" fill="#1f2d3a">Mastery Model（掌握度模型）</text>
-  <text x="825" y="578" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">skill_id, mastery_level（技能/掌握度）</text>
-  <text x="825" y="606" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">confidence, last_practiced（置信度/练习）</text>
-  <text x="825" y="634" font-family="Noto Sans CJK SC" font-size="13" fill="#46586a">BKT-ready, not required first（可接 BKT）</text>
+  <text x="825" y="546" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2d3a">Mastery Model</text>
+  <text x="825" y="578" font-family="Arial, sans-serif" font-size="18" fill="#23313f">skill_id, mastery_level</text>
+  <text x="825" y="606" font-family="Arial, sans-serif" font-size="18" fill="#23313f">confidence, last_practiced</text>
+  <text x="825" y="634" font-family="Arial, sans-serif" font-size="16" fill="#46586a">BKT-ready, not required first</text>
 
   <rect x="1145" y="510" width="300" height="155" fill="#f4f0ff" stroke="#6c56b3" stroke-width="2.5" rx="16"/>
-  <text x="1170" y="546" font-family="Noto Sans CJK SC" font-size="19" font-weight="700" fill="#1f2d3a">Consolidator（记忆整理）</text>
-  <text x="1170" y="578" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">merge, correct, supersede（合并/修正/替代）</text>
-  <text x="1170" y="606" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">raise or lower confidence（调整置信度）</text>
-  <text x="1170" y="634" font-family="Noto Sans CJK SC" font-size="13" fill="#46586a">learner lock + schedule（学习者锁+调度）</text>
+  <text x="1170" y="546" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2d3a">Consolidator</text>
+  <text x="1170" y="578" font-family="Arial, sans-serif" font-size="18" fill="#23313f">merge, correct, supersede</text>
+  <text x="1170" y="606" font-family="Arial, sans-serif" font-size="18" fill="#23313f">raise or lower confidence</text>
+  <text x="1170" y="634" font-family="Arial, sans-serif" font-size="16" fill="#46586a">learner lock + schedule</text>
 
   <rect x="1490" y="510" width="300" height="155" fill="#f4f0ff" stroke="#6c56b3" stroke-width="2.5" rx="16"/>
-  <text x="1515" y="546" font-family="Noto Sans CJK SC" font-size="19" font-weight="700" fill="#1f2d3a">Privacy Guard（隐私保护）</text>
-  <text x="1515" y="578" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">PII filter and retention（PII 过滤/保留）</text>
-  <text x="1515" y="606" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">learner_id hashing（学习者 ID 哈希）</text>
-  <text x="1515" y="634" font-family="Noto Sans CJK SC" font-size="13" fill="#46586a">no secrets, no full transcript（不存密钥/全文）</text>
+  <text x="1515" y="546" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2d3a">Privacy Guard</text>
+  <text x="1515" y="578" font-family="Arial, sans-serif" font-size="18" fill="#23313f">PII filter and retention</text>
+  <text x="1515" y="606" font-family="Arial, sans-serif" font-size="18" fill="#23313f">learner_id hashing</text>
+  <text x="1515" y="634" font-family="Arial, sans-serif" font-size="16" fill="#46586a">no secrets, no full transcript</text>
 
   <rect x="1835" y="510" width="245" height="155" fill="#f4f0ff" stroke="#6c56b3" stroke-width="2.5" rx="16"/>
-  <text x="1860" y="546" font-family="Noto Sans CJK SC" font-size="19" font-weight="700" fill="#1f2d3a">Projector（投影器）</text>
-  <text x="1860" y="578" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">Store to Markdown（转 Markdown）</text>
-  <text x="1860" y="606" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">review and graph input（审查/图谱输入）</text>
-  <text x="1860" y="634" font-family="Noto Sans CJK SC" font-size="13" fill="#46586a">rebuildable output（可重建输出）</text>
+  <text x="1860" y="546" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2d3a">Projector</text>
+  <text x="1860" y="578" font-family="Arial, sans-serif" font-size="18" fill="#23313f">Store to Markdown</text>
+  <text x="1860" y="606" font-family="Arial, sans-serif" font-size="18" fill="#23313f">review and graph input</text>
+  <text x="1860" y="634" font-family="Arial, sans-serif" font-size="16" fill="#46586a">rebuildable output</text>
 
   <path d="M1458 340 L605 510" stroke="#40566b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
   <path d="M1872 340 L260 510" stroke="#40566b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
 
   <!-- Database -->
   <rect x="70" y="780" width="2060" height="410" fill="#eef7ff" stroke="#c9deef" stroke-width="2" rx="20"/>
-  <text x="100" y="825" font-family="Noto Sans CJK SC" font-size="19" font-weight="700" fill="#1f2d3a">3. One Physical Database as Source of Truth（一个物理数据库作为事实源）</text>
+  <text x="100" y="825" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">3. One Physical Database as Source of Truth</text>
 
   <rect x="110" y="860" width="360" height="270" fill="#e8f4ff" stroke="#246b9f" stroke-width="2.5" rx="16"/>
-  <text x="135" y="897" font-family="Noto Sans CJK SC" font-size="20" font-weight="700" fill="#1f2d3a">checkpoints table（检查点表）</text>
-  <text x="135" y="930" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">LangGraph Saver tables（状态保存表）</text>
-  <text x="135" y="960" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">thread_id = session_id（线程=会话）</text>
-  <text x="135" y="990" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">state snapshots per node（节点状态快照）</text>
-  <text x="135" y="1020" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">resume interrupted workflow（恢复中断流程）</text>
-  <text x="135" y="1055" font-family="Noto Sans CJK SC" font-size="13" fill="#46586a">short-term execution memory（短期执行记忆）</text>
+  <text x="135" y="897" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#1f2d3a">checkpoints table</text>
+  <text x="135" y="930" font-family="Arial, sans-serif" font-size="18" fill="#23313f">LangGraph Saver tables</text>
+  <text x="135" y="960" font-family="Arial, sans-serif" font-size="18" fill="#23313f">thread_id = session_id</text>
+  <text x="135" y="990" font-family="Arial, sans-serif" font-size="18" fill="#23313f">state snapshots per node</text>
+  <text x="135" y="1020" font-family="Arial, sans-serif" font-size="18" fill="#23313f">resume interrupted workflow</text>
+  <text x="135" y="1055" font-family="Arial, sans-serif" font-size="16" fill="#46586a">short-term execution memory</text>
 
   <rect x="520" y="860" width="520" height="270" fill="#e8f4ff" stroke="#246b9f" stroke-width="2.5" rx="16"/>
-  <text x="545" y="897" font-family="Noto Sans CJK SC" font-size="20" font-weight="700" fill="#1f2d3a">learner_memory table（学习者记忆表）</text>
-  <text x="545" y="930" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">("learners", learner_id, "profile")</text>
-  <text x="545" y="960" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">("learners", learner_id, "history")</text>
-  <text x="545" y="990" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">("learners", learner_id, "preference")</text>
-  <text x="545" y="1020" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">("learners", learner_id, "mastery")</text>
-  <text x="545" y="1050" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">("learners", learner_id, "insight")</text>
-  <text x="545" y="1085" font-family="Noto Sans CJK SC" font-size="13" fill="#46586a">LangGraph Store logical namespaces（逻辑命名空间）</text>
+  <text x="545" y="897" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#1f2d3a">learner_memory table</text>
+  <text x="545" y="930" font-family="Arial, sans-serif" font-size="18" fill="#23313f">("learners", learner_id, "profile")</text>
+  <text x="545" y="960" font-family="Arial, sans-serif" font-size="18" fill="#23313f">("learners", learner_id, "history")</text>
+  <text x="545" y="990" font-family="Arial, sans-serif" font-size="18" fill="#23313f">("learners", learner_id, "preference")</text>
+  <text x="545" y="1020" font-family="Arial, sans-serif" font-size="18" fill="#23313f">("learners", learner_id, "mastery")</text>
+  <text x="545" y="1050" font-family="Arial, sans-serif" font-size="18" fill="#23313f">("learners", learner_id, "insight")</text>
+  <text x="545" y="1085" font-family="Arial, sans-serif" font-size="16" fill="#46586a">LangGraph Store logical namespaces</text>
 
   <rect x="1090" y="860" width="420" height="270" fill="#e8f4ff" stroke="#246b9f" stroke-width="2.5" rx="16"/>
-  <text x="1115" y="897" font-family="Noto Sans CJK SC" font-size="20" font-weight="700" fill="#1f2d3a">memory_evidence table（记忆证据表）</text>
-  <text x="1115" y="930" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">memory_id, session_id（记忆/会话 ID）</text>
-  <text x="1115" y="960" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">source field / artifact path（来源字段/产物路径）</text>
-  <text x="1115" y="990" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">confidence, freshness（置信度/新鲜度）</text>
-  <text x="1115" y="1020" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">superseded_by</text>
-  <text x="1115" y="1050" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">recall_trace per node（节点召回轨迹）</text>
-  <text x="1115" y="1085" font-family="Noto Sans CJK SC" font-size="13" fill="#46586a">auditability and debugging（审计与调试）</text>
+  <text x="1115" y="897" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#1f2d3a">memory_evidence table</text>
+  <text x="1115" y="930" font-family="Arial, sans-serif" font-size="18" fill="#23313f">memory_id, session_id</text>
+  <text x="1115" y="960" font-family="Arial, sans-serif" font-size="18" fill="#23313f">source field / artifact path</text>
+  <text x="1115" y="990" font-family="Arial, sans-serif" font-size="18" fill="#23313f">confidence, freshness</text>
+  <text x="1115" y="1020" font-family="Arial, sans-serif" font-size="18" fill="#23313f">superseded_by</text>
+  <text x="1115" y="1050" font-family="Arial, sans-serif" font-size="18" fill="#23313f">recall_trace per node</text>
+  <text x="1115" y="1085" font-family="Arial, sans-serif" font-size="16" fill="#46586a">auditability and debugging</text>
 
   <rect x="1560" y="860" width="520" height="270" fill="#e8f4ff" stroke="#246b9f" stroke-width="2.5" rx="16"/>
-  <text x="1585" y="897" font-family="Noto Sans CJK SC" font-size="20" font-weight="700" fill="#1f2d3a">learning_domain tables（学习领域表）</text>
-  <text x="1585" y="930" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">skills: novelty, inventiveness, priority（技能点）</text>
-  <text x="1585" y="960" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">prerequisite graph and review cadence（先修图/复习节奏）</text>
-  <text x="1585" y="990" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">strategy_effectiveness by learner（策略效果）</text>
-  <text x="1585" y="1020" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">misconception taxonomy（误区分类）</text>
-  <text x="1585" y="1050" font-family="Noto Sans CJK SC" font-size="15" fill="#23313f">optional vector index metadata（可选向量索引）</text>
-  <text x="1585" y="1085" font-family="Noto Sans CJK SC" font-size="13" fill="#46586a">education-specific memory model（教育场景记忆模型）</text>
+  <text x="1585" y="897" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#1f2d3a">learning_domain tables</text>
+  <text x="1585" y="930" font-family="Arial, sans-serif" font-size="18" fill="#23313f">skills: novelty, inventiveness, priority</text>
+  <text x="1585" y="960" font-family="Arial, sans-serif" font-size="18" fill="#23313f">prerequisite graph and review cadence</text>
+  <text x="1585" y="990" font-family="Arial, sans-serif" font-size="18" fill="#23313f">strategy_effectiveness by learner</text>
+  <text x="1585" y="1020" font-family="Arial, sans-serif" font-size="18" fill="#23313f">misconception taxonomy</text>
+  <text x="1585" y="1050" font-family="Arial, sans-serif" font-size="18" fill="#23313f">optional vector index metadata</text>
+  <text x="1585" y="1085" font-family="Arial, sans-serif" font-size="16" fill="#46586a">education-specific memory model</text>
 
-  <text x="100" y="1170" font-family="Noto Sans CJK SC" font-size="14" fill="#46586a">Deployment（部署）：start with one SQLite file for local development（本地一个 SQLite 文件）；use one Postgres database in production（生产一个 Postgres 数据库）。</text>
-  <text x="100" y="1195" font-family="Noto Sans CJK SC" font-size="14" fill="#46586a">These boxes are logical table groups, not separate databases（这些框是逻辑表组，不是多个数据库）。</text>
+  <text x="100" y="1170" font-family="Arial, sans-serif" font-size="17" fill="#46586a">Deployment: start with one SQLite file for local development; use one Postgres database in production. These boxes are logical table groups, not separate databases.</text>
 
   <path d="M260 665 L780 860" stroke="#40566b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
   <path d="M605 665 L780 860" stroke="#40566b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
@@ -137,23 +136,23 @@
 
   <!-- Projections -->
   <rect x="70" y="1230" width="2060" height="190" fill="#effaf3" stroke="#d1eadb" stroke-width="2" rx="20"/>
-  <text x="100" y="1275" font-family="Noto Sans CJK SC" font-size="19" font-weight="700" fill="#1f2d3a">4. Human Review, Artifacts, and Knowledge Surfaces（人工审查、产物与知识表面）</text>
+  <text x="100" y="1275" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f2d3a">4. Human Review, Artifacts, and Knowledge Surfaces</text>
 
   <rect x="110" y="1310" width="420" height="80" fill="#effaf3" stroke="#2e7d4f" stroke-width="2.5" rx="16"/>
-  <text x="135" y="1342" font-family="Noto Sans CJK SC" font-size="19" font-weight="700" fill="#1f2d3a">Artifacts（产物）</text>
-  <text x="135" y="1372" font-family="Noto Sans CJK SC" font-size="14" fill="#23313f">immutable session reports and final answers（不可变报告）</text>
+  <text x="135" y="1342" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2d3a">Artifacts</text>
+  <text x="135" y="1372" font-family="Arial, sans-serif" font-size="17" fill="#23313f">immutable session reports and final answers</text>
 
   <rect x="585" y="1310" width="420" height="80" fill="#effaf3" stroke="#2e7d4f" stroke-width="2.5" rx="16"/>
-  <text x="610" y="1342" font-family="Noto Sans CJK SC" font-size="19" font-weight="700" fill="#1f2d3a">Markdown Projection（Markdown 投影）</text>
-  <text x="610" y="1372" font-family="Noto Sans CJK SC" font-size="14" fill="#23313f">data/memory/learners/*, rebuildable（可重建）</text>
+  <text x="610" y="1342" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2d3a">Markdown Projection</text>
+  <text x="610" y="1372" font-family="Arial, sans-serif" font-size="17" fill="#23313f">data/memory/learners/*, rebuildable</text>
 
   <rect x="1060" y="1310" width="420" height="80" fill="#effaf3" stroke="#2e7d4f" stroke-width="2.5" rx="16"/>
-  <text x="1085" y="1342" font-family="Noto Sans CJK SC" font-size="19" font-weight="700" fill="#1f2d3a">RAG / Curriculum（检索/课程）</text>
-  <text x="1085" y="1372" font-family="Noto Sans CJK SC" font-size="14" fill="#23313f">legal text and course knowledge（法条/课程知识）</text>
+  <text x="1085" y="1342" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2d3a">RAG / Curriculum</text>
+  <text x="1085" y="1372" font-family="Arial, sans-serif" font-size="17" fill="#23313f">legal text and course knowledge, not learner memory</text>
 
   <rect x="1535" y="1310" width="500" height="80" fill="#fff4f4" stroke="#b55252" stroke-width="2.5" rx="16"/>
-  <text x="1560" y="1342" font-family="Noto Sans CJK SC" font-size="19" font-weight="700" fill="#1f2d3a">Governance（治理）</text>
-  <text x="1560" y="1372" font-family="Noto Sans CJK SC" font-size="14" fill="#23313f">PII redaction, retention, export/delete（脱敏/保留/导出删除）</text>
+  <text x="1560" y="1342" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1f2d3a">Governance</text>
+  <text x="1560" y="1372" font-family="Arial, sans-serif" font-size="17" fill="#23313f">PII redaction, retention, export/delete, manual review</text>
 
   <path d="M290 1130 L320 1310" stroke="#40566b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
   <path d="M780 1130 L795 1310" stroke="#40566b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
@@ -161,5 +160,5 @@
   <path d="M1820 1130 L1270 1310" stroke="#40566b" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
   <path d="M1640 665 C2110 735 2105 1170 1785 1310" stroke="#7a8794" stroke-width="2.5" stroke-dasharray="8 7" fill="none" marker-end="url(#arrow)"/>
 
-  <text x="95" y="1460" font-family="Noto Sans CJK SC" font-size="14" fill="#46586a">Key rule（关键规则）：one database owns operational memory（一个数据库负责运行记忆）；Markdown and artifacts are derived surfaces（Markdown 和产物只是派生表面）。</text>
+  <text x="95" y="1460" font-family="Arial, sans-serif" font-size="17" fill="#46586a">Key rule: one database owns operational memory; Markdown and artifacts are derived surfaces for humans, audits, graph extraction, and debugging.</text>
 </svg>
