@@ -10,7 +10,7 @@
 | Artifact 产物落盘 | ✅ 完成 | `_with_artifacts` 包装 + manifest.json + cross_review/joint_synthesis 产物 |
 | CLI Demo | ✅ 完成 | `run_workflow.py` + `show_workflow.py`（max_debate_rounds 默认 3） |
 | 测试 | ✅ 完成 | 覆盖 workflow/LLM/contracts/记忆系统/三路由/五阶段协作链 |
-| FastAPI 服务层 | ✅ 完成 | 已实现会话 REST API、SSE/WebSocket 事件流、artifact 读取与后台 workflow 运行 |
+| FastAPI 服务层 | 🟡 基础完成 | 6 个核心端点已实现并测试通过；缺少 cancel、health、中间件栈、会话 TTL、优雅停机 |
 | RAG 知识库 | ❌ 待实现 | `rag_retrieve()` 为 mock 数据（硬编码 3 条法条） |
 | 前端 | ❌ 待实现 | `frontend/` 为空占位 |
 | 记忆系统 | 🟡 基础完成 | 已接入 LangGraph Checkpointer + Store；BKT 暂不实现 |
@@ -308,47 +308,148 @@ P4 (持久化 + 错误韧性) ──────────→ 可与 P1/P2/P5 
 
 ## P1 — FastAPI + WebSocket/SSE 服务化
 
-**目标**：将 CLI demo 变为可对外服务的 API，使前端可以创建会话、查询状态、接收实时事件。
+### 定位：FastAPI 层要做什么？
 
-**当前入口**：`backend/scripts/run_workflow.py`（同步 CLI，一次性输出 stdout）；`backend/main.py`（FastAPI 服务入口）
+FastAPI 层的角色是**把后台运行的 LangGraph 工作流暴露为 HTTP 可访问的实时教学会话服务**。它不做工作流编排、不调 LLM、不管理长期存储——这些是 `workflow.py`、`core/llm.py`、LangGraph Store 各自的职责。
 
-**目标架构**：
+三层解耦关系：
 
 ```
-POST /sessions              → 创建会话，启动 LangGraph workflow，返回 session_id
-GET  /sessions/{id}         → 返回 StateDict 当前快照（JSON）
-WS   /sessions/{id}/events  → WebSocket 实时推送 AgentEvent 流
-      或
-GET  /sessions/{id}/events/stream  → SSE (Server-Sent Events) 替代方案
-GET  /sessions/{id}/artifacts/{path}  → 拉取已落盘的 .md 产物文件
+FastAPI 层                     LangGraph 工作流
+─────────                     ──────────────
+SessionService                arun_workflow()
+  .create_session() ────────→   session_id, user_input, ...
+  ._run_session()  ──调用──→   workflow.ainvoke(...)
+    ↑ update_sink  ←──回调──   _with_runtime_side_effects()
+    ↑ event_sink   ←──回调──   _with_runtime_side_effects()
+SessionEventBridge            AgentEvent dicts
+  .publish()      ←──回调──   每个节点完成后推送
+  .subscribe()    ──SSE/WS→   客户端实时消费
 ```
 
-### 流式推送方案对比
+因为这三层通过 `update_sink`、`event_sink`、`arun_workflow` 三个接口解耦，**工作流内部拓扑变化（19 节点、5 阶段协作链、辩论循环）对 FastAPI 层完全透明**。`StateDict` 新增的 P0.1 字段（`cross_review_a/b`、`joint_synthesis_output` 等）FastAPI 层只是透传 `dict`，无需改一行代码。
 
-| 特性 | WebSocket | SSE (`EventSourceResponse`) |
-|---|---|---|
-| 方向 | 双向 | 单向（server → client） |
-| 协议 | `ws://` 升级 | HTTP 长连接 |
-| 前端复杂度 | 需 WebSocket 客户端 | 浏览器原生 `EventSource` API |
-| 自动重连 | 需手动实现 | 浏览器内置 |
-| 适用场景 | 需要前端发送中途指令 | 纯进度展示 |
+### 当前实现现状（6 个端点 + services 层）
 
-**推荐**：Agent 状态动画使用 **SSE**（当前用 Starlette `StreamingResponse` 输出 `text/event-stream`，前端一行 `new EventSource(url)` 即可），聊天界面保留 WebSocket 用于双向通信场景（前端发送取消/追问指令）。
+```
+main.py (32行)
+  └─ app/api/__init__.py → create_api_router() 组装3个子路由
+       ├─ sessions.py  → POST /sessions, GET /sessions, GET /sessions/{id}
+       ├─ events.py    → GET .../events/stream (SSE), WS .../events (WebSocket)
+       └─ artifacts.py → GET .../artifacts/{path}
+            ↓ 全部依赖
+       services/session_service.py (249行) — 会话生命周期管理
+       services/event_bridge.py     (74行)  — 跨线程事件 pub/sub
+```
+
+| 端点 | 用途 | 状态 |
+|------|------|------|
+| `POST /sessions` | 创建会话，启动后台工作流（daemon thread），立即返回 `session_id` | ✅ |
+| `GET /sessions` | 列出所有会话 | ✅ |
+| `GET /sessions/{session_id}` | 返回完整 `StateDict` 快照 | ✅ |
+| `GET /sessions/{session_id}/events/stream` | SSE 实时事件流（每个节点完成后推一条 `agent_event`，结束时推 `session_status`） | ✅ |
+| `WS /sessions/{session_id}/events` | WebSocket 实时事件流（同 SSE，json 消息） | ✅ |
+| `GET /sessions/{session_id}/artifacts/{path}` | 读取产物 Markdown 文件（含路径穿越防护） | ✅ |
+
+**质量评估**：
+
+| 维度 | 评价 | 问题 |
+|------|------|------|
+| 架构设计 | ✅ 优秀 | 工厂函数注入、关注点分离、三层解耦干净 |
+| 测试覆盖 | ✅ 5 个用例 | SSE/WS/artifact/快照 全覆盖，含路径穿越防护测试 |
+| 会话生命周期 | 🟡 基本可用 | daemon thread 无取消机制；关闭时线程被丢弃 |
+| 优雅停机 | ❌ 缺失 | 无 signal handler，uvicorn 终止时线程直接被杀 |
+| 安全防护 | ❌ 缺失 | 无认证、无限流、无 CORS |
+| 可观测性 | ❌ 缺失 | 无 request ID、无结构化日志、无 health check |
+| 内存管理 | 🟡 有风险 | session dict 无界增长，永不淘汰 |
+| OpenAPI 文档 | 🟡 基础 | 无 response_model、无 description、无 example |
+| WebSocket 鲁棒性 | 🟡 基础 | 无 heartbeat、无 reconnect token、close 不传 reason |
+
+**结论**：当前 FastAPI 代码结构干净，解耦正确，**完全适用优化后的工作流，无需重写**。6 个端点的功能逻辑正确，测试通过。需要做的是**补齐缺失的横切能力**，而非改动核心逻辑。
+
+### 路由设计：完整端点列表
+
+#### 现有端点（保持不变，无需修改）
+
+```
+POST   /sessions                             创建会话，启动后台工作流
+GET    /sessions                             列出所有会话
+GET    /sessions/{session_id}                获取会话完整状态快照（StateDict）
+GET    /sessions/{session_id}/events/stream  SSE 实时事件流
+WS     /sessions/{session_id}/events         WebSocket 实时事件流
+GET    /sessions/{session_id}/artifacts/{p}  读取产物 Markdown 文件
+```
+
+#### 建议新增端点
+
+```
+DELETE /sessions/{session_id}                取消运行中的会话
+GET    /health                               健康检查（k8s/docker 探活，返回活跃会话数）
+GET    /health/ready                         就绪检查（验证 LLM provider 可达）
+```
+
+#### 为什么不需要更多路由？
+
+工作流内部的 19 个节点、5 阶段协作链、辩论循环是**服务端实现细节**，客户端不需要逐节点调用 API。客户端只需要：
+
+| 客户端需要知道的 | 通过哪个接口 |
+|------------------|-------------|
+| 工作流跑到哪个节点了 | SSE/WS 事件的 `node` 字段 |
+| 当前辩论轮数 | SSE/WS 事件的 `round` 字段，或 state 快照的 `debate_round` |
+| 教学草稿内容 | `GET /sessions/{id}` state 字段，或 artifacts markdown |
+| 交叉审查意见 | state 的 `cross_review_a/b`，或 artifacts markdown |
+| 最终答案 | state 的 `final_answer`，或 `GET .../artifacts/final_answer.md` |
+| 会话是否结束 | SSE 的 `session_status` 事件，或轮询 state 的 `status` |
+| 产物文件内容 | `GET /sessions/{id}/artifacts/{path}` |
+
+**不需要**为 `cross_review`、`joint_synthesis`、`lightweight_review` 等内部阶段单独创建路由。
 
 ### 任务拆解
 
+#### Phase 1：补齐基础设施（不改现有端点行为）
+
 | # | 任务 | 涉及文件 | 说明 |
 |---|---|---|---|
-| 1.1 | ✅ 实现 `SessionService` | `backend/app/services/session_service.py` | 封装 workflow 后台运行，管理运行中的会话引用，提供 `create/get/list` |
-| 1.2 | ✅ 实现 `POST /sessions` | `backend/app/api/sessions.py` | 接收 `{user_input, provider_overrides?}`，调用 `SessionService.create_session()`，返回 `{session_id, status: "running"}` |
-| 1.3 | ✅ 实现 `GET /sessions/{id}` | 同上 | 返回 StateDict JSON 快照（所有非 None 字段）与会话状态 |
-| 1.4 | ✅ 实现事件流推送 | `backend/app/api/events.py` | 已提供 WebSocket 与 SSE；使用事件桥接服务回放/推送 workflow 事件 |
-| 1.5 | ✅ 实现 `GET /sessions/{id}/artifacts/{path}` | `backend/app/api/artifacts.py` | 读取 `artifacts/sessions/{id}/{path}` 文件，返回原始 Markdown 内容（`Content-Type: text/markdown`），并阻止路径穿越 |
-| 1.6 | ✅ 异步化 workflow 运行 | `backend/app/graph/workflow.py` | 保留同步 `run_workflow()`，新增 `arun_workflow()` 使用 `workflow.ainvoke()` 支持 API 后台运行 |
-| 1.7 | ✅ 事件桥接 | `backend/app/services/event_bridge.py` | workflow 产生 `AgentEvent` 后写入线程安全桥接器，由 SSE/WS handler 消费，并支持完成后回放 |
-| 1.8 | ✅ 重构 `backend/main.py` | `backend/main.py` | 挂载路由，启动 uvicorn，加载 `.env` |
+| 1.9 | Lifespan + 优雅停机 | `backend/main.py` | `@asynccontextmanager async def lifespan(app)` — startup 加载配置，shutdown 取消所有运行中 session、drain event bridge（超时 30s） |
+| 1.10 | 中间件栈 | `backend/app/middleware.py`（新建） | `RequestIDMiddleware`（注入 X-Request-ID）、`StructuredLoggingMiddleware`（method/path/status/duration）、`ErrorFormatMiddleware`（统一 `{detail, request_id}` 格式） |
+| 1.11 | CORS | `backend/main.py` | `app.add_middleware(CORSMiddleware, ...)`，开发环境 `allow_origins=["*"]`，生产从 config 读取 |
+| 1.12 | Health check | `backend/app/api/health.py`（新建） | `GET /health` → `{status, active_sessions}`；`GET /health/ready` → 验证 LLM provider 可达 |
 
-### 前端数据流说明
+#### Phase 2：增强会话管理
+
+| # | 任务 | 涉及文件 | 说明 |
+|---|---|---|---|
+| 1.13 | 会话取消 | `backend/app/api/sessions.py` + `session_service.py` | `DELETE /sessions/{session_id}` → 设置 cancel event；`_with_runtime_side_effects` 在每个节点前检查取消标志，提前退出 |
+| 1.14 | Session TTL + 自动清理 | `backend/app/services/session_service.py` | completed/failed 会话超过 TTL（默认 1h）自动从 `_sessions` dict 移除，防止内存泄漏 |
+
+#### Phase 3：API 质量提升
+
+| # | 任务 | 涉及文件 | 说明 |
+|---|---|---|---|
+| 1.15 | Response Models + OpenAPI | `backend/app/api/sessions.py` + `events.py` + `artifacts.py` | 为所有端点添加 `response_model`（Pydantic 模型）、`description`、`responses` 文档 |
+| 1.16 | WebSocket 增强 | `backend/app/api/events.py` | heartbeat ping/pong（30s）、连接时发送 reconnect_token、close 时发送结构化 reason |
+
+#### Phase 4：安全加固（按需，非 MVP 阻塞项）
+
+| # | 任务 | 涉及文件 | 说明 |
+|---|---|---|---|
+| 1.17 | 认证中间件 | `backend/app/middleware/auth.py`（新建） | Bearer token / API key 验证；按 learner_id 隔离 session 访问权限（多用户场景） |
+| 1.18 | 速率限制 | 通过 slowapi 或手写装饰器 | `POST /sessions` 限制 10/min 等 |
+
+### 已完成的 P1 基础任务（保留记录）
+
+| # | 任务 | 涉及文件 | 说明 | 状态 |
+|---|---|---|---|---|
+| 1.1 | 实现 `SessionService` | `backend/app/services/session_service.py` | 封装 workflow 后台运行，管理运行中的会话引用，提供 `create/get/list/snapshot/wait_for_completion/read_artifact` | ✅ |
+| 1.2 | 实现 `POST /sessions` + `GET /sessions` + `GET /sessions/{id}` | `backend/app/api/sessions.py` | 工厂函数 `create_sessions_router(service)` 注入，Pydantic 请求体验证 | ✅ |
+| 1.3 | 实现 SSE + WebSocket 事件流 | `backend/app/api/events.py` | 双通道：SSE `StreamingResponse` + WS `websocket.send_json`；事件桥接回放历史事件后推送实时事件，结束时发送 `session_status` | ✅ |
+| 1.4 | 实现 Artifact 路由 | `backend/app/api/artifacts.py` | 路径穿越防护（`candidate.relative_to(root)`）+ `text/markdown` 返回 | ✅ |
+| 1.5 | 实现 `arun_workflow()` | `backend/app/graph/workflow.py` | 异步版 `workflow.ainvoke()`，接受 `update_sink`/`event_sink` 回调 | ✅ |
+| 1.6 | 实现 `SessionEventBridge` | `backend/app/services/event_bridge.py` | 线程安全 pub/sub：`publish()` 跨线程推事件，`subscribe()` 异步迭代器支持 replay + sentinel 关闭 | ✅ |
+| 1.7 | 重构 `backend/main.py` | `backend/main.py` | `create_app(service)` 工厂函数，`app.state.session_service` 注入 | ✅ |
+| 1.8 | 单元测试 | `backend/tests/unit/test_fastapi_sessions.py` | 5 个测试用例：会话 CRUD、SSE 流、WebSocket 流、artifact 读取、路径穿越防护 | ✅ |
+
+### 前端数据流说明（P1 当前已提供，可直接用于 P3 开发）
 
 前端六个视图获取数据的路径：
 
@@ -775,14 +876,17 @@ Agent 状态动画 → 无变化（事件流不受影响）
                     ┌──────────────────────┐
                     │       P0             │
                     │   工作流完善          │
-                    │   (优先于 P1-P5)     │
+                    │   ✅ P0.1 已完成      │
+                    │   P0.2-P0.6 待实现    │
                     └──────────┬───────────┘
                                │
-                               │ 完善后的工作流
+                               │ 完善后的工作流 (P0.1 done, rest TBD)
                                ▼
                     ┌──────────────────────┐
                     │       P1             │
                     │  FastAPI + SSE/WS     │
+                    │  🟡 基础完成          │
+                    │  Phase 1-4 待补全     │
                     └──────────┬───────────┘
                                │
                                │ 提供 API/事件流
@@ -797,6 +901,7 @@ Agent 状态动画 → 无变化（事件流不受影响）
 ┌──────────────────────┐      │
 │       P5             │──────┘
 │   记忆系统 (Store)    │
+│   🟡 基础完成         │
 └──────────┬───────────┘
            │
            │ 依赖 Checkpointer + Store
@@ -804,13 +909,14 @@ Agent 状态动画 → 无变化（事件流不受影响）
 ┌──────────────────────┐      ┌──────────────────────┐
 │       P4             │      │       P2             │
 │  持久化 + 错误韧性    │      │    RAG 知识库         │
-│  (Checkpointer)      │      │                      │
+│  ❌ 待实现            │      │   ❌ 待实现           │
 └──────────────────────┘      └──────────────────────┘
        独立推进                    独立推进
 ```
 
-- **P0 是 P1-P5 的前置**：工作流完善后再进行 FastAPI 包装
-- **P1 阻塞 P3**：前端所有视图依赖 P1 的 API 和事件流
+- **P0.1 已完成**：5 阶段专家协作链（交叉审查 → 修订 → 联合合成 → 轻量互审）已接入工作流，`StateDict` 已扩展 7 个 ContractModel + 6 个字段
+- **P1 基础完成且与 P0.1 兼容**：FastAPI 层通过 `update_sink`/`event_sink` 解耦，工作流内部拓扑变化对 API 层透明；6 个核心端点无需修改
+- **P1 阻塞 P3**：前端所有视图依赖 P1 的 API 和事件流；当前 P1 的 6 个端点已足以支撑 P3 启动
 - **P5 增强 P3**：学情看板和诊断问卷在 P5 完成后获得历史数据能力，但不是阻塞关系
 - **P4 是 P5 的基础**：Checkpointer 提供短期状态持久化，Store 提供长期记忆存储（生产环境共用 PostgreSQL）
 - **P2 独立**：可以随时启动，不影响其他阶段；但 P0.5（独立 RAG）依赖 P2
@@ -818,18 +924,19 @@ Agent 状态动画 → 无变化（事件流不受影响）
 ## 建议执行顺序
 
 ```
-第 0 步: P0 (工作流完善)                    ← 进行中，约 5-7 天
+第 0 步: P0 (工作流完善)                    ← 进行中
            ├── ✅ P0.1 专家协作链 (已完成)
            ├── P0.2 知识图谱+A*   (2-3 天)
            ├── P0.3 五维画像      (1-2 天)
            ├── P0.4 BKT          (2-3 天，依赖 P0.3)
            ├── P0.5 独立 RAG      (1-2 天，依赖 P2)
            └── P0.6 动态重规划    (1-2 天，依赖 P0.2+P0.4)
-第 1 步: P1 (FastAPI + SSE/WS)              ← P0 完成后，约 2-3 天
-第 2 步: P3 (前端看板 MVP)                  ← P1 完成后，约 3-4 天
-第 3 步: P4 (持久化 + 错误韧性)             ← 约 2 天，可与 P3 并行
-第 4 步: P5 (记忆系统/Store+BKT持久化)       ← 约 3-4 天，需要 P4 基础设施
-第 5 步: P2 (RAG 知识库)                    ← 约 3-4 天，可随时插入（P0.5 之前完成）
+第 1 步: P1 Phase 1-2 (补齐基础设施 + 会话管理)  ← 约 0.5-1 天，可在 P0 间歇期顺手完成
+第 2 步: P3 (前端看板 MVP)                     ← P1 6 个核心端点已就绪，可立即启动，约 3-4 天
+第 3 步: P4 (持久化 + 错误韧性)                ← 约 2 天，可与 P3 并行
+第 4 步: P5 (记忆系统/Store+BKT持久化)          ← 约 3-4 天，需要 P4 基础设施
+第 5 步: P2 (RAG 知识库)                       ← 约 3-4 天，可随时插入（P0.5 之前完成）
+第 6 步: P1 Phase 3-4 (API 质量 + 安全加固)     ← 非 MVP 阻塞项，按需推进
 ```
 
 ---
