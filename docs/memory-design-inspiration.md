@@ -1,788 +1,1580 @@
-# 记忆系统设计借鉴：从 Claude Code 到 Patent Tutor Agent
+# 专利辅导系统 — 记忆机制架构设计
 
-> 本文基于知乎专栏《Claude Code 源码深度解析：Memory 模块设计与实现》的分析，
-> 结合 patent-tutor-agent 当前记忆系统现状，提炼可借鉴的设计理念与具体实施方案。
+> 基于 Claude Code CLI Memory 模块的源码级分析，为 Patent Tutor Agent 重新设计记忆系统。
+> 本文件可直接用于绘制正式架构图。
 >
-> 原文链接：https://zhuanlan.zhihu.com/p/2024236369631879273
+> 参考原文：https://zhuanlan.zhihu.com/p/2024236369631879273
 >
-> 撰写日期：2026-06-22
+> 最后更新：2026-06-22
 
 ---
 
-## 一、Claude Code 记忆系统核心设计理念
+## 目录
 
-Claude Code 的记忆系统不是简单的"存下来下次用"，而是一套**六层分层架构 + 三条注入路径 + 全生命周期管理**的完整体系。
+1. [Claude Code 记忆架构全景](#一claude-code-记忆架构全景)
+2. [专利辅导系统记忆架构总览](#二专利辅导系统记忆架构总览)
+3. [四层记忆详解](#三四层记忆详解)
+4. [三层注入路径](#四三层注入路径)
+5. [两条写入路径](#五两条写入路径)
+6. [完整生命周期](#六完整生命周期)
+7. [每个 Agent 节点的记忆交互矩阵](#七每个-agent-节点的记忆交互矩阵)
+8. [目录结构](#八目录结构)
+9. [与 Claude Code 的映射对照](#九与-claude-code-的映射对照)
 
-### 1.1 六层记忆架构（时间尺度视角）
+---
+
+## 一、Claude Code 记忆架构全景
+
+### 1.1 六层记忆（时间尺度分层）
 
 ```
-时间尺度      机制                  说明
+                            ▲
+                            │  跨 session
+                            │
+    ┌───────────────────────┼───────────────────────────┐
+    │                       │                           │
+    │  ┌────────────────────┴───────────────────────┐   │
+    │  │         层级 6: CLAUDE.md                   │   │
+    │  │         手动维护，注入为 User Context        │   │
+    │  │         ~/.claude/CLAUDE.md                │   │
+    │  │         项目/CLAUDE.md                      │   │
+    │  └────────────────────────────────────────────┘   │
+    │                       │                           │
+    │  ┌────────────────────┴───────────────────────┐   │
+    │  │         层级 5: Team Memory                 │   │
+    │  │         团队共享，checksum 增量同步          │   │
+    │  │         GitHub repo → Anthropic API         │   │
+    │  │         memory/team/*.md                    │   │
+    │  └────────────────────────────────────────────┘   │
+    │                       │                           │
+    │  ┌────────────────────┴───────────────────────┐   │
+    │  │         层级 4: Agent Memory                │   │
+    │  │         角色分域，三种 scope:               │   │
+    │  │         user / project / local              │   │
+    │  │         .claude/agent-memory/<type>/        │   │
+    │  └────────────────────────────────────────────┘   │
+    │                       │                           │
+    │  ┌────────────────────┴───────────────────────┐   │
+    │  │         层级 3: AutoDream                   │   │
+    │  │         离线巩固，24h + 5 sessions 门槛      │   │
+    │  │         读多 session transcript → 合并/纠错  │   │
+    │  └────────────────────────────────────────────┘   │
+    │                       │                           │
+    │  ┌────────────────────┴───────────────────────┐   │
+    │  │         层级 2: Session Memory              │   │
+    │  │         单 session 内, 为 compact 服务       │   │
+    │  │         ~/.claude/session-<id>/memory/      │   │
+    │  │         9-section 结构化模板                │   │
+    │  └────────────────────────────────────────────┘   │
+    │                       │                           │
+    │  ┌────────────────────┴───────────────────────┐   │
+    │  │         层级 1: Auto Memory                 │   │
+    │  │         跨 session, file-based              │   │
+    │  │         memory/ 目录, MEMORY.md 索引        │   │
+    │  │         4 种类型: user/feedback/project/ref │   │
+    │  └────────────────────────────────────────────┘   │
+    │                       │                           │
+    └───────────────────────┼───────────────────────────┘
+                            │  单 session 内
+                            ▼
+```
+
+时间尺度对照：
+
+```
+秒级 ────── Active Recall (每轮 Sonnet 选 ≤5 个记忆文件)
+回合级 ──── extractMemories (每轮结束 fork 子 Agent 写回)
+分钟级 ──── Session Memory (token 阈值触发，更新会话摘要)
+天级 ────── AutoDream (24h + 5 sessions 门槛，跨 session 巩固)
+手动 ────── CLAUDE.md / Team Memory (用户编辑/团队同步)
+```
+
+### 1.2 三层记忆注入路径
+
+```
+                        Claude API 请求
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                     │
+        ▼                     ▼                     ▼
+   ┌─────────┐          ┌─────────┐          ┌─────────┐
+   │ System   │          │ User     │          │ Current  │
+   │ Prompt   │          │ Message  │          │ Turn     │
+   │ 动态段    │          │ #1       │          │ Messages │
+   └────┬─────┘          └────┬─────┘          └────┬─────┘
+        │                     │                     │
+        │  路径 A              │  路径 B              │  路径 C
+        │  行为规则             │  记忆索引            │  主动召回
+        │                     │                     │
+        ▼                     ▼                     ▼
+   ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+   │ 固定模板      │    │ MEMORY.md    │    │ ≤5 个记忆文件 │
+   │ ~3K tokens   │    │ 完整内容      │    │ 完整正文      │
+   │              │    │ ≤200 行      │    │ 含过期警告    │
+   │ 记忆类型定义  │    │ ≤25KB        │    │ per-file 4KB  │
+   │ 保存规则      │    │              │    │ session 60KB  │
+   │ 排除规则      │    │ 所有记忆条目  │    │               │
+   │ 过期验证规则  │    │ 的概览清单    │    │ 按相关性选择  │
+   │              │    │              │    │               │
+   │ 每session    │    │ 每session    │    │ 每轮都执行    │
+   │ 执行一次     │    │ 执行一次     │    │ (唯一能感知   │
+   │ (memoize)   │    │ (memoize)    │    │  新写入记忆   │
+   │              │    │              │    │  的路径)      │
+   └──────────────┘    └──────────────┘    └──────────────┘
+```
+
+### 1.3 两条写入路径
+
+```
+                    用户消息 → Claude 回答
+                              │
+            ┌─────────────────┴─────────────────┐
+            │                                   │
+            ▼                                   ▼
+    ┌───────────────┐                   ┌───────────────┐
+    │  路径 A        │                   │  路径 B        │
+    │  主模型直接写  │                   │  后台自动提取  │
+    │               │                   │               │
+    │ 用户说          │                   │ Stop Hook     │
+    │ "记住这个"     │                   │ 每轮自动触发  │
+    │ → 主模型调     │                   │ → fork 子Agent│
+    │   Write 工具   │                   │   提取记忆     │
+    │               │                   │               │
+    │ 同步, 阻塞     │                   │ 异步, 不阻塞   │
+    │ 只在用户明确    │                   │ 每轮结束自动   │
+    │ 要求时触发     │                   │ fire-and-forget│
+    └───────────────┘                   └───────────────┘
+            │                                   │
+            └─────────────┬─────────────────────┘
+                          │
+                          ▼
+                  互斥检测:
+                  hasMemoryWritesSince()
+                  如果路径 A 写过 → 路径 B 跳过
+```
+
+### 1.4 Active Recall 完整流程（路径 C 的核心机制）
+
+```
+用户输入新消息
+      │
+      ▼
+┌─────────────────────────────────────────────────┐
+│  Step 1: scanMemoryFiles()                      │
+│  递归扫描 memory/ 目录（含 team/ 子目录）         │
+│  → 读每个 .md 文件的前 30 行 frontmatter          │
+│  → 最多 200 个文件，按 mtime 倒序                │
+│  → 排除: MEMORY.md, 已达 session 上限的文件       │
+└──────────────────────┬──────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────┐
+│  Step 2: 去重过滤                                │
+│  移除 alreadySurfaced 集合中的文件                │
+│  （之前轮次已选过的不会重复注入）                  │
+└──────────────────────┬──────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────┐
+│  Step 3: formatMemoryManifest()                 │
+│  构建候选清单:                                   │
+│  "- [user] user_role.md (2026-06-15): 描述"     │
+│  "- [feedback] testing.md (2026-06-14): 描述"   │
+└──────────────────────┬──────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────┐
+│  Step 4: Sonnet sideQuery 打分选择               │
+│  候选清单 + 用户当前输入 → Sonnet                │
+│  → 选出 ≤5 个最相关的文件                        │
+│  → 返回 JSON: ["user_role.md", "testing.md"]    │
+│  (用 Sonnet 而非 Opus: 检索排序任务, 更快更便宜)  │
+└──────────────────────┬──────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────┐
+│  Step 5: 读取完整内容 + 注入                      │
+│  - 读取选中文件的完整 markdown 正文               │
+│  - 附加 freshnessNote (过期警告, 基于 mtime)      │
+│  - 截断: per-file ≤4KB / ≤200 行                 │
+│  - session 累计 ≤60KB                            │
+│  - 包裹在 <system-reminder> 标签                  │
+│  - 注入当前轮次的消息                             │
+└──────────────────────┬──────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────┐
+│  Step 6: 更新 alreadySurfaced                    │
+│  把本轮选中的文件加入 Set<string>                  │
+│  后续轮次不再重复注入 (节省 token)                 │
+└─────────────────────────────────────────────────┘
+```
+
+### 1.5 Memory 过期与新鲜度机制
+
+```
+memoryAge(mtimeMs) → 计算天数
+      │
+      ├── d = 0 → "today"     → 不附加警告
+      ├── d = 1 → "yesterday"  → 不附加警告
+      └── d ≥ 2 → "N days ago" → ⚠️ 附加过期警告
+
+过期警告内容:
+  "This memory is N days old.
+   Memories are point-in-time observations, not live state —
+   claims about code behavior or file:line citations may be outdated.
+   Verify against current code before asserting as fact."
+
+System Prompt 中也有两条硬编码规则:
+  规则 1 (DRIFT_CAVEAT): 用记忆做上下文起点，但行动前要验证
+  规则 2 (TRUST_SECTION): 'The memory says X exists' ≠ 'X exists now'
+```
+
+---
+
+## 二、专利辅导系统记忆架构总览
+
+### 2.1 四层记忆架构
+
+```
+╔══════════════════════════════════════════════════════════════════╗
+║                    Patent Tutor Memory System                    ║
+╠══════════════════════════════════════════════════════════════════╣
+║                                                                  ║
+║   ┌──────────────────────────────────────────────────────────┐  ║
+║   │                  层级 1: Learner Memory                   │  ║
+║   │                  (Learner Memory)                         │  ║
+║   │                  跨 session 持久化                        │  ║
+║   │                                                          │  ║
+║   │  存储: memory/learners/{learner_id}/*.md                  │  ║
+║   │  索引: MEMORY.md (≤200行, ≤25KB)                          │  ║
+║   │  类型: user / feedback / project / reference              │  ║
+║   │                                                          │  ║
+║   │  写入: feedback 节点 (路径A) + 后台 extractMemories (路径B)│  ║
+║   │  读取: 所有 Agent 节点 (通过 Active Recall)               │  ║
+║   │  整合: 跨 session Consolidation (AutoDream 模式)          │  ║
+║   │                                                          │  ║
+║   │  内容示例:                                                │  ║
+║   │  - 学习背景与知识水平                                      │  ║
+║   │  - 概念掌握度与薄弱点                                      │  ║
+║   │  - 学习风格偏好 (视觉/案例/理论)                           │  ║
+║   │  - 教学策略有效性证据                                      │  ║
+║   │  - 跨 session 反复出现的学习模式                           │  ║
+║   └──────────────────────────────────────────────────────────┘  ║
+║                              │                                   ║
+║   ┌──────────────────────────┴───────────────────────────────┐  ║
+║   │                  层级 2: Session Memory                   │  ║
+║   │                  (Session Memory)                         │  ║
+║   │                  单 session 内持久化                      │  ║
+║   │                                                          │  ║
+║   │  存储: memory/sessions/{session_id}/session_memory.md     │  ║
+║   │  格式: 9-section 结构化模板 (改编自 Claude Code)          │  ║
+║   │                                                          │  ║
+║   │  写入: judge 节点触发更新 (辩论轮次后)                     │  ║
+║   │         feedback 节点补充最终状态                          │  ║
+║   │  读取: expert_a, expert_b, judge, finalize                │  ║
+║   │                                                          │  ║
+║   │  用途:                                                    │  ║
+║   │  - 长 debate 循环保持连贯                                 │  ║
+║   │  - 为未来的 context compact 提供基底                      │  ║
+║   └──────────────────────────────────────────────────────────┘  ║
+║                              │                                   ║
+║   ┌──────────────────────────┴───────────────────────────────┐  ║
+║   │                  层级 3: Agent Role Memory                │  ║
+║   │                  (Agent Role Memory)                      │  ║
+║   │                  项目级持久化                              │  ║
+║   │                                                          │  ║
+║   │  存储: memory/agents/{agent_name}/*.md                    │  ║
+║   │                                                          │  ║
+║   │  每个 Agent 拥有独立的角色记忆:                            │  ║
+║   │  - diagnosis/  : 诊断策略有效性                          │  ║
+║   │  - expert_a/   : 严谨型教学模板库                        │  ║
+║   │  - expert_b/   : 案例教学素材库                          │  ║
+║   │  - judge/      : 评审标准与常见问题                      │  ║
+║   │  - planner/    : 学习路径设计模式                        │  ║
+║   │  - feedback/   : 问卷设计与画像更新策略                  │  ║
+║   │                                                          │  ║
+║   │  写入: 手动维护 + 定期从教学效果中提炼                     │  ║
+║   │  读取: 对应 Agent 启动时注入 System Prompt                │  ║
+║   └──────────────────────────────────────────────────────────┘  ║
+║                              │                                   ║
+║   ┌──────────────────────────┴───────────────────────────────┐  ║
+║   │                  层级 4: Curriculum Knowledge             │  ║
+║   │                  (Curriculum Knowledge)                   │  ║
+║   │                  项目级半静态                              │  ║
+║   │                                                          │  ║
+║   │  存储: memory/curriculum/*.md                             │  ║
+║   │                                                          │  ║
+║   │  内容:                                                    │  ║
+║   │  - 专利法知识体系结构 (知识点依赖图)                        │  ║
+║   │  - 常见概念混淆库 (学习者高频错误模式)                      │  ║
+║   │  - 教学策略模板库 (对比表格/IRAC/案例教学范式)              │  ║
+║   │  - 法条索引 (专利法第22/25/29条等的教学要点)               │  ║
+║   │                                                          │  ║
+║   │  写入: 手动维护 + 从教学反馈中定期更新                      │  ║
+║   │  读取: planner, expert_a, expert_b (构建教学内容时)        │  ║
+║   └──────────────────────────────────────────────────────────┘  ║
+║                                                                  ║
+╚══════════════════════════════════════════════════════════════════╝
+```
+
+### 2.2 四层记忆的时间尺度
+
+```
+时间尺度          记忆层              触发机制
 ─────────────────────────────────────────────────────
-秒级          Active Recall         每轮 prefetch，Sonnet 选择相关记忆
-回合级        extractMemories       每轮结束后后台子 Agent 写回
-分钟级        Session Memory        达到 token 阈值后更新会话摘要
-天级          AutoDream             24h + 5 session 门槛，跨 session 整合
-手动          CLAUDE.md             用户编辑
-团队级        Team Memory           通过 API 双向同步
+节点级 (秒)       Learner Memory      每个 Agent 节点执行前,
+                  (Active Recall)     LLM 选择最相关的 ≤5 条记忆
+
+回合级 (分钟)     Learner Memory      feedback 节点写入 + 后台
+                  (extractMemories)   fork 子 Agent 提取教学洞见
+
+轮次级 (分钟)     Session Memory      judge 节点后更新教学进度
+                                      debate 每轮结束触发
+
+session 级 (小时) Session Memory      feedback 节点补充最终状态
+                                      session 结束时完整归档
+
+跨 session (天)   Learner Memory      24h + N sessions 门槛
+                  (Consolidation)     合并碎片、纠正矛盾
+
+手动/项目级        Agent Role Memory   教学团队维护
+                   Curriculum Knowledge
 ```
-
-每一层解决不同时间尺度的信息保持问题：秒级解决"这轮需要什么记忆"，
-回合级解决"刚才对话中有哪些值得记住的"，分钟级解决"长对话如何不丢失状态"，
-天级解决"多个学习片段如何形成完整画像"。
-
-### 1.2 三条记忆注入路径
-
-| 路径 | 注入位置 | 内容 | 更新频率 |
-|------|----------|------|----------|
-| 路径 A：行为规则 | System Prompt 动态段 | 固定模板（~3K tokens）：记忆类型定义、保存规则、排除规则 | 每 session 一次（memoize） |
-| 路径 B：记忆索引 | 第一条 User Message | MEMORY.md 全部索引条目（≤200 行） | 每 session 一次（memoize） |
-| 路径 C：主动召回 | 当前轮次 `\<system-reminder\>` | ≤5 个最相关记忆文件的完整内容 | **每轮执行** |
-
-关键洞察：**只有路径 C 能感知会话中新写入的记忆**。路径 A/B 被 memoize 后，
-即使后台 extractMemories 在 Turn 3 写了新记忆，本会话的 Turn 4+ 也看不到（直到下次会话）。
-但路径 C 每轮重新扫描 memory 目录，可以选中新写入的文件。
-
-### 1.3 核心设计原则
-
-1. **记忆是时间点快照，不是实时状态** — 每条记忆标记写入时间，超期自动附加验证警告
-2. **即时写回 + 离线巩固 双通道** — extractMemories 快速捕获，AutoDream 延迟整理
-3. **主模型直接写 + 后台自动提取 两条路径** — 互斥但互补
-4. **严格限定"什么不该保存"** — 比"什么该保存"更重要的设计决策
-5. **分层限制从松到紧** — 写入宽松（topic file 无硬限制）→ 扫描 200 文件 → 注入 4KB/文件 → 会话 60KB 总量
 
 ---
 
-## 二、Patent Tutor Agent 当前记忆系统现状
+## 三、四层记忆详解
 
-### 2.1 当前架构
+### 3.1 层级 1: Learner Memory（学习者记忆）
 
-```
-┌──────────────────────────────────────────────┐
-│               LangGraph 进程                   │
-│                                              │
-│  短期记忆 (InMemorySaver)   长期记忆 (InMemoryStore) │
-│  ┌──────────────────┐     ┌─────────────────┐ │
-│  │ thread_id → state │     │ namespace:       │ │
-│  │ 快照               │     │ learners/{id}/   │ │
-│  │ 自动读写（所有节点）│     │   profile        │ │
-│  └──────────────────┘     │   history        │ │
-│                           └─────────────────┘ │
-│  进程重启 → 全部丢失                           │
-└──────────────────────────────────────────────┘
-```
-
-### 2.2 当前能力
-
-| 能力 | 状态 | 说明 |
-|------|------|------|
-| 短期记忆（checkpoint） | ✅ 已有 | InMemorySaver，session 内状态恢复 |
-| 长期记忆（Store） | ⚠️ 部分 | InMemoryStore，仅 teach 路径 feedback 节点写入 |
-| 跨 session 记忆 | ❌ 无 | 进程重启全部清零 |
-| 记忆检索/筛选 | ❌ 无 | diagnosis 节点全量 search profile，无相关性选择 |
-| 记忆过期 | ❌ 无 | 无时间戳判断，不区分新旧数据 |
-| 会话摘要 | ❌ 无 | 长对话无结构化笔记 |
-| 记忆整合 | ❌ 无 | 无跨 session 合并/去重/纠错 |
-
-### 2.3 已知问题（来自 docs/memory-persistence.md）
-
-1. **进程重启即丢失** — InMemorySaver + InMemoryStore，重启清零
-2. **learner_id 在 Studio 中不可控** — 无 learner_id 时长期记忆完全不可用
-3. **只有 teach 路径写记忆** — chat 和 diagnose 路径不积累
-4. **无持久化的并发支持** — 多 worker 数据不一致
-5. **记忆无结构化筛选** — diagnosis 只取最近 3 条 profile，无相关性评估
-
----
-
-## 三、可借鉴的设计理念
-
-### 3.1 核心洞察
-
-Claude Code 的记忆系统对 Patent Tutor Agent 最有价值的启示不是具体代码，
-而是**三个架构级别的设计范式**：
-
-#### 范式 1：「快写慢整」双通道
+#### 3.1.1 目录与文件格式
 
 ```
-回合级 extractMemories（快写）      天级 AutoDream（慢整）
-─────────────────────────────      ────────────────────
-每轮对话结束后                     满足门槛后（24h + 5 sessions）
-fork 子 agent 提取                 读已有 memory + 多 session transcript
-当前对话中值得记的信息              → 合并重复、纠正矛盾、删除过期
-写入 memory 文件                    → 精简 MEMORY.md 索引
+memory/learners/{learner_id}/
+│
+├── MEMORY.md                      # 索引文件 (≤200行, ≤25KB)
+│   │
+│   ├── 条目格式:
+│   │   - [学习背景](user_background.md) — 化学研究员, 专利法零基础, 2026-06-10 首次
+│   │   - [学习风格](user_learning_style.md) — 视觉型, 偏好对比表格, 案例教学效果最佳
+│   │   - [新颖性概念混淆](feedback_novelty_confusion.md) — 反复混淆新颖性与创造性
+│   │   - [教学节奏反馈](feedback_teaching_pace.md) — 反馈节奏过快, 需要练习环节
+│   │   - [第22条掌握度](project_article22_mastery.md) — 基本理解, 抵触申请不稳定
+│   │
+│   └── 末尾: <!-- MEMORY.md truncated at 200 lines -->
+│
+├── user_background.md             # type: user
+├── user_learning_style.md         # type: user
+├── user_knowledge_level.md        # type: user
+│
+├── feedback_novelty_confusion.md  # type: feedback
+├── feedback_teaching_pace.md      # type: feedback
+├── feedback_case_method_works.md  # type: feedback
+│
+├── project_article22_mastery.md   # type: project
+├── project_article25_mastery.md   # type: project
+├── project_learning_path_history.md # type: project
+│
+└── reference_effective_queries.md # type: reference
 ```
 
-**对 Patent Tutor 的启示**：当前 feedback 节点直接在 workflow 内同步写 Store。
-改为：feedback 写"快速笔记"（学习片段）→ 后台异步任务定期整合为"学习者完整画像"。
-
-#### 范式 2：「规则 + 索引 + 主动召回」三路径注入
-
-```
-路径 A（System Prompt）：「如何理解和使用学习者记忆」的规则模板
-路径 B（Context）：「该学习者的记忆清单」（每个 learner 的 MEMORY.md）
-路径 C（每节点前置）：「本节点最相关的 N 条历史学习记录」
-```
-
-**对 Patent Tutor 的启示**：当前 diagnosis 全量取最近 3 条 profile 的做法过于粗暴。
-应该：规则告诉 diagnosis 怎么用记忆，索引给 overview，每节点按需精准检索。
-
-#### 范式 3：「从松到紧」的分层限制
-
-```
-写入层：topic file 无硬限制 → 扫描层：最多 200 文件 → 注入层：4KB/文件 → 会话层：60KB 总量
-```
-
-**对 Patent Tutor 的启示**：不需要限制 LearnerProfile 存多少条（多多益善），
-但需要在 diagnosis/planner 注入时做截断和取舍决策。
-
-### 3.2 可直接迁移的模式
-
-#### 模式 1：File-based Memory with Frontmatter（替代纯内存 Store）
-
-```
-memory/learners/
-├── learner-demo/
-│   ├── MEMORY.md                 # 索引文件（≤200 行）
-│   ├── user_background.md        # type: user — 学习背景
-│   ├── user_learning_style.md    # type: user — 学习风格偏好
-│   ├── feedback_concept_confusion.md  # type: feedback — 常见概念混淆
-│   ├── feedback_teaching_pace.md # type: feedback — 教学节奏偏好
-│   ├── project_patent_law_article22.md  # type: project — 对第22条的掌握程度
-│   └── reference_rag_queries.md  # type: reference — 有效的 RAG 检索词
-```
-
-每个文件格式：
+每个记忆文件格式：
 
 ```markdown
 ---
 name: 学习者对"新颖性"概念存在混淆
-description: learner-demo 在三次诊断中都将"新颖性"与"创造性"混淆
+description: 在三次诊断中都将"新颖性"与"创造性"的判断标准混淆
 type: feedback
 created_at: 2026-06-15T10:30:00Z
 updated_at: 2026-06-20T14:22:00Z
 session_ids: [sess-001, sess-003, sess-005]
+confidence: high          # low/medium/high — 该记忆的确信度
 ---
 
 ## 现象
 学习者在解释"新颖性"时，反复将"抵触申请"与"现有技术"两个概念混用。
+在 sess-003 的开放性问题中，回答"判断新颖性就是看有没有创造性"。
 
 ## 根因分析
-学习者背景为化学领域，对法律概念的精确区分能力较弱。
-可能是将化学中的"新颖性"（结构新颖=创造性）类比到了专利法中。
+学习者背景为化学领域。化学中"新颖性"和"创造性"边界模糊
+（结构新颖≈有创造性），该思维惯性被带入了专利法学习。
 
-## 教学建议
-- 使用对比表格明确区分"新颖性"和"创造性"的判断标准
-- 多用化学领域的专利案例作为类比桥梁
-- expert_b 的案例教学法对此学习者效果更好（sess-003 反馈评分高）
+## 教学策略有效性
+- 对比表格法 (sess-003): 部分有效，学习者能记住定义但应用仍有困难 ★★★☆☆
+- 案例分析法 (sess-005): 效果更好，化学专利案例作类比桥梁 ★★★★☆
+- IRAC 框架练习: 尚未尝试
+
+## 待验证假设
+- "先讲现有技术, 再讲抵触申请, 最后讲新颖性"的教学顺序是否更有效
+- 需要用化学领域专利案例做正面和反面对比
 ```
 
-**对比当前方案**：当前 `store.put(("learners", id, "profile"), uuid, dict)` 存的是无结构的 dict。
-文件方案的优势：
-- 人类可读、可手动编辑
-- 天然支持按主题拆分（不再是一个大 dict）
-- frontmatter 提供元数据导航（类型、时间、关联 session）
-- 可以用 Read/Grep/Glob 工具检索
-- 易于版本控制和备份
+#### 3.1.2 四种记忆类型（改编自 Claude Code）
 
-#### 模式 2：Memory Index（MEMORY.md）
+| 类型 | 含义 | 何时保存 | Patent Tutor 示例 |
+|------|------|----------|-------------------|
+| `user` | 学习者角色、背景、知识水平、偏好 | 了解到学习者的任何个人信息或偏好表达 | "化学领域研究员，专利法零基础，偏好视觉化教学" |
+| `feedback` | 学习者对教学方式的反馈、教学策略的有效性证据 | 学习者纠正或确认某种教学方式的效果 | "对比表格法对概念区分有效，但案例法对理解应用更有效" |
+| `project` | 学习者对具体知识点的掌握程度、学习进度里程碑 | 完成某个知识点的教学后 | "第22条新颖性：理解现有技术和宽限期，抵触申请判断不稳定" |
+| `reference` | 对学习者有效的教学方法、外部资源 | 发现对特定学习者有效的教学资源 | "化学领域专利案例集能有效帮助该学习者建立类比" |
 
-```markdown
-# Learner: learner-demo
-
-- [学习者背景](user_background.md) — 化学领域研究员，专利法零基础，2026-06-10 首次学习
-- [学习风格偏好](user_learning_style.md) — 视觉型学习者，偏好对比表格和流程图，案例教学效果最佳
-- [新颖性概念混淆](feedback_concept_confusion.md) — 反复混淆"新颖性"与"创造性"，2026-06-20 最近更新
-- [教学节奏反馈](feedback_teaching_pace.md) — 反馈教学节奏过快，需要更多练习环节
-- [专利法第22条掌握度](project_patent_law_article22.md) — 基本理解，但抵触申请的判断仍不稳定
-- [有效RAG检索词](reference_rag_queries.md) — "专利法第22条""审查指南新颖性""抵触申请案例"
-```
-
-索引的价值：
-- diagnosis 节点先读 MEMORY.md（200 行概览）→ 决定深入读取哪几个 topic file
-- planner 节点据此制定个性化学习路径
-- 控制在 200 行/25KB 以内，确保不占过多 context
-
-#### 模式 3：Background Memory Extraction（extractMemories）
+#### 3.1.3 什么不该保存（排除规则）
 
 ```
-Teach 路径 feedback 节点结束后
-        │
-        ▼
-┌─────────────────────────────────────────────┐
-│ 后台 fork 子 Agent（不阻塞主流程）             │
-│                                              │
-│ 输入：                                       │
-│  - 当前 session 的完整对话摘要                 │
-│  - diagnosis 诊断结果                        │
-│  - expert_a/b 草稿 + judge 评审              │
-│  - feedback 问卷结果                          │
-│  - 现有 learner 记忆文件清单                  │
-│                                              │
-│ 输出：                                       │
-│  - 更新/新建 learner memory 文件              │
-│  - 更新 MEMORY.md 索引                        │
-│                                              │
-│ 权限限制：只能写 learner 的 memory 目录        │
-│ 轮次限制：maxTurns=5（第1轮并行读，第2轮并行写）│
-└─────────────────────────────────────────────┘
+❌ 单次可重新诊断的信息
+   "sess-003 中薄弱点是概念混淆"
+   → 如果下次 diagnosis 还能测出来，就不要固化
+
+❌ 临时的对话细节
+   "学员在 sess-005 第3轮问了抵触申请的定义"
+   → session transcript 中有
+
+❌ 模型可推理的固定知识
+   "专利法第22条要求新颖性、创造性、实用性"
+   → 法条内容不存为学习记忆
+
+❌ 临时技术问题
+   "sess-007 中 RAG 检索超时"
+   → 运维问题，不属于学习者画像
+
+✅ 应该保存:
+   → 跨 session 反复出现的学习模式
+   → 学习者明确表达的风格偏好
+   → 教学策略有效性证据（有对比数据的）
+   → 学习进度里程碑
+   → 概念混淆的根因分析（不是表面现象）
 ```
 
-**关键设计**：主模型不直接写记忆文件（避免分心），而是由独立子 Agent 在回合结束后
-专门做"这段教学对话中有哪些值得记下来"的提炼工作。
+---
 
-子 Agent 的 Prompt 要点：
-- "只从最近 N 条教学对话中提取值得记住的信息"
-- "不要浪费 turn 去验证内容（不 grep 源码、不重读文件）"
-- "高效策略：第 1 轮并行读，第 2 轮并行写"
-- 附带现有的记忆文件清单，避免重复创建
+### 3.2 层级 2: Session Memory（会话教学记忆）
 
-#### 模式 4：Memory Freshness & Expiry
+#### 3.2.1 结构化模板
 
-```python
-# 借鉴 Claude Code 的 memoryAge 设计
-def memory_freshness_note(mtime_ms: int) -> str:
-    """计算记忆新鲜度，>=2 天自动附加过期警告。"""
-    days = max(0, (now_ms() - mtime_ms) // 86_400_000)
-    if days <= 1:
-        return f"Memory (saved {days}d ago)"  # 新鲜，不警告
-    return (
-        f"⚠️ This memory is {days} days old. "
-        f"Learning states are point-in-time observations — "
-        f"the learner may have progressed since. "
-        f"Verify against current diagnosis before asserting."
-    )
-```
-
-**对 Patent Tutor 的价值**：
-- 学习者的薄弱点可能在 3 次学习后已经不再是薄弱点
-- 如果 diagnosis 看到的是 30 天前的 profile，必须警告"这可能已过时"
-- 促使系统优先信任当前 session 的诊断结果，将旧记忆作为参考而非事实
-
-#### 模式 5：Active Recall per Node（按节点检索相关记忆）
-
-```
-当前实现（全量取最近 3 条）:
-  diagnosis → store.search(("learners", id, "profile"), limit=3)
-  → 不论当前话题是什么，都返回最近 3 条
-
-改进方案（相关性检索）:
-  diagnosis(当前输入="我想学习专利侵权判定")
-    → 扫描 learner 的 MEMORY.md
-    → 用 LLM 选出 ≤5 个最相关的 memory 文件
-    → 注入当前节点的 prompt
-
-  planner(当前输入="我想学习专利侵权判定")
-    → 同样检索流程
-    → 但 planner 关心的可能是"学习路径偏好"而非"概念混淆"
-    → 所以不同节点可能选中不同的记忆子集
-```
-
-**关键设计**：
-- 用轻量模型（deepseek-chat）做选择，而非 Opus
-- 只看 frontmatter 的 description 做匹配（不需要读完整文件）
-- 已选过的记忆在同一 session 中不重复选（alreadySurfaced 去重）
-
-#### 模式 6：Session Memory for Long Teaching Sessions
+改编自 Claude Code 的 9-section 模板，适配专利教学场景：
 
 ```markdown
 # Session Title
-专利法第22条"新颖性"深度学习 session
+专利法第22条"新颖性"深度学习 — 第3轮debate中
 
-# Current State
-正在第 3 轮 debate，expert_b 的案例教学草案被 judge 要求补充抵触申请的内容
+# Current Teaching State
+【当前正在进行的教学环节】
+- debate 轮次: 3/3 (max)
+- expert_b 的案例教学草案被 judge 要求补充抵触申请的内容
+- 等待 expert_b 修订后重新提交
 
-# Learner Profile Snapshot
-化学领域研究员，视觉型学习者，对法律概念区分较弱
+【待完成的教学任务】
+- 抵触申请 vs 现有技术的对比讲解
+- 宽限期的适用条件
 
-# Knowledge Points Covered
-- 现有技术的定义 ✓
-- 新颖性判断标准 ✓
-- 抵触申请的概念 ⚠️（混淆点，需要reinforce）
-- 宽限期的适用条件 ○（本轮计划）
+# Learner Snapshot (本 session 最新诊断)
+- 学习背景: 化学研究员, 专利法零基础
+- 当前理解度: 现有技术 ★★★★☆ / 抵触申请 ★★☆☆☆ / 宽限期 ★★★☆☆
+- 学习风格: 视觉型, 偏好案例 > 理论
 
-# Teaching Strategies That Worked
-- 对比表格（"新颖性 vs 创造性"）
-- 化学领域案例类比
+# Teaching Plan (本轮 session 的教学路径)
+1. 现有技术定义 → ✓ 完成
+2. 新颖性判断标准 → ✓ 完成
+3. 抵触申请概念 → ⚠️ 进行中 (混淆点)
+4. 宽限期适用条件 → ○ 待进行
+
+# Debate History
+Round 1:
+  - expert_a: 法条原文逐句拆解 (严谨型)
+  - expert_b: 可口可乐配方案例 (生动型)
+  - judge 决策: revise — expert_a 太晦涩, expert_b 案例不贴切
+Round 2:
+  - expert_a: 加入了对比表格
+  - expert_b: 改用化学专利案例 (阿司匹林缓释片)
+  - judge 决策: revise — 抵触申请部分需要补充
+
+# Strategies That Worked
+- 化学专利案例作类比 (阿司匹林缓释片案例效果显著)
+- 对比表格区分概念 (学习者反馈"清晰多了")
+- 先讲现有技术再讲抵触申请的顺序
+
+# Strategies That Failed
+- 纯法条原文讲解 (学习者反馈"太抽象")
+- 一次讲解两个概念 (学习者反馈"信息量太大")
 
 # Errors & Corrections
-- expert_a 第 2 轮引用了过时的审查指南条文 → judge 纠正
+- expert_a Round 1 引用了废止的审查指南条文 → judge 纠正
+- expert_b Round 2 案例中抵触申请的判断有误 → judge 纠正
 
-# Key Results
-- learner 在反馈问卷中自评对"现有技术"理解度 4/5
-- 对"抵触申请"理解度仅 2/5，需要再一轮 debate
+# Key Teaching Insights
+- 该学习者对"时间节点"概念 (申请日/优先权日/公开日) 的理解是最大瓶颈
+- 用时间线图可能比文字表格更有效
+- 每个概念需要至少一个化学领域类比才能牢记
+
+# Learner Feedback (来自反馈问卷)
+- 自评理解度: 现有技术 4/5, 抵触申请 2/5
+- 教学节奏: "刚好，但希望有更多练习题"
+- 下一步想学: "宽限期的具体案例"
+
+# Worklog (节点执行记录)
+1. diagnosis: 识别薄弱点为概念混淆
+2. planner: 生成3节点学习路径
+3. tool_agent: 检索到专利法22条+审查指南相关段落
+4. Round 1: expert_a + expert_b + judge → revise
+5. Round 2: expert_a + expert_b + judge → revise
+6. Round 3: 进行中...
 ```
 
-**为什么需要 Session Memory**：
-- 当前 debate 循环中，expert_a/b 只能看到 judge 的 revision_requests
-- 如果 debate 达到 3+ 轮，专家容易丢失前几轮的上下文
-- Session Memory 提供结构化的"当前进度"，帮助专家保持连贯
-- 同时也为未来的 compact/长对话压缩做准备
+#### 3.2.2 触发条件
 
-#### 模式 7：What NOT to Save（排除规则）
+```
+Session Memory 更新触发条件 (改编自 Claude Code):
+
+条件 1: debate 轮次完成 (judge 节点执行完毕)
+条件 2: 自上次更新后，辩论内容有实质性进展
+        (新的 expert draft, 新的 judge 评审意见)
+条件 3: "安静时刻" — 不在并行执行 expert_a 和 expert_b 期间
+
+触发后:
+  Fork 子 Agent (不阻塞 workflow 主流程)
+  读取整段 debate 历史 → 增量编辑 session_memory.md
+```
+
+---
+
+### 3.3 层级 3: Agent Role Memory（Agent 角色记忆）
+
+每个 Agent 节点拥有自己的"职业经验"，独立于具体的学习者。在 Agent 启动时作为 System Prompt 的一部分注入。
+
+#### 3.3.1 各 Agent 角色记忆内容
+
+```
+memory/agents/
+├── diagnosis/
+│   └── diagnosis_patterns.md
+│       - 有效的诊断问题模板
+│       - 学习者常见背景分类 (法律背景/技术背景/零基础)
+│       - 不同背景对应的诊断策略
+│       - 薄弱点识别的最佳实践
+│
+├── expert_a/
+│   ├── rigorous_teaching_templates.md
+│   │   - 法条原文→逐句拆解→要件分析 三段式模板
+│   │   - 不同专利法条文的严谨讲解框架
+│   ├── concept_distinction_tables.md
+│   │   - 新颖性 vs 创造性 对比表
+│   │   - 发明 vs 实用新型 对比表
+│   │   - 抵触申请 vs 现有技术 对比表
+│   └── common_legal_pitfalls.md
+│       - 学习者高频法律理解偏差
+│       - 审查指南中的易忽视要点
+│
+├── expert_b/
+│   ├── case_library_index.md
+│   │   - 按专利法条文索引的案例库
+│   │   - 按行业/领域分类的类比素材
+│   ├── analogy_patterns.md
+│   │   - 法律概念→生活类比 映射表
+│   │   - 不同学科背景的类比策略 (化学/机械/软件)
+│   └── engagement_strategies.md
+│       - 提升学习者兴趣的教学技巧
+│       - 互动式教学方法模板
+│
+├── judge/
+│   ├── review_criteria.md
+│   │   - 教学准确性检查清单
+│   │   - 学习者适配性评估维度
+│   │   - 法条引用正确性验证标准
+│   ├── common_teaching_errors.md
+│   │   - expert_a 常见问题: 过于晦涩
+│   │   - expert_b 常见问题: 案例与法条脱节
+│   └── revision_request_templates.md
+│       - 结构化的修订请求模板
+│
+├── planner/
+│   ├── learning_path_patterns.md
+│   │   - 渐进式路径 (法条→案例→应用)
+│   │   - 螺旋式路径 (概念→深化→再深化)
+│   │   - 问题驱动路径 (案例→概念→法条)
+│   └── knowledge_dependency_map.md
+│       - 专利法知识点前置依赖关系
+│
+└── feedback/
+    ├── question_templates.md
+    │   - 理解度自评问卷模板
+    │   - 教学满意度调查模板
+    └── profile_update_strategies.md
+        - 何时更新画像、更新什么字段
+```
+
+#### 3.3.2 Agent Memory 注入方式
+
+```
+Agent 启动时的 System Prompt 组装:
+
+┌─────────────────────────────────────────────────┐
+│ Agent System Prompt                              │
+│                                                 │
+│ ┌─────────────────────────────────────────────┐ │
+│ │ 静态部分 (与 Claude Code 的 prompt.ts 类似)  │ │
+│ │ - Agent 角色定义                             │ │
+│ │ - 输入输出格式要求                           │ │
+│ │ - 行为准则                                   │ │
+│ ├─────────────────────────────────────────────┤ │
+│ │ 角色记忆部分 (从 Agent Memory 文件加载)       │ │
+│ │ - 有效策略                                   │ │
+│ │ - 常见错误与避免方式                          │ │
+│ │ - 参考模板                                   │ │
+│ └─────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────┘
+```
+
+---
+
+### 3.4 层级 4: Curriculum Knowledge（课程知识库）
 
 ```markdown
-## 什么不应该保存到 Learner Memory
-
-❌ 临时的对话细节
-   "学员在 sess-005 第 3 轮问了抵触申请的定义"
-   → 这类临时信息不需要持久化，session transcript 中有
-
-❌ 可以通过当前 diagnosis 重新获得的信息
-   "学员在 sess-003 中薄弱点是概念混淆"
-   → 如果下次 diagnosis 还能测出来，就不要固化
-
-❌ 模型可以推理的固定知识
-   "专利法第22条要求新颖性、创造性、实用性"
-   → 这是法条内容，不需要作为 learner 记忆保存
-
-❌ 临时的技术问题
-   "sess-007 中 RAG 检索超时了"
-   → 这是运维问题，不属于 learner 画像
-
-✅ 应该保存：
-   - 跨 session 反复出现的学习模式（如"总是混淆新颖性和创造性"）
-   - 学习者明确表达的风格偏好（如"我喜欢案例，不要纯理论"）
-   - 教学策略有效性证据（如"对比表格法比纯文字解释有效 2 倍"）
-   - 学习进度里程碑（如"已完成专利法第22-25条的学习"）
-```
-
-#### 模式 8：Agent-level Memory Scoping
-
-对应 Claude Code 的 Agent Memory，Patent Tutor 的不同 Agent 可以拥有
-各自作用域的"角色记忆"：
-
-| Agent | Memory 内容 | Scope | 示例 |
-|-------|------------|-------|------|
-| diagnosis | 诊断策略有效性 | project | "开放性问题比选择题更能暴露概念混淆" |
-| expert_a | 严谨型教学模板库 | project | "法条原文→逐句拆解→案例分析"三段式模板 |
-| expert_b | 生动型教学案例库 | project | "用'可口可乐配方'类比'技术方案'" |
-| judge | 评审标准演进 | project | "最近 3 次 learner 反馈中，案例准确性比法条引用更重要" |
-| planner | 学习路径有效性 | project | "从具体法条到抽象原则的学习顺序效果更好" |
-
-这不同于 Learner Memory（关于特定学习者的记忆），而是 Agent 的"职业经验"。
-可以预置在 `.claude/agents/{agent}/memory/` 目录中，随 Agent 启动时加载。
-
-### 3.3 架构改进路线图
-
-```
-Phase 1: 文件化记忆存储（当前 MVP 增强）
-├── 创建 memory/learners/{learner_id}/ 目录结构
-├── 实现 MEMORY.md 索引文件格式
-├── 实现带 frontmatter 的 topic file 格式
-├── feedback 节点改为写文件（替代 InMemoryStore.put）
-└── diagnosis 节点改为读文件（替代 InMemoryStore.search）
-
-Phase 2: 智能检索
-├── 实现 Active Recall（按节点相关性检索）
-├── 实现 alreadySurfaced 去重机制
-├── 实现 memory freshness 检查
-└── 实现分层的注入限制（200 文件扫描 → 5 文件选择 → 4KB/文件注入）
-
-Phase 3: 后台提取（extractMemories）
-├── workflow 结束后 fork 子 Agent 提取记忆
-├── 设计提取 Prompt（learner 记忆专用）
-├── 实现权限限制（只能写 learner memory 目录）
-└── 实现互斥机制（主模型直接写 vs 后台提取）
-
-Phase 4: 跨 session 整合（AutoDream）
-├── 实现每日/每 N session 的离线巩固
-├── 合并同一 learner 的多条相关记忆
-├── 检测并纠正矛盾（如 3 个月前说"概念混淆"，最新 diagnosis 显示"已掌握"）
-└── 精简 MEMORY.md，移除过时条目
-
-Phase 5: Session Memory
-├── 为 debate 循环维护 Session Memory
-├── 实现结构化模板（9 个 section）
-├── 为长对话压缩做准备
-└── expert_a/b/judge 可引用 Session Memory
+memory/curriculum/
+│
+├── patent_law_knowledge_graph.md    # 专利法知识点体系与依赖关系
+│   │
+│   │  新颖性 (Art.22.2)
+│   │  ├── 前置: 现有技术定义 (Art.22.2 ¶1)
+│   │  ├── 前置: 申请日/优先权日概念
+│   │  ├── 核心: 不属于现有技术
+│   │  ├── 核心: 无抵触申请
+│   │  ├── 扩展: 宽限期 (Art.24)
+│   │  └── 后续: 创造性 (Art.22.3)
+│   │
+│   │  创造性 (Art.22.3)
+│   │  ├── 前置: 新颖性 (Art.22.2)
+│   │  ├── 核心: 突出的实质性特点
+│   │  ├── 核心: 显著的进步
+│   │  └── 扩展: 三步法判断
+│   │
+├── common_misconceptions.md         # 学习者高频概念混淆库
+│   │
+│   │ 混淆对 #1: 新颖性 vs 创造性
+│   │ 混淆对 #2: 抵触申请 vs 现有技术
+│   │ 混淆对 #3: 优先权日 vs 申请日
+│   │ 混淆对 #4: 发明 vs 实用新型 (保护客体)
+│   │ ...
+│   │
+├── teaching_strategy_templates.md   # 教学策略模板库
+│   │
+│   │ 模板 1: 法条逐句拆解法 (expert_a 偏好)
+│   │ 模板 2: 案例驱动法 (expert_b 偏好)
+│   │ 模板 3: 对比表格法 (概念区分)
+│   │ 模板 4: IRAC 框架法 (法律推理训练)
+│   │ 模板 5: 时间线事件法 (适合时间节点类概念)
+│   │ ...
+│   │
+└── article_index.md                 # 法条索引 (RAG 辅助)
+    │
+    │ Art.22: 授权条件 (新颖性/创造性/实用性)
+    │ Art.24: 不丧失新颖性的宽限期
+    │ Art.25: 不授予专利权的主题
+    │ Art.29: 外国优先权
+    │ ...
 ```
 
 ---
 
-## 四、具体实施方案（Phase 1 详细设计）
+## 四、三层注入路径
 
-### 4.1 目录结构
-
-```
-memory/
-└── learners/
-    └── {learner_id}/
-        ├── MEMORY.md              # 索引（≤200 行，≤25KB）
-        ├── user_background.md     # type: user
-        ├── user_learning_style.md # type: user
-        ├── feedback_*.md          # type: feedback（可多个）
-        ├── project_*.md           # type: project（可多个）
-        └── reference_*.md         # type: reference（可多个）
-```
-
-### 4.2 Python 实现骨架
-
-```python
-# backend/app/memory/file_store.py
-
-import os
-import re
-import time
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Optional
-import yaml
-
-# ── 常量 ──────────────────────────────────────────────
-MAX_INDEX_LINES = 200
-MAX_INDEX_BYTES = 25_000
-MAX_SCAN_FILES = 200
-FRONTMATTER_MAX_LINES = 30
-MAX_MEMORY_BYTES_PER_INJECT = 4_096
-MAX_MEMORY_LINES_PER_INJECT = 200
-MAX_SESSION_INJECT_BYTES = 61_440
-
-MEMORY_TYPES = ("user", "feedback", "project", "reference")
-
-
-@dataclass
-class MemoryFile:
-    """A single memory file with parsed frontmatter."""
-    path: Path
-    name: str              # frontmatter: name
-    description: str       # frontmatter: description
-    mem_type: str          # frontmatter: type
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
-    session_ids: list[str] = field(default_factory=list)
-
-    @classmethod
-    def from_file(cls, path: Path) -> Optional["MemoryFile"]:
-        """Parse a memory file, extracting frontmatter."""
-        content = path.read_text(encoding="utf-8")
-        fm = cls._parse_frontmatter(content)
-        if not fm or "type" not in fm:
-            return None
-        return cls(
-            path=path,
-            name=fm.get("name", path.stem),
-            description=fm.get("description", ""),
-            mem_type=fm["type"],
-            created_at=fm.get("created_at"),
-            updated_at=fm.get("updated_at"),
-            session_ids=fm.get("session_ids", []),
-        )
-
-    @staticmethod
-    def _parse_frontmatter(content: str) -> dict:
-        """Parse YAML frontmatter between --- delimiters."""
-        if not content.startswith("---"):
-            return {}
-        parts = content.split("---", 2)
-        if len(parts) < 3:
-            return {}
-        try:
-            return yaml.safe_load(parts[1]) or {}
-        except yaml.YAMLError:
-            return {}
-
-    def read_body(self) -> str:
-        """Return content without frontmatter."""
-        content = self.path.read_text(encoding="utf-8")
-        if content.startswith("---"):
-            parts = content.split("---", 2)
-            return parts[2].strip() if len(parts) >= 3 else content
-        return content
-
-    @property
-    def mtime_ms(self) -> int:
-        return int(self.path.stat().st_mtime * 1000)
-
-
-# ── Memory freshness ─────────────────────────────────
-def memory_age_days(mtime_ms: int) -> int:
-    return max(0, (int(time.time() * 1000) - mtime_ms) // 86_400_000)
-
-
-def memory_freshness_note(mtime_ms: int) -> str:
-    days = memory_age_days(mtime_ms)
-    if days <= 1:
-        return ""
-    return (
-        f"⚠️ This memory is {days} days old. "
-        f"Learning states are point-in-time observations — "
-        f"the learner may have progressed since. "
-        f"Verify against current diagnosis before asserting."
-    )
-
-
-# ── Memory directory management ──────────────────────
-class LearnerMemoryStore:
-    """File-based learner memory store, replacing InMemoryStore."""
-
-    def __init__(self, base_dir: str = "memory/learners"):
-        self.base_dir = Path(base_dir)
-
-    def learner_dir(self, learner_id: str) -> Path:
-        return self.base_dir / learner_id
-
-    def ensure_dir(self, learner_id: str) -> Path:
-        d = self.learner_dir(learner_id)
-        d.mkdir(parents=True, exist_ok=True)
-        return d
-
-    # ── Write ─────────────────────────────────────────
-    def save_memory(
-        self,
-        learner_id: str,
-        name: str,
-        description: str,
-        mem_type: str,
-        body: str,
-        session_id: Optional[str] = None,
-        filename: Optional[str] = None,
-    ) -> Path:
-        """Write a new memory file or overwrite an existing one."""
-        self.ensure_dir(learner_id)
-        filename = filename or f"{mem_type}_{_slugify(name)}.md"
-        filepath = self.learner_dir(learner_id) / filename
-
-        now = _now_iso()
-        existing = MemoryFile.from_file(filepath) if filepath.exists() else None
-        session_ids = (existing.session_ids if existing else [])
-        if session_id and session_id not in session_ids:
-            session_ids.append(session_id)
-
-        frontmatter = {
-            "name": name,
-            "description": description,
-            "type": mem_type,
-            "created_at": existing.created_at if existing else now,
-            "updated_at": now,
-            "session_ids": session_ids[-10:],  # keep last 10
-        }
-        fm_yaml = yaml.dump(frontmatter, allow_unicode=True, sort_keys=False).strip()
-        content = f"---\n{fm_yaml}\n---\n\n{body.strip()}\n"
-        filepath.write_text(content, encoding="utf-8")
-        self._update_index(learner_id)
-        return filepath
-
-    # ── Read ──────────────────────────────────────────
-    def load_index(self, learner_id: str) -> str:
-        """Read MEMORY.md index, truncated to limits."""
-        idx_path = self.learner_dir(learner_id) / "MEMORY.md"
-        if not idx_path.exists():
-            return ""
-        content = idx_path.read_text(encoding="utf-8")
-        lines = content.split("\n")
-        if len(lines) > MAX_INDEX_LINES:
-            content = "\n".join(lines[:MAX_INDEX_LINES])
-            content += f"\n\n<!-- MEMORY.md truncated from {len(lines)} to {MAX_INDEX_LINES} lines -->"
-        if len(content.encode("utf-8")) > MAX_INDEX_BYTES:
-            content = _truncate_at_bytes(content, MAX_INDEX_BYTES)
-        return content
-
-    def scan_files(self, learner_id: str) -> list[MemoryFile]:
-        """Scan all memory files for a learner (excludes MEMORY.md)."""
-        d = self.learner_dir(learner_id)
-        if not d.exists():
-            return []
-        files = sorted(
-            [f for f in d.glob("*.md") if f.name != "MEMORY.md"],
-            key=lambda f: f.stat().st_mtime,
-            reverse=True,
-        )
-        memories = []
-        for f in files[:MAX_SCAN_FILES]:
-            mf = MemoryFile.from_file(f)
-            if mf:
-                memories.append(mf)
-        return memories
-
-    def select_relevant(
-        self,
-        learner_id: str,
-        query: str,
-        max_count: int = 5,
-        already_surfaced: Optional[set[str]] = None,
-    ) -> list[dict]:
-        """
-        Active recall: select ≤max_count most relevant memories.
-
-        This is where you plug in relevance scoring.
-        MVP: keyword-based BM25.  Future: LLM-based selection.
-        """
-        candidates = self.scan_files(learner_id)
-        already = already_surfaced or set()
-
-        # Filter already-surfaced
-        candidates = [c for c in candidates if c.path.name not in already]
-
-        # MVP: simple keyword overlap scoring
-        scored = []
-        query_lower = query.lower()
-        for c in candidates:
-            score = 0
-            if any(w in c.description.lower() for w in query_lower.split()):
-                score += 3
-            if any(w in c.name.lower() for w in query_lower.split()):
-                score += 1
-            if score > 0:
-                scored.append((score, c))
-
-        scored.sort(key=lambda x: x[0], reverse=True)
-        selected = scored[:max_count]
-
-        results = []
-        for _, mem in selected:
-            body = mem.read_body()
-            if len(body.encode("utf-8")) > MAX_MEMORY_BYTES_PER_INJECT:
-                body = _truncate_at_bytes(body, MAX_MEMORY_BYTES_PER_INJECT)
-            freshness = memory_freshness_note(mem.mtime_ms)
-            results.append({
-                "filename": mem.path.name,
-                "name": mem.name,
-                "description": mem.description,
-                "type": mem.mem_type,
-                "body": body,
-                "freshness_note": freshness,
-            })
-
-        return results
-
-    # ── Index maintenance ─────────────────────────────
-    def _update_index(self, learner_id: str) -> None:
-        """Regenerate MEMORY.md from all memory files."""
-        memories = self.scan_files(learner_id)
-        lines = [f"# Learner: {learner_id}\n", ""]
-        for m in memories:
-            age = memory_age_days(m.mtime_ms)
-            age_str = f"{age}d ago" if age > 0 else "today"
-            lines.append(
-                f"- [{m.name}]({m.path.name}) "
-                f"— {m.description} ({age_str})"
-            )
-        if len(lines) > MAX_INDEX_LINES:
-            lines = lines[:MAX_INDEX_LINES]
-            lines.append(f"\n<!-- Index truncated at {MAX_INDEX_LINES} lines -->")
-        content = "\n".join(lines)
-        if len(content.encode("utf-8")) > MAX_INDEX_BYTES:
-            content = _truncate_at_bytes(content, MAX_INDEX_BYTES)
-        idx_path = self.learner_dir(learner_id) / "MEMORY.md"
-        idx_path.write_text(content, encoding="utf-8")
-
-
-# ── Helpers ──────────────────────────────────────────
-def _slugify(text: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")[:64]
-
-
-def _now_iso() -> str:
-    from datetime import UTC, datetime
-    return datetime.now(UTC).isoformat()
-
-
-def _truncate_at_bytes(content: str, max_bytes: int) -> str:
-    encoded = content.encode("utf-8")
-    if len(encoded) <= max_bytes:
-        return content
-    truncated = encoded[:max_bytes]
-    # Cut at last newline
-    last_nl = truncated.rfind(b"\n")
-    if last_nl > 0:
-        truncated = truncated[:last_nl]
-    return truncated.decode("utf-8", errors="replace") + "\n\n<!-- truncated -->"
-```
-
-### 4.3 diagnosis 节点改造
+### 4.1 整体架构图
 
 ```
-当前: load_profile_memories(runtime, limit=3) → store.search(...)
-改造后:
-  1. load_learner_index(learner_id)          → MEMORY.md 完整内容（≤200行）
-  2. select_relevant(learner_id, user_input) → 5个最相关的 topic file 完整内容
-  3. 注入 diagnosis prompt：
-     - MEMORY.md 作为 overview
-     - 选中的 memory files 以 <system-reminder> 标签包裹
-     - 过期的 memory 附 freshness_note 警告
+    ┌──────────────────────────────────────────────────────────────┐
+    │              每次 Agent 节点执行时的 Prompt 组装              │
+    │                                                              │
+    │  ┌────────────────────────────────────────────────────────┐  │
+    │  │                    System Prompt                       │  │
+    │  │                                                        │  │
+    │  │  ┌──────────────────────────────────────────────────┐  │  │
+    │  │  │ 路径 A: 记忆行为规则 (固定模板)                   │  │  │
+    │  │  │                                                  │  │  │
+    │  │  │ - 你有 Learner Memory 系统在 memory/learners/    │  │  │
+    │  │  │ - 4 种学习者记忆类型定义                          │  │  │
+    │  │  │ - 如何保存学习记忆 (两步: 写文件 → 更新索引)      │  │  │
+    │  │  │ - 什么不该保存到 Learner Memory                   │  │  │
+    │  │  │ - 过期记忆验证规则                                │  │  │
+    │  │  │ - 何时主动读取记忆                                │  │  │
+    │  │  │                                                  │  │  │
+    │  │  │ 来源: 固定模板文本, 每 session memoize 一次       │  │  │
+    │  │  └──────────────────────────────────────────────────┘  │  │
+    │  │                                                        │  │
+    │  │  + Agent Role Memory (层级3, 对应 Agent 的角色记忆)    │  │
+    │  │                                                        │  │
+    │  └────────────────────────────────────────────────────────┘  │
+    │                                                              │
+    │  ┌────────────────────────────────────────────────────────┐  │
+    │  │                    Context (User Message)               │  │
+    │  │                                                        │  │
+    │  │  ┌──────────────────────────────────────────────────┐  │  │
+    │  │  │ 路径 B: Learner MEMORY.md 索引                   │  │  │
+    │  │  │                                                  │  │  │
+    │  │  │ <system-reminder>                                │  │  │
+    │  │  │ # Learner: learner-demo                          │  │  │
+    │  │  │                                                  │  │  │
+    │  │  │ - [学习背景](user_background.md) — ...           │  │  │
+    │  │  │ - [学习风格](user_learning_style.md) — ...       │  │  │
+    │  │  │ - [概念混淆](feedback_novelty_confusion.md) — ...│  │  │
+    │  │  │ ... (≤200行)                                     │  │  │
+    │  │  │                                                  │  │  │
+    │  │  │ IMPORTANT: 以上内容可能或可能不相关               │  │  │
+    │  │  │ </system-reminder>                               │  │  │
+    │  │  │                                                  │  │  │
+    │  │  │ 来源: memory/learners/{id}/MEMORY.md             │  │  │
+    │  │  │ 频率: 每 session 加载一次 (memoize)              │  │  │
+    │  │  └──────────────────────────────────────────────────┘  │  │
+    │  │                                                        │  │
+    │  │  + Curriculum Knowledge (层级4, planner/experts 需要)  │  │
+    │  │                                                        │  │
+    │  └────────────────────────────────────────────────────────┘  │
+    │                                                              │
+    │  ┌────────────────────────────────────────────────────────┐  │
+    │  │                Per-Node Message (当前节点 Prompt)       │  │
+    │  │                                                        │  │
+    │  │  ┌──────────────────────────────────────────────────┐  │  │
+    │  │  │ 路径 C: Active Recall (主动召回)                 │  │  │
+    │  │  │                                                  │  │  │
+    │  │  │ <system-reminder>                                │  │  │
+    │  │  │ ⚠️ Memory is 5 days old. Verify before acting.   │  │  │
+    │  │  │                                                  │  │  │
+    │  │  │ Memory: feedback_novelty_confusion.md            │  │  │
+    │  │  │ (完整正文, ≤4KB, ≤200行)                         │  │  │
+    │  │  │                                                  │  │  │
+    │  │  │ ## 现象                                         │  │  │
+    │  │  │ 学习者在解释"新颖性"时...                         │  │  │
+    │  │  │ ...                                              │  │  │
+    │  │  │ </system-reminder>                               │  │  │
+    │  │  │                                                  │  │  │
+    │  │  │ 来源: memory/learners/{id}/*.md                  │  │  │
+    │  │  │ 频率: 每个 Agent 节点执行前执行                   │  │  │
+    │  │  │ 选择: LLM 从候选清单中选 ≤5 个最相关文件         │  │  │
+    │  │  └──────────────────────────────────────────────────┘  │  │
+    │  │                                                        │  │
+    │  │  + Session Memory (层级2, debate 轮次中)               │  │
+    │  │                                                        │  │
+    │  └────────────────────────────────────────────────────────┘  │
+    └──────────────────────────────────────────────────────────────┘
 ```
 
-### 4.4 feedback 节点改造
+### 4.2 三路径对比
 
 ```
-当前: save_learner_memories(runtime, state, feedback_result)
-      → store.put(profile) + store.put(history)
+┌──────────────┬──────────────────┬──────────────────┬──────────────────┐
+│              │  路径 A           │  路径 B           │  路径 C           │
+│              │  行为规则         │  记忆索引         │  主动召回         │
+├──────────────┼──────────────────┼──────────────────┼──────────────────┤
+│ 注入位置      │ System Prompt    │ Context           │ Per-Node         │
+│              │ (动态段)          │ (User Message)    │ <system-reminder>│
+├──────────────┼──────────────────┼──────────────────┼──────────────────┤
+│ 内容          │ 固定规则模板      │ MEMORY.md 全文    │ ≤5 个最相关文件   │
+│              │ (~2K tokens)     │ (≤200行, ≤25KB)   │ 完整正文 + 过期警告│
+├──────────────┼──────────────────┼──────────────────┼──────────────────┤
+│ 执行频率      │ 每 session 一次   │ 每 session 一次   │ 每个节点执行前     │
+│              │ (memoize)        │ (memoize)         │ 每次都执行        │
+├──────────────┼──────────────────┼──────────────────┼──────────────────┤
+│ 能否感知      │ 否               │ 否               │ 是                │
+│ 新写入记忆    │                  │                  │ (每轮重新扫描目录) │
+├──────────────┼──────────────────┼──────────────────┼──────────────────┤
+│ 在 Patent     │ 所有 Agent 节点   │ 所有 Agent 节点   │ diagnosis         │
+│ Tutor 中     │                  │                  │ planner           │
+│ 的适用范围    │                  │                  │ expert_a/b        │
+│              │                  │                  │ judge             │
+│              │                  │                  │ (feedback 部分)   │
+└──────────────┴──────────────────┴──────────────────┴──────────────────┘
+```
 
-改造后:
-  1. save_memory(learner_id, name="学习诊断 - {date}",
-                 description="最新诊断结果",
-                 type="user", body=diagnosis_summary)
-  2. save_memory(learner_id, name="学习反馈 - {date}",
-                 type="feedback", body=feedback_analysis)
-  3. _update_index(learner_id)  # 自动刷新 MEMORY.md
+### 4.3 路径 C 在 Patent Tutor 中的完整流程
+
+```
+Agent 节点即将执行 (例如: diagnosis 节点)
+      │
+      ▼
+┌─────────────────────────────────────────────────┐
+│ Step 1: 扫描 Learner Memory 目录                 │
+│                                                 │
+│ readdir memory/learners/{learner_id}/           │
+│ → 读每个 .md (排除 MEMORY.md) 的前 30 行         │
+│ → 提取 frontmatter: name, description, type     │
+│ → 按 mtime 倒序, 取前 200 个                     │
+└──────────────────────┬──────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────┐
+│ Step 2: 去重                                     │
+│                                                 │
+│ 排除 alreadySurfaced 集合中已选过的文件            │
+│ (同 session 内已注入过的不再重复)                  │
+│                                                 │
+│ 排除被标记为 superseded 的过时记忆                │
+│ (如 frontmatter 中 superseded_by 指向其他文件)     │
+└──────────────────────┬──────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────┐
+│ Step 3: 构建候选清单 (Memory Manifest)            │
+│                                                 │
+│ - [user] user_background.md (2026-06-10):       │
+│   化学研究员, 专利法零基础, 偏好视觉化教学       │
+│ - [feedback] feedback_novelty_confusion.md      │
+│   (2026-06-20): 反复混淆新颖性与创造性           │
+│ - [project] project_article22_mastery.md        │
+│   (2026-06-18): 第22条掌握状态                   │
+│ ...                                             │
+└──────────────────────┬──────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────┐
+│ Step 4: LLM 相关性选择                           │
+│                                                 │
+│ 候选清单 + 当前节点上下文 (user_input, 节点角色)   │
+│ → 发给 LLM (使用轻量模型, 非 Opus)               │
+│                                                 │
+│ Prompt: "Given the current teaching task,       │
+│  select up to 5 memory files most relevant.     │
+│  Be selective — only pick clearly relevant.     │
+│  Return a JSON array of filenames."             │
+│                                                 │
+│ 返回: ["user_learning_style.md",                │
+│        "feedback_novelty_confusion.md",         │
+│        "project_article22_mastery.md"]          │
+└──────────────────────┬──────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────┐
+│ Step 5: 读取完整内容 + 注入                       │
+│                                                 │
+│ - 读取每个选中文件的完整 markdown                  │
+│ - 附加 freshness_note:                           │
+│   "此记忆是 5 天前的观察, 学习者可能已有进步"      │
+│ - 截断: per-file ≤4KB / ≤200行                   │
+│ - 节点累计: ≤20KB (5个 Agent 节点 × 约4KB)       │
+│ - 包裹为 <system-reminder> 标签                  │
+│ - 注入当前 Agent 节点的 Prompt                    │
+└──────────────────────┬──────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────┐
+│ Step 6: 更新 alreadySurfaced                     │
+│                                                 │
+│ alreadySurfaced.add("feedback_novelty_..."...)   │
+│                                                 │
+│ 影响:                                            │
+│ - 同一 session 的后续节点不再注入同样的记忆         │
+│ - planner 会看到不同的记忆子集                    │
+│ - expert_a 和 expert_b 可能看到不同的记忆子集       │
+│                                                 │
+│ 注意: 不同节点关心的维度不同                       │
+│ → diagnosis 关心: 学习背景、薄弱点                │
+│ → planner 关心: 学习风格、路径偏好                │
+│ → expert_a 关心: 概念混淆、教学策略有效性          │
+│ → expert_b 关心: 学习风格、有效类比                │
+│ → judge 关心: 概念混淆(用于评估是否纠正)           │
+└─────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 五、设计决策与权衡
+## 五、两条写入路径
 
-### 5.1 为什么选择文件而不是数据库
+### 5.1 整体架构
 
-| 维度 | 文件系统 | SQLite/Postgres |
-|------|----------|-----------------|
-| AI 可读性 | ✅ 直接用 Read/Edit/Write 操作 | ❌ 需要专用工具或 API |
-| 人类可编辑 | ✅ 任何文本编辑器 | ❌ 需要 SQL 客户端 |
-| 版本控制 | ✅ git diff 清晰可读 | ❌ 二进制或 SQL dump |
-| 并发写入 | ⚠️ 需要锁 | ✅ 事务支持 |
-| 查询效率 | ⚠️ 全量扫描 | ✅ 索引查询 |
+```
+    ┌──────────────────────────────────────────────────────┐
+    │                 Learner Memory 写入                    │
+    │                                                      │
+    │  ┌─────────────────────┐    ┌─────────────────────┐  │
+    │  │   路径 A: 同步写入   │    │   路径 B: 异步提取   │  │
+    │  │                     │    │                     │  │
+    │  │ 执行者: feedback 节点│    │ 执行者: fork 子Agent │  │
+    │  │ 时机: workflow 内    │    │ 时机: workflow 结束后 │  │
+    │  │ 内容: 结构化数据     │    │ 内容: 非结构化洞见   │  │
+    │  │                     │    │                     │  │
+    │  │ - 诊断结果快照       │    │ - 学习模式识别       │  │
+    │  │ - 学习路径完成状态   │    │ - 概念混淆根因分析   │  │
+    │  │ - 反馈问卷结果       │    │ - 教学策略有效性发现 │  │
+    │  │ - 掌握度自评         │    │ - 跨知识点关联       │  │
+    │  │                     │    │                     │  │
+    │  │ 同步, 在 workflow   │    │ 异步, fire-and-      │  │
+    │  │ 的 feedback 阶段    │    │ forget, 不阻塞用户   │  │
+    │  │ 不额外消耗 LLM 调用  │    │ fork 子 Agent 执行   │  │
+    │  │                     │    │ maxTurns=5          │  │
+    │  └──────────┬──────────┘    └──────────┬──────────┘  │
+    │             │                          │              │
+    │             └──────────┬───────────────┘              │
+    │                        │                              │
+    │                        ▼                              │
+    │              ┌──────────────────┐                     │
+    │              │    互斥检测       │                     │
+    │              │ hasWrittenThisTurn│                     │
+    │              │ 路径A写过?→B跳过  │                     │
+    │              └──────────────────┘                     │
+    └──────────────────────────────────────────────────────┘
+```
 
-对于 Patent Tutor 的场景，learner 数量少（教学辅导是 1:1 的），
-文件系统的优势（AI 友好、人类可读、版本可控）远大于劣势。
+### 5.2 路径 A: feedback 节点同步写入
 
-**Phase 4+ 如果需要多 learner 或复杂查询，再考虑 SQLite 作为底层存储引擎，
-但保持文件系统作为 AI 接口层（双写策略）。**
+```
+feedback 节点执行
+      │
+      ▼
+┌─────────────────────────────────────────────┐
+│ feedback 生成后 → 写入 Learner Memory        │
+│                                             │
+│ 写什么:                                      │
+│                                             │
+│ 1. [必须写] 更新 MEMORY.md 索引              │
+│    (如果新增了记忆文件)                       │
+│                                             │
+│ 2. [条件写] 如果是首次 session:              │
+│    → 创建 user_background.md               │
+│    → 创建 user_learning_style.md            │
+│    (从 diagnosis 结果中提取)                 │
+│                                             │
+│ 3. [条件写] 如果发现新的薄弱点或混淆:         │
+│    → 创建 feedback_*.md                    │
+│    (从 judge 评审和 feedback 问卷中提取)      │
+│                                             │
+│ 4. [条件写] 如果知识点掌握度有显著变化:       │
+│    → 更新 project_article*_mastery.md       │
+│    (从 feedback 问卷中的自评分数提取)         │
+│                                             │
+│ 5. [必须写] session 完成标记:               │
+│    → 更新 project_learning_path_history.md  │
+│    (记录本次学习的知识点、用时、完成度)       │
+└─────────────────────────────────────────────┘
+```
 
-### 5.2 为什么用子 Agent 提取而不是在 workflow 内直接写
+### 5.3 路径 B: 后台 extractMemories
 
-Claude Code 的设计中，extractMemories 作为独立子 Agent 是有意为之：
+```
+workflow 结束 (finalize 节点执行完毕)
+      │
+      ▼
+┌─────────────────────────────────────────────┐
+│ Stop Hook: extractTeachingInsights()         │
+│                                             │
+│ Gate 1: 是主 workflow? (非子 Agent)          │
+│ Gate 2: Learner Memory 功能已启用?           │
+│ Gate 3: 不是 remote 模式?                    │
+│ Gate 4: 没有正在进行的提取? (overlap guard)   │
+│ Gate 5: feedback 节点是否已写过新文件?        │
+│         (hasMemoryWritesSince 检测 → 互斥)    │
+│                                             │
+│ 全部通过 → 继续                               │
+└──────────────────────┬──────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────┐
+│ Fork 子 Agent (fire-and-forget)              │
+│                                             │
+│ 权限:                                        │
+│ ✅ 可读: 所有文件 (了解上下文)                 │
+│ ✅ 可写: 仅 memory/learners/{id}/ 目录       │
+│ ❌ 不可: 写其他目录, 执行危险命令              │
+│                                             │
+│ 轮次限制: maxTurns = 5                       │
+│   - Turn 1: 并行读取所有可能需要更新的文件     │
+│   - Turn 2: 并行写入/编辑记忆文件             │
+│   - Turn 3-4: 更新 MEMORY.md 索引            │
+│   - Turn 5: 硬上限 (防止兔子洞)               │
+│                                             │
+│ 子 Agent Prompt 要点:                        │
+│ "分析本次教学对话, 提取值得记入 Learner       │
+│  Memory 的信息。只使用最近 {N} 条教学消息。    │
+│  不要浪费 turn 验证内容。                     │
+│  第1轮并行读, 第2轮并行写。"                  │
+└─────────────────────────────────────────────┘
+```
 
-1. **不阻塞主流程** — 用户不需要等记忆写完了才看到回答
-2. **降低主模型负担** — 主模型专注教学任务，不用分心"这该不该记住"
-3. **专用 Prompt** — 提取记忆的 Prompt 和教学的 Prompt 完全不同
-4. **权限隔离** — 子 Agent 只能写 memory 目录，防止误操作
+### 5.4 跨 Session 巩固 (Consolidation)
 
-Patent Tutor 可以采用类似设计：feedback 节点做轻量的"写入标记"，
-详细的记忆提炼留给后台子 Agent。
+```
+触发条件:
+├── 距离上次 consolidation ≥ 24 小时
+├── 累积 ≥ 3 个新 session (教学场景 session 数较少, 降低门槛)
+└── 获取文件锁 (防止并发)
 
-### 5.3 两条写入路径的互斥
-
-借鉴 Claude Code 的 `hasMemoryWritesSince()` 检测：
-- 如果主模型（feedback 节点）已经直接写入过 memory 文件，后台提取就跳过
-- 后台提取推进游标，记录上次处理到的位置
-- 两者互斥但互补，避免同一段对话被重复提取
+执行流程:
+      │
+      ▼
+┌─────────────────────────────────────────────┐
+│ Phase 1: Orient                              │
+│ - 读 MEMORY.md 索引                          │
+│ - 浏览现有 topic files                        │
+│ - 避免创建重复                                │
+├─────────────────────────────────────────────┤
+│ Phase 2: Gather                              │
+│ - 读最近 session 的 session_memory.md         │
+│ - 读最近 feedback 问卷结果 (session transcript)│
+│ - 搜索现有记忆中与最新诊断矛盾的内容            │
+├─────────────────────────────────────────────┤
+│ Phase 3: Consolidate                         │
+│ - 合并: "第22条混淆 - sess03" +               │
+│         "第22条混淆 - sess05"                 │
+│         → "第22条混淆 (跨3次session持续出现)"  │
+│ - 纠正: 旧记忆"薄弱点是概念混淆"               │
+│         但新diagnosis显示已掌握                │
+│         → 标记 superseded, 创建"已克服"记录   │
+│ - 提升确信度: 单次观察 → 多次确认 → confidence│
+│               从 low 提升到 medium/high       │
+├─────────────────────────────────────────────┤
+│ Phase 4: Prune                               │
+│ - 删除被纠正的旧记忆                          │
+│ - 精简 MEMORY.md (合并相似条目)                │
+│ - 将超过 200 字符的索引条目内容移到 topic file │
+│ - 把相对日期 ("上周") 转换为绝对日期           │
+└─────────────────────────────────────────────┘
+```
 
 ---
 
-## 六、总结
+## 六、完整生命周期
 
-Claude Code 的记忆系统设计本质上回答了三个问题：
+### 6.1 一次完整 Teach 路径的记忆流转
 
-1. **记忆存在哪** — 六层分层，覆盖秒/回合/分钟/天/手动/团队六个时间尺度
-2. **记忆怎么注入** — 三路径注入，行为规则 + 索引概览 + 主动精准召回
-3. **记忆如何保鲜** — 双通道写入（即时 + 离线整合），过期检测 + 验证警告
+```
+┌── 用户输入: "我想学习专利新颖性" ──────────────────────────────────────┐
+│                                                                        │
+│  ┌─────────────────────────────────────────────────────────────────┐  │
+│  │ Session 开始                                                    │  │
+│  │                                                                 │  │
+│  │ 加载:                                                           │  │
+│  │ 路径 B → MEMORY.md 索引                                         │  │
+│  │          路径 B 内容:                                           │  │
+│  │          - [学习背景](user_background.md) — 化学研究员,...      │  │
+│  │          - [学习风格](user_learning_style.md) — 视觉型,...       │  │
+│  │          - [概念混淆](feedback_novelty_confusion.md) — ...      │  │
+│  │                                                                 │  │
+│  │ 路径 A → System Prompt (记忆行为规则, 固定模板)                  │  │
+│  └─────────────────────────────────────────────────────────────────┘  │
+│                              │                                         │
+│                              ▼                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐  │
+│  │ route 节点                                                       │  │
+│  │ → intent = teach                                                 │  │
+│  │ → 不需要 Active Recall (只是分类任务)                             │  │
+│  └─────────────────────────────────────────────────────────────────┘  │
+│                              │                                         │
+│                              ▼                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐  │
+│  │ diagnosis 节点                                                   │  │
+│  │                                                                 │  │
+│  │ 路径 C → Active Recall:                                         │  │
+│  │   query = user_input + "学情诊断"                                │  │
+│  │   LLM 从候选清单选择:                                            │  │
+│  │   1. user_background.md (背景信息, 影响诊断策略)                  │  │
+│  │   2. user_learning_style.md (学习偏好, 影响诊断问题设计)          │  │
+│  │   3. feedback_novelty_confusion.md (已知混淆, 针对性诊断)         │  │
+│  │                                                                 │  │
+│  │ → 输出: learner_profile                                          │  │
+│  │ → artifact 写入: artifacts/{session_id}/round-01/                │  │
+│  │                  learner_profile.md                              │  │
+│  └─────────────────────────────────────────────────────────────────┘  │
+│                              │                                         │
+│                              ▼                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐  │
+│  │ planner 节点                                                     │  │
+│  │                                                                 │  │
+│  │ 路径 C → Active Recall:                                         │  │
+│  │   query = learner_profile + "规划学习路径"                       │  │
+│  │   LLM 选:                                                        │  │
+│  │   1. user_learning_style.md (学习风格, 影响路径设计)              │  │
+│  │   2. project_learning_path_history.md (之前学过什么, 避免重复)    │  │
+│  │   3. project_article22_mastery.md (当前掌握状态)                 │  │
+│  │                                                                 │  │
+│  │ 路径 B → Curriculum Knowledge (知识点依赖图)                     │  │
+│  │                                                                 │  │
+│  │ → 输出: learning_path                                            │  │
+│  └─────────────────────────────────────────────────────────────────┘  │
+│                              │                                         │
+│                              ▼                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐  │
+│  │ tool_agent 节点 (RAG 检索)                                       │  │
+│  │ → 不需要 Active Recall (检索法条, 不涉及学习者记忆)               │  │
+│  └─────────────────────────────────────────────────────────────────┘  │
+│                              │                                         │
+│                              ▼                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐  │
+│  │ ┌─ expert_a ─┐  ┌─ expert_b ─┐                                   │  │
+│  │ │             │  │             │  ← 并行执行                      │  │
+│  │ │ 路径 C:     │  │ 路径 C:     │                                  │  │
+│  │ │                                            │  │
+│  │ │ query:      │  │ query:      │                                  │  │
+│  │ │ "严谨教学"  │  │ "案例教学"  │                                  │  │
+│  │ │ + topic     │  │ + topic     │                                  │  │
+│  │ │                                            │  │
+│  │ │ 可能选:     │  │ 可能选:     │                                  │  │
+│  │ │ - concept_  │  │ - learning_ │                                  │  │
+│  │ │  confusion  │  │  style      │                                  │  │
+│  │ │ - article22 │  │ - concept_  │                                  │  │
+│  │ │  _mastery   │  │  confusion  │                                  │  │
+│  │ │             │  │ - effective │                                  │  │
+│  │ │                                             │  │
+│  │ │ 注意! 同一个│  │  注意! 同一个│                                  │  │
+│  │ │ feedback_   │  │  feedback_  │                                  │  │
+│  │ │ novelty_    │  │  novelty_   │                                  │  │
+│  │ │ confusion   │  │  confusion  │                                  │  │
+│  │ │ 已被 expert │  │ 已被 expert │                                  │  │
+│  │ │ _a 的 AC    │  │ _a 的 AC    │                                  │  │
+│  │ │ 消费 →     │  │ 消费 → 同   │                                  │  │
+│  │ │ alreadySur- │  │  session 下 │                                  │  │
+│  │ │ faced 已标  │  │ 不会重复    │                                  │  │
+│  │ │ 记          │  │ 注入        │                                  │  │
+│  │ └─────────────┘  └─────────────┘                                  │  │
+│  └─────────────────────────────────────────────────────────────────┘  │
+│                              │                                         │
+│                              ▼                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐  │
+│  │ Session Memory 更新 (judge 节点后触发)                            │  │
+│  │                                                                 │  │
+│  │ 路径 C + Session Memory                                          │  │
+│  │ → judge 读取当前 session_memory.md                               │  │
+│  │    → 了解之前的 debate 轮次中的策略有效性和错误                    │  │
+│  │ → judge 执行后, fork 子 Agent 更新 session_memory.md              │  │
+│  │    → 记录本轮 debate 的策略、错误、学习者反馈                      │  │
+│  └─────────────────────────────────────────────────────────────────┘  │
+│                              │                                         │
+│                              ▼                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐  │
+│  │ feedback 节点                                                    │  │
+│  │                                                                 │  │
+│  │ 路径 A 写入:                                                     │  │
+│  │ 1. user_background.md (如果是首次 session)                       │  │
+│  │ 2. feedback_*.md (发现新的薄弱点或混淆模式)                       │  │
+│  │ 3. project_article*_mastery.md (更新知识点掌握度)                 │  │
+│  │ 4. project_learning_path_history.md (追加学习记录)                │  │
+│  │ 5. MEMORY.md (刷新索引)                                          │  │
+│  │                                                                 │  │
+│  │ 路径 C → Active Recall:                                          │  │
+│  │   query = "生成反馈和画像更新"                                    │  │
+│  │   LLM 选:                                                        │  │
+│  │   - 所有 project_*_mastery.md (了解当前掌握状态)                  │  │
+│  │   - 所有 feedback_*.md (了解已知问题)                             │  │
+│  │                                                                 │  │
+│  │ 必须更新 Session Memory:                                         │  │
+│  │   → # Learner Feedback section                                  │  │
+│  │   → # Key Teaching Insights section                             │  │
+│  └─────────────────────────────────────────────────────────────────┘  │
+│                              │                                         │
+│                              ▼                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐  │
+│  │ finalize 节点                                                    │  │
+│  │                                                                 │  │
+│  │ 路径 C → Active Recall:                                          │  │
+│  │   query = "合成最终教学答案"                                      │  │
+│  │   LLM 选:                                                        │  │
+│  │   - feedback_case_method_works.md (案例法有效, 在总结中强调)       │  │
+│  │   - feedback_teaching_pace.md (节奏偏好, 影响总结建议)            │  │
+│  │                                                                 │  │
+│  │ → 输出: final_answer                                             │  │
+│  │ → artifact: artifacts/{session_id}/final_answer.md               │  │
+│  └─────────────────────────────────────────────────────────────────┘  │
+│                              │                                         │
+│                              ▼                                         │
+│  ┌─────────────────────────────────────────────────────────────────┐  │
+│  │ Workflow 结束                                                    │  │
+│  │                                                                 │  │
+│  │ Stop Hook: 触发路径 B (extractMemories)                          │  │
+│  │ → fork 子 Agent 分析教学对话                                      │  │
+│  │ → 提取: 学习模式、概念混淆根因、策略有效性                         │  │
+│  │ → 写入新的 Learner Memory 文件或更新现有文件                       │  │
+│  │                                                                 │  │
+│  │ 路径 B 写入 (示例输出):                                           │  │
+│  │ - 新建: feedback_time_axis_confusion.md                          │  │
+│  │   "学习者对时间节点概念 (申请日/优先权日/公开日) 的理解是最大瓶颈" │  │
+│  │ - 更新: feedback_novelty_confusion.md                            │  │
+│  │   "补充根因: 化学领域类比惯性 → 已经通过案例教学缓解"              │  │
+│  │ - 更新: MEMORY.md (新增条目 + 刷新修改时间)                        │  │
+│  └─────────────────────────────────────────────────────────────────┘  │
+│                                                                        │
+└── END ────────────────────────────────────────────────────────────────┘
+```
 
-对于 Patent Tutor Agent，最有价值的三点借鉴：
+### 6.2 跨 Session 的生命周期
 
-| 借鉴点 | 当前缺口 | 预期收益 |
-|--------|----------|----------|
-| File-based memory + frontmatter | 纯内存 dict，无结构 | 人类可读、AI 可操作、按主题拆分 |
-| Active Recall（按节点相关性检索） | 全量取最近 N 条 | 精准注入，节省 context，提高 relevancy |
-| Background extractMemories | feedback 节点同步写 | 不阻塞主流程，专用提取 Prompt，更高质量的 learner 画像 |
-| Memory freshness + expiry | 无 | 防止过时的学习诊断误导教学决策 |
-| Session Memory | 无 | 长 debate 循环保持连贯，为 compact 做准备 |
-| MEMORY.md 索引 | 无 | 快速 overview，减少不必要的全量读取 |
+```
+Session 1                   Session 2                   Session 3+
+───────                     ───────                     ───────
 
-建议优先实施 Phase 1（文件化存储 + MEMORY.md 索引）和
-Phase 2（Active Recall 相关性检索），它们是 ROI 最高、风险最低的两项改进。
+"我想学新颖性"              "我想继续学创造性"          "我想复习专利授权条件"
+
+diagnosis:                   diagnosis:                   diagnosis:
+  路径C: 空                   路径C:                      路径C:
+  (首次, 无记忆)              选到:                       选到:
+                              user_background.md          user_background.md
+                              feedback_novelty_*.md       user_learning_style.md
+                                                          project_article22.md
+                              → 已知他是化学研究员        → 已知学习风格和进度
+                              → 已知上次混淆过概念        → 针对性诊断
+
+... 教学流程 ...              ... 教学流程 ...              ... 教学流程 ...
+
+feedback:                    feedback:                    feedback:
+  路径A 创建:                 路径A 更新:                  路径A 更新:
+  user_background.md          project_article22.md         project_article22.md
+  feedback_novelty_*.md       (掌握度: ★★☆☆→★★★☆)       (掌握度: ★★★☆→★★★★☆)
+  project_article22.md        feedback_creative_*.md
+                                                        feedback 节点检测到:
+extractMemories:              extractMemories:             "第22条掌握度连续3次
+  路径B 提取:                  路径B 提取:                  session 上升"
+  "化学类比惯性"               "对比表格法对概念            → 视为已稳定掌握
+                              区分持续有效"                → 标记 memory
+                                                          confidence=high
+                              
+                              ──── 跨 Session ────
+                              满足 Consolidation 条件
+                              (≥24h 且 ≥3 sessions)
+                                      │
+                                      ▼
+                              ┌─────────────────┐
+                              │  Consolidation   │
+                              │                 │
+                              │ 合并:           │
+                              │ "新颖性混淆"    │
+                              │  sess1+sess2    │
+                              │ → 一条记录      │
+                              │                 │
+                              │ 纠正:           │
+                              │ 旧"概念混淆"    │
+                              │ → 已改善        │
+                              │ → 标记为历史    │
+                              │                 │
+                              │ 升级:           │
+                              │ low confidence  │
+                              │ → high          │
+                              │ (3次确认)       │
+                              │                 │
+                              │ 精简:           │
+                              │ MEMORY.md       │
+                              │ 合并相似条目    │
+                              │ 删除过期条目    │
+                              └─────────────────┘
+```
 
 ---
 
-## 参考资料
+## 七、每个 Agent 节点的记忆交互矩阵
 
-- 知乎原文：[Claude Code 源码深度解析：Memory 模块设计与实现](https://zhuanlan.zhihu.com/p/2024236369631879273)
-- 项目文档：[记忆系统现状与持久化方案](./memory-persistence.md)
-- 项目文档：[Agent 接口规范](./agent-interface-spec.md)
+```
+┌─────────────┬──────────┬──────────┬──────────┬──────────┬──────────┐
+│ Agent 节点   │ 路径 A   │ 路径 B   │ 路径 C   │ Session  │ 写入     │
+│             │ 行为规则  │ MEMORY.md│ Active   │ Memory   │ Learner  │
+│             │          │ 索引     │ Recall   │ (读取)   │ Memory   │
+├─────────────┼──────────┼──────────┼──────────┼──────────┼──────────┤
+│ route       │    ✓     │    -     │    -     │    -     │    -     │
+│ (意图分类)   │          │          │          │          │          │
+├─────────────┼──────────┼──────────┼──────────┼──────────┼──────────┤
+│ diagnosis   │    ✓     │    ✓     │    ✓     │    -     │    -     │
+│ (学情诊断)   │          │          │ 选:背景,  │          │          │
+│             │          │          │  风格,    │          │          │
+│             │          │          │  已知混淆 │          │          │
+├─────────────┼──────────┼──────────┼──────────┼──────────┼──────────┤
+│ planner     │    ✓     │    ✓     │    ✓     │    -     │    -     │
+│ (规划路径)   │          │          │ 选:风格,  │          │          │
+│             │          │          │  路径历史,│          │          │
+│             │          │          │  掌握度   │          │          │
+│             │          │ + 路径B  │          │          │          │
+│             │          │ Curriculum│          │          │          │
+├─────────────┼──────────┼──────────┼──────────┼──────────┼──────────┤
+│ tool_agent  │    -     │    -     │    -     │    -     │    -     │
+│ (RAG检索)   │          │          │          │          │          │
+├─────────────┼──────────┼──────────┼──────────┼──────────┼──────────┤
+│ expert_a    │    ✓     │    ✓     │    ✓     │    ✓     │    -     │
+│ (严谨教学)   │          │          │ 选:混淆, │ 读取当前 │          │
+│             │          │          │  掌握度  │ debate   │          │
+│             │          │ + Agent  │          │ 状态     │          │
+│             │          │  Role    │          │          │          │
+├─────────────┼──────────┼──────────┼──────────┼──────────┼──────────┤
+│ expert_b    │    ✓     │    ✓     │    ✓     │    ✓     │    -     │
+│ (案例教学)   │          │          │ 选:风格, │ 读取当前 │          │
+│             │          │          │  有效类比│ debate   │          │
+│             │          │ + Agent  │          │ 状态     │          │
+│             │          │  Role    │          │          │          │
+├─────────────┼──────────┼──────────┼──────────┼──────────┼──────────┤
+│ judge       │    ✓     │    ✓     │    ✓     │    ✓     │    -     │
+│ (评审裁判)   │          │          │ 选:混淆, │ 读取+    │          │
+│             │          │          │  常见错误│ 更新     │          │
+│             │          │ + Agent  │          │ Session  │          │
+│             │          │  Role    │          │ Memory   │          │
+├─────────────┼──────────┼──────────┼──────────┼──────────┼──────────┤
+│ feedback    │    ✓     │    ✓     │    ✓     │    ✓     │ 路径 A   │
+│ (反馈问卷)   │          │          │ 选:所有  │ 读取+    │ 同步写入 │
+│             │          │          │ 已知记忆 │ 更新     │ Learner  │
+│             │          │          │          │ Session  │ Memory   │
+│             │          │          │          │ Memory   │          │
+├─────────────┼──────────┼──────────┼──────────┼──────────┼──────────┤
+│ finalize    │    ✓     │    ✓     │    ✓     │    ✓     │    -     │
+│ (合成答案)   │          │          │ 选:有效  │ 读取     │          │
+│             │          │          │  策略,   │ 最终     │          │
+│             │          │          │  风格偏好│ 状态     │          │
+├─────────────┼──────────┼──────────┼──────────┼──────────┼──────────┤
+│ chat_answer │    ✓     │    ✓     │    ✓     │    -     │    -     │
+│ (快速问答)   │          │          │ (可选)   │          │          │
+├─────────────┼──────────┼──────────┼──────────┼──────────┼──────────┤
+│ [后台]      │    -     │    -     │    -     │    -     │ 路径 B   │
+│ extract-    │          │          │          │          │ 异步提取 │
+│ Memories    │          │          │          │          │ Learner  │
+│             │          │          │          │          │ Memory   │
+├─────────────┼──────────┼──────────┼──────────┼──────────┼──────────┤
+│ [后台]      │    -     │    -     │    -     │    -     │ 跨session│
+│ Consoli-    │          │          │          │          │ 巩固     │
+│ dation      │          │          │          │          │ Learner  │
+│             │          │          │          │          │ Memory   │
+└─────────────┴──────────┴──────────┴──────────┴──────────┴──────────┘
+```
+
+---
+
+## 八、目录结构
+
+### 8.1 完整目录树
+
+```
+patent-tutor-agent/
+│
+├── memory/                                # 记忆根目录 (git 追踪部分)
+│   │
+│   ├── learners/                          # === 层级 1: Learner Memory ===
+│   │   └── {learner_id}/
+│   │       ├── MEMORY.md                  # 索引 (≤200行, ≤25KB)
+│   │       ├── user_background.md         # type: user
+│   │       ├── user_learning_style.md     # type: user
+│   │       ├── user_knowledge_level.md    # type: user
+│   │       ├── feedback_*.md             # type: feedback (可多个)
+│   │       ├── project_*.md              # type: project (可多个)
+│   │       └── reference_*.md            # type: reference (可多个)
+│   │
+│   ├── agents/                            # === 层级 3: Agent Role Memory ===
+│   │   ├── diagnosis/
+│   │   │   └── diagnosis_patterns.md
+│   │   ├── expert_a/
+│   │   │   ├── rigorous_teaching_templates.md
+│   │   │   ├── concept_distinction_tables.md
+│   │   │   └── common_legal_pitfalls.md
+│   │   ├── expert_b/
+│   │   │   ├── case_library_index.md
+│   │   │   ├── analogy_patterns.md
+│   │   │   └── engagement_strategies.md
+│   │   ├── judge/
+│   │   │   ├── review_criteria.md
+│   │   │   ├── common_teaching_errors.md
+│   │   │   └── revision_request_templates.md
+│   │   ├── planner/
+│   │   │   ├── learning_path_patterns.md
+│   │   │   └── knowledge_dependency_map.md
+│   │   └── feedback/
+│   │       ├── question_templates.md
+│   │       └── profile_update_strategies.md
+│   │
+│   └── curriculum/                        # === 层级 4: Curriculum Knowledge ===
+│       ├── patent_law_knowledge_graph.md
+│       ├── common_misconceptions.md
+│       ├── teaching_strategy_templates.md
+│       └── article_index.md
+│
+├── artifacts/                             # 运行时产物 (gitignore)
+│   └── sessions/
+│       └── {session_id}/
+│           ├── manifest.json
+│           ├── round-01/
+│           │   ├── learner_profile.md
+│           │   ├── learning_path.md
+│           │   ├── retrieval_context.md
+│           │   ├── expert_a_draft.md
+│           │   ├── expert_b_draft.md
+│           │   ├── judge_report.md
+│           │   └── feedback_report.md
+│           ├── round-02/  (如果有)
+│           ├── session_memory.md           # === 层级 2: Session Memory ===
+│           └── final_answer.md
+│
+├── data/                                  # 运行时数据 (gitignore)
+│   ├── checkpoints.db                     # LangGraph SqliteSaver
+│   └── learner_store.db                   # (可选) SQLite 索引
+│
+└── backend/
+    └── app/
+        ├── memory/
+        │   ├── file_store.py              # LearnerMemoryStore
+        │   ├── session_memory.py           # SessionMemoryManager
+        │   ├── active_recall.py            # findRelevantMemories 实现
+        │   ├── extract_memories.py         # 后台 extractMemories
+        │   ├── consolidation.py            # 跨 session 巩固
+        │   ├── freshness.py               # memoryAge, freshnessNote
+        │   └── paths.py                   # 路径解析与安全验证
+        └── ...
+```
+
+### 8.2 与现有 artifacts/ 的关系
+
+```
+artifacts/ 目录 (已有)           memory/ 目录 (新增)
+─────────────────────────       ─────────────────────
+
+存放运行时产物:                  存放持久化记忆:
+- Agent 节点的 markdown 输出     - 学习者画像
+- debate 各轮的草稿              - 教学策略有效性
+- judge 评审报告                 - Agent 角色经验
+- 最终答案                       - 课程知识体系
+
+特点:                            特点:
+- 按 session 组织                - 按 learner/agent 组织
+- gitignore (不追踪)             - git 追踪 (Agent/Curriculum)
+- 不可修改 (immutable)           - Learner 部分 gitignore
+- 每次 workflow 覆写              - 可增量更新
+```
+
+---
+
+## 九、与 Claude Code 的映射对照
+
+```
+┌──────────────────────────────┬──────────────────────────────────────┐
+│       Claude Code            │        Patent Tutor Agent            │
+├──────────────────────────────┼──────────────────────────────────────┤
+│                              │                                      │
+│ Auto Memory                  │ Learner Memory                       │
+│ (跨 session, 4种类型)        │ (跨 session, 4种类型)                │
+│ memory/ 目录                  │ memory/learners/{id}/                │
+│ MEMORY.md 索引                │ MEMORY.md 索引                       │
+│ 2条写入路径                   │ 2条写入路径                          │
+│                              │                                      │
+├──────────────────────────────┼──────────────────────────────────────┤
+│                              │                                      │
+│ Session Memory               │ Session Memory                       │
+│ (单 session, compact用)      │ (单 session, debate连贯+compact)     │
+│ 9-section 模板                │ 9-section 模板 (改编)                │
+│ token阈值触发                 │ debate轮次+内容阈值触发              │
+│                              │                                      │
+├──────────────────────────────┼──────────────────────────────────────┤
+│                              │                                      │
+│ Agent Memory                 │ Agent Role Memory                    │
+│ (角色分域, 3种scope)         │ (每Agent独立角色记忆)                │
+│ .claude/agent-memory/        │ memory/agents/{agent_name}/           │
+│                              │                                      │
+├──────────────────────────────┼──────────────────────────────────────┤
+│                              │                                      │
+│ CLAUDE.md                    │ Curriculum Knowledge                  │
+│ (项目规则, 手动维护)          │ (课程知识体系, 半静态)               │
+│ 注入为 User Context           │ 注入为 Context (planner/experts用)   │
+│                              │                                      │
+├──────────────────────────────┼──────────────────────────────────────┤
+│                              │                                      │
+│ Team Memory                  │ 暂无对应 (未来: 教学团队共享)        │
+│ (团队共享, API同步)           │ 可由多个 tutor 共享学习者画像        │
+│                              │                                      │
+├──────────────────────────────┼──────────────────────────────────────┤
+│                              │                                      │
+│ AutoDream                    │ Consolidation                        │
+│ (24h+5sessions 离线巩固)     │ (24h+3sessions 整合碎片记忆)         │
+│                              │                                      │
+├──────────────────────────────┼──────────────────────────────────────┤
+│                              │                                      │
+│ 3条注入路径:                  │ 3条注入路径:                         │
+│ A: System Prompt (规则)      │ A: System Prompt (记忆规则)          │
+│ B: User Message (MEMORY.md)  │ B: Context (Learner MEMORY.md)       │
+│ C: Per-turn Active Recall    │ C: Per-node Active Recall            │
+│                              │                                      │
+├──────────────────────────────┼──────────────────────────────────────┤
+│                              │                                      │
+│ 2条写入路径:                  │ 2条写入路径:                         │
+│ A: 主模型直接写               │ A: feedback节点同步写                │
+│ B: extractMemories 后台提取   │ B: extractMemories 后台提取          │
+│ 互斥检测                      │ 互斥检测                             │
+│                              │                                      │
+├──────────────────────────────┼──────────────────────────────────────┤
+│                              │                                      │
+│ Memory 新鲜度:                 │ Memory 新鲜度:                       │
+│ d≤1: 不警告                   │ d≤7: 不警告 (教学场景变化慢)         │
+│ d≥2: 过期警告                 │ d≥8: 过期警告                        │
+│ System Prompt中有规则          │ System Prompt中有规则               │
+│                              │                                      │
+├──────────────────────────────┼──────────────────────────────────────┤
+│                              │                                      │
+│ 大小限制:                      │ 大小限制:                            │
+│ MEMORY.md ≤200行/25KB        │ MEMORY.md ≤200行/25KB                │
+│ 扫描 ≤200文件                  │ 扫描 ≤200文件                        │
+│ 注入 ≤5文件/4KB per file      │ 注入 ≤5文件/4KB per file            │
+│ Session ≤60KB                 │ Per-node ≤20KB (5节点×4KB)          │
+│                              │                                      │
+└──────────────────────────────┴──────────────────────────────────────┘
+```
+
+---
+
+## 附录 A: 关键设计决策
+
+### A.1 文件系统 vs 数据库
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ 决策: 学习者记忆 (Learner Memory) 使用文件系统存储                │
+│                                                                 │
+│ 理由:                                                            │
+│ 1. 内容是叙事型长文本 (诊断分析、教学建议)，不是结构化字段         │
+│ 2. LLM Agent 可以直接用 Read/Write 工具操作文件                  │
+│ 3. 人类可读、可手动编辑 (教学团队可以 review 和修正)             │
+│ 4. Markdown + YAML frontmatter 提供足够的结构化                  │
+│ 5. git diff 清晰可追溯 (Agent Role Memory 和 Curriculum)         │
+│                                                                 │
+│ LangGraph Checkpointer 层必须用数据库 (SqliteSaver)               │
+│ → 这是框架强制的，不能用文件替代                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### A.2 新鲜度阈值: 教学场景的特殊性
+
+```
+Claude Code:  d ≥ 2 days → 过期警告
+Patent Tutor: d ≥ 8 days → 过期警告
+
+原因:
+- 代码状态变化快 (每日都可能改变)
+- 学习状态变化慢 (学习者的知识水平和学习风格在数天内保持稳定)
+- 教学记忆的价值衰减比代码记忆慢得多
+- 但超过一周的学习诊断可能已过时 (学习者可能已有多次新学习)
+```
+
+### A.3 Consolidation 门槛: 教学场景的调整
+
+```
+Claude Code: 24h + 5 sessions
+Patent Tutor: 24h + 3 sessions
+
+原因:
+- 编程 session 频繁 (可能一天多次)
+- 教学 session 低频 (可能几天一次)
+- 3 次教学 session 已能看出清晰的学习模式
+- 教学记忆需要更早开始整合和纠错
+```
+
+### A.4 排除规则: 借鉴并适配
+
+```
+Claude Code 的排除规则 → Patent Tutor 的适配:
+
+CC: "不要保存代码模式" → PT: "不要保存法条原文"
+CC: "不要保存 git 历史" → PT: "不要保存单次诊断细节"
+CC: "不要保存 CLAUDE.md 已有内容" → PT: "不要保存 Curriculum 已有的知识点"
+CC: "不要保存临时任务细节" → PT: "不要保存单轮 debate 的临时讨论"
+```
+
+---
+
+## 附录 B: 术语表
+
+| 术语 | 含义 |
+|------|------|
+| Learner Memory | 跨 session 的学习者记忆系统 (核心) |
+| Session Memory | 单 session 内的教学进度结构化笔记 |
+| Agent Role Memory | 每个 Agent 节点的角色经验和策略库 |
+| Curriculum Knowledge | 专利法课程知识体系 (半静态) |
+| Active Recall | 每个 Agent 节点执行前，按相关性检索记忆 |
+| extractMemories | 后台 fork 子 Agent，从教学对话中提取值得持久化的信息 |
+| Consolidation | 跨 session 的记忆整合：合并、纠正、删除过时记忆 |
+| MEMORY.md | 学习者记忆索引文件 (类似目录/目录) |
+| alreadySurfaced | 已注入过的记忆文件集合 (session 内去重) |
+| freshness_note | 基于 mtime 的过期警告 |
+| confidence | 记忆确信度 (low/medium/high)，多次确认可提升 |
+| 路径 A/B/C | 三层记忆注入路径 (规则/索引/召回) |
