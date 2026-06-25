@@ -1,16 +1,16 @@
 # Graph Report - patent-tutor-agent  (2026-06-25)
 
 ## Corpus Check
-- 163 files · ~73,070 words
+- 169 files · ~73,059 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1547 nodes · 1848 edges · 188 communities (142 shown, 46 thin omitted)
-- Extraction: 84% EXTRACTED · 16% INFERRED · 0% AMBIGUOUS · INFERRED: 294 edges (avg confidence: 0.68)
+- 1582 nodes · 1871 edges · 201 communities (141 shown, 60 thin omitted)
+- Extraction: 84% EXTRACTED · 16% INFERRED · 0% AMBIGUOUS · INFERRED: 300 edges (avg confidence: 0.69)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `373f3c5d`
+- Built from commit: `d815282d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -172,16 +172,27 @@
 - [[_COMMUNITY_Community 183|Community 183]]
 - [[_COMMUNITY_Community 184|Community 184]]
 - [[_COMMUNITY_Community 185|Community 185]]
+- [[_COMMUNITY_Community 188|Community 188]]
+- [[_COMMUNITY_Community 189|Community 189]]
+- [[_COMMUNITY_Community 190|Community 190]]
+- [[_COMMUNITY_Community 191|Community 191]]
+- [[_COMMUNITY_Community 192|Community 192]]
+- [[_COMMUNITY_Community 193|Community 193]]
+- [[_COMMUNITY_Community 194|Community 194]]
+- [[_COMMUNITY_Community 195|Community 195]]
+- [[_COMMUNITY_Community 196|Community 196]]
+- [[_COMMUNITY_Community 197|Community 197]]
+- [[_COMMUNITY_Community 198|Community 198]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `LLMResponseWithTools` - 30 edges
 2. `ContractModel` - 28 edges
 3. `LLMMessage` - 27 edges
-4. `FakeLLMClient` - 22 edges
-5. `ToolDefinition` - 21 edges
-6. `AgentLLMRouter` - 21 edges
-7. `SessionService` - 20 edges
-8. `build_agent_nodes()` - 18 edges
+4. `build_agent_nodes()` - 24 edges
+5. `FakeLLMClient` - 22 edges
+6. `ToolDefinition` - 21 edges
+7. `AgentLLMRouter` - 21 edges
+8. `SessionService` - 20 edges
 9. `ToolCall` - 18 edges
 10. `LLMProviderError` - 16 edges
 
@@ -190,12 +201,12 @@
   backend/tests/integration/test_workflow_integration.py → artifacts/sessions/local-real-debug/round-02/feedback_report.md
 - `Three-Route Workflow (teach/chat/diagnose)` --conceptually_related_to--> `Debate Quality Assessment System`  [INFERRED]
   backend/tests/integration/test_three_routes_integration.py → artifacts/sessions/local-real-debug/round-02/feedback_report.md
-- `build_agent_nodes()` --calls--> `build_chat_answer_node()`  [INFERRED]
-  backend/app/agents/__init__.py → app/agents/chat_answer/node.py
-- `messages_from_prompt()` --calls--> `LLMMessage`  [INFERRED]
-  app/agents/common.py → backend/app/core/llm.py
-- `build_agent_nodes()` --calls--> `build_expert_a_revise_node()`  [INFERRED]
-  backend/app/agents/__init__.py → app/agents/expert_a/revise.py
+- `build_agent_nodes()` --calls--> `build_diagnosis_node()`  [INFERRED]
+  app/agents/__init__.py → backend/app/agents/diagnosis/node.py
+- `build_agent_nodes()` --calls--> `build_feedback_node()`  [INFERRED]
+  app/agents/__init__.py → backend/app/agents/feedback/node.py
+- `build_workflow()` --calls--> `build_agent_nodes()`  [INFERRED]
+  backend/app/graph/workflow.py → app/agents/__init__.py
 
 ## Hyperedges (group relationships)
 - **Debate Loop: Parallel Expert Generation + Judge Evaluation + Revision Cycle** — AGENTSMD_fan_out_experts, AGENTSMD_expert_a_node, AGENTSMD_expert_b_node, AGENTSMD_judge_node, AGENTSMD_revise_experts [EXTRACTED 1.00]
@@ -212,23 +223,23 @@
 - **Patent Novelty vs Inventiveness Teaching Core** — final_answer_NoveltyPrinciple, final_answer_InventivenessPrinciple, expert_b_draft_SoleComparison, expert_b_draft_CombinationComparison, judge_report_ThreeStepMethod, judge_report_ConflictingApplication, expert_a_draft_GracePeriod, retrieval_context_MockRAGRetrieval [EXTRACTED 1.00]
 - **Workflow Testing Architecture** — test_workflow_integration_FullWorkflow, test_memory_integration_CrossSessionMemory, test_three_routes_RouteWorkflow, test_providers_ProviderRouting, test_schema_extensions_ContractModels, test_run_workflow_CLI, manifest_ArtifactPersistenceSystem [EXTRACTED 1.00]
 
-## Communities (188 total, 46 thin omitted)
+## Communities (201 total, 60 thin omitted)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.05
 Nodes (49): encode_query(), get_chroma_collection(), get_embedding_model(), _lazy_import(), rag_retrieve(), RAG retriever — currently a mock, ready for real vector/hybrid retrieval., Retrieve patent law knowledge chunks for a given query.      Currently returns m, # TODO: Replace with real retrieval (embedding + vector search / BM25 / hybrid) (+41 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.14
-Nodes (8): build_workflow(), export_workflow_mermaid(), _print_summary(), LangGraph workflow for the real five-Agent system., Print a one-line summary of an agent node's output., _with_runtime_side_effects(), main(), Export the current mock LangGraph workflow to Mermaid.
+Cohesion: 0.11
+Nodes (11): arun_workflow(), build_workflow(), export_workflow_mermaid(), _print_summary(), LangGraph workflow for the real five-Agent system., Print a one-line summary of an agent node's output., _with_runtime_side_effects(), Runtime context passed to LangGraph nodes. (+3 more)
 
 ### Community 3 - "Community 3"
-Cohesion: 0.08
-Nodes (23): AgentLLMRouter, LLMConfigurationError, Raised when model provider configuration is incomplete., Raised when model provider configuration is incomplete., Routes each Agent node to its configured provider, falling back to the default p, Routes each Agent node to its configured provider, falling back to the default p, Integration tests for three-route workflow with real LLM providers.  Requires va, Diagnosis-only path: route→diagnosis→END. (+15 more)
+Cohesion: 0.19
+Nodes (11): Integration tests for three-route workflow with real LLM providers.  Requires va, Diagnosis-only path: route→diagnosis→END., Systematic learning path: route→diagnosis→planner→tool_agent→experts→judge→feedb, Quick Q&A path: route→tool_agent→chat_answer→END., Quick Q&A path: route→tool_agent→chat_answer→END., Diagnosis-only path: route→diagnosis→END., TestChatRoute, TestDiagnoseRoute (+3 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.27
-Nodes (7): build_judge_node(), JudgeLLMClient, LLM 可能输出中文描述到 target 字段，需规范化为 expert_a/expert_b/both., LLM 可能输出中文描述到 target 字段，需规范化为 expert_a/expert_b/both., test_judge_adds_fallback_revision_request_when_revise_has_no_requests(), test_judge_normalizes_major_revision_decision_to_revise(), test_judge_normalizes_target_field_in_revision_requests()
+Cohesion: 0.19
+Nodes (10): build_judge_node(), _normalize_judge_report(), _normalize_target(), 将 LLM 可能输出的中文描述规范化为 expert_a / expert_b / both., JudgeLLMClient, LLM 可能输出中文描述到 target 字段，需规范化为 expert_a/expert_b/both., LLM 可能输出中文描述到 target 字段，需规范化为 expert_a/expert_b/both., test_judge_adds_fallback_revision_request_when_revise_has_no_requests() (+2 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.6
@@ -262,10 +273,6 @@ Nodes (23): chat_answer 节点, code:block1 (START), code:block2 (route → diag
 Cohesion: 0.11
 Nodes (18): code:block1 (当前 MVP                              目标（agents_analysis）), code:block2 (阶段一：并行独立生成（当前已实现）), code:block3 (知识图谱节点结构：), code:block4 (维度 1: knowledge（知识掌握度）), code:block5 (四个 BKT 参数：), code:block6 (diagnosis:  检索学习风格诊断题库、BKT 先验数据), code:block7 (feedback 输出变化向量 Δ：), code:block8 (第一优先：✅ P0.1 专家协作链（核心差异化能力）—— 已完成) (+10 more)
 
-### Community 14 - "Community 14"
-Cohesion: 0.33
-Nodes (6): Diagnosis Package, Expert A Package, Expert B Package, Agent Node Assembly, Judge Package, Planner Package
-
 ### Community 15 - "Community 15"
 Cohesion: 0.29
 Nodes (6): artifacts, debate_round, max_debate_rounds, session_id, status, updated_at
@@ -283,8 +290,8 @@ Cohesion: 0.33
 Nodes (6): Artifact persistence system, Artifact round scoping, Cross-session learner memory, Learner memory helpers, Workflow CLI runner, Workflow Mermaid exporter
 
 ### Community 20 - "Community 20"
-Cohesion: 0.14
-Nodes (10): create_artifacts_router(), Artifact retrieval endpoints., create_events_router(), _format_sse(), SSE and WebSocket event endpoints., _sse_events(), create_api_router(), FastAPI routers for sessionized workflow access. (+2 more)
+Cohesion: 0.13
+Nodes (10): create_artifacts_router(), Artifact retrieval endpoints., create_api_router(), FastAPI routers for sessionized workflow access., create_sessions_router(), CreateSessionRequest, Session REST endpoints., create_app() (+2 more)
 
 ### Community 21 - "Community 21"
 Cohesion: 0.83
@@ -359,8 +366,8 @@ Cohesion: 0.17
 Nodes (11): Agent 节点工厂模式, Artifact 落盘包装层, code:block1 (┌───────────────────────────────────────────────────────────), code:block2 (┌───────────────────────────────────────────────────────────), code:block3 (┌───────────────────────────────────────────────────────────), code:block4 (build_<name>_node(llm_client: LLMClient) → Node), code:block5 (_with_artifacts(node, artifact_root) → wrapped_node(state)), 关键数据流路径 (+3 more)
 
 ### Community 73 - "Community 73"
-Cohesion: 0.26
-Nodes (7): LLMResponseWithTools, Response from an LLM call that supports tool calling., A tool call requested by the LLM., Definition of a tool that can be called by the LLM., ToolCall, TestLLMResponseWithTools, TestToolCallDataclass
+Cohesion: 0.14
+Nodes (17): LLMResponseWithTools, Response from an LLM call that supports tool calling., A tool call requested by the LLM., A tool call requested by the LLM., Definition of a tool that can be called by the LLM., ToolCall, ToolDefinition, TDD Phase 1: Tests for LLM tool-calling support.  RED phase — these tests define (+9 more)
 
 ### Community 74 - "Community 74"
 Cohesion: 0.22
@@ -379,12 +386,12 @@ Cohesion: 0.25
 Nodes (7): 1. 检索是手段，不是目的, 2. 一次好的检索胜过三次泛泛检索, 3. 检索结果不加虚构, SYSTEM_PROMPT — 工具调用 Agent (tool_agent), 核心价值判断, 行为规范, 身份
 
 ### Community 78 - "Community 78"
-Cohesion: 0.11
-Nodes (20): 5.3 路径 B: 后台 extractMemories / consolidation, 6.1 一次完整 Teach 路径的记忆流转, 6.2 跨 Session 的生命周期, 8.1 完整目录树, 8.2 与现有 artifacts/ 的关系, A.1 文件系统 vs 数据库, code:block24 (workflow 结束 (finalize 节点执行完毕)), code:block25 (触发条件:) (+12 more)
+Cohesion: 0.06
+Nodes (45): 4.1 整体架构图, 4.2 三路径对比, 4.3 路径 C 在 Patent Tutor 中的完整流程, 5.1 整体架构, 5.2 路径 A: feedback 节点同步写入, 5.2 路径 A: workflow 内同步写入, 5.3 路径 B: 后台 extractMemories, 5.3 路径 B: 后台 extractMemories / consolidation (+37 more)
 
 ### Community 79 - "Community 79"
 Cohesion: 0.13
-Nodes (18): _build_chat_body(), _build_chat_body_with_tools(), call_llm_json(), call_llm_tools(), from_env(), LLMProviderConfig, LLMProviderError, load_provider_config() (+10 more)
+Nodes (20): _build_chat_body(), _build_chat_body_with_tools(), call_llm_json(), from_env(), LLMConfigurationError, LLMProviderConfig, LLMProviderError, load_provider_config() (+12 more)
 
 ### Community 80 - "Community 80"
 Cohesion: 0.12
@@ -399,8 +406,8 @@ Cohesion: 0.5
 Nodes (3): Agents, 共同约束, 角色总览
 
 ### Community 83 - "Community 83"
-Cohesion: 0.21
-Nodes (6): build_route_node(), Route node: classifies user intent as teach/chat/diagnose., FakeLLMClient, Returns predetermined JSON responses., Returns predetermined JSON responses., TestRouteNode
+Cohesion: 0.13
+Nodes (9): build_chat_answer_node(), Chat answer node: generates a direct answer from tool_agent context., build_route_node(), Route node: classifies user intent as teach/chat/diagnose., FakeLLMClient, Returns predetermined JSON responses., Returns predetermined JSON responses., TestChatAnswerNode (+1 more)
 
 ### Community 84 - "Community 84"
 Cohesion: 0.67
@@ -503,8 +510,8 @@ Cohesion: 0.33
 Nodes (5): Planner Agent, 功能, 输入, 输出, 边界
 
 ### Community 118 - "Community 118"
-Cohesion: 0.38
-Nodes (8): call_llm(), LLMMessage, _json_response(), test_call_llm_json_adds_json_mode_and_parses_response(), test_call_llm_normalizes_socks_proxy(), test_call_llm_posts_to_configured_openai_compatible_provider(), test_call_llm_supports_three_configured_providers(), test_call_llm_wraps_provider_error_body()
+Cohesion: 0.14
+Nodes (15): call_llm(), call_llm_tools(), LLMMessage, _json_response(), test_call_llm_json_adds_json_mode_and_parses_response(), test_call_llm_normalizes_socks_proxy(), test_call_llm_posts_to_configured_openai_compatible_provider(), test_call_llm_supports_three_configured_providers() (+7 more)
 
 ### Community 119 - "Community 119"
 Cohesion: 0.4
@@ -531,20 +538,24 @@ Cohesion: 0.24
 Nodes (10): code:block16 (user_input ("我想学习专利新颖性")), code:block19 (┌───────────────────────────────────────────────────────────), code:block22 (┌───────────────────────────────────────────────────────────), LangGraph 记忆系统架构（v1.0+）, P5 — 记忆系统, Store 核心概念, Store 语义搜索的后续应用, 与旧版设计的关键差异 (+2 more)
 
 ### Community 134 - "Community 134"
-Cohesion: 0.6
-Nodes (5): _make_router(), Cross-session memory integration tests with real LLM providers.  Requires valid, _run_workflow(), test_first_session_writes_profile_and_history_to_store(), test_second_session_injects_historical_profile_into_diagnosis()
+Cohesion: 0.23
+Nodes (12): _make_router(), Cross-session memory integration tests with real LLM providers.  Requires valid, _run_workflow(), test_first_session_writes_profile_and_history_to_store(), test_second_session_injects_historical_profile_into_diagnosis(), completed_state(), completed_teach_state(), Shared test helpers for workflow assertions. (+4 more)
 
 ### Community 135 - "Community 135"
-Cohesion: 0.13
-Nodes (12): schema_note(), build_agent_nodes(), Agent node assembly for the LangGraph workflow., build_diagnosis_node(), Diagnosis Agent node., build_expert_a_cross_review_node(), Expert A cross-review node — reviews Expert B's draft for legal accuracy., build_expert_a_node() (+4 more)
+Cohesion: 0.18
+Nodes (7): schema_note(), build_lightweight_review_node(), Lightweight review agent node — quick peer review of changed paragraphs only., build_expert_a_cross_review_node(), Expert A cross-review node — reviews Expert B's draft for legal accuracy., build_expert_a_node(), build_feedback_node()
 
 ### Community 136 - "Community 136"
 Cohesion: 0.24
 Nodes (5): build_planner_node(), _normalize_learning_path_item(), _normalize_node_id(), PlannerLLMClient, test_planner_normalizes_model_generated_node_ids_to_slug()
 
 ### Community 137 - "Community 137"
-Cohesion: 0.11
-Nodes (13): _chat_role(), load_prompt(), messages_from_prompt(), normalize_key_aliases(), Shared helpers for Agent node modules., Map known provider key variants to the internal contract field names., Load a system prompt file co-located with the agent module.      Args:         m, test_messages_from_prompt_maps_langchain_roles_to_chat_api_roles() (+5 more)
+Cohesion: 0.09
+Nodes (15): _chat_role(), load_prompt(), messages_from_prompt(), normalize_key_aliases(), Shared helpers for Agent node modules., Map known provider key variants to the internal contract field names., Load a system prompt file co-located with the agent module.      Args:         m, test_messages_from_prompt_maps_langchain_roles_to_chat_api_roles() (+7 more)
+
+### Community 138 - "Community 138"
+Cohesion: 0.33
+Nodes (3): build_expert_b_node(), CamelCaseExpertLLMClient, test_expert_b_accepts_known_provider_camel_case_keys_as_contract_fields()
 
 ### Community 139 - "Community 139"
 Cohesion: 0.2
@@ -555,8 +566,8 @@ Cohesion: 0.05
 Nodes (38): 10. 后续增强路线, 1. 问题：为什么需要 FastAPI 层？, 2. 核心设计原则：FastAPI 层不做什么, 3. 三层如何解耦, 4.1 创建会话（POST /sessions）, 4.2 查询会话状态（GET /sessions/{id}）, 4.3 工作流完成后的清理, 4.4 会话状态机 (+30 more)
 
 ### Community 141 - "Community 141"
-Cohesion: 0.24
-Nodes (9): run_workflow(), Full 5-stage workflow with max_debate_rounds=1 — 13 LLM calls., test_workflow_runs_single_round_with_real_llm(), completed_teach_state(), Assert teach-path workflow completion including P0.1 fields., DebateQueueLLMClient, Per-agent response queues for the 5-stage expert collaboration workflow., test_workflow_reruns_only_targeted_expert_when_judge_targets_expert_a() (+1 more)
+Cohesion: 0.17
+Nodes (11): run_workflow(), Integration tests that run the full workflow with real LLM providers.  Requires, Verify that agent events fire in the expected order., Verify that agent events fire in the expected order., Full 5-stage workflow with max_debate_rounds=1 — 13 LLM calls., test_workflow_event_ordering_is_correct_with_real_llm(), test_workflow_runs_single_round_with_real_llm(), DebateQueueLLMClient (+3 more)
 
 ### Community 142 - "Community 142"
 Cohesion: 0.35
@@ -567,8 +578,8 @@ Cohesion: 0.22
 Nodes (3): Thread-safe bridge from workflow AgentEvents to HTTP stream consumers., SessionEventBridge, _Subscriber
 
 ### Community 144 - "Community 144"
-Cohesion: 0.14
-Nodes (13): A tool call requested by the LLM., ToolDefinition, TDD Phase 1: Tests for LLM tool-calling support.  RED phase — these tests define, Verify the request body has 'tools' not 'response_format'., Verify tool_calls are correctly parsed from the response., Verify tool_calls are correctly parsed from the response., Response without tool_calls — returns empty list., Response without tool_calls — returns empty list. (+5 more)
+Cohesion: 0.17
+Nodes (8): build_agent_nodes(), Agent node assembly for the LangGraph workflow., build_expert_a_cross_review_node(), Expert A cross-review node — reviews Expert B's draft for legal accuracy., build_expert_b_revise_node(), Expert B revision node — responds to Expert A's cross-review., build_lightweight_review_node(), Lightweight review agent node — quick peer review of changed paragraphs only.
 
 ### Community 146 - "Community 146"
 Cohesion: 0.28
@@ -579,8 +590,8 @@ Cohesion: 0.5
 Nodes (4): _fan_out_experts_node(), Pass-through node that triggers parallel expert_a + expert_b., Pass-through node that triggers parallel expert_a + expert_b., Pass-through node that triggers parallel expert_a + expert_b.
 
 ### Community 149 - "Community 149"
-Cohesion: 0.14
-Nodes (18): 3.3.2 Agent Memory 注入方式, 3.4 层级 4: Curriculum Knowledge（课程知识库）, 4.1 整体架构图, 4.1 目录结构, 4.2 Python 实现骨架, 4.2 三路径对比, 4.3 diagnosis 节点改造, 4.3 路径 C 在 Patent Tutor 中的完整流程 (+10 more)
+Cohesion: 0.19
+Nodes (14): 3.3.1 各 Agent 角色记忆内容, 3.3.2 Agent Memory 注入方式, 3.3 层级 3: Agent Role Memory（Agent 角色记忆）, 3.4 层级 4: Curriculum Knowledge（课程知识库）, 4.1 目录结构, 4.2 Python 实现骨架, 4.3 diagnosis 节点改造, 4.4 feedback 节点改造 (+6 more)
 
 ### Community 150 - "Community 150"
 Cohesion: 0.67
@@ -588,7 +599,7 @@ Nodes (3): Increment debate round and record revision history for lightweight re
 
 ### Community 151 - "Community 151"
 Cohesion: 0.32
-Nodes (8): 5.1 整体架构, 5.2 路径 A: workflow 内同步写入, 5.3 路径 B: 后台 extractMemories, 5.4 跨 Session 巩固 (Consolidation), code:block20 (┌──────────────┬──────────────────┬──────────────────┬──────), code:block22 (┌──────────────────────────────────────────────────────┐), code:block23 (feedback/chat_answer 节点执行), 五、两条写入路径
+Nodes (3): AgentLLMRouter, Routes each Agent node to its configured provider, falling back to the default p, Routes each Agent node to its configured provider, falling back to the default p
 
 ### Community 152 - "Community 152"
 Cohesion: 0.31
@@ -599,32 +610,32 @@ Cohesion: 0.33
 Nodes (5): LLMClient, Generate and parse a JSON response from a chat model., Generate and parse a JSON response from a chat model., Generate a response with tool-calling capability. Does NOT use json_mode., Protocol
 
 ### Community 154 - "Community 154"
-Cohesion: 0.22
-Nodes (11): 1.2 三层记忆注入路径, 1.3 两条写入路径, 1.4 Active Recall 完整流程（路径 C 的核心机制）, 3.1 核心洞察, code:block3 (Claude API 请求), code:block4 (用户消息 → Claude 回答), code:block5 (用户输入新消息), 一、Claude Code 记忆架构全景 (+3 more)
+Cohesion: 0.2
+Nodes (12): 1.2 三层记忆注入路径, 1.3 两条写入路径, 1.4 Active Recall 完整流程（路径 C 的核心机制）, 3.1 核心洞察, code:block3 (Claude API 请求), code:block4 (用户消息 → Claude 回答), code:block5 (用户输入新消息), 一、Claude Code 记忆架构全景 (+4 more)
 
 ### Community 155 - "Community 155"
-Cohesion: 0.24
-Nodes (10): A.1 Store 优先，Markdown 投影, A.2 新鲜度阈值: 教学场景的特殊性, A.3 Consolidation 门槛: 教学场景的调整, A.4 排除规则: 借鉴并适配, code:block31 (┌──────────────────────────────┬────────────────────────────), code:block32 (┌───────────────────────────────────────────────────────────), code:block33 (Claude Code:  d ≥ 2 days → 过期警告), code:block34 (Claude Code: 24h + 5 sessions) (+2 more)
+Cohesion: 0.25
+Nodes (8): 3.1.4 隐私、安全与保留期, 3.2.1 结构化模板, 3.2.2 触发条件, 3.2 层级 2: Session Memory（会话教学记忆）, 3.3 架构改进路线图, code:block13 (必须脱敏:), code:markdown (# Session Title), 模式 7：What NOT to Save（排除规则）
 
 ### Community 156 - "Community 156"
-Cohesion: 0.11
-Nodes (18): 1.1 六层记忆（时间尺度分层）, 1.1 六层记忆架构（时间尺度视角）, 1.2 三条记忆注入路径, 1.3 核心设计原则, 2.1 当前架构, 2.2 当前能力, 2.3 已知问题（来自 docs/memory-persistence.md）, 5.1 为什么选择文件而不是数据库 (+10 more)
+Cohesion: 0.18
+Nodes (11): 1.1 六层记忆（时间尺度分层）, 1.1 六层记忆架构（时间尺度视角）, 1.2 三条记忆注入路径, 1.3 核心设计原则, 2.1 当前架构, 2.2 当前能力, 2.3 已知问题（来自 docs/memory-persistence.md）, code:block1 (▲) (+3 more)
 
 ### Community 157 - "Community 157"
-Cohesion: 0.11
-Nodes (27): 3.1.1 Store 结构与 Markdown 投影, 3.1.1 目录与文件格式, 3.1.2 四种记忆类型（改编自 Claude Code）, 3.1.3 什么不该保存（排除规则）, 3.1.4 隐私、安全与保留期, 3.1 层级 1: Learner Memory（学习者记忆）, 3.2.1 结构化模板, 3.2.2 触发条件 (+19 more)
+Cohesion: 0.19
+Nodes (15): 3.1.1 Store 结构与 Markdown 投影, 3.1.1 目录与文件格式, 3.1.2 四种记忆类型（改编自 Claude Code）, 3.1.3 什么不该保存（排除规则）, 3.1 层级 1: Learner Memory（学习者记忆）, 3.2 可直接迁移的模式, code:json ({), code:markdown (---) (+7 more)
 
 ### Community 158 - "Community 158"
 Cohesion: 0.29
 Nodes (7): code:block13 (POST   /sessions                             创建会话，启动后台工作流), P2 — RAG 知识库接入, 为什么不需要更多路由？, 任务拆解, 检索链路, 现有端点（保持不变，无需修改）, 路由设计：完整端点列表
 
 ### Community 159 - "Community 159"
-Cohesion: 0.4
-Nodes (4): create_sessions_router(), CreateSessionRequest, Session REST endpoints., BaseModel
+Cohesion: 0.25
+Nodes (7): 5.1 为什么选择文件而不是数据库, 5.2 为什么用子 Agent 提取而不是在 workflow 内直接写, 5.3 两条写入路径的互斥, 五、设计决策与权衡, 六、总结, 参考资料, 记忆系统设计借鉴：从 Claude Code 到 Patent Tutor Agent
 
 ### Community 160 - "Community 160"
-Cohesion: 0.67
-Nodes (3): _normalize_judge_report(), _normalize_target(), 将 LLM 可能输出的中文描述规范化为 expert_a / expert_b / both.
+Cohesion: 0.4
+Nodes (4): main(), Run the current workflow with configured real LLM providers., summary_lines(), test_summary_lines_render_concise_workflow_result()
 
 ### Community 161 - "Community 161"
 Cohesion: 0.83
@@ -635,48 +646,36 @@ Cohesion: 0.5
 Nodes (3): level1_chapters, level2_parents, level3_children
 
 ### Community 163 - "Community 163"
-Cohesion: 0.33
-Nodes (3): build_chat_answer_node(), Chat answer node: generates a direct answer from tool_agent context., TestChatAnswerNode
+Cohesion: 0.5
+Nodes (4): create_events_router(), _format_sse(), SSE and WebSocket event endpoints., _sse_events()
 
 ### Community 164 - "Community 164"
-Cohesion: 0.17
-Nodes (9): DefaultLLMClient, Adapter used when all Agent nodes should use one provider., Adapter used when all Agent nodes should use one provider., DefaultLLMClient implements generate_with_tools., DefaultLLMClient implements generate_with_tools., The new agent names are valid AgentName values., The new agent names are valid AgentName values., TestAgentNameExtension (+1 more)
-
-### Community 165 - "Community 165"
-Cohesion: 0.33
-Nodes (5): completed_state(), Shared test helpers for workflow assertions., Assert that a workflow has completed with all expected state keys populated., Assert that a workflow has completed with all expected state keys populated., Assert that a workflow has completed with all expected state keys populated.
+Cohesion: 0.18
+Nodes (8): DefaultLLMClient, Adapter used when all Agent nodes should use one provider., Adapter used when all Agent nodes should use one provider., DefaultLLMClient implements generate_with_tools., DefaultLLMClient implements generate_with_tools., AgentLLMRouter implements generate_with_tools., AgentLLMRouter implements generate_with_tools., TestLLMClientGenerateWithTools
 
 ### Community 166 - "Community 166"
 Cohesion: 0.33
 Nodes (6): code:block23 (("learners", "{learner_id}", "profile")   → 历史画像列表), code:block26 (学习路径图   → planner 利用 BKT 后，已掌握节点标记 ✓，推荐节点高亮), code:json (// langgraph.json（项目根目录）), code:bash (langgraph dev   # 启动开发服务器（内存模式）), 前端受影响视图, 附录：LangGraph 生产部署（`langgraph dev` / `langgraph up`）
 
-### Community 181 - "Community 181"
-Cohesion: 0.4
-Nodes (4): Integration tests that run the full workflow with real LLM providers.  Requires, Verify that agent events fire in the expected order., Verify that agent events fire in the expected order., test_workflow_event_ordering_is_correct_with_real_llm()
-
-### Community 182 - "Community 182"
-Cohesion: 0.5
-Nodes (3): arun_workflow(), Runtime context passed to LangGraph nodes., WorkflowContext
-
 ## Knowledge Gaps
-- **618 isolated node(s):** `code:bash (curl -LsSf https://astral.sh/uv/install.sh | sh)`, `code:powershell (powershell -ExecutionPolicy ByPass -c "irm https://astral.sh)`, `code:powershell (pip install uv          # 通过 pip)`, `code:bash (git clone https://github.com/yuewen-ye/patent-tutor-agent.gi)`, `code:bash (cp .env.example .env)` (+613 more)
+- **632 isolated node(s):** `Agent node assembly for the LangGraph workflow.`, `Cross Review A Agent package.`, `Expert A cross-review node — reviews Expert B's draft for legal accuracy.`, `Cross Review B Agent package.`, `Expert B cross-review node — reviews Expert A's draft for accessibility.` (+627 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **46 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **60 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `StateDict` connect `Community 1` to `Community 136`, `Community 4`, `Community 6`?**
-  _High betweenness centrality (0.029) - this node is a cross-community bridge._
-- **Why does `SessionService` connect `Community 6` to `Community 1`, `Community 3`, `Community 143`, `Community 20`, `Community 152`, `Community 153`, `Community 159`?**
+- **Why does `SessionService` connect `Community 6` to `Community 1`, `Community 143`, `Community 20`, `Community 151`, `Community 152`, `Community 153`?**
+  _High betweenness centrality (0.028) - this node is a cross-community bridge._
+- **Why does `build_agent_nodes()` connect `Community 144` to `Community 0`, `Community 2`, `Community 4`, `Community 165`, `Community 135`, `Community 136`, `Community 138`, `Community 81`, `Community 83`, `Community 147`, `Community 181`, `Community 182`, `Community 183`, `Community 184`, `Community 185`, `Community 188`?**
   _High betweenness centrality (0.021) - this node is a cross-community bridge._
-- **Why does `LLMMessage` connect `Community 118` to `Community 163`, `Community 4`, `Community 164`, `Community 136`, `Community 137`, `Community 138`, `Community 73`, `Community 141`, `Community 79`, `Community 144`, `Community 145`, `Community 146`, `Community 83`, `Community 81`, `Community 152`?**
-  _High betweenness centrality (0.020) - this node is a cross-community bridge._
+- **Why does `LLMMessage` connect `Community 118` to `Community 4`, `Community 164`, `Community 136`, `Community 137`, `Community 138`, `Community 73`, `Community 141`, `Community 79`, `Community 145`, `Community 146`, `Community 83`, `Community 81`, `Community 152`?**
+  _High betweenness centrality (0.019) - this node is a cross-community bridge._
 - **Are the 26 inferred relationships involving `LLMResponseWithTools` (e.g. with `QueueLLMClient` and `.generate_with_tools()`) actually correct?**
   _`LLMResponseWithTools` has 26 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 26 inferred relationships involving `LLMMessage` (e.g. with `messages_from_prompt()` and `QueueLLMClient`) actually correct?**
   _`LLMMessage` has 26 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 23 inferred relationships involving `build_agent_nodes()` (e.g. with `build_expert_a_cross_review_node()` and `build_expert_b_cross_review_node()`) actually correct?**
+  _`build_agent_nodes()` has 23 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 5 inferred relationships involving `FakeLLMClient` (e.g. with `LLMMessage` and `LLMProviderError`) actually correct?**
   _`FakeLLMClient` has 5 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 18 inferred relationships involving `ToolDefinition` (e.g. with `CamelCaseExpertLLMClient` and `PlannerLLMClient`) actually correct?**
-  _`ToolDefinition` has 18 INFERRED edges - model-reasoned connections that need verification._

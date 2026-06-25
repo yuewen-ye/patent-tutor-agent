@@ -215,22 +215,499 @@
   },
   "nodes": [
     {
+      "label": "__init__.py",
+      "file_type": "code",
+      "source_file": "app/agents/__init__.py",
+      "source_location": "L1",
+      "id": "app_agents_init_py",
+      "community": 144,
+      "norm_label": "__init__.py"
+    },
+    {
+      "label": "build_agent_nodes()",
+      "file_type": "code",
+      "source_file": "app/agents/__init__.py",
+      "source_location": "L25",
+      "id": "agents_init_build_agent_nodes",
+      "community": 144,
+      "norm_label": "build_agent_nodes()"
+    },
+    {
+      "label": "Agent node assembly for the LangGraph workflow.",
+      "file_type": "rationale",
+      "source_file": "app/agents/__init__.py",
+      "source_location": "L1",
+      "id": "agents_init_rationale_1",
+      "community": 144,
+      "norm_label": "agent node assembly for the langgraph workflow."
+    },
+    {
+      "label": "__init__.py",
+      "file_type": "code",
+      "source_file": "app/agents/cross_review_a/__init__.py",
+      "source_location": "L1",
+      "id": "app_agents_cross_review_a_init_py",
+      "community": 189,
+      "norm_label": "__init__.py"
+    },
+    {
+      "label": "Cross Review A Agent package.",
+      "file_type": "rationale",
+      "source_file": "app/agents/cross_review_a/__init__.py",
+      "source_location": "L1",
+      "id": "cross_review_a_init_rationale_1",
+      "community": 189,
+      "norm_label": "cross review a agent package."
+    },
+    {
+      "label": "node.py",
+      "file_type": "code",
+      "source_file": "app/agents/cross_review_a/node.py",
+      "source_location": "L1",
+      "id": "app_agents_cross_review_a_node_py",
+      "community": 144,
+      "norm_label": "node.py"
+    },
+    {
+      "label": "build_expert_a_cross_review_node()",
+      "file_type": "code",
+      "source_file": "app/agents/cross_review_a/node.py",
+      "source_location": "L16",
+      "id": "cross_review_a_node_build_expert_a_cross_review_node",
+      "community": 144,
+      "norm_label": "build_expert_a_cross_review_node()"
+    },
+    {
+      "label": "Expert A cross-review node \u2014 reviews Expert B's draft for legal accuracy.",
+      "file_type": "rationale",
+      "source_file": "app/agents/cross_review_a/node.py",
+      "source_location": "L1",
+      "id": "cross_review_a_node_rationale_1",
+      "community": 144,
+      "norm_label": "expert a cross-review node \u2014 reviews expert b's draft for legal accuracy."
+    },
+    {
+      "label": "system.md",
+      "file_type": "document",
+      "source_file": "app/agents/cross_review_a/system.md",
+      "source_location": "L1",
+      "id": "app_agents_cross_review_a_system_md",
+      "community": 199,
+      "norm_label": "system.md"
+    },
+    {
+      "label": "__init__.py",
+      "file_type": "code",
+      "source_file": "app/agents/cross_review_b/__init__.py",
+      "source_location": "L1",
+      "id": "app_agents_cross_review_b_init_py",
+      "community": 190,
+      "norm_label": "__init__.py"
+    },
+    {
+      "label": "Cross Review B Agent package.",
+      "file_type": "rationale",
+      "source_file": "app/agents/cross_review_b/__init__.py",
+      "source_location": "L1",
+      "id": "cross_review_b_init_rationale_1",
+      "community": 190,
+      "norm_label": "cross review b agent package."
+    },
+    {
+      "label": "node.py",
+      "file_type": "code",
+      "source_file": "app/agents/cross_review_b/node.py",
+      "source_location": "L1",
+      "id": "app_agents_cross_review_b_node_py",
+      "community": 165,
+      "norm_label": "node.py"
+    },
+    {
+      "label": "build_expert_b_cross_review_node()",
+      "file_type": "code",
+      "source_file": "app/agents/cross_review_b/node.py",
+      "source_location": "L16",
+      "id": "cross_review_b_node_build_expert_b_cross_review_node",
+      "community": 165,
+      "norm_label": "build_expert_b_cross_review_node()"
+    },
+    {
+      "label": "Expert B cross-review node \u2014 reviews Expert A's draft for accessibility.",
+      "file_type": "rationale",
+      "source_file": "app/agents/cross_review_b/node.py",
+      "source_location": "L1",
+      "id": "cross_review_b_node_rationale_1",
+      "community": 165,
+      "norm_label": "expert b cross-review node \u2014 reviews expert a's draft for accessibility."
+    },
+    {
+      "label": "system.md",
+      "file_type": "document",
+      "source_file": "app/agents/cross_review_b/system.md",
+      "source_location": "L1",
+      "id": "app_agents_cross_review_b_system_md",
+      "community": 200,
+      "norm_label": "system.md"
+    },
+    {
+      "label": "__init__.py",
+      "file_type": "code",
+      "source_file": "app/agents/expert_a_revise/__init__.py",
+      "source_location": "L1",
+      "id": "app_agents_expert_a_revise_init_py",
+      "community": 191,
+      "norm_label": "__init__.py"
+    },
+    {
+      "label": "Expert A Revise Agent package.",
+      "file_type": "rationale",
+      "source_file": "app/agents/expert_a_revise/__init__.py",
+      "source_location": "L1",
+      "id": "expert_a_revise_init_rationale_1",
+      "community": 191,
+      "norm_label": "expert a revise agent package."
+    },
+    {
+      "label": "node.py",
+      "file_type": "code",
+      "source_file": "app/agents/expert_a_revise/node.py",
+      "source_location": "L1",
+      "id": "app_agents_expert_a_revise_node_py",
+      "community": 181,
+      "norm_label": "node.py"
+    },
+    {
+      "label": "build_expert_a_revise_node()",
+      "file_type": "code",
+      "source_file": "app/agents/expert_a_revise/node.py",
+      "source_location": "L16",
+      "id": "expert_a_revise_node_build_expert_a_revise_node",
+      "community": 181,
+      "norm_label": "build_expert_a_revise_node()"
+    },
+    {
+      "label": "Expert A revision node \u2014 responds to Expert B's cross-review.",
+      "file_type": "rationale",
+      "source_file": "app/agents/expert_a_revise/node.py",
+      "source_location": "L1",
+      "id": "expert_a_revise_node_rationale_1",
+      "community": 181,
+      "norm_label": "expert a revision node \u2014 responds to expert b's cross-review."
+    },
+    {
+      "label": "system.md",
+      "file_type": "document",
+      "source_file": "app/agents/expert_a_revise/system.md",
+      "source_location": "L1",
+      "id": "app_agents_expert_a_revise_system_md",
+      "community": 169,
+      "norm_label": "system.md"
+    },
+    {
+      "label": "__init__.py",
+      "file_type": "code",
+      "source_file": "app/agents/expert_b_revise/__init__.py",
+      "source_location": "L1",
+      "id": "app_agents_expert_b_revise_init_py",
+      "community": 192,
+      "norm_label": "__init__.py"
+    },
+    {
+      "label": "Expert B Revise Agent package.",
+      "file_type": "rationale",
+      "source_file": "app/agents/expert_b_revise/__init__.py",
+      "source_location": "L1",
+      "id": "expert_b_revise_init_rationale_1",
+      "community": 192,
+      "norm_label": "expert b revise agent package."
+    },
+    {
+      "label": "node.py",
+      "file_type": "code",
+      "source_file": "app/agents/expert_b_revise/node.py",
+      "source_location": "L1",
+      "id": "app_agents_expert_b_revise_node_py",
+      "community": 144,
+      "norm_label": "node.py"
+    },
+    {
+      "label": "build_expert_b_revise_node()",
+      "file_type": "code",
+      "source_file": "app/agents/expert_b_revise/node.py",
+      "source_location": "L16",
+      "id": "expert_b_revise_node_build_expert_b_revise_node",
+      "community": 144,
+      "norm_label": "build_expert_b_revise_node()"
+    },
+    {
+      "label": "Expert B revision node \u2014 responds to Expert A's cross-review.",
+      "file_type": "rationale",
+      "source_file": "app/agents/expert_b_revise/node.py",
+      "source_location": "L1",
+      "id": "expert_b_revise_node_rationale_1",
+      "community": 144,
+      "norm_label": "expert b revision node \u2014 responds to expert a's cross-review."
+    },
+    {
+      "label": "system.md",
+      "file_type": "document",
+      "source_file": "app/agents/expert_b_revise/system.md",
+      "source_location": "L1",
+      "id": "app_agents_expert_b_revise_system_md",
+      "community": 172,
+      "norm_label": "system.md"
+    },
+    {
+      "label": "__init__.py",
+      "file_type": "code",
+      "source_file": "app/agents/joint_synthesis/__init__.py",
+      "source_location": "L1",
+      "id": "app_agents_joint_synthesis_init_py",
+      "community": 193,
+      "norm_label": "__init__.py"
+    },
+    {
+      "label": "Joint Synthesis Agent package.",
+      "file_type": "rationale",
+      "source_file": "app/agents/joint_synthesis/__init__.py",
+      "source_location": "L1",
+      "id": "joint_synthesis_init_rationale_1",
+      "community": 193,
+      "norm_label": "joint synthesis agent package."
+    },
+    {
+      "label": "node.py",
+      "file_type": "code",
+      "source_file": "app/agents/joint_synthesis/node.py",
+      "source_location": "L1",
+      "id": "app_agents_joint_synthesis_node_py",
+      "community": 183,
+      "norm_label": "node.py"
+    },
+    {
+      "label": "build_joint_synthesis_node()",
+      "file_type": "code",
+      "source_file": "app/agents/joint_synthesis/node.py",
+      "source_location": "L16",
+      "id": "joint_synthesis_node_build_joint_synthesis_node",
+      "community": 183,
+      "norm_label": "build_joint_synthesis_node()"
+    },
+    {
+      "label": "Joint synthesis agent node \u2014 merges Expert A and B revised drafts into one outpu",
+      "file_type": "rationale",
+      "source_file": "app/agents/joint_synthesis/node.py",
+      "source_location": "L1",
+      "id": "joint_synthesis_node_rationale_1",
+      "community": 183,
+      "norm_label": "joint synthesis agent node \u2014 merges expert a and b revised drafts into one outpu"
+    },
+    {
+      "label": "system.md",
+      "file_type": "document",
+      "source_file": "app/agents/joint_synthesis/system.md",
+      "source_location": "L1",
+      "id": "app_agents_joint_synthesis_system_md",
+      "community": 175,
+      "norm_label": "system.md"
+    },
+    {
+      "label": "__init__.py",
+      "file_type": "code",
+      "source_file": "app/agents/lightweight_review/__init__.py",
+      "source_location": "L1",
+      "id": "app_agents_lightweight_review_init_py",
+      "community": 194,
+      "norm_label": "__init__.py"
+    },
+    {
+      "label": "Lightweight Review Agent package.",
+      "file_type": "rationale",
+      "source_file": "app/agents/lightweight_review/__init__.py",
+      "source_location": "L1",
+      "id": "lightweight_review_init_rationale_1",
+      "community": 194,
+      "norm_label": "lightweight review agent package."
+    },
+    {
+      "label": "node.py",
+      "file_type": "code",
+      "source_file": "app/agents/lightweight_review/node.py",
+      "source_location": "L1",
+      "id": "app_agents_lightweight_review_node_py",
+      "community": 144,
+      "norm_label": "node.py"
+    },
+    {
+      "label": "build_lightweight_review_node()",
+      "file_type": "code",
+      "source_file": "app/agents/lightweight_review/node.py",
+      "source_location": "L16",
+      "id": "lightweight_review_node_build_lightweight_review_node",
+      "community": 144,
+      "norm_label": "build_lightweight_review_node()"
+    },
+    {
+      "label": "Lightweight review agent node \u2014 quick peer review of changed paragraphs only.",
+      "file_type": "rationale",
+      "source_file": "app/agents/lightweight_review/node.py",
+      "source_location": "L1",
+      "id": "lightweight_review_node_rationale_1",
+      "community": 144,
+      "norm_label": "lightweight review agent node \u2014 quick peer review of changed paragraphs only."
+    },
+    {
+      "label": "system.md",
+      "file_type": "document",
+      "source_file": "app/agents/lightweight_review/system.md",
+      "source_location": "L1",
+      "id": "app_agents_lightweight_review_system_md",
+      "community": 177,
+      "norm_label": "system.md"
+    },
+    {
+      "label": "test_prompt_loader.py",
+      "file_type": "code",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L1",
+      "id": "tests_unit_test_prompt_loader_py",
+      "community": 137,
+      "norm_label": "test_prompt_loader.py"
+    },
+    {
+      "label": "TestPromptFiles",
+      "file_type": "code",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L32",
+      "id": "unit_test_prompt_loader_testpromptfiles",
+      "community": 137,
+      "norm_label": "testpromptfiles"
+    },
+    {
+      "label": "test_prompt_file_exists()",
+      "file_type": "code",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L36",
+      "id": "unit_test_prompt_loader_test_prompt_file_exists",
+      "community": 137,
+      "norm_label": "test_prompt_file_exists()"
+    },
+    {
+      "label": "test_prompt_file_non_empty()",
+      "file_type": "code",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L41",
+      "id": "unit_test_prompt_loader_test_prompt_file_non_empty",
+      "community": 137,
+      "norm_label": "test_prompt_file_non_empty()"
+    },
+    {
+      "label": "TestLoadPrompt",
+      "file_type": "code",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L47",
+      "id": "unit_test_prompt_loader_testloadprompt",
+      "community": 137,
+      "norm_label": "testloadprompt"
+    },
+    {
+      "label": ".test_loads_route_system_prompt()",
+      "file_type": "code",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L50",
+      "id": "unit_test_prompt_loader_testloadprompt_test_loads_route_system_prompt",
+      "community": 137,
+      "norm_label": ".test_loads_route_system_prompt()"
+    },
+    {
+      "label": ".test_loads_judge_system_prompt()",
+      "file_type": "code",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L56",
+      "id": "unit_test_prompt_loader_testloadprompt_test_loads_judge_system_prompt",
+      "community": 137,
+      "norm_label": ".test_loads_judge_system_prompt()"
+    },
+    {
+      "label": ".test_loads_cross_review_prompt()",
+      "file_type": "code",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L62",
+      "id": "unit_test_prompt_loader_testloadprompt_test_loads_cross_review_prompt",
+      "community": 137,
+      "norm_label": ".test_loads_cross_review_prompt()"
+    },
+    {
+      "label": ".test_loads_joint_synthesis_prompt()",
+      "file_type": "code",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L68",
+      "id": "unit_test_prompt_loader_testloadprompt_test_loads_joint_synthesis_prompt",
+      "community": 137,
+      "norm_label": ".test_loads_joint_synthesis_prompt()"
+    },
+    {
+      "label": ".test_raises_on_missing_file()",
+      "file_type": "code",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L74",
+      "id": "unit_test_prompt_loader_testloadprompt_test_raises_on_missing_file",
+      "community": 137,
+      "norm_label": ".test_raises_on_missing_file()"
+    },
+    {
+      "label": ".test_raises_on_missing_custom_file()",
+      "file_type": "code",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L78",
+      "id": "unit_test_prompt_loader_testloadprompt_test_raises_on_missing_custom_file",
+      "community": 137,
+      "norm_label": ".test_raises_on_missing_custom_file()"
+    },
+    {
+      "label": "Tests for the prompt file loading mechanism.",
+      "file_type": "rationale",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L1",
+      "id": "unit_test_prompt_loader_rationale_1",
+      "community": 137,
+      "norm_label": "tests for the prompt file loading mechanism."
+    },
+    {
+      "label": "Verify that every expected prompt file exists and is non-empty.",
+      "file_type": "rationale",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L33",
+      "id": "unit_test_prompt_loader_rationale_33",
+      "community": 137,
+      "norm_label": "verify that every expected prompt file exists and is non-empty."
+    },
+    {
+      "label": "Verify load_prompt() reads files correctly.",
+      "file_type": "rationale",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L48",
+      "id": "unit_test_prompt_loader_rationale_48",
+      "community": 137,
+      "norm_label": "verify load_prompt() reads files correctly."
+    },
+    {
       "label": "langgraph-stop.ps1",
       "file_type": "code",
       "source_file": "langgraph-stop.ps1",
       "source_location": "L1",
-      "id": "langgraph_stop_ps1",
       "community": 186,
-      "norm_label": "langgraph-stop.ps1"
+      "norm_label": "langgraph-stop.ps1",
+      "id": "langgraph_stop_ps1"
     },
     {
       "label": "langgraph-stop.sh",
       "file_type": "code",
       "source_file": "langgraph-stop.sh",
       "source_location": "L1",
-      "id": "langgraph_stop_sh",
       "community": 187,
-      "norm_label": "langgraph-stop.sh"
+      "norm_label": "langgraph-stop.sh",
+      "id": "langgraph_stop_sh"
     },
     {
       "label": "README.md",
@@ -624,7 +1101,7 @@
       "file_type": "code",
       "source_file": "app/agents/chat_answer/node.py",
       "source_location": "L1",
-      "community": 163,
+      "community": 83,
       "norm_label": "node.py",
       "id": "app_agents_chat_answer_node_py"
     },
@@ -633,7 +1110,7 @@
       "file_type": "code",
       "source_file": "app/agents/chat_answer/node.py",
       "source_location": "L15",
-      "community": 163,
+      "community": 83,
       "norm_label": "_sources_from_retrieval_context()",
       "id": "chat_answer_node_sources_from_retrieval_context"
     },
@@ -642,7 +1119,7 @@
       "file_type": "code",
       "source_file": "app/agents/chat_answer/node.py",
       "source_location": "L28",
-      "community": 163,
+      "community": 83,
       "norm_label": "build_chat_answer_node()",
       "id": "chat_answer_node_build_chat_answer_node"
     },
@@ -651,7 +1128,7 @@
       "file_type": "rationale",
       "source_file": "app/agents/chat_answer/node.py",
       "source_location": "L1",
-      "community": 163,
+      "community": 83,
       "norm_label": "chat answer node: generates a direct answer from tool_agent context.",
       "id": "chat_answer_node_rationale_1"
     },
@@ -827,15 +1304,6 @@
       "id": "expert_a_revise_rationale_1"
     },
     {
-      "label": "revise_system.md",
-      "file_type": "document",
-      "source_file": "app/agents/expert_a/revise_system.md",
-      "source_location": "L1",
-      "community": 169,
-      "norm_label": "revise_system.md",
-      "id": "app_agents_expert_a_revise_system_md"
-    },
-    {
       "label": "system.md",
       "file_type": "document",
       "source_file": "app/agents/expert_a/system.md",
@@ -885,7 +1353,7 @@
       "file_type": "code",
       "source_file": "app/agents/expert_b/node.py",
       "source_location": "L1",
-      "community": 135,
+      "community": 138,
       "norm_label": "node.py",
       "id": "app_agents_expert_b_node_py"
     },
@@ -894,7 +1362,7 @@
       "file_type": "code",
       "source_file": "app/agents/expert_b/node.py",
       "source_location": "L16",
-      "community": 135,
+      "community": 138,
       "norm_label": "build_expert_b_node()",
       "id": "expert_b_node_build_expert_b_node"
     },
@@ -903,7 +1371,7 @@
       "file_type": "code",
       "source_file": "app/agents/expert_b/revise.py",
       "source_location": "L1",
-      "community": 135,
+      "community": 182,
       "norm_label": "revise.py",
       "id": "app_agents_expert_b_revise_py"
     },
@@ -912,7 +1380,7 @@
       "file_type": "code",
       "source_file": "app/agents/expert_b/revise.py",
       "source_location": "L16",
-      "community": 135,
+      "community": 182,
       "norm_label": "build_expert_b_revise_node()",
       "id": "expert_b_revise_build_expert_b_revise_node"
     },
@@ -921,18 +1389,9 @@
       "file_type": "rationale",
       "source_file": "app/agents/expert_b/revise.py",
       "source_location": "L1",
-      "community": 135,
+      "community": 182,
       "norm_label": "expert b revision node \u2014 responds to expert a's cross-review.",
       "id": "expert_b_revise_rationale_1"
-    },
-    {
-      "label": "revise_system.md",
-      "file_type": "document",
-      "source_file": "app/agents/expert_b/revise_system.md",
-      "source_location": "L1",
-      "community": 172,
-      "norm_label": "revise_system.md",
-      "id": "app_agents_expert_b_revise_system_md"
     },
     {
       "label": "system.md",
@@ -1007,20 +1466,11 @@
       "id": "agents_joint_synthesis_rationale_1"
     },
     {
-      "label": "joint_synthesis_system.md",
-      "file_type": "document",
-      "source_file": "app/agents/joint_synthesis_system.md",
-      "source_location": "L1",
-      "community": 175,
-      "norm_label": "joint_synthesis_system.md",
-      "id": "app_agents_joint_synthesis_system_md"
-    },
-    {
       "label": "node.py",
       "file_type": "code",
       "source_file": "app/agents/judge/node.py",
       "source_location": "L1",
-      "community": 160,
+      "community": 4,
       "norm_label": "node.py",
       "id": "app_agents_judge_node_py"
     },
@@ -1029,7 +1479,7 @@
       "file_type": "code",
       "source_file": "app/agents/judge/node.py",
       "source_location": "L28",
-      "community": 160,
+      "community": 4,
       "norm_label": "_normalize_target()",
       "id": "judge_node_normalize_target"
     },
@@ -1038,7 +1488,7 @@
       "file_type": "code",
       "source_file": "app/agents/judge/node.py",
       "source_location": "L42",
-      "community": 160,
+      "community": 4,
       "norm_label": "_normalize_judge_report()",
       "id": "judge_node_normalize_judge_report"
     },
@@ -1056,7 +1506,7 @@
       "file_type": "rationale",
       "source_file": "app/agents/judge/node.py",
       "source_location": "L29",
-      "community": 160,
+      "community": 4,
       "norm_label": "\u5c06 llm \u53ef\u80fd\u8f93\u51fa\u7684\u4e2d\u6587\u63cf\u8ff0\u89c4\u8303\u5316\u4e3a expert_a / expert_b / both.",
       "id": "judge_node_rationale_29"
     },
@@ -1074,7 +1524,7 @@
       "file_type": "code",
       "source_file": "app/agents/lightweight_review.py",
       "source_location": "L1",
-      "community": 183,
+      "community": 135,
       "norm_label": "lightweight_review.py",
       "id": "app_agents_lightweight_review_py"
     },
@@ -1083,7 +1533,7 @@
       "file_type": "code",
       "source_file": "app/agents/lightweight_review.py",
       "source_location": "L16",
-      "community": 183,
+      "community": 135,
       "norm_label": "build_lightweight_review_node()",
       "id": "agents_lightweight_review_build_lightweight_review_node"
     },
@@ -1092,18 +1542,9 @@
       "file_type": "rationale",
       "source_file": "app/agents/lightweight_review.py",
       "source_location": "L1",
-      "community": 183,
+      "community": 135,
       "norm_label": "lightweight review agent node \u2014 quick peer review of changed paragraphs only.",
       "id": "agents_lightweight_review_rationale_1"
-    },
-    {
-      "label": "lightweight_review_system.md",
-      "file_type": "document",
-      "source_file": "app/agents/lightweight_review_system.md",
-      "source_location": "L1",
-      "community": 177,
-      "norm_label": "lightweight_review_system.md",
-      "id": "app_agents_lightweight_review_system_md"
     },
     {
       "label": "node.py",
@@ -1232,69 +1673,6 @@
       "id": "app_agents_tool_agent_system_md"
     },
     {
-      "label": "test_prompt_loader.py",
-      "file_type": "code",
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L1",
-      "community": 137,
-      "norm_label": "test_prompt_loader.py",
-      "id": "tests_unit_test_prompt_loader_py"
-    },
-    {
-      "label": "TestPromptFiles",
-      "file_type": "code",
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L35",
-      "community": 137,
-      "norm_label": "testpromptfiles",
-      "id": "unit_test_prompt_loader_testpromptfiles"
-    },
-    {
-      "label": "test_prompt_file_exists()",
-      "file_type": "code",
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L39",
-      "community": 137,
-      "norm_label": "test_prompt_file_exists()",
-      "id": "unit_test_prompt_loader_test_prompt_file_exists"
-    },
-    {
-      "label": "test_prompt_file_non_empty()",
-      "file_type": "code",
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L48",
-      "community": 137,
-      "norm_label": "test_prompt_file_non_empty()",
-      "id": "unit_test_prompt_loader_test_prompt_file_non_empty"
-    },
-    {
-      "label": "TestLoadPrompt",
-      "file_type": "code",
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L58",
-      "community": 137,
-      "norm_label": "testloadprompt",
-      "id": "unit_test_prompt_loader_testloadprompt"
-    },
-    {
-      "label": ".test_loads_route_system_prompt()",
-      "file_type": "code",
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L61",
-      "community": 137,
-      "norm_label": ".test_loads_route_system_prompt()",
-      "id": "unit_test_prompt_loader_testloadprompt_test_loads_route_system_prompt"
-    },
-    {
-      "label": ".test_loads_judge_system_prompt()",
-      "file_type": "code",
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L67",
-      "community": 137,
-      "norm_label": ".test_loads_judge_system_prompt()",
-      "id": "unit_test_prompt_loader_testloadprompt_test_loads_judge_system_prompt"
-    },
-    {
       "label": ".test_loads_custom_filename()",
       "file_type": "code",
       "source_file": "tests/unit/test_prompt_loader.py",
@@ -1311,33 +1689,6 @@
       "community": 137,
       "norm_label": ".test_loads_flat_file_prompt()",
       "id": "unit_test_prompt_loader_testloadprompt_test_loads_flat_file_prompt"
-    },
-    {
-      "label": ".test_raises_on_missing_file()",
-      "file_type": "code",
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L85",
-      "community": 137,
-      "norm_label": ".test_raises_on_missing_file()",
-      "id": "unit_test_prompt_loader_testloadprompt_test_raises_on_missing_file"
-    },
-    {
-      "label": ".test_raises_on_missing_custom_file()",
-      "file_type": "code",
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L89",
-      "community": 137,
-      "norm_label": ".test_raises_on_missing_custom_file()",
-      "id": "unit_test_prompt_loader_testloadprompt_test_raises_on_missing_custom_file"
-    },
-    {
-      "label": "Tests for the prompt file loading mechanism.",
-      "file_type": "rationale",
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L1",
-      "community": 137,
-      "norm_label": "tests for the prompt file loading mechanism.",
-      "id": "unit_test_prompt_loader_rationale_1"
     },
     {
       "label": "Verify that every expected prompt file exists and is non-empty.",
@@ -1623,7 +1974,7 @@
       "file_type": "code",
       "source_file": "backend/tests/helpers.py",
       "source_location": "L1",
-      "community": 165,
+      "community": 134,
       "norm_label": "helpers.py",
       "id": "backend_tests_helpers_py"
     },
@@ -1632,7 +1983,7 @@
       "file_type": "code",
       "source_file": "backend/tests/helpers.py",
       "source_location": "L33",
-      "community": 165,
+      "community": 134,
       "norm_label": "completed_state()",
       "id": "tests_helpers_completed_state"
     },
@@ -1641,7 +1992,7 @@
       "file_type": "code",
       "source_file": "backend/tests/helpers.py",
       "source_location": "L45",
-      "community": 141,
+      "community": 134,
       "norm_label": "completed_teach_state()",
       "id": "tests_helpers_completed_teach_state"
     },
@@ -1650,7 +2001,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/helpers.py",
       "source_location": "L1",
-      "community": 165,
+      "community": 134,
       "norm_label": "shared test helpers for workflow assertions.",
       "id": "tests_helpers_rationale_1"
     },
@@ -1659,7 +2010,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/helpers.py",
       "source_location": "L34",
-      "community": 165,
+      "community": 134,
       "norm_label": "assert that a workflow has completed with all expected state keys populated.",
       "id": "tests_helpers_rationale_34"
     },
@@ -1668,7 +2019,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/helpers.py",
       "source_location": "L46",
-      "community": 141,
+      "community": 134,
       "norm_label": "assert teach-path workflow completion including p0.1 fields.",
       "id": "tests_helpers_rationale_46"
     },
@@ -1677,7 +2028,7 @@
       "file_type": "code",
       "source_file": "backend/tests/integration/test_workflow_integration.py",
       "source_location": "L1",
-      "community": 181,
+      "community": 141,
       "norm_label": "test_workflow_integration.py",
       "id": "backend_tests_integration_test_workflow_integration_py"
     },
@@ -1695,7 +2046,7 @@
       "file_type": "code",
       "source_file": "backend/tests/integration/test_workflow_integration.py",
       "source_location": "L145",
-      "community": 181,
+      "community": 141,
       "norm_label": "test_workflow_event_ordering_is_correct_with_real_llm()",
       "id": "integration_test_workflow_integration_test_workflow_event_ordering_is_correct_with_real_llm"
     },
@@ -1704,7 +2055,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/integration/test_workflow_integration.py",
       "source_location": "L1",
-      "community": 181,
+      "community": 141,
       "norm_label": "integration tests that run the full workflow with real llm providers.  requires",
       "id": "integration_test_workflow_integration_rationale_1"
     },
@@ -1722,7 +2073,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/integration/test_workflow_integration.py",
       "source_location": "L146",
-      "community": 181,
+      "community": 141,
       "norm_label": "verify that agent events fire in the expected order.",
       "id": "integration_test_workflow_integration_rationale_146"
     },
@@ -2433,7 +2784,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_run_workflow_cli.py",
       "source_location": "L1",
-      "community": 3,
+      "community": 160,
       "norm_label": "test_run_workflow_cli.py",
       "id": "backend_tests_unit_test_run_workflow_cli_py"
     },
@@ -2442,7 +2793,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_run_workflow_cli.py",
       "source_location": "L8",
-      "community": 3,
+      "community": 160,
       "norm_label": "test_summary_lines_render_concise_workflow_result()",
       "id": "unit_test_run_workflow_cli_test_summary_lines_render_concise_workflow_result"
     },
@@ -2469,7 +2820,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L1",
-      "community": 144,
+      "community": 73,
       "norm_label": "test_llm_tools.py",
       "id": "backend_tests_unit_test_llm_tools_py"
     },
@@ -2505,7 +2856,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L41",
-      "community": 144,
+      "community": 73,
       "norm_label": "testtooldefinition",
       "id": "unit_test_llm_tools_testtooldefinition"
     },
@@ -2514,7 +2865,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L42",
-      "community": 144,
+      "community": 73,
       "norm_label": ".test_creation()",
       "id": "unit_test_llm_tools_testtooldefinition_test_creation"
     },
@@ -2523,7 +2874,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L59",
-      "community": 144,
+      "community": 73,
       "norm_label": ".test_to_openai_format()",
       "id": "unit_test_llm_tools_testtooldefinition_test_to_openai_format"
     },
@@ -2568,7 +2919,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L98",
-      "community": 144,
+      "community": 73,
       "norm_label": "testcallllmtoolswithmocktransport",
       "id": "unit_test_llm_tools_testcallllmtoolswithmocktransport"
     },
@@ -2577,7 +2928,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L99",
-      "community": 144,
+      "community": 118,
       "norm_label": ".test_sends_tools_not_response_format()",
       "id": "unit_test_llm_tools_testcallllmtoolswithmocktransport_test_sends_tools_not_response_format"
     },
@@ -2586,7 +2937,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L153",
-      "community": 144,
+      "community": 118,
       "norm_label": ".test_parses_tool_calls_from_response()",
       "id": "unit_test_llm_tools_testcallllmtoolswithmocktransport_test_parses_tool_calls_from_response"
     },
@@ -2595,7 +2946,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L206",
-      "community": 144,
+      "community": 118,
       "norm_label": ".test_no_tool_calls_in_response()",
       "id": "unit_test_llm_tools_testcallllmtoolswithmocktransport_test_no_tool_calls_in_response"
     },
@@ -2622,7 +2973,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L253",
-      "community": 3,
+      "community": 164,
       "norm_label": ".test_agent_router_has_method()",
       "id": "unit_test_llm_tools_testllmclientgeneratewithtools_test_agent_router_has_method"
     },
@@ -2631,7 +2982,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L260",
-      "community": 164,
+      "community": 73,
       "norm_label": "testagentnameextension",
       "id": "unit_test_llm_tools_testagentnameextension"
     },
@@ -2640,7 +2991,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L261",
-      "community": 164,
+      "community": 73,
       "norm_label": ".test_new_agent_names_accepted()",
       "id": "unit_test_llm_tools_testagentnameextension_test_new_agent_names_accepted"
     },
@@ -2649,7 +3000,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L1",
-      "community": 144,
+      "community": 73,
       "norm_label": "tdd phase 1: tests for llm tool-calling support.  red phase \u2014 these tests define",
       "id": "unit_test_llm_tools_rationale_1"
     },
@@ -2658,7 +3009,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L60",
-      "community": 144,
+      "community": 73,
       "norm_label": "tooldefinition should serialize to openai-compatible tool dict.",
       "id": "unit_test_llm_tools_rationale_60"
     },
@@ -2667,7 +3018,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L100",
-      "community": 144,
+      "community": 118,
       "norm_label": "verify the request body has 'tools' not 'response_format'.",
       "id": "unit_test_llm_tools_rationale_100"
     },
@@ -2676,7 +3027,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L154",
-      "community": 144,
+      "community": 118,
       "norm_label": "verify tool_calls are correctly parsed from the response.",
       "id": "unit_test_llm_tools_rationale_154"
     },
@@ -2685,7 +3036,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L207",
-      "community": 144,
+      "community": 118,
       "norm_label": "response without tool_calls \u2014 returns empty list.",
       "id": "unit_test_llm_tools_rationale_207"
     },
@@ -2703,7 +3054,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L254",
-      "community": 3,
+      "community": 164,
       "norm_label": "agentllmrouter implements generate_with_tools.",
       "id": "unit_test_llm_tools_rationale_254"
     },
@@ -2712,7 +3063,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L262",
-      "community": 164,
+      "community": 73,
       "norm_label": "the new agent names are valid agentname values.",
       "id": "unit_test_llm_tools_rationale_262"
     },
@@ -2991,7 +3342,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L168",
-      "community": 163,
+      "community": 83,
       "norm_label": "testchatanswernode",
       "id": "unit_test_new_agent_nodes_testchatanswernode"
     },
@@ -3000,7 +3351,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L169",
-      "community": 163,
+      "community": 83,
       "norm_label": ".test_reuses_tool_agent_answer_without_second_llm_call()",
       "id": "unit_test_new_agent_nodes_testchatanswernode_test_reuses_tool_agent_answer_without_second_llm_call"
     },
@@ -3009,7 +3360,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L185",
-      "community": 163,
+      "community": 83,
       "norm_label": ".test_generates_answer()",
       "id": "unit_test_new_agent_nodes_testchatanswernode_test_generates_answer"
     },
@@ -3900,7 +4251,7 @@
       "file_type": "code",
       "source_file": "backend/app/api/sessions.py",
       "source_location": "L1",
-      "community": 159,
+      "community": 20,
       "norm_label": "sessions.py",
       "id": "backend_app_api_sessions_py"
     },
@@ -3909,7 +4260,7 @@
       "file_type": "code",
       "source_file": "backend/app/api/sessions.py",
       "source_location": "L14",
-      "community": 159,
+      "community": 20,
       "norm_label": "createsessionrequest",
       "id": "api_sessions_createsessionrequest"
     },
@@ -3918,7 +4269,7 @@
       "file_type": "code",
       "source_file": "",
       "source_location": "",
-      "community": 159,
+      "community": 20,
       "norm_label": "basemodel",
       "id": "basemodel"
     },
@@ -3927,7 +4278,7 @@
       "file_type": "code",
       "source_file": "backend/app/api/sessions.py",
       "source_location": "L21",
-      "community": 159,
+      "community": 20,
       "norm_label": "create_sessions_router()",
       "id": "api_sessions_create_sessions_router"
     },
@@ -3936,7 +4287,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/api/sessions.py",
       "source_location": "L1",
-      "community": 159,
+      "community": 20,
       "norm_label": "session rest endpoints.",
       "id": "api_sessions_rationale_1"
     },
@@ -3972,7 +4323,7 @@
       "file_type": "code",
       "source_file": "backend/app/api/events.py",
       "source_location": "L1",
-      "community": 20,
+      "community": 163,
       "norm_label": "events.py",
       "id": "backend_app_api_events_py"
     },
@@ -3981,7 +4332,7 @@
       "file_type": "code",
       "source_file": "backend/app/api/events.py",
       "source_location": "L14",
-      "community": 20,
+      "community": 163,
       "norm_label": "create_events_router()",
       "id": "api_events_create_events_router"
     },
@@ -3990,7 +4341,7 @@
       "file_type": "code",
       "source_file": "backend/app/api/events.py",
       "source_location": "L46",
-      "community": 20,
+      "community": 163,
       "norm_label": "_sse_events()",
       "id": "api_events_sse_events"
     },
@@ -3999,7 +4350,7 @@
       "file_type": "code",
       "source_file": "backend/app/api/events.py",
       "source_location": "L53",
-      "community": 20,
+      "community": 163,
       "norm_label": "_format_sse()",
       "id": "api_events_format_sse"
     },
@@ -4008,7 +4359,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/api/events.py",
       "source_location": "L1",
-      "community": 20,
+      "community": 163,
       "norm_label": "sse and websocket event endpoints.",
       "id": "api_events_rationale_1"
     },
@@ -4038,33 +4389,6 @@
       "community": 33,
       "norm_label": "langgraph api entry point for langgraph studio.  usage:     langgraph dev --conf",
       "id": "builder_langgraph_api_rationale_1"
-    },
-    {
-      "label": "__init__.py",
-      "file_type": "code",
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": "L1",
-      "community": 135,
-      "norm_label": "__init__.py",
-      "id": "backend_app_agents_init_py"
-    },
-    {
-      "label": "build_agent_nodes()",
-      "file_type": "code",
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": "L25",
-      "community": 135,
-      "norm_label": "build_agent_nodes()",
-      "id": "agents_init_build_agent_nodes"
-    },
-    {
-      "label": "Agent node assembly for the LangGraph workflow.",
-      "file_type": "rationale",
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": "L1",
-      "community": 135,
-      "norm_label": "agent node assembly for the langgraph workflow.",
-      "id": "agents_init_rationale_1"
     },
     {
       "label": "__init__.py",
@@ -4134,7 +4458,7 @@
       "file_type": "code",
       "source_file": "backend/app/agents/diagnosis/node.py",
       "source_location": "L1",
-      "community": 135,
+      "community": 188,
       "norm_label": "node.py",
       "id": "backend_app_agents_diagnosis_node_py"
     },
@@ -4143,7 +4467,7 @@
       "file_type": "code",
       "source_file": "backend/app/agents/diagnosis/node.py",
       "source_location": "L18",
-      "community": 135,
+      "community": 188,
       "norm_label": "build_diagnosis_node()",
       "id": "diagnosis_node_build_diagnosis_node"
     },
@@ -4152,7 +4476,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/agents/diagnosis/node.py",
       "source_location": "L1",
-      "community": 135,
+      "community": 188,
       "norm_label": "diagnosis agent node.",
       "id": "diagnosis_node_rationale_1"
     },
@@ -4377,7 +4701,7 @@
       "file_type": "code",
       "source_file": "backend/app/graph/workflow.py",
       "source_location": "L523",
-      "community": 182,
+      "community": 2,
       "norm_label": "arun_workflow()",
       "id": "graph_workflow_arun_workflow"
     },
@@ -4755,7 +5079,7 @@
       "file_type": "code",
       "source_file": "backend/app/schemas/context.py",
       "source_location": "L1",
-      "community": 182,
+      "community": 2,
       "norm_label": "context.py",
       "id": "backend_app_schemas_context_py"
     },
@@ -4764,7 +5088,7 @@
       "file_type": "code",
       "source_file": "backend/app/schemas/context.py",
       "source_location": "L9",
-      "community": 182,
+      "community": 2,
       "norm_label": "workflowcontext",
       "id": "schemas_context_workflowcontext"
     },
@@ -4773,7 +5097,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/schemas/context.py",
       "source_location": "L1",
-      "community": 182,
+      "community": 2,
       "norm_label": "runtime context passed to langgraph nodes.",
       "id": "schemas_context_rationale_1"
     },
@@ -4827,7 +5151,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L97",
-      "community": 144,
+      "community": 73,
       "norm_label": "tooldefinition",
       "id": "core_llm_tooldefinition"
     },
@@ -4881,7 +5205,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L129",
-      "community": 3,
+      "community": 79,
       "norm_label": "llmconfigurationerror",
       "id": "core_llm_llmconfigurationerror"
     },
@@ -4908,7 +5232,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L136",
-      "community": 3,
+      "community": 151,
       "norm_label": ".__init__()",
       "id": "core_llm_llmprovidererror_init"
     },
@@ -5016,7 +5340,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L399",
-      "community": 79,
+      "community": 118,
       "norm_label": "call_llm_tools()",
       "id": "core_llm_call_llm_tools"
     },
@@ -5052,7 +5376,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L433",
-      "community": 79,
+      "community": 164,
       "norm_label": ".generate_json()",
       "id": "core_llm_defaultllmclient_generate_json"
     },
@@ -5061,7 +5385,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L438",
-      "community": 164,
+      "community": 118,
       "norm_label": ".generate_with_tools()",
       "id": "core_llm_defaultllmclient_generate_with_tools"
     },
@@ -5070,7 +5394,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L448",
-      "community": 3,
+      "community": 151,
       "norm_label": "agentllmrouter",
       "id": "core_llm_agentllmrouter"
     },
@@ -5079,7 +5403,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L454",
-      "community": 3,
+      "community": 151,
       "norm_label": ".__init__()",
       "id": "core_llm_agentllmrouter_init"
     },
@@ -5088,7 +5412,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L475",
-      "community": 3,
+      "community": 151,
       "norm_label": ".provider_for()",
       "id": "core_llm_agentllmrouter_provider_for"
     },
@@ -5097,7 +5421,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L480",
-      "community": 3,
+      "community": 151,
       "norm_label": ".generate_json()",
       "id": "core_llm_agentllmrouter_generate_json"
     },
@@ -5106,7 +5430,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L489",
-      "community": 3,
+      "community": 151,
       "norm_label": ".generate_with_tools()",
       "id": "core_llm_agentllmrouter_generate_with_tools"
     },
@@ -5124,7 +5448,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L89",
-      "community": 144,
+      "community": 73,
       "norm_label": "a tool call requested by the llm.",
       "id": "core_llm_rationale_89"
     },
@@ -5169,7 +5493,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L130",
-      "community": 3,
+      "community": 79,
       "norm_label": "raised when model provider configuration is incomplete.",
       "id": "core_llm_rationale_130"
     },
@@ -5196,7 +5520,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L449",
-      "community": 3,
+      "community": 151,
       "norm_label": "routes each agent node to its configured provider, falling back to the default p",
       "id": "core_llm_rationale_449"
     },
@@ -5232,7 +5556,7 @@
       "file_type": "code",
       "source_file": "backend/scripts/run_workflow.py",
       "source_location": "L1",
-      "community": 3,
+      "community": 160,
       "norm_label": "run_workflow.py",
       "id": "backend_scripts_run_workflow_py"
     },
@@ -5241,7 +5565,7 @@
       "file_type": "code",
       "source_file": "backend/scripts/run_workflow.py",
       "source_location": "L14",
-      "community": 3,
+      "community": 160,
       "norm_label": "summary_lines()",
       "id": "scripts_run_workflow_summary_lines"
     },
@@ -5250,7 +5574,7 @@
       "file_type": "code",
       "source_file": "backend/scripts/run_workflow.py",
       "source_location": "L54",
-      "community": 3,
+      "community": 160,
       "norm_label": "main()",
       "id": "scripts_run_workflow_main"
     },
@@ -5259,7 +5583,7 @@
       "file_type": "rationale",
       "source_file": "backend/scripts/run_workflow.py",
       "source_location": "L1",
-      "community": 3,
+      "community": 160,
       "norm_label": "run the current workflow with configured real llm providers.",
       "id": "scripts_run_workflow_rationale_1"
     },
@@ -11424,7 +11748,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L372",
-      "community": 157,
+      "community": 149,
       "norm_label": "\u4e09\u3001\u56db\u5c42\u8bb0\u5fc6\u8be6\u89e3",
       "id": "docs_memory_design_inspiration_\u4e09_\u56db\u5c42\u8bb0\u5fc6\u8be6\u89e3"
     },
@@ -11505,7 +11829,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L504",
-      "community": 157,
+      "community": 155,
       "norm_label": "3.1.4 \u9690\u79c1\u3001\u5b89\u5168\u4e0e\u4fdd\u7559\u671f",
       "id": "docs_memory_design_inspiration_3_1_4_\u9690\u79c1_\u5b89\u5168\u4e0e\u4fdd\u7559\u671f"
     },
@@ -11514,7 +11838,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L506",
-      "community": 157,
+      "community": 155,
       "norm_label": "code:block13 (\u5fc5\u987b\u8131\u654f:)",
       "id": "docs_memory_design_inspiration_codeblock_13"
     },
@@ -11523,7 +11847,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L526",
-      "community": 157,
+      "community": 155,
       "norm_label": "3.2 \u5c42\u7ea7 2: session memory(\u4f1a\u8bdd\u6559\u5b66\u8bb0\u5fc6)",
       "id": "docs_memory_design_inspiration_3_2_\u5c42\u7ea7_2_session_memory_\u4f1a\u8bdd\u6559\u5b66\u8bb0\u5fc6"
     },
@@ -11532,7 +11856,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L528",
-      "community": 157,
+      "community": 155,
       "norm_label": "3.2.1 \u7ed3\u6784\u5316\u6a21\u677f",
       "id": "docs_memory_design_inspiration_3_2_1_\u7ed3\u6784\u5316\u6a21\u677f"
     },
@@ -11541,7 +11865,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L532",
-      "community": 157,
+      "community": 155,
       "norm_label": "code:markdown (# session title)",
       "id": "docs_memory_design_inspiration_codeblock_14"
     },
@@ -11550,7 +11874,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L599",
-      "community": 157,
+      "community": 155,
       "norm_label": "3.2.2 \u89e6\u53d1\u6761\u4ef6",
       "id": "docs_memory_design_inspiration_3_2_2_\u89e6\u53d1\u6761\u4ef6"
     },
@@ -11568,7 +11892,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L616",
-      "community": 157,
+      "community": 149,
       "norm_label": "3.3 \u5c42\u7ea7 3: agent role memory(agent \u89d2\u8272\u8bb0\u5fc6)",
       "id": "docs_memory_design_inspiration_3_3_\u5c42\u7ea7_3_agent_role_memory_agent_\u89d2\u8272\u8bb0\u5fc6"
     },
@@ -11577,7 +11901,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L620",
-      "community": 157,
+      "community": 149,
       "norm_label": "3.3.1 \u5404 agent \u89d2\u8272\u8bb0\u5fc6\u5185\u5bb9",
       "id": "docs_memory_design_inspiration_3_3_1_\u5404_agent_\u89d2\u8272\u8bb0\u5fc6\u5185\u5bb9"
     },
@@ -11631,7 +11955,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L754",
-      "community": 149,
+      "community": 78,
       "norm_label": "\u56db\u3001\u4e09\u5c42\u6ce8\u5165\u8def\u5f84",
       "id": "docs_memory_design_inspiration_\u56db_\u4e09\u5c42\u6ce8\u5165\u8def\u5f84"
     },
@@ -11640,7 +11964,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L756",
-      "community": 149,
+      "community": 78,
       "norm_label": "4.1 \u6574\u4f53\u67b6\u6784\u56fe",
       "id": "docs_memory_design_inspiration_4_1_\u6574\u4f53\u67b6\u6784\u56fe"
     },
@@ -11649,7 +11973,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L758",
-      "community": 149,
+      "community": 78,
       "norm_label": "code:block19 (\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500)",
       "id": "docs_memory_design_inspiration_codeblock_19"
     },
@@ -11658,7 +11982,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L835",
-      "community": 149,
+      "community": 78,
       "norm_label": "4.2 \u4e09\u8def\u5f84\u5bf9\u6bd4",
       "id": "docs_memory_design_inspiration_4_2_\u4e09\u8def\u5f84\u5bf9\u6bd4"
     },
@@ -11667,7 +11991,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L837",
-      "community": 151,
+      "community": 78,
       "norm_label": "code:block20 (\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500)",
       "id": "docs_memory_design_inspiration_codeblock_20"
     },
@@ -11676,7 +12000,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L862",
-      "community": 149,
+      "community": 78,
       "norm_label": "4.3 \u8def\u5f84 c \u5728 patent tutor \u4e2d\u7684\u5b8c\u6574\u6d41\u7a0b",
       "id": "docs_memory_design_inspiration_4_3_\u8def\u5f84_c_\u5728_patent_tutor_\u4e2d\u7684\u5b8c\u6574\u6d41\u7a0b"
     },
@@ -11685,7 +12009,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L864",
-      "community": 149,
+      "community": 78,
       "norm_label": "code:block21 (agent \u8282\u70b9\u5373\u5c06\u6267\u884c (\u4f8b\u5982: diagnosis \u8282\u70b9))",
       "id": "docs_memory_design_inspiration_codeblock_21"
     },
@@ -11694,7 +12018,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L957",
-      "community": 151,
+      "community": 78,
       "norm_label": "\u4e94\u3001\u4e24\u6761\u5199\u5165\u8def\u5f84",
       "id": "docs_memory_design_inspiration_\u4e94_\u4e24\u6761\u5199\u5165\u8def\u5f84"
     },
@@ -11703,7 +12027,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L959",
-      "community": 151,
+      "community": 78,
       "norm_label": "5.1 \u6574\u4f53\u67b6\u6784",
       "id": "docs_memory_design_inspiration_5_1_\u6574\u4f53\u67b6\u6784"
     },
@@ -11712,7 +12036,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L961",
-      "community": 151,
+      "community": 78,
       "norm_label": "code:block22 (\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510)",
       "id": "docs_memory_design_inspiration_codeblock_22"
     },
@@ -11721,7 +12045,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L994",
-      "community": 151,
+      "community": 78,
       "norm_label": "5.2 \u8def\u5f84 a: workflow \u5185\u540c\u6b65\u5199\u5165",
       "id": "docs_memory_design_inspiration_5_2_\u8def\u5f84_a_workflow_\u5185\u540c\u6b65\u5199\u5165"
     },
@@ -11730,7 +12054,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L996",
-      "community": 151,
+      "community": 78,
       "norm_label": "code:block23 (feedback/chat_answer \u8282\u70b9\u6267\u884c)",
       "id": "docs_memory_design_inspiration_codeblock_23"
     },
@@ -11757,7 +12081,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L1065",
-      "community": 151,
+      "community": 78,
       "norm_label": "5.4 \u8de8 session \u5de9\u56fa (consolidation)",
       "id": "docs_memory_design_inspiration_5_4_\u8de8_session_\u5de9\u56fa_consolidation"
     },
@@ -11892,7 +12216,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L1505",
-      "community": 155,
+      "community": 78,
       "norm_label": "code:block31 (\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500)",
       "id": "docs_memory_design_inspiration_codeblock_31"
     },
@@ -11901,7 +12225,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L1579",
-      "community": 155,
+      "community": 78,
       "norm_label": "\u9644\u5f55 a: \u5173\u952e\u8bbe\u8ba1\u51b3\u7b56",
       "id": "docs_memory_design_inspiration_\u9644\u5f55_a_\u5173\u952e\u8bbe\u8ba1\u51b3\u7b56"
     },
@@ -11910,7 +12234,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L1581",
-      "community": 155,
+      "community": 78,
       "norm_label": "a.1 store \u4f18\u5148,markdown \u6295\u5f71",
       "id": "docs_memory_design_inspiration_a_1_store_\u4f18\u5148_markdown_\u6295\u5f71"
     },
@@ -11919,7 +12243,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L1583",
-      "community": 155,
+      "community": 78,
       "norm_label": "code:block32 (\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500)",
       "id": "docs_memory_design_inspiration_codeblock_32"
     },
@@ -11928,7 +12252,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L1603",
-      "community": 155,
+      "community": 78,
       "norm_label": "a.2 \u65b0\u9c9c\u5ea6\u9608\u503c: \u6559\u5b66\u573a\u666f\u7684\u7279\u6b8a\u6027",
       "id": "docs_memory_design_inspiration_a_2_\u65b0\u9c9c\u5ea6\u9608\u503c_\u6559\u5b66\u573a\u666f\u7684\u7279\u6b8a\u6027"
     },
@@ -11937,7 +12261,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L1605",
-      "community": 155,
+      "community": 78,
       "norm_label": "code:block33 (claude code:  d \u2265 2 days \u2192 \u8fc7\u671f\u8b66\u544a)",
       "id": "docs_memory_design_inspiration_codeblock_33"
     },
@@ -11946,7 +12270,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L1616",
-      "community": 155,
+      "community": 78,
       "norm_label": "a.3 consolidation \u95e8\u69db: \u6559\u5b66\u573a\u666f\u7684\u8c03\u6574",
       "id": "docs_memory_design_inspiration_a_3_consolidation_\u95e8\u69db_\u6559\u5b66\u573a\u666f\u7684\u8c03\u6574"
     },
@@ -11955,7 +12279,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L1618",
-      "community": 155,
+      "community": 78,
       "norm_label": "code:block34 (claude code: 24h + 5 sessions)",
       "id": "docs_memory_design_inspiration_codeblock_34"
     },
@@ -11964,7 +12288,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L1629",
-      "community": 155,
+      "community": 78,
       "norm_label": "a.4 \u6392\u9664\u89c4\u5219: \u501f\u9274\u5e76\u9002\u914d",
       "id": "docs_memory_design_inspiration_a_4_\u6392\u9664\u89c4\u5219_\u501f\u9274\u5e76\u9002\u914d"
     },
@@ -11973,7 +12297,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L1631",
-      "community": 155,
+      "community": 78,
       "norm_label": "code:block35 (claude code \u7684\u6392\u9664\u89c4\u5219 \u2192 patent tutor \u7684\u9002\u914d:)",
       "id": "docs_memory_design_inspiration_codeblock_35"
     },
@@ -12468,7 +12792,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L1",
-      "community": 156,
+      "community": 159,
       "norm_label": "memory-design-inspiration.md",
       "id": "memory_design_inspiration_md"
     },
@@ -12495,7 +12819,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L915",
-      "community": 149,
+      "community": 78,
       "norm_label": "5.2 \u8def\u5f84 a: feedback \u8282\u70b9\u540c\u6b65\u5199\u5165",
       "id": "docs_memory_design_inspiration_5_2_\u8def\u5f84_a_feedback_\u8282\u70b9\u540c\u6b65\u5199\u5165"
     },
@@ -12504,7 +12828,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L948",
-      "community": 151,
+      "community": 78,
       "norm_label": "5.3 \u8def\u5f84 b: \u540e\u53f0 extractmemories",
       "id": "docs_memory_design_inspiration_5_3_\u8def\u5f84_b_\u540e\u53f0_extractmemories"
     },
@@ -12522,7 +12846,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L1",
-      "community": 156,
+      "community": 159,
       "norm_label": "\u8bb0\u5fc6\u7cfb\u7edf\u8bbe\u8ba1\u501f\u9274:\u4ece claude code \u5230 patent tutor agent",
       "id": "docs_memory_design_inspiration_\u8bb0\u5fc6\u7cfb\u7edf\u8bbe\u8ba1\u501f\u9274_\u4ece_claude_code_\u5230_patent_tutor_agent"
     },
@@ -12603,7 +12927,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L96",
-      "community": 157,
+      "community": 154,
       "norm_label": "\u4e09\u3001\u53ef\u501f\u9274\u7684\u8bbe\u8ba1\u7406\u5ff5",
       "id": "docs_memory_design_inspiration_\u4e09_\u53ef\u501f\u9274\u7684\u8bbe\u8ba1\u7406\u5ff5"
     },
@@ -12711,7 +13035,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L320",
-      "community": 157,
+      "community": 155,
       "norm_label": "\u6a21\u5f0f 7:what not to save(\u6392\u9664\u89c4\u5219)",
       "id": "docs_memory_design_inspiration_\u6a21\u5f0f_7_what_not_to_save_\u6392\u9664\u89c4\u5219"
     },
@@ -12729,7 +13053,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L364",
-      "community": 157,
+      "community": 155,
       "norm_label": "3.3 \u67b6\u6784\u6539\u8fdb\u8def\u7ebf\u56fe",
       "id": "docs_memory_design_inspiration_3_3_\u67b6\u6784\u6539\u8fdb\u8def\u7ebf\u56fe"
     },
@@ -12783,7 +13107,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L721",
-      "community": 156,
+      "community": 159,
       "norm_label": "\u4e94\u3001\u8bbe\u8ba1\u51b3\u7b56\u4e0e\u6743\u8861",
       "id": "docs_memory_design_inspiration_\u4e94_\u8bbe\u8ba1\u51b3\u7b56\u4e0e\u6743\u8861"
     },
@@ -12792,7 +13116,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L723",
-      "community": 156,
+      "community": 159,
       "norm_label": "5.1 \u4e3a\u4ec0\u4e48\u9009\u62e9\u6587\u4ef6\u800c\u4e0d\u662f\u6570\u636e\u5e93",
       "id": "docs_memory_design_inspiration_5_1_\u4e3a\u4ec0\u4e48\u9009\u62e9\u6587\u4ef6\u800c\u4e0d\u662f\u6570\u636e\u5e93"
     },
@@ -12801,7 +13125,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L739",
-      "community": 156,
+      "community": 159,
       "norm_label": "5.2 \u4e3a\u4ec0\u4e48\u7528\u5b50 agent \u63d0\u53d6\u800c\u4e0d\u662f\u5728 workflow \u5185\u76f4\u63a5\u5199",
       "id": "docs_memory_design_inspiration_5_2_\u4e3a\u4ec0\u4e48\u7528\u5b50_agent_\u63d0\u53d6\u800c\u4e0d\u662f\u5728_workflow_\u5185\u76f4\u63a5\u5199"
     },
@@ -12810,7 +13134,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L751",
-      "community": 156,
+      "community": 159,
       "norm_label": "5.3 \u4e24\u6761\u5199\u5165\u8def\u5f84\u7684\u4e92\u65a5",
       "id": "docs_memory_design_inspiration_5_3_\u4e24\u6761\u5199\u5165\u8def\u5f84\u7684\u4e92\u65a5"
     },
@@ -12819,7 +13143,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L760",
-      "community": 156,
+      "community": 159,
       "norm_label": "\u516d\u3001\u603b\u7ed3",
       "id": "docs_memory_design_inspiration_\u516d_\u603b\u7ed3"
     },
@@ -12828,7 +13152,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L784",
-      "community": 156,
+      "community": 159,
       "norm_label": "\u53c2\u8003\u8d44\u6599",
       "id": "docs_memory_design_inspiration_\u53c2\u8003\u8d44\u6599"
     },
@@ -12936,7 +13260,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/helpers.py",
       "source_location": "L31",
-      "community": 165,
+      "community": 134,
       "norm_label": "assert that a workflow has completed with all expected state keys populated.",
       "id": "tests_helpers_rationale_31"
     },
@@ -12945,7 +13269,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/integration/test_workflow_integration.py",
       "source_location": "L117",
-      "community": 181,
+      "community": 141,
       "norm_label": "verify that agent events fire in the expected order.",
       "id": "integration_test_workflow_integration_rationale_117"
     },
@@ -12981,7 +13305,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L57",
-      "community": 144,
+      "community": 73,
       "norm_label": "tooldefinition should serialize to openai-compatible tool dict.",
       "id": "unit_test_llm_tools_rationale_57"
     },
@@ -12990,7 +13314,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L97",
-      "community": 144,
+      "community": 118,
       "norm_label": "verify the request body has 'tools' not 'response_format'.",
       "id": "unit_test_llm_tools_rationale_97"
     },
@@ -12999,7 +13323,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L151",
-      "community": 144,
+      "community": 118,
       "norm_label": "verify tool_calls are correctly parsed from the response.",
       "id": "unit_test_llm_tools_rationale_151"
     },
@@ -13008,7 +13332,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L204",
-      "community": 144,
+      "community": 118,
       "norm_label": "response without tool_calls \u2014 returns empty list.",
       "id": "unit_test_llm_tools_rationale_204"
     },
@@ -13026,7 +13350,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L251",
-      "community": 3,
+      "community": 164,
       "norm_label": "agentllmrouter implements generate_with_tools.",
       "id": "unit_test_llm_tools_rationale_251"
     },
@@ -13035,7 +13359,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L259",
-      "community": 164,
+      "community": 73,
       "norm_label": "the new agent names are valid agentname values.",
       "id": "unit_test_llm_tools_rationale_259"
     },
@@ -13125,7 +13449,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/helpers.py",
       "source_location": "L25",
-      "community": 165,
+      "community": 134,
       "norm_label": "assert that a workflow has completed with all expected state keys populated.",
       "id": "tests_helpers_rationale_25"
     },
@@ -13161,7 +13485,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L121",
-      "community": 3,
+      "community": 79,
       "norm_label": "raised when model provider configuration is incomplete.",
       "id": "core_llm_rationale_121"
     },
@@ -13188,7 +13512,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L440",
-      "community": 3,
+      "community": 151,
       "norm_label": "routes each agent node to its configured provider, falling back to the default p",
       "id": "core_llm_rationale_440"
     },
@@ -13513,7 +13837,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 14,
+      "community": 198,
       "norm_label": "planner package",
       "id": "agents_planner_package"
     },
@@ -13539,7 +13863,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 14,
+      "community": 195,
       "norm_label": "expert a package",
       "id": "agents_expert_a_package"
     },
@@ -13565,7 +13889,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 14,
+      "community": 196,
       "norm_label": "expert b package",
       "id": "agents_expert_b_package"
     },
@@ -13591,7 +13915,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 14,
+      "community": 197,
       "norm_label": "judge package",
       "id": "agents_judge_package"
     },
@@ -13607,19 +13931,6 @@
       "community": 57,
       "norm_label": "judge readme",
       "id": "agents_judge_readme"
-    },
-    {
-      "label": "Agent Node Assembly",
-      "file_type": "code",
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": null,
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "community": 14,
-      "norm_label": "agent node assembly",
-      "id": "agents_init"
     },
     {
       "label": "build_feedback_node",
@@ -14562,6 +14873,673 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "app/agents/__init__.py",
+      "source_location": "L25",
+      "weight": 1.0,
+      "source": "app_agents_init_py",
+      "target": "agents_init_build_agent_nodes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/agents/__init__.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "agents_init_rationale_1",
+      "target": "app_agents_init_py",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "app/agents/__init__.py",
+      "source_location": "L38",
+      "weight": 1.0,
+      "source": "agents_init_build_agent_nodes",
+      "target": "cross_review_a_node_build_expert_a_cross_review_node"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "app/agents/__init__.py",
+      "source_location": "L39",
+      "weight": 1.0,
+      "source": "agents_init_build_agent_nodes",
+      "target": "cross_review_b_node_build_expert_b_cross_review_node"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "app/agents/__init__.py",
+      "source_location": "L40",
+      "weight": 1.0,
+      "source": "agents_init_build_agent_nodes",
+      "target": "expert_a_revise_node_build_expert_a_revise_node"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "app/agents/__init__.py",
+      "source_location": "L41",
+      "weight": 1.0,
+      "source": "agents_init_build_agent_nodes",
+      "target": "expert_b_revise_node_build_expert_b_revise_node"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "app/agents/__init__.py",
+      "source_location": "L42",
+      "weight": 1.0,
+      "source": "agents_init_build_agent_nodes",
+      "target": "joint_synthesis_node_build_joint_synthesis_node"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "app/agents/__init__.py",
+      "source_location": "L43",
+      "weight": 1.0,
+      "source": "agents_init_build_agent_nodes",
+      "target": "lightweight_review_node_build_lightweight_review_node"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/app/agents/__init__.py",
+      "source_location": "L29",
+      "weight": 1.0,
+      "source": "agents_init_build_agent_nodes",
+      "target": "chat_answer_node_build_chat_answer_node"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/app/agents/__init__.py",
+      "source_location": "L38",
+      "weight": 1.0,
+      "source": "agents_init_build_agent_nodes",
+      "target": "expert_a_cross_review_build_expert_a_cross_review_node"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/app/agents/__init__.py",
+      "source_location": "L23",
+      "weight": 1.0,
+      "source": "agents_init_build_agent_nodes",
+      "target": "expert_a_node_build_expert_a_node"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/app/agents/__init__.py",
+      "source_location": "L40",
+      "weight": 1.0,
+      "source": "agents_init_build_agent_nodes",
+      "target": "expert_a_revise_build_expert_a_revise_node"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/app/agents/__init__.py",
+      "source_location": "L39",
+      "weight": 1.0,
+      "source": "agents_init_build_agent_nodes",
+      "target": "expert_b_cross_review_build_expert_b_cross_review_node"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/app/agents/__init__.py",
+      "source_location": "L24",
+      "weight": 1.0,
+      "source": "agents_init_build_agent_nodes",
+      "target": "expert_b_node_build_expert_b_node"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/app/agents/__init__.py",
+      "source_location": "L41",
+      "weight": 1.0,
+      "source": "agents_init_build_agent_nodes",
+      "target": "expert_b_revise_build_expert_b_revise_node"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/app/agents/__init__.py",
+      "source_location": "L30",
+      "weight": 1.0,
+      "source": "agents_init_build_agent_nodes",
+      "target": "finalize_node_build_finalize_node"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/app/agents/__init__.py",
+      "source_location": "L42",
+      "weight": 1.0,
+      "source": "agents_init_build_agent_nodes",
+      "target": "agents_joint_synthesis_build_joint_synthesis_node"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/app/agents/__init__.py",
+      "source_location": "L25",
+      "weight": 1.0,
+      "source": "agents_init_build_agent_nodes",
+      "target": "judge_node_build_judge_node"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/app/agents/__init__.py",
+      "source_location": "L43",
+      "weight": 1.0,
+      "source": "agents_init_build_agent_nodes",
+      "target": "agents_lightweight_review_build_lightweight_review_node"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/app/agents/__init__.py",
+      "source_location": "L22",
+      "weight": 1.0,
+      "source": "agents_init_build_agent_nodes",
+      "target": "planner_node_build_planner_node"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/app/agents/__init__.py",
+      "source_location": "L27",
+      "weight": 1.0,
+      "source": "agents_init_build_agent_nodes",
+      "target": "route_node_build_route_node"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/app/agents/__init__.py",
+      "source_location": "L28",
+      "weight": 1.0,
+      "source": "agents_init_build_agent_nodes",
+      "target": "tool_agent_node_build_tool_agent_node"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/app/agents/__init__.py",
+      "source_location": "L21",
+      "weight": 1.0,
+      "source": "agents_init_build_agent_nodes",
+      "target": "diagnosis_node_build_diagnosis_node"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/app/agents/__init__.py",
+      "source_location": "L26",
+      "weight": 1.0,
+      "source": "agents_init_build_agent_nodes",
+      "target": "feedback_node_build_feedback_node"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/app/graph/workflow.py",
+      "source_location": "L280",
+      "weight": 1.0,
+      "source": "graph_workflow_build_workflow",
+      "target": "agents_init_build_agent_nodes"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/agents/cross_review_a/__init__.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "cross_review_a_init_rationale_1",
+      "target": "app_agents_cross_review_a_init_py",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/agents/cross_review_a/node.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "app_agents_cross_review_a_node_py",
+      "target": "cross_review_a_node_build_expert_a_cross_review_node",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/agents/cross_review_a/node.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "cross_review_a_node_rationale_1",
+      "target": "app_agents_cross_review_a_node_py",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/agents/cross_review_b/__init__.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "cross_review_b_init_rationale_1",
+      "target": "app_agents_cross_review_b_init_py",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/agents/cross_review_b/node.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "app_agents_cross_review_b_node_py",
+      "target": "cross_review_b_node_build_expert_b_cross_review_node",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/agents/cross_review_b/node.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "cross_review_b_node_rationale_1",
+      "target": "app_agents_cross_review_b_node_py",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/agents/expert_a_revise/__init__.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "expert_a_revise_init_rationale_1",
+      "target": "app_agents_expert_a_revise_init_py",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/agents/expert_a_revise/node.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "app_agents_expert_a_revise_node_py",
+      "target": "expert_a_revise_node_build_expert_a_revise_node",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/agents/expert_a_revise/node.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "expert_a_revise_node_rationale_1",
+      "target": "app_agents_expert_a_revise_node_py",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/agents/expert_b_revise/__init__.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "expert_b_revise_init_rationale_1",
+      "target": "app_agents_expert_b_revise_init_py",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/agents/expert_b_revise/node.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "app_agents_expert_b_revise_node_py",
+      "target": "expert_b_revise_node_build_expert_b_revise_node",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/agents/expert_b_revise/node.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "expert_b_revise_node_rationale_1",
+      "target": "app_agents_expert_b_revise_node_py",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/agents/joint_synthesis/__init__.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "joint_synthesis_init_rationale_1",
+      "target": "app_agents_joint_synthesis_init_py",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/agents/joint_synthesis/node.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "app_agents_joint_synthesis_node_py",
+      "target": "joint_synthesis_node_build_joint_synthesis_node",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/agents/joint_synthesis/node.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "joint_synthesis_node_rationale_1",
+      "target": "app_agents_joint_synthesis_node_py",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/agents/lightweight_review/__init__.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "lightweight_review_init_rationale_1",
+      "target": "app_agents_lightweight_review_init_py",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/agents/lightweight_review/node.py",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "app_agents_lightweight_review_node_py",
+      "target": "lightweight_review_node_build_lightweight_review_node",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/agents/lightweight_review/node.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "source": "lightweight_review_node_rationale_1",
+      "target": "app_agents_lightweight_review_node_py",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L35",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "tests_unit_test_prompt_loader_py",
+      "target": "unit_test_prompt_loader_testpromptfiles"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L39",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "tests_unit_test_prompt_loader_py",
+      "target": "unit_test_prompt_loader_test_prompt_file_exists"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L48",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "tests_unit_test_prompt_loader_py",
+      "target": "unit_test_prompt_loader_test_prompt_file_non_empty"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L58",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "tests_unit_test_prompt_loader_py",
+      "target": "unit_test_prompt_loader_testloadprompt"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L1",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "unit_test_prompt_loader_rationale_1",
+      "target": "tests_unit_test_prompt_loader_py"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L33",
+      "weight": 1.0,
+      "source": "unit_test_prompt_loader_rationale_33",
+      "target": "unit_test_prompt_loader_testpromptfiles",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L36",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "unit_test_prompt_loader_rationale_36",
+      "target": "unit_test_prompt_loader_testpromptfiles"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L61",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "unit_test_prompt_loader_testloadprompt",
+      "target": "unit_test_prompt_loader_testloadprompt_test_loads_route_system_prompt"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L67",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "unit_test_prompt_loader_testloadprompt",
+      "target": "unit_test_prompt_loader_testloadprompt_test_loads_judge_system_prompt"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L62",
+      "weight": 1.0,
+      "source": "unit_test_prompt_loader_testloadprompt",
+      "target": "unit_test_prompt_loader_testloadprompt_test_loads_cross_review_prompt",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L68",
+      "weight": 1.0,
+      "source": "unit_test_prompt_loader_testloadprompt",
+      "target": "unit_test_prompt_loader_testloadprompt_test_loads_joint_synthesis_prompt",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L85",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "unit_test_prompt_loader_testloadprompt",
+      "target": "unit_test_prompt_loader_testloadprompt_test_raises_on_missing_file"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L89",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "unit_test_prompt_loader_testloadprompt",
+      "target": "unit_test_prompt_loader_testloadprompt_test_raises_on_missing_custom_file"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L48",
+      "weight": 1.0,
+      "source": "unit_test_prompt_loader_rationale_48",
+      "target": "unit_test_prompt_loader_testloadprompt",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L73",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "unit_test_prompt_loader_testloadprompt",
+      "target": "unit_test_prompt_loader_testloadprompt_test_loads_custom_filename"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L79",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "unit_test_prompt_loader_testloadprompt",
+      "target": "unit_test_prompt_loader_testloadprompt_test_loads_flat_file_prompt"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L59",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "unit_test_prompt_loader_rationale_59",
+      "target": "unit_test_prompt_loader_testloadprompt"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L63",
+      "weight": 1.0,
+      "source": "unit_test_prompt_loader_testloadprompt_test_loads_route_system_prompt",
+      "target": "agents_common_load_prompt"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L69",
+      "weight": 1.0,
+      "source": "unit_test_prompt_loader_testloadprompt_test_loads_judge_system_prompt",
+      "target": "agents_common_load_prompt"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L87",
+      "weight": 1.0,
+      "source": "unit_test_prompt_loader_testloadprompt_test_raises_on_missing_file",
+      "target": "agents_common_load_prompt"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L91",
+      "weight": 1.0,
+      "source": "unit_test_prompt_loader_testloadprompt_test_raises_on_missing_custom_file",
+      "target": "agents_common_load_prompt"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "README.md",
       "source_location": "L1",
       "weight": 1.0,
@@ -15062,17 +16040,6 @@
       "target": "chat_answer_node_build_chat_answer_node"
     },
     {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": "L29",
-      "weight": 1.0,
-      "source": "agents_init_build_agent_nodes",
-      "target": "chat_answer_node_build_chat_answer_node"
-    },
-    {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/agents/common.py",
@@ -15323,28 +16290,6 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L63",
-      "weight": 1.0,
-      "source": "unit_test_prompt_loader_testloadprompt_test_loads_route_system_prompt",
-      "target": "agents_common_load_prompt"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L69",
-      "weight": 1.0,
-      "source": "unit_test_prompt_loader_testloadprompt_test_loads_judge_system_prompt",
-      "target": "agents_common_load_prompt"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L75",
       "weight": 1.0,
       "source": "unit_test_prompt_loader_testloadprompt_test_loads_custom_filename",
@@ -15359,28 +16304,6 @@
       "source_location": "L81",
       "weight": 1.0,
       "source": "unit_test_prompt_loader_testloadprompt_test_loads_flat_file_prompt",
-      "target": "agents_common_load_prompt"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L87",
-      "weight": 1.0,
-      "source": "unit_test_prompt_loader_testloadprompt_test_raises_on_missing_file",
-      "target": "agents_common_load_prompt"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L91",
-      "weight": 1.0,
-      "source": "unit_test_prompt_loader_testloadprompt_test_raises_on_missing_custom_file",
       "target": "agents_common_load_prompt"
     },
     {
@@ -15404,17 +16327,6 @@
       "target": "app_agents_expert_a_cross_review_py"
     },
     {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": "L38",
-      "weight": 1.0,
-      "source": "agents_init_build_agent_nodes",
-      "target": "expert_a_cross_review_build_expert_a_cross_review_node"
-    },
-    {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/agents/expert_a/node.py",
@@ -15422,17 +16334,6 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "app_agents_expert_a_node_py",
-      "target": "expert_a_node_build_expert_a_node"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": "L23",
-      "weight": 1.0,
-      "source": "agents_init_build_agent_nodes",
       "target": "expert_a_node_build_expert_a_node"
     },
     {
@@ -15456,17 +16357,6 @@
       "target": "app_agents_expert_a_revise_py"
     },
     {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": "L40",
-      "weight": 1.0,
-      "source": "agents_init_build_agent_nodes",
-      "target": "expert_a_revise_build_expert_a_revise_node"
-    },
-    {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/agents/expert_b/cross_review.py",
@@ -15485,17 +16375,6 @@
       "confidence_score": 1.0,
       "source": "expert_b_cross_review_rationale_1",
       "target": "app_agents_expert_b_cross_review_py"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": "L39",
-      "weight": 1.0,
-      "source": "agents_init_build_agent_nodes",
-      "target": "expert_b_cross_review_build_expert_b_cross_review_node"
     },
     {
       "relation": "contains",
@@ -15519,17 +16398,6 @@
       "target": "expert_b_node_build_expert_b_node"
     },
     {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": "L24",
-      "weight": 1.0,
-      "source": "agents_init_build_agent_nodes",
-      "target": "expert_b_node_build_expert_b_node"
-    },
-    {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/agents/expert_b/revise.py",
@@ -15550,17 +16418,6 @@
       "target": "app_agents_expert_b_revise_py"
     },
     {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": "L41",
-      "weight": 1.0,
-      "source": "agents_init_build_agent_nodes",
-      "target": "expert_b_revise_build_expert_b_revise_node"
-    },
-    {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/agents/finalize/node.py",
@@ -15579,17 +16436,6 @@
       "confidence_score": 1.0,
       "source": "finalize_node_rationale_1",
       "target": "app_agents_finalize_node_py"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": "L30",
-      "weight": 1.0,
-      "source": "agents_init_build_agent_nodes",
-      "target": "finalize_node_build_finalize_node"
     },
     {
       "relation": "contains",
@@ -15630,17 +16476,6 @@
       "confidence_score": 1.0,
       "source": "agents_joint_synthesis_rationale_1",
       "target": "app_agents_joint_synthesis_py"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": "L42",
-      "weight": 1.0,
-      "source": "agents_init_build_agent_nodes",
-      "target": "agents_joint_synthesis_build_joint_synthesis_node"
     },
     {
       "relation": "contains",
@@ -15747,17 +16582,6 @@
       "target": "judge_node_build_judge_node"
     },
     {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": "L25",
-      "weight": 1.0,
-      "source": "agents_init_build_agent_nodes",
-      "target": "judge_node_build_judge_node"
-    },
-    {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/agents/lightweight_review.py",
@@ -15776,17 +16600,6 @@
       "confidence_score": 1.0,
       "source": "agents_lightweight_review_rationale_1",
       "target": "app_agents_lightweight_review_py"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": "L43",
-      "weight": 1.0,
-      "source": "agents_init_build_agent_nodes",
-      "target": "agents_lightweight_review_build_lightweight_review_node"
     },
     {
       "relation": "contains",
@@ -15838,17 +16651,6 @@
       "source_location": "L23",
       "weight": 1.0,
       "source": "unit_test_planner_node_test_planner_normalizes_model_generated_node_ids_to_slug",
-      "target": "planner_node_build_planner_node"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": "L22",
-      "weight": 1.0,
-      "source": "agents_init_build_agent_nodes",
       "target": "planner_node_build_planner_node"
     },
     {
@@ -15948,17 +16750,6 @@
       "target": "route_node_build_route_node"
     },
     {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": "L27",
-      "weight": 1.0,
-      "source": "agents_init_build_agent_nodes",
-      "target": "route_node_build_route_node"
-    },
-    {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/agents/tool_agent/node.py",
@@ -16010,147 +16801,6 @@
       "weight": 1.0,
       "source": "unit_test_new_agent_nodes_testtoolagentnode_test_max_rounds_capped",
       "target": "tool_agent_node_build_tool_agent_node"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": "L28",
-      "weight": 1.0,
-      "source": "agents_init_build_agent_nodes",
-      "target": "tool_agent_node_build_tool_agent_node"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L35",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tests_unit_test_prompt_loader_py",
-      "target": "unit_test_prompt_loader_testpromptfiles"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L39",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tests_unit_test_prompt_loader_py",
-      "target": "unit_test_prompt_loader_test_prompt_file_exists"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L48",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tests_unit_test_prompt_loader_py",
-      "target": "unit_test_prompt_loader_test_prompt_file_non_empty"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L58",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "tests_unit_test_prompt_loader_py",
-      "target": "unit_test_prompt_loader_testloadprompt"
-    },
-    {
-      "relation": "rationale_for",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L1",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "unit_test_prompt_loader_rationale_1",
-      "target": "tests_unit_test_prompt_loader_py"
-    },
-    {
-      "relation": "rationale_for",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L36",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "unit_test_prompt_loader_rationale_36",
-      "target": "unit_test_prompt_loader_testpromptfiles"
-    },
-    {
-      "relation": "method",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L61",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "unit_test_prompt_loader_testloadprompt",
-      "target": "unit_test_prompt_loader_testloadprompt_test_loads_route_system_prompt"
-    },
-    {
-      "relation": "method",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L67",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "unit_test_prompt_loader_testloadprompt",
-      "target": "unit_test_prompt_loader_testloadprompt_test_loads_judge_system_prompt"
-    },
-    {
-      "relation": "method",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L73",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "unit_test_prompt_loader_testloadprompt",
-      "target": "unit_test_prompt_loader_testloadprompt_test_loads_custom_filename"
-    },
-    {
-      "relation": "method",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L79",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "unit_test_prompt_loader_testloadprompt",
-      "target": "unit_test_prompt_loader_testloadprompt_test_loads_flat_file_prompt"
-    },
-    {
-      "relation": "method",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L85",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "unit_test_prompt_loader_testloadprompt",
-      "target": "unit_test_prompt_loader_testloadprompt_test_raises_on_missing_file"
-    },
-    {
-      "relation": "method",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L89",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "unit_test_prompt_loader_testloadprompt",
-      "target": "unit_test_prompt_loader_testloadprompt_test_raises_on_missing_custom_file"
-    },
-    {
-      "relation": "rationale_for",
-      "confidence": "EXTRACTED",
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L59",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "unit_test_prompt_loader_rationale_59",
-      "target": "unit_test_prompt_loader_testloadprompt"
     },
     {
       "relation": "contains",
@@ -21922,59 +22572,6 @@
       "confidence_score": 1.0,
       "source": "builder_langgraph_api_rationale_1",
       "target": "backend_app_builder_langgraph_api_py"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": "L19",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "backend_app_agents_init_py",
-      "target": "agents_init_build_agent_nodes"
-    },
-    {
-      "relation": "rationale_for",
-      "confidence": "EXTRACTED",
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": "L1",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "agents_init_rationale_1",
-      "target": "backend_app_agents_init_py"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": "L21",
-      "weight": 1.0,
-      "source": "agents_init_build_agent_nodes",
-      "target": "diagnosis_node_build_diagnosis_node"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": "L26",
-      "weight": 1.0,
-      "source": "agents_init_build_agent_nodes",
-      "target": "feedback_node_build_feedback_node"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "backend/app/graph/workflow.py",
-      "source_location": "L280",
-      "weight": 1.0,
-      "source": "graph_workflow_build_workflow",
-      "target": "agents_init_build_agent_nodes"
     },
     {
       "relation": "contains",
@@ -32598,56 +33195,6 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": null,
-      "weight": 1.0,
-      "source": "agents_init",
-      "target": "agents_diagnosis_package"
-    },
-    {
-      "relation": "calls",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": null,
-      "weight": 1.0,
-      "source": "agents_init",
-      "target": "agents_planner_package"
-    },
-    {
-      "relation": "calls",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": null,
-      "weight": 1.0,
-      "source": "agents_init",
-      "target": "agents_expert_a_package"
-    },
-    {
-      "relation": "calls",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": null,
-      "weight": 1.0,
-      "source": "agents_init",
-      "target": "agents_expert_b_package"
-    },
-    {
-      "relation": "calls",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "backend/app/agents/__init__.py",
-      "source_location": null,
-      "weight": 1.0,
-      "source": "agents_init",
-      "target": "agents_judge_package"
-    },
-    {
-      "relation": "calls",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
       "source_file": "backend/app/agents/feedback/node.py",
       "source_location": null,
       "weight": 1.0,
@@ -33515,5 +34062,5 @@
       "source_file": "backend/tests/integration/test_workflow_integration.py"
     }
   ],
-  "built_at_commit": "373f3c5db347582fb3e19fde7036a8f2190d88c0"
+  "built_at_commit": "d815282d742b88a33be657481d3049e40e686d61"
 }
