@@ -7,12 +7,14 @@ from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
 
-from backend.app.agents.common import Node, messages_from_prompt, schema_note
+from backend.app.agents.common import Node, load_prompt, messages_from_prompt, schema_note
 from backend.app.core.llm import LLMClient, LLMProviderError
 from backend.app.schemas.state import LearningPathItem, StateDict, completed_event
 
 _NODE_ID_INVALID_CHARS = re.compile(r"[^a-z0-9-]+")
 _NODE_ID_REPEATED_DASHES = re.compile(r"-+")
+
+_EXTRA_TEXT = load_prompt(__file__)
 
 
 def _normalize_node_id(value: object, fallback_index: int) -> str:
@@ -40,7 +42,7 @@ def build_planner_node(llm_client: LLMClient) -> Node:
                     '[{"node_id":"patentability-basic","node_name":"专利授权条件基础",'
                     '"duration_min":20,"strategy":"先学概念","prerequisites":[]}]',
                 )
-                + "node_id 必须使用小写英文、数字和短横线，不要使用下划线。",
+                + _EXTRA_TEXT,
             ),
             (
                 "user",

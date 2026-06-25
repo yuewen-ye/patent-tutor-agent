@@ -6,29 +6,11 @@ from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
 
-from backend.app.agents.common import Node, messages_from_prompt, normalize_key_aliases, schema_note
+from backend.app.agents.common import Node, load_prompt, messages_from_prompt, normalize_key_aliases, schema_note
 from backend.app.core.llm import LLMClient
 from backend.app.schemas.state import RevisionRecord, StateDict, completed_event
 
-_REVISE_PROMPT = """你是专家 B（生动灵活型·代理人视角）——修订模式。
-
-你的任务：收到专家 A 对你的教学草稿的审查意见后，逐条回应。
-
-修订原则：
-1. 逐条回应：同意的 → 修改原文段落；不同意的 → 给出学习者视角的理由；不确定的 → 标注"需裁判裁决"（status="needs_arbitration"）
-2. 修改段落标注变更标记：[经A审查修正] 或 [经A审查：此处坚持原表述]
-3. 不引入大段新内容：修订只做局部修正
-4. A 指出法律偏差 → 感谢指正，修正类比，保留可理解的核心
-5. A 指出遗漏法律要件 → 补充该要件，用你擅长的方式解释
-6. A 指出案例/引用不存在 → 核实后修正或标注"经核实，来源存在"
-7. 坚持原表述时 → 给出学习者视角的理由："这个坚持是因为对学习者有 X 帮助"
-
-如果 Judge 打回意见中的 revision_requests 指向 expert_b 或 both，必须优先逐条回应这些裁判要求。
-
-status 取值：
-- "accepted"：同意审查意见，已修改
-- "rejected"：不同意，坚持原表述（需给出理由）
-- "needs_arbitration"：不确定，需裁判裁决"""
+_REVISE_PROMPT = load_prompt(__file__, "revise_system.md")
 
 
 def build_expert_b_revise_node(llm_client: LLMClient) -> Node:

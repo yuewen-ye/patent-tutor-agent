@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
@@ -51,3 +52,26 @@ def normalize_key_aliases(raw: object, aliases: dict[str, str]) -> object:
         if alias in normalized and canonical not in normalized:
             normalized[canonical] = normalized.pop(alias)
     return normalized
+
+
+def load_prompt(module_file: str, name: str = "system.md") -> str:
+    """Load a system prompt file co-located with the agent module.
+
+    Args:
+        module_file: Pass ``__file__`` from the calling module so the
+                     prompt file is resolved relative to that module.
+        name:        Prompt filename (default ``"system.md"``).
+
+    Returns:
+        The file contents as a single string.
+
+    Raises:
+        FileNotFoundError: If the prompt file does not exist.
+    """
+    prompt_path = Path(module_file).resolve().parent / name
+    if not prompt_path.is_file():
+        raise FileNotFoundError(
+            f"Agent prompt file not found: {prompt_path}.\n"
+            f"Create '{name}' with the system prompt content for this agent."
+        )
+    return prompt_path.read_text(encoding="utf-8").strip()
