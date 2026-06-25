@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 from typing import Any, cast
@@ -77,15 +76,7 @@ def main() -> None:
     parser.add_argument("--max-debate-rounds", type=int, default=3)
     parser.add_argument("--user-input", default="我想学习专利新颖性和创造性的区别")
     parser.add_argument("--json", action="store_true", help="Print the full final StateDict JSON to stdout.")
-    parser.add_argument(
-        "--real-rag",
-        action="store_true",
-        help="Use real ChromaDB + BGE-M3 vector search (default: mock).",
-    )
     args = parser.parse_args()
-
-    if not args.real_rag:
-        os.environ.setdefault("RAG_MOCK", "1")
 
     router = AgentLLMRouter.from_env()
     overrides: dict[AgentName, LLMProvider] = dict(router.agent_providers)

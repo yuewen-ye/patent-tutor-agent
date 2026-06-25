@@ -6,11 +6,9 @@ from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
 
-from backend.app.agents.common import Node, load_prompt, messages_from_prompt, normalize_key_aliases, schema_note
+from backend.app.agents.common import Node, messages_from_prompt, normalize_key_aliases, schema_note
 from backend.app.core.llm import LLMClient
 from backend.app.schemas.state import ExpertDraft, StateDict, completed_event
-
-_EXTRA_TEXT = load_prompt(__file__)
 
 
 def build_expert_a_node(llm_client: LLMClient) -> Node:
@@ -24,7 +22,8 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                     '"knowledge_points":["要点"],"legal_basis":["依据"],'
                     '"teaching_content":"正文","risks":[]}',
                 )
-                + _EXTRA_TEXT,
+                + "你是保守严谨的专利法专家 A，优先保证法条准确。"
+                + "如果修订上下文包含 revision_requests，必须逐条回应裁判意见。",
             ),
             (
                 "user",

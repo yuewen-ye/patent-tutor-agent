@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from backend.app.agents.chat_answer import build_chat_answer_node
 from backend.app.agents.common import Node
-from backend.app.agents.cross_review_a import build_expert_a_cross_review_node
-from backend.app.agents.cross_review_b import build_expert_b_cross_review_node
 from backend.app.agents.diagnosis import build_diagnosis_node
 from backend.app.agents.expert_a import build_expert_a_node
-from backend.app.agents.expert_a_revise import build_expert_a_revise_node
+from backend.app.agents.expert_a.cross_review import build_expert_a_cross_review_node
+from backend.app.agents.expert_a.revise import build_expert_a_revise_node
 from backend.app.agents.expert_b import build_expert_b_node
-from backend.app.agents.expert_b_revise import build_expert_b_revise_node
+from backend.app.agents.expert_b.cross_review import build_expert_b_cross_review_node
+from backend.app.agents.expert_b.revise import build_expert_b_revise_node
 from backend.app.agents.feedback import build_feedback_node
 from backend.app.agents.finalize import build_finalize_node
 from backend.app.agents.joint_synthesis import build_joint_synthesis_node

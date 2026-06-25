@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any, cast
 
-from backend.app.agents.common import Node, load_prompt
+from backend.app.agents.common import Node
 from backend.app.core.llm import (
     LLMClient,
     LLMMessage,
@@ -39,7 +39,13 @@ _TOOLS = [
     )
 ]
 
-_SYSTEM_PROMPT = load_prompt(__file__)
+_SYSTEM_PROMPT = """你是一个专利知识助手，负责回答用户关于专利法的问题。
+
+你可以使用 rag_retrieve 工具来检索专利法律知识库。根据用户的问题，自主判断是否需要检索、检索什么内容。
+如果用户的问题可以直接回答，不需要检索，就直接回答。
+如果需要检索，检索后根据结果判断是否还需要更多信息。最多可以进行5次检索。
+
+当信息足够时，给用户一个完整、准确的回答。"""
 
 
 def build_tool_agent_node(llm_client: LLMClient) -> Node:

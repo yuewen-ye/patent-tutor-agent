@@ -4,11 +4,20 @@ from __future__ import annotations
 
 from typing import Any
 
-from backend.app.agents.common import Node, LLMMessage, load_prompt, normalize_key_aliases
+from backend.app.agents.common import Node, LLMMessage, normalize_key_aliases
 from backend.app.core.llm import LLMClient
 from backend.app.schemas.state import FinalAnswer, StateDict, completed_event
 
-_FINALIZE_SYSTEM = load_prompt(__file__)
+_FINALIZE_SYSTEM = """你是专利教学内容的最终格式化专家。你的任务是将专家联合合成稿格式化为最终答案。
+
+联合合成稿已由两位专家协作完成，包含来源标注（[A]/[B]/[A+B融合]），你主要负责：
+1. 检查并确认标题、内容、来源是否完整
+2. 如有裁判指出的问题但尚未在联合合成稿中修正的，在最终答案中修正
+3. 保留完整的来源引用列表
+4. 添加下一步学习问题建议
+
+你必须只输出 JSON，不要输出 Markdown。字段名必须使用 snake_case。
+示例：{"title": "专利新颖性判断标准", "content": "格式化后的教学内容...", "sources": ["法条来源"]}"""
 
 
 def build_finalize_node(llm_client: LLMClient) -> Node:

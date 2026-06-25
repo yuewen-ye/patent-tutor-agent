@@ -5,11 +5,19 @@ from __future__ import annotations
 from typing import Any, Literal
 
 
-from backend.app.agents.common import Node, load_prompt
+from backend.app.agents.common import Node
 from backend.app.core.llm import LLMClient, LLMProviderError
 from backend.app.schemas.state import IntentResult, completed_event
 
-_ROUTE_SYSTEM = load_prompt(__file__)
+_ROUTE_SYSTEM = """你是一个专利学习助手路由器。将用户输入分类为三种意图之一，并返回JSON。
+
+intent 可选值：
+- teach: 用户想要系统学习专利知识（例如可能含"系统学习"、"学习路径"、"规划"、"帮我准备"等词）
+- chat: 具体知识点问答、定义、对比类问题（如"什么是抵触申请"）
+- diagnose: 用户只想做学情诊断（例如可能含"诊断"、"薄弱点"、"评估"、"测试一下"等词）
+- 不确定时默认为 chat
+
+必须返回包含 intent、confidence、reason 三个字段的 JSON。"""
 
 _ROUTE_EXAMPLE = """{"intent": "teach", "confidence": 0.9, "reason": "用户请求系统学习"}"""
 
