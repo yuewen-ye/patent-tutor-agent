@@ -215,742 +215,1129 @@
   },
   "nodes": [
     {
+      "label": "README.md",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L1",
+      "id": "readme_md",
+      "community": 24,
+      "norm_label": "readme.md"
+    },
+    {
+      "label": "Patent Tutor Agent",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L1",
+      "id": "patent_tutor_agent_readme_patent_tutor_agent",
+      "community": 24,
+      "norm_label": "patent tutor agent"
+    },
+    {
+      "label": "\u4ece\u96f6\u5230 LangGraph Studio",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L7",
+      "id": "patent_tutor_agent_readme_\u4ece\u96f6\u5230_langgraph_studio",
+      "community": 24,
+      "norm_label": "\u4ece\u96f6\u5230 langgraph studio"
+    },
+    {
+      "label": "1. \u5b89\u88c5 uv\uff08Python \u5305\u7ba1\u7406\u5668\uff09",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L9",
+      "id": "patent_tutor_agent_readme_1_\u5b89\u88c5_uv_python_\u5305\u7ba1\u7406\u5668",
+      "community": 24,
+      "norm_label": "1. \u5b89\u88c5 uv(python \u5305\u7ba1\u7406\u5668)"
+    },
+    {
+      "label": "code:bash (curl -LsSf https://astral.sh/uv/install.sh | sh)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L13",
+      "id": "patent_tutor_agent_readme_codeblock_1",
+      "community": 24,
+      "norm_label": "code:bash (curl -lssf https://astral.sh/uv/install.sh | sh)"
+    },
+    {
+      "label": "code:powershell (powershell -ExecutionPolicy ByPass -c \"irm https://astral.sh)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L21",
+      "id": "patent_tutor_agent_readme_codeblock_2",
+      "community": 24,
+      "norm_label": "code:powershell (powershell -executionpolicy bypass -c \"irm https://astral.sh)"
+    },
+    {
+      "label": "code:powershell (pip install uv          # \u901a\u8fc7 pip)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L27",
+      "id": "patent_tutor_agent_readme_codeblock_3",
+      "community": 24,
+      "norm_label": "code:powershell (pip install uv          # \u901a\u8fc7 pip)"
+    },
+    {
+      "label": "2. \u514b\u9686\u9879\u76ee\u5e76\u5b89\u88c5\u4f9d\u8d56",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L35",
+      "id": "patent_tutor_agent_readme_2_\u514b\u9686\u9879\u76ee\u5e76\u5b89\u88c5\u4f9d\u8d56",
+      "community": 24,
+      "norm_label": "2. \u514b\u9686\u9879\u76ee\u5e76\u5b89\u88c5\u4f9d\u8d56"
+    },
+    {
+      "label": "code:bash (git clone https://github.com/yuewen-ye/patent-tutor-agent.gi)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L37",
+      "id": "patent_tutor_agent_readme_codeblock_4",
+      "community": 24,
+      "norm_label": "code:bash (git clone https://github.com/yuewen-ye/patent-tutor-agent.gi)"
+    },
+    {
+      "label": "3. \u914d\u7f6e API Key",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L45",
+      "id": "patent_tutor_agent_readme_3_\u914d\u7f6e_api_key",
+      "community": 24,
+      "norm_label": "3. \u914d\u7f6e api key"
+    },
+    {
+      "label": "code:bash (cp .env.example .env)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L48",
+      "id": "patent_tutor_agent_readme_codeblock_5",
+      "community": 24,
+      "norm_label": "code:bash (cp .env.example .env)"
+    },
+    {
+      "label": "code:cmd (copy .env.example .env)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L53",
+      "id": "patent_tutor_agent_readme_codeblock_6",
+      "community": 24,
+      "norm_label": "code:cmd (copy .env.example .env)"
+    },
+    {
+      "label": "code:powershell (Copy-Item .env.example .env)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L58",
+      "id": "patent_tutor_agent_readme_codeblock_7",
+      "community": 24,
+      "norm_label": "code:powershell (copy-item .env.example .env)"
+    },
+    {
+      "label": "code:env (# LangSmith \u2014 LangGraph Studio \u8fde\u63a5\u9700\u8981\uff08\u5728 https://smith.langchai)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L64",
+      "id": "patent_tutor_agent_readme_codeblock_8",
+      "community": 24,
+      "norm_label": "code:env (# langsmith \u2014 langgraph studio \u8fde\u63a5\u9700\u8981(\u5728 https://smith.langchai)"
+    },
+    {
+      "label": "code:env (ROUTE_PROVIDER=deepseek)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L75",
+      "id": "patent_tutor_agent_readme_codeblock_9",
+      "community": 24,
+      "norm_label": "code:env (route_provider=deepseek)"
+    },
+    {
+      "label": "4. \u542f\u52a8 LangGraph Studio",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L87",
+      "id": "patent_tutor_agent_readme_4_\u542f\u52a8_langgraph_studio",
+      "community": 24,
+      "norm_label": "4. \u542f\u52a8 langgraph studio"
+    },
+    {
+      "label": "code:powershell (powershell -ExecutionPolicy Bypass -File .\\scripts\\langgraph)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L89",
+      "id": "patent_tutor_agent_readme_codeblock_10",
+      "community": 24,
+      "norm_label": "code:powershell (powershell -executionpolicy bypass -file .\\scripts\\langgraph)"
+    },
+    {
+      "label": "code:bash (bash scripts/langgraph-dev.sh)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L95",
+      "id": "patent_tutor_agent_readme_codeblock_11",
+      "community": 24,
+      "norm_label": "code:bash (bash scripts/langgraph-dev.sh)"
+    },
+    {
+      "label": "code:block12 (- \ud83d\ude80 API: http://127.0.0.1:8124)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L101",
+      "id": "patent_tutor_agent_readme_codeblock_12",
+      "community": 24,
+      "norm_label": "code:block12 (- \ud83d\ude80 api: http://127.0.0.1:8124)"
+    },
+    {
+      "label": "5. \u672c\u5730\u8bbf\u95ee\uff08\u672c\u673a\u8fd0\u884c\uff09",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L107",
+      "id": "patent_tutor_agent_readme_5_\u672c\u5730\u8bbf\u95ee_\u672c\u673a\u8fd0\u884c",
+      "community": 24,
+      "norm_label": "5. \u672c\u5730\u8bbf\u95ee(\u672c\u673a\u8fd0\u884c)"
+    },
+    {
+      "label": "6. \u8fdc\u7a0b\u8bbf\u95ee\uff08SSH \u96a7\u9053\uff09",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L111",
+      "id": "patent_tutor_agent_readme_6_\u8fdc\u7a0b\u8bbf\u95ee_ssh_\u96a7\u9053",
+      "community": 24,
+      "norm_label": "6. \u8fdc\u7a0b\u8bbf\u95ee(ssh \u96a7\u9053)"
+    },
+    {
+      "label": "code:bash (ssh -L 8124:localhost:8124 wangbin@<\u670d\u52a1\u5668IP>)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L117",
+      "id": "patent_tutor_agent_readme_codeblock_13",
+      "community": 24,
+      "norm_label": "code:bash (ssh -l 8124:localhost:8124 wangbin@<\u670d\u52a1\u5668ip>)"
+    },
+    {
+      "label": "code:block14 (https://smith.langchain.com/studio/?baseUrl=http://localhost)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L125",
+      "id": "patent_tutor_agent_readme_codeblock_14",
+      "community": 24,
+      "norm_label": "code:block14 (https://smith.langchain.com/studio/?baseurl=http://localhost)"
+    },
+    {
+      "label": "7. Studio \u91cc\u505a\u4ec0\u4e48",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L129",
+      "id": "patent_tutor_agent_readme_7_studio_\u91cc\u505a\u4ec0\u4e48",
+      "community": 24,
+      "norm_label": "7. studio \u91cc\u505a\u4ec0\u4e48"
+    },
+    {
+      "label": "\u6280\u672f\u6808",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L141",
+      "id": "patent_tutor_agent_readme_\u6280\u672f\u6808",
+      "community": 24,
+      "norm_label": "\u6280\u672f\u6808"
+    },
+    {
+      "label": "\u9879\u76ee\u7ed3\u6784",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L153",
+      "id": "patent_tutor_agent_readme_\u9879\u76ee\u7ed3\u6784",
+      "community": 24,
+      "norm_label": "\u9879\u76ee\u7ed3\u6784"
+    },
+    {
+      "label": "code:text (.)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L155",
+      "id": "patent_tutor_agent_readme_codeblock_15",
+      "community": 24,
+      "norm_label": "code:text (.)"
+    },
+    {
+      "label": "\u5de5\u4f5c\u6d41\u67b6\u6784",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L191",
+      "id": "patent_tutor_agent_readme_\u5de5\u4f5c\u6d41\u67b6\u6784",
+      "community": 24,
+      "norm_label": "\u5de5\u4f5c\u6d41\u67b6\u6784"
+    },
+    {
+      "label": "code:text (START \u2192 _init \u2192 route \u2500\u2500\u252c\u2500\u2500 diagnose: diagnosis \u2192 END)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L195",
+      "id": "patent_tutor_agent_readme_codeblock_16",
+      "community": 24,
+      "norm_label": "code:text (start \u2192 _init \u2192 route \u2500\u2500\u252c\u2500\u2500 diagnose: diagnosis \u2192 end)"
+    },
+    {
+      "label": "Agent \u8282\u70b9\u804c\u8d23",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L222",
+      "id": "patent_tutor_agent_readme_agent_\u8282\u70b9\u804c\u8d23",
+      "community": 24,
+      "norm_label": "agent \u8282\u70b9\u804c\u8d23"
+    },
+    {
+      "label": "\u5feb\u901f\u547d\u4ee4",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L244",
+      "id": "patent_tutor_agent_readme_\u5feb\u901f\u547d\u4ee4",
+      "community": 24,
+      "norm_label": "\u5feb\u901f\u547d\u4ee4"
+    },
+    {
+      "label": "code:bash (uv sync                                           # \u5b89\u88c5\u4f9d\u8d56)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L246",
+      "id": "patent_tutor_agent_readme_codeblock_17",
+      "community": 24,
+      "norm_label": "code:bash (uv sync                                           # \u5b89\u88c5\u4f9d\u8d56)"
+    },
+    {
+      "label": "\u6a21\u578b\u4e0e\u914d\u7f6e",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L267",
+      "id": "patent_tutor_agent_readme_\u6a21\u578b\u4e0e\u914d\u7f6e",
+      "community": 24,
+      "norm_label": "\u6a21\u578b\u4e0e\u914d\u7f6e"
+    },
+    {
+      "label": "code:env (DEEPSEEK_MODEL=deepseek-v4-flash)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L273",
+      "id": "patent_tutor_agent_readme_codeblock_18",
+      "community": 24,
+      "norm_label": "code:env (deepseek_model=deepseek-v4-flash)"
+    },
+    {
+      "label": "RAG \u5de5\u5177\u51fd\u6570",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L280",
+      "id": "patent_tutor_agent_readme_rag_\u5de5\u5177\u51fd\u6570",
+      "community": 24,
+      "norm_label": "rag \u5de5\u5177\u51fd\u6570"
+    },
+    {
+      "label": "\u5f00\u542f\u771f\u5b9e RAG \u6a21\u5f0f",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L286",
+      "id": "patent_tutor_agent_readme_\u5f00\u542f\u771f\u5b9e_rag_\u6a21\u5f0f",
+      "community": 24,
+      "norm_label": "\u5f00\u542f\u771f\u5b9e rag \u6a21\u5f0f"
+    },
+    {
+      "label": "code:env (RAG_MOCK=0)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L290",
+      "id": "patent_tutor_agent_readme_codeblock_19",
+      "community": 24,
+      "norm_label": "code:env (rag_mock=0)"
+    },
+    {
+      "label": "FastAPI \u670d\u52a1",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L303",
+      "id": "patent_tutor_agent_readme_fastapi_\u670d\u52a1",
+      "community": 24,
+      "norm_label": "fastapi \u670d\u52a1"
+    },
+    {
+      "label": "\u77e5\u8bc6\u56fe\u8c31",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L314",
+      "id": "patent_tutor_agent_readme_\u77e5\u8bc6\u56fe\u8c31",
+      "community": 24,
+      "norm_label": "\u77e5\u8bc6\u56fe\u8c31"
+    },
+    {
+      "label": "code:bash (graphify query \"<\u95ee\u9898>\"        # \u56fe\u8c31\u95ee\u7b54)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L326",
+      "id": "patent_tutor_agent_readme_codeblock_20",
+      "community": 24,
+      "norm_label": "code:bash (graphify query \"<\u95ee\u9898>\"        # \u56fe\u8c31\u95ee\u7b54)"
+    },
+    {
+      "label": "\u4f9d\u8d56\u7ba1\u7406",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L333",
+      "id": "patent_tutor_agent_readme_\u4f9d\u8d56\u7ba1\u7406",
+      "community": 24,
+      "norm_label": "\u4f9d\u8d56\u7ba1\u7406"
+    },
+    {
+      "label": "code:bash (uv export --format requirements-txt --output-file requiremen)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L337",
+      "id": "patent_tutor_agent_readme_codeblock_21",
+      "community": 24,
+      "norm_label": "code:bash (uv export --format requirements-txt --output-file requiremen)"
+    },
+    {
+      "label": "\u63d0\u4ea4\u89c4\u8303",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L341",
+      "id": "patent_tutor_agent_readme_\u63d0\u4ea4\u89c4\u8303",
+      "community": 24,
+      "norm_label": "\u63d0\u4ea4\u89c4\u8303"
+    },
+    {
       "label": "node.py",
       "file_type": "code",
       "source_file": "app/agents/chat_answer/node.py",
       "source_location": "L1",
-      "id": "app_agents_chat_answer_node_py",
-      "community": 83,
-      "norm_label": "node.py"
+      "community": 163,
+      "norm_label": "node.py",
+      "id": "app_agents_chat_answer_node_py"
     },
     {
       "label": "_sources_from_retrieval_context()",
       "file_type": "code",
       "source_file": "app/agents/chat_answer/node.py",
       "source_location": "L15",
-      "id": "chat_answer_node_sources_from_retrieval_context",
-      "community": 83,
-      "norm_label": "_sources_from_retrieval_context()"
+      "community": 163,
+      "norm_label": "_sources_from_retrieval_context()",
+      "id": "chat_answer_node_sources_from_retrieval_context"
     },
     {
       "label": "build_chat_answer_node()",
       "file_type": "code",
       "source_file": "app/agents/chat_answer/node.py",
       "source_location": "L28",
-      "id": "chat_answer_node_build_chat_answer_node",
-      "community": 83,
-      "norm_label": "build_chat_answer_node()"
+      "community": 163,
+      "norm_label": "build_chat_answer_node()",
+      "id": "chat_answer_node_build_chat_answer_node"
     },
     {
       "label": "Chat answer node: generates a direct answer from tool_agent context.",
       "file_type": "rationale",
       "source_file": "app/agents/chat_answer/node.py",
       "source_location": "L1",
-      "id": "chat_answer_node_rationale_1",
-      "community": 83,
-      "norm_label": "chat answer node: generates a direct answer from tool_agent context."
+      "community": 163,
+      "norm_label": "chat answer node: generates a direct answer from tool_agent context.",
+      "id": "chat_answer_node_rationale_1"
     },
     {
       "label": "system.md",
       "file_type": "document",
       "source_file": "app/agents/chat_answer/system.md",
       "source_location": "L1",
-      "id": "app_agents_chat_answer_system_md",
       "community": 167,
-      "norm_label": "system.md"
+      "norm_label": "system.md",
+      "id": "app_agents_chat_answer_system_md"
     },
     {
       "label": "common.py",
       "file_type": "code",
       "source_file": "app/agents/common.py",
       "source_location": "L1",
-      "id": "app_agents_common_py",
       "community": 137,
-      "norm_label": "common.py"
+      "norm_label": "common.py",
+      "id": "app_agents_common_py"
     },
     {
       "label": "_chat_role()",
       "file_type": "code",
       "source_file": "app/agents/common.py",
       "source_location": "L24",
-      "id": "agents_common_chat_role",
       "community": 137,
-      "norm_label": "_chat_role()"
+      "norm_label": "_chat_role()",
+      "id": "agents_common_chat_role"
     },
     {
       "label": "messages_from_prompt()",
       "file_type": "code",
       "source_file": "app/agents/common.py",
       "source_location": "L31",
-      "id": "agents_common_messages_from_prompt",
       "community": 137,
-      "norm_label": "messages_from_prompt()"
+      "norm_label": "messages_from_prompt()",
+      "id": "agents_common_messages_from_prompt"
     },
     {
       "label": "schema_note()",
       "file_type": "code",
       "source_file": "app/agents/common.py",
       "source_location": "L38",
-      "id": "agents_common_schema_note",
       "community": 135,
-      "norm_label": "schema_note()"
+      "norm_label": "schema_note()",
+      "id": "agents_common_schema_note"
     },
     {
       "label": "normalize_key_aliases()",
       "file_type": "code",
       "source_file": "app/agents/common.py",
       "source_location": "L46",
-      "id": "agents_common_normalize_key_aliases",
       "community": 137,
-      "norm_label": "normalize_key_aliases()"
+      "norm_label": "normalize_key_aliases()",
+      "id": "agents_common_normalize_key_aliases"
     },
     {
       "label": "load_prompt()",
       "file_type": "code",
       "source_file": "app/agents/common.py",
       "source_location": "L57",
-      "id": "agents_common_load_prompt",
       "community": 137,
-      "norm_label": "load_prompt()"
+      "norm_label": "load_prompt()",
+      "id": "agents_common_load_prompt"
     },
     {
       "label": "Shared helpers for Agent node modules.",
       "file_type": "rationale",
       "source_file": "app/agents/common.py",
       "source_location": "L1",
-      "id": "agents_common_rationale_1",
       "community": 137,
-      "norm_label": "shared helpers for agent node modules."
+      "norm_label": "shared helpers for agent node modules.",
+      "id": "agents_common_rationale_1"
     },
     {
       "label": "Map known provider key variants to the internal contract field names.",
       "file_type": "rationale",
       "source_file": "app/agents/common.py",
       "source_location": "L47",
-      "id": "agents_common_rationale_47",
       "community": 137,
-      "norm_label": "map known provider key variants to the internal contract field names."
+      "norm_label": "map known provider key variants to the internal contract field names.",
+      "id": "agents_common_rationale_47"
     },
     {
       "label": "Load a system prompt file co-located with the agent module.      Args:         m",
       "file_type": "rationale",
       "source_file": "app/agents/common.py",
       "source_location": "L58",
-      "id": "agents_common_rationale_58",
       "community": 137,
-      "norm_label": "load a system prompt file co-located with the agent module.      args:         m"
+      "norm_label": "load a system prompt file co-located with the agent module.      args:         m",
+      "id": "agents_common_rationale_58"
     },
     {
       "label": "cross_review.py",
       "file_type": "code",
       "source_file": "app/agents/expert_a/cross_review.py",
       "source_location": "L1",
-      "id": "app_agents_expert_a_cross_review_py",
       "community": 135,
-      "norm_label": "cross_review.py"
+      "norm_label": "cross_review.py",
+      "id": "app_agents_expert_a_cross_review_py"
     },
     {
       "label": "build_expert_a_cross_review_node()",
       "file_type": "code",
       "source_file": "app/agents/expert_a/cross_review.py",
       "source_location": "L16",
-      "id": "expert_a_cross_review_build_expert_a_cross_review_node",
       "community": 135,
-      "norm_label": "build_expert_a_cross_review_node()"
+      "norm_label": "build_expert_a_cross_review_node()",
+      "id": "expert_a_cross_review_build_expert_a_cross_review_node"
     },
     {
       "label": "Expert A cross-review node \u2014 reviews Expert B's draft for legal accuracy.",
       "file_type": "rationale",
       "source_file": "app/agents/expert_a/cross_review.py",
       "source_location": "L1",
-      "id": "expert_a_cross_review_rationale_1",
       "community": 135,
-      "norm_label": "expert a cross-review node \u2014 reviews expert b's draft for legal accuracy."
+      "norm_label": "expert a cross-review node \u2014 reviews expert b's draft for legal accuracy.",
+      "id": "expert_a_cross_review_rationale_1"
     },
     {
       "label": "cross_review_system.md",
       "file_type": "document",
       "source_file": "app/agents/expert_a/cross_review_system.md",
       "source_location": "L1",
-      "id": "app_agents_expert_a_cross_review_system_md",
       "community": 168,
-      "norm_label": "cross_review_system.md"
+      "norm_label": "cross_review_system.md",
+      "id": "app_agents_expert_a_cross_review_system_md"
     },
     {
       "label": "node.py",
       "file_type": "code",
       "source_file": "app/agents/expert_a/node.py",
       "source_location": "L1",
-      "id": "app_agents_expert_a_node_py",
       "community": 135,
-      "norm_label": "node.py"
+      "norm_label": "node.py",
+      "id": "app_agents_expert_a_node_py"
     },
     {
       "label": "build_expert_a_node()",
       "file_type": "code",
       "source_file": "app/agents/expert_a/node.py",
       "source_location": "L16",
-      "id": "expert_a_node_build_expert_a_node",
       "community": 135,
-      "norm_label": "build_expert_a_node()"
+      "norm_label": "build_expert_a_node()",
+      "id": "expert_a_node_build_expert_a_node"
     },
     {
       "label": "revise.py",
       "file_type": "code",
       "source_file": "app/agents/expert_a/revise.py",
       "source_location": "L1",
-      "id": "app_agents_expert_a_revise_py",
-      "community": 135,
-      "norm_label": "revise.py"
+      "community": 184,
+      "norm_label": "revise.py",
+      "id": "app_agents_expert_a_revise_py"
     },
     {
       "label": "build_expert_a_revise_node()",
       "file_type": "code",
       "source_file": "app/agents/expert_a/revise.py",
       "source_location": "L16",
-      "id": "expert_a_revise_build_expert_a_revise_node",
-      "community": 135,
-      "norm_label": "build_expert_a_revise_node()"
+      "community": 184,
+      "norm_label": "build_expert_a_revise_node()",
+      "id": "expert_a_revise_build_expert_a_revise_node"
     },
     {
       "label": "Expert A revision node \u2014 responds to Expert B's cross-review.",
       "file_type": "rationale",
       "source_file": "app/agents/expert_a/revise.py",
       "source_location": "L1",
-      "id": "expert_a_revise_rationale_1",
-      "community": 135,
-      "norm_label": "expert a revision node \u2014 responds to expert b's cross-review."
+      "community": 184,
+      "norm_label": "expert a revision node \u2014 responds to expert b's cross-review.",
+      "id": "expert_a_revise_rationale_1"
     },
     {
       "label": "revise_system.md",
       "file_type": "document",
       "source_file": "app/agents/expert_a/revise_system.md",
       "source_location": "L1",
-      "id": "app_agents_expert_a_revise_system_md",
       "community": 169,
-      "norm_label": "revise_system.md"
+      "norm_label": "revise_system.md",
+      "id": "app_agents_expert_a_revise_system_md"
     },
     {
       "label": "system.md",
       "file_type": "document",
       "source_file": "app/agents/expert_a/system.md",
       "source_location": "L1",
-      "id": "app_agents_expert_a_system_md",
       "community": 170,
-      "norm_label": "system.md"
+      "norm_label": "system.md",
+      "id": "app_agents_expert_a_system_md"
     },
     {
       "label": "cross_review.py",
       "file_type": "code",
       "source_file": "app/agents/expert_b/cross_review.py",
       "source_location": "L1",
-      "id": "app_agents_expert_b_cross_review_py",
-      "community": 165,
-      "norm_label": "cross_review.py"
+      "community": 135,
+      "norm_label": "cross_review.py",
+      "id": "app_agents_expert_b_cross_review_py"
     },
     {
       "label": "build_expert_b_cross_review_node()",
       "file_type": "code",
       "source_file": "app/agents/expert_b/cross_review.py",
       "source_location": "L16",
-      "id": "expert_b_cross_review_build_expert_b_cross_review_node",
-      "community": 165,
-      "norm_label": "build_expert_b_cross_review_node()"
+      "community": 135,
+      "norm_label": "build_expert_b_cross_review_node()",
+      "id": "expert_b_cross_review_build_expert_b_cross_review_node"
     },
     {
       "label": "Expert B cross-review node \u2014 reviews Expert A's draft for accessibility.",
       "file_type": "rationale",
       "source_file": "app/agents/expert_b/cross_review.py",
       "source_location": "L1",
-      "id": "expert_b_cross_review_rationale_1",
-      "community": 165,
-      "norm_label": "expert b cross-review node \u2014 reviews expert a's draft for accessibility."
+      "community": 135,
+      "norm_label": "expert b cross-review node \u2014 reviews expert a's draft for accessibility.",
+      "id": "expert_b_cross_review_rationale_1"
     },
     {
       "label": "cross_review_system.md",
       "file_type": "document",
       "source_file": "app/agents/expert_b/cross_review_system.md",
       "source_location": "L1",
-      "id": "app_agents_expert_b_cross_review_system_md",
       "community": 171,
-      "norm_label": "cross_review_system.md"
+      "norm_label": "cross_review_system.md",
+      "id": "app_agents_expert_b_cross_review_system_md"
     },
     {
       "label": "node.py",
       "file_type": "code",
       "source_file": "app/agents/expert_b/node.py",
       "source_location": "L1",
-      "id": "app_agents_expert_b_node_py",
-      "community": 138,
-      "norm_label": "node.py"
+      "community": 135,
+      "norm_label": "node.py",
+      "id": "app_agents_expert_b_node_py"
     },
     {
       "label": "build_expert_b_node()",
       "file_type": "code",
       "source_file": "app/agents/expert_b/node.py",
       "source_location": "L16",
-      "id": "expert_b_node_build_expert_b_node",
-      "community": 138,
-      "norm_label": "build_expert_b_node()"
+      "community": 135,
+      "norm_label": "build_expert_b_node()",
+      "id": "expert_b_node_build_expert_b_node"
     },
     {
       "label": "revise.py",
       "file_type": "code",
       "source_file": "app/agents/expert_b/revise.py",
       "source_location": "L1",
-      "id": "app_agents_expert_b_revise_py",
       "community": 135,
-      "norm_label": "revise.py"
+      "norm_label": "revise.py",
+      "id": "app_agents_expert_b_revise_py"
     },
     {
       "label": "build_expert_b_revise_node()",
       "file_type": "code",
       "source_file": "app/agents/expert_b/revise.py",
       "source_location": "L16",
-      "id": "expert_b_revise_build_expert_b_revise_node",
       "community": 135,
-      "norm_label": "build_expert_b_revise_node()"
+      "norm_label": "build_expert_b_revise_node()",
+      "id": "expert_b_revise_build_expert_b_revise_node"
     },
     {
       "label": "Expert B revision node \u2014 responds to Expert A's cross-review.",
       "file_type": "rationale",
       "source_file": "app/agents/expert_b/revise.py",
       "source_location": "L1",
-      "id": "expert_b_revise_rationale_1",
       "community": 135,
-      "norm_label": "expert b revision node \u2014 responds to expert a's cross-review."
+      "norm_label": "expert b revision node \u2014 responds to expert a's cross-review.",
+      "id": "expert_b_revise_rationale_1"
     },
     {
       "label": "revise_system.md",
       "file_type": "document",
       "source_file": "app/agents/expert_b/revise_system.md",
       "source_location": "L1",
-      "id": "app_agents_expert_b_revise_system_md",
       "community": 172,
-      "norm_label": "revise_system.md"
+      "norm_label": "revise_system.md",
+      "id": "app_agents_expert_b_revise_system_md"
     },
     {
       "label": "system.md",
       "file_type": "document",
       "source_file": "app/agents/expert_b/system.md",
       "source_location": "L1",
-      "id": "app_agents_expert_b_system_md",
       "community": 173,
-      "norm_label": "system.md"
+      "norm_label": "system.md",
+      "id": "app_agents_expert_b_system_md"
     },
     {
       "label": "node.py",
       "file_type": "code",
       "source_file": "app/agents/finalize/node.py",
       "source_location": "L1",
-      "id": "app_agents_finalize_node_py",
       "community": 147,
-      "norm_label": "node.py"
+      "norm_label": "node.py",
+      "id": "app_agents_finalize_node_py"
     },
     {
       "label": "build_finalize_node()",
       "file_type": "code",
       "source_file": "app/agents/finalize/node.py",
       "source_location": "L14",
-      "id": "finalize_node_build_finalize_node",
       "community": 147,
-      "norm_label": "build_finalize_node()"
+      "norm_label": "build_finalize_node()",
+      "id": "finalize_node_build_finalize_node"
     },
     {
       "label": "Workflow finalization node \u2014 merges expert drafts into a unified teaching answer",
       "file_type": "rationale",
       "source_file": "app/agents/finalize/node.py",
       "source_location": "L1",
-      "id": "finalize_node_rationale_1",
       "community": 147,
-      "norm_label": "workflow finalization node \u2014 merges expert drafts into a unified teaching answer"
+      "norm_label": "workflow finalization node \u2014 merges expert drafts into a unified teaching answer",
+      "id": "finalize_node_rationale_1"
     },
     {
       "label": "system.md",
       "file_type": "document",
       "source_file": "app/agents/finalize/system.md",
       "source_location": "L1",
-      "id": "app_agents_finalize_system_md",
       "community": 174,
-      "norm_label": "system.md"
+      "norm_label": "system.md",
+      "id": "app_agents_finalize_system_md"
     },
     {
       "label": "joint_synthesis.py",
       "file_type": "code",
       "source_file": "app/agents/joint_synthesis.py",
       "source_location": "L1",
-      "id": "app_agents_joint_synthesis_py",
       "community": 0,
-      "norm_label": "joint_synthesis.py"
+      "norm_label": "joint_synthesis.py",
+      "id": "app_agents_joint_synthesis_py"
     },
     {
       "label": "build_joint_synthesis_node()",
       "file_type": "code",
       "source_file": "app/agents/joint_synthesis.py",
       "source_location": "L16",
-      "id": "agents_joint_synthesis_build_joint_synthesis_node",
       "community": 0,
-      "norm_label": "build_joint_synthesis_node()"
+      "norm_label": "build_joint_synthesis_node()",
+      "id": "agents_joint_synthesis_build_joint_synthesis_node"
     },
     {
       "label": "Joint synthesis agent node \u2014 merges Expert A and B revised drafts into one outpu",
       "file_type": "rationale",
       "source_file": "app/agents/joint_synthesis.py",
       "source_location": "L1",
-      "id": "agents_joint_synthesis_rationale_1",
       "community": 0,
-      "norm_label": "joint synthesis agent node \u2014 merges expert a and b revised drafts into one outpu"
+      "norm_label": "joint synthesis agent node \u2014 merges expert a and b revised drafts into one outpu",
+      "id": "agents_joint_synthesis_rationale_1"
     },
     {
       "label": "joint_synthesis_system.md",
       "file_type": "document",
       "source_file": "app/agents/joint_synthesis_system.md",
       "source_location": "L1",
-      "id": "app_agents_joint_synthesis_system_md",
       "community": 175,
-      "norm_label": "joint_synthesis_system.md"
+      "norm_label": "joint_synthesis_system.md",
+      "id": "app_agents_joint_synthesis_system_md"
     },
     {
       "label": "node.py",
       "file_type": "code",
       "source_file": "app/agents/judge/node.py",
       "source_location": "L1",
-      "id": "app_agents_judge_node_py",
       "community": 160,
-      "norm_label": "node.py"
+      "norm_label": "node.py",
+      "id": "app_agents_judge_node_py"
     },
     {
       "label": "_normalize_target()",
       "file_type": "code",
       "source_file": "app/agents/judge/node.py",
       "source_location": "L28",
-      "id": "judge_node_normalize_target",
       "community": 160,
-      "norm_label": "_normalize_target()"
+      "norm_label": "_normalize_target()",
+      "id": "judge_node_normalize_target"
     },
     {
       "label": "_normalize_judge_report()",
       "file_type": "code",
       "source_file": "app/agents/judge/node.py",
       "source_location": "L42",
-      "id": "judge_node_normalize_judge_report",
       "community": 160,
-      "norm_label": "_normalize_judge_report()"
+      "norm_label": "_normalize_judge_report()",
+      "id": "judge_node_normalize_judge_report"
     },
     {
       "label": "build_judge_node()",
       "file_type": "code",
       "source_file": "app/agents/judge/node.py",
       "source_location": "L76",
-      "id": "judge_node_build_judge_node",
       "community": 4,
-      "norm_label": "build_judge_node()"
+      "norm_label": "build_judge_node()",
+      "id": "judge_node_build_judge_node"
     },
     {
       "label": "\u5c06 LLM \u53ef\u80fd\u8f93\u51fa\u7684\u4e2d\u6587\u63cf\u8ff0\u89c4\u8303\u5316\u4e3a expert_a / expert_b / both.",
       "file_type": "rationale",
       "source_file": "app/agents/judge/node.py",
       "source_location": "L29",
-      "id": "judge_node_rationale_29",
       "community": 160,
-      "norm_label": "\u5c06 llm \u53ef\u80fd\u8f93\u51fa\u7684\u4e2d\u6587\u63cf\u8ff0\u89c4\u8303\u5316\u4e3a expert_a / expert_b / both."
+      "norm_label": "\u5c06 llm \u53ef\u80fd\u8f93\u51fa\u7684\u4e2d\u6587\u63cf\u8ff0\u89c4\u8303\u5316\u4e3a expert_a / expert_b / both.",
+      "id": "judge_node_rationale_29"
     },
     {
       "label": "system.md",
       "file_type": "document",
       "source_file": "app/agents/judge/system.md",
       "source_location": "L1",
-      "id": "app_agents_judge_system_md",
       "community": 176,
-      "norm_label": "system.md"
+      "norm_label": "system.md",
+      "id": "app_agents_judge_system_md"
     },
     {
       "label": "lightweight_review.py",
       "file_type": "code",
       "source_file": "app/agents/lightweight_review.py",
       "source_location": "L1",
-      "id": "app_agents_lightweight_review_py",
-      "community": 135,
-      "norm_label": "lightweight_review.py"
+      "community": 183,
+      "norm_label": "lightweight_review.py",
+      "id": "app_agents_lightweight_review_py"
     },
     {
       "label": "build_lightweight_review_node()",
       "file_type": "code",
       "source_file": "app/agents/lightweight_review.py",
       "source_location": "L16",
-      "id": "agents_lightweight_review_build_lightweight_review_node",
-      "community": 135,
-      "norm_label": "build_lightweight_review_node()"
+      "community": 183,
+      "norm_label": "build_lightweight_review_node()",
+      "id": "agents_lightweight_review_build_lightweight_review_node"
     },
     {
       "label": "Lightweight review agent node \u2014 quick peer review of changed paragraphs only.",
       "file_type": "rationale",
       "source_file": "app/agents/lightweight_review.py",
       "source_location": "L1",
-      "id": "agents_lightweight_review_rationale_1",
-      "community": 135,
-      "norm_label": "lightweight review agent node \u2014 quick peer review of changed paragraphs only."
+      "community": 183,
+      "norm_label": "lightweight review agent node \u2014 quick peer review of changed paragraphs only.",
+      "id": "agents_lightweight_review_rationale_1"
     },
     {
       "label": "lightweight_review_system.md",
       "file_type": "document",
       "source_file": "app/agents/lightweight_review_system.md",
       "source_location": "L1",
-      "id": "app_agents_lightweight_review_system_md",
       "community": 177,
-      "norm_label": "lightweight_review_system.md"
+      "norm_label": "lightweight_review_system.md",
+      "id": "app_agents_lightweight_review_system_md"
     },
     {
       "label": "node.py",
       "file_type": "code",
       "source_file": "app/agents/planner/node.py",
       "source_location": "L1",
-      "id": "app_agents_planner_node_py",
       "community": 136,
-      "norm_label": "node.py"
+      "norm_label": "node.py",
+      "id": "app_agents_planner_node_py"
     },
     {
       "label": "_normalize_node_id()",
       "file_type": "code",
       "source_file": "app/agents/planner/node.py",
       "source_location": "L20",
-      "id": "planner_node_normalize_node_id",
       "community": 136,
-      "norm_label": "_normalize_node_id()"
+      "norm_label": "_normalize_node_id()",
+      "id": "planner_node_normalize_node_id"
     },
     {
       "label": "_normalize_learning_path_item()",
       "file_type": "code",
       "source_file": "app/agents/planner/node.py",
       "source_location": "L27",
-      "id": "planner_node_normalize_learning_path_item",
       "community": 136,
-      "norm_label": "_normalize_learning_path_item()"
+      "norm_label": "_normalize_learning_path_item()",
+      "id": "planner_node_normalize_learning_path_item"
     },
     {
       "label": "build_planner_node()",
       "file_type": "code",
       "source_file": "app/agents/planner/node.py",
       "source_location": "L35",
-      "id": "planner_node_build_planner_node",
       "community": 136,
-      "norm_label": "build_planner_node()"
+      "norm_label": "build_planner_node()",
+      "id": "planner_node_build_planner_node"
     },
     {
       "label": "system.md",
       "file_type": "document",
       "source_file": "app/agents/planner/system.md",
       "source_location": "L1",
-      "id": "app_agents_planner_system_md",
       "community": 178,
-      "norm_label": "system.md"
+      "norm_label": "system.md",
+      "id": "app_agents_planner_system_md"
     },
     {
       "label": "node.py",
       "file_type": "code",
       "source_file": "app/agents/route/node.py",
       "source_location": "L1",
-      "id": "app_agents_route_node_py",
       "community": 83,
-      "norm_label": "node.py"
+      "norm_label": "node.py",
+      "id": "app_agents_route_node_py"
     },
     {
       "label": "_local_intent_hint()",
       "file_type": "code",
       "source_file": "app/agents/route/node.py",
       "source_location": "L32",
-      "id": "route_node_local_intent_hint",
       "community": 83,
-      "norm_label": "_local_intent_hint()"
+      "norm_label": "_local_intent_hint()",
+      "id": "route_node_local_intent_hint"
     },
     {
       "label": "build_route_node()",
       "file_type": "code",
       "source_file": "app/agents/route/node.py",
       "source_location": "L40",
-      "id": "route_node_build_route_node",
       "community": 83,
-      "norm_label": "build_route_node()"
+      "norm_label": "build_route_node()",
+      "id": "route_node_build_route_node"
     },
     {
       "label": "Route node: classifies user intent as teach/chat/diagnose.",
       "file_type": "rationale",
       "source_file": "app/agents/route/node.py",
       "source_location": "L1",
-      "id": "route_node_rationale_1",
       "community": 83,
-      "norm_label": "route node: classifies user intent as teach/chat/diagnose."
+      "norm_label": "route node: classifies user intent as teach/chat/diagnose.",
+      "id": "route_node_rationale_1"
     },
     {
       "label": "system.md",
       "file_type": "document",
       "source_file": "app/agents/route/system.md",
       "source_location": "L1",
-      "id": "app_agents_route_system_md",
       "community": 179,
-      "norm_label": "system.md"
+      "norm_label": "system.md",
+      "id": "app_agents_route_system_md"
     },
     {
       "label": "node.py",
       "file_type": "code",
       "source_file": "app/agents/tool_agent/node.py",
       "source_location": "L1",
-      "id": "app_agents_tool_agent_node_py",
       "community": 81,
-      "norm_label": "node.py"
+      "norm_label": "node.py",
+      "id": "app_agents_tool_agent_node_py"
     },
     {
       "label": "build_tool_agent_node()",
       "file_type": "code",
       "source_file": "app/agents/tool_agent/node.py",
       "source_location": "L45",
-      "id": "tool_agent_node_build_tool_agent_node",
       "community": 81,
-      "norm_label": "build_tool_agent_node()"
+      "norm_label": "build_tool_agent_node()",
+      "id": "tool_agent_node_build_tool_agent_node"
     },
     {
       "label": "Tool agent node: ReAct loop with rag_retrieve tool calling.",
       "file_type": "rationale",
       "source_file": "app/agents/tool_agent/node.py",
       "source_location": "L1",
-      "id": "tool_agent_node_rationale_1",
       "community": 81,
-      "norm_label": "tool agent node: react loop with rag_retrieve tool calling."
+      "norm_label": "tool agent node: react loop with rag_retrieve tool calling.",
+      "id": "tool_agent_node_rationale_1"
     },
     {
       "label": "system.md",
       "file_type": "document",
       "source_file": "app/agents/tool_agent/system.md",
       "source_location": "L1",
-      "id": "app_agents_tool_agent_system_md",
       "community": 180,
-      "norm_label": "system.md"
+      "norm_label": "system.md",
+      "id": "app_agents_tool_agent_system_md"
     },
     {
       "label": "test_prompt_loader.py",
       "file_type": "code",
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L1",
-      "id": "tests_unit_test_prompt_loader_py",
       "community": 137,
-      "norm_label": "test_prompt_loader.py"
+      "norm_label": "test_prompt_loader.py",
+      "id": "tests_unit_test_prompt_loader_py"
     },
     {
       "label": "TestPromptFiles",
       "file_type": "code",
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L35",
-      "id": "unit_test_prompt_loader_testpromptfiles",
       "community": 137,
-      "norm_label": "testpromptfiles"
+      "norm_label": "testpromptfiles",
+      "id": "unit_test_prompt_loader_testpromptfiles"
     },
     {
       "label": "test_prompt_file_exists()",
       "file_type": "code",
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L39",
-      "id": "unit_test_prompt_loader_test_prompt_file_exists",
       "community": 137,
-      "norm_label": "test_prompt_file_exists()"
+      "norm_label": "test_prompt_file_exists()",
+      "id": "unit_test_prompt_loader_test_prompt_file_exists"
     },
     {
       "label": "test_prompt_file_non_empty()",
       "file_type": "code",
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L48",
-      "id": "unit_test_prompt_loader_test_prompt_file_non_empty",
       "community": 137,
-      "norm_label": "test_prompt_file_non_empty()"
+      "norm_label": "test_prompt_file_non_empty()",
+      "id": "unit_test_prompt_loader_test_prompt_file_non_empty"
     },
     {
       "label": "TestLoadPrompt",
       "file_type": "code",
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L58",
-      "id": "unit_test_prompt_loader_testloadprompt",
       "community": 137,
-      "norm_label": "testloadprompt"
+      "norm_label": "testloadprompt",
+      "id": "unit_test_prompt_loader_testloadprompt"
     },
     {
       "label": ".test_loads_route_system_prompt()",
       "file_type": "code",
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L61",
-      "id": "unit_test_prompt_loader_testloadprompt_test_loads_route_system_prompt",
       "community": 137,
-      "norm_label": ".test_loads_route_system_prompt()"
+      "norm_label": ".test_loads_route_system_prompt()",
+      "id": "unit_test_prompt_loader_testloadprompt_test_loads_route_system_prompt"
     },
     {
       "label": ".test_loads_judge_system_prompt()",
       "file_type": "code",
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L67",
-      "id": "unit_test_prompt_loader_testloadprompt_test_loads_judge_system_prompt",
       "community": 137,
-      "norm_label": ".test_loads_judge_system_prompt()"
+      "norm_label": ".test_loads_judge_system_prompt()",
+      "id": "unit_test_prompt_loader_testloadprompt_test_loads_judge_system_prompt"
     },
     {
       "label": ".test_loads_custom_filename()",
       "file_type": "code",
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L73",
-      "id": "unit_test_prompt_loader_testloadprompt_test_loads_custom_filename",
       "community": 137,
-      "norm_label": ".test_loads_custom_filename()"
+      "norm_label": ".test_loads_custom_filename()",
+      "id": "unit_test_prompt_loader_testloadprompt_test_loads_custom_filename"
     },
     {
       "label": ".test_loads_flat_file_prompt()",
       "file_type": "code",
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L79",
-      "id": "unit_test_prompt_loader_testloadprompt_test_loads_flat_file_prompt",
       "community": 137,
-      "norm_label": ".test_loads_flat_file_prompt()"
+      "norm_label": ".test_loads_flat_file_prompt()",
+      "id": "unit_test_prompt_loader_testloadprompt_test_loads_flat_file_prompt"
     },
     {
       "label": ".test_raises_on_missing_file()",
       "file_type": "code",
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L85",
-      "id": "unit_test_prompt_loader_testloadprompt_test_raises_on_missing_file",
       "community": 137,
-      "norm_label": ".test_raises_on_missing_file()"
+      "norm_label": ".test_raises_on_missing_file()",
+      "id": "unit_test_prompt_loader_testloadprompt_test_raises_on_missing_file"
     },
     {
       "label": ".test_raises_on_missing_custom_file()",
       "file_type": "code",
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L89",
-      "id": "unit_test_prompt_loader_testloadprompt_test_raises_on_missing_custom_file",
       "community": 137,
-      "norm_label": ".test_raises_on_missing_custom_file()"
+      "norm_label": ".test_raises_on_missing_custom_file()",
+      "id": "unit_test_prompt_loader_testloadprompt_test_raises_on_missing_custom_file"
     },
     {
       "label": "Tests for the prompt file loading mechanism.",
       "file_type": "rationale",
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L1",
-      "id": "unit_test_prompt_loader_rationale_1",
       "community": 137,
-      "norm_label": "tests for the prompt file loading mechanism."
+      "norm_label": "tests for the prompt file loading mechanism.",
+      "id": "unit_test_prompt_loader_rationale_1"
     },
     {
       "label": "Verify that every expected prompt file exists and is non-empty.",
       "file_type": "rationale",
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L36",
-      "id": "unit_test_prompt_loader_rationale_36",
       "community": 137,
-      "norm_label": "verify that every expected prompt file exists and is non-empty."
+      "norm_label": "verify that every expected prompt file exists and is non-empty.",
+      "id": "unit_test_prompt_loader_rationale_36"
     },
     {
       "label": "Verify load_prompt() reads files correctly.",
       "file_type": "rationale",
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L59",
-      "id": "unit_test_prompt_loader_rationale_59",
       "community": 137,
-      "norm_label": "verify load_prompt() reads files correctly."
+      "norm_label": "verify load_prompt() reads files correctly.",
+      "id": "unit_test_prompt_loader_rationale_59"
     },
     {
       "label": "langgraph.json",
@@ -1218,7 +1605,7 @@
       "file_type": "code",
       "source_file": "backend/tests/helpers.py",
       "source_location": "L1",
-      "community": 134,
+      "community": 165,
       "norm_label": "helpers.py",
       "id": "backend_tests_helpers_py"
     },
@@ -1227,7 +1614,7 @@
       "file_type": "code",
       "source_file": "backend/tests/helpers.py",
       "source_location": "L33",
-      "community": 134,
+      "community": 165,
       "norm_label": "completed_state()",
       "id": "tests_helpers_completed_state"
     },
@@ -1236,7 +1623,7 @@
       "file_type": "code",
       "source_file": "backend/tests/helpers.py",
       "source_location": "L45",
-      "community": 134,
+      "community": 141,
       "norm_label": "completed_teach_state()",
       "id": "tests_helpers_completed_teach_state"
     },
@@ -1245,7 +1632,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/helpers.py",
       "source_location": "L1",
-      "community": 134,
+      "community": 165,
       "norm_label": "shared test helpers for workflow assertions.",
       "id": "tests_helpers_rationale_1"
     },
@@ -1254,7 +1641,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/helpers.py",
       "source_location": "L34",
-      "community": 134,
+      "community": 165,
       "norm_label": "assert that a workflow has completed with all expected state keys populated.",
       "id": "tests_helpers_rationale_34"
     },
@@ -1263,7 +1650,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/helpers.py",
       "source_location": "L46",
-      "community": 134,
+      "community": 141,
       "norm_label": "assert teach-path workflow completion including p0.1 fields.",
       "id": "tests_helpers_rationale_46"
     },
@@ -1272,7 +1659,7 @@
       "file_type": "code",
       "source_file": "backend/tests/integration/test_workflow_integration.py",
       "source_location": "L1",
-      "community": 141,
+      "community": 181,
       "norm_label": "test_workflow_integration.py",
       "id": "backend_tests_integration_test_workflow_integration_py"
     },
@@ -1290,7 +1677,7 @@
       "file_type": "code",
       "source_file": "backend/tests/integration/test_workflow_integration.py",
       "source_location": "L145",
-      "community": 141,
+      "community": 181,
       "norm_label": "test_workflow_event_ordering_is_correct_with_real_llm()",
       "id": "integration_test_workflow_integration_test_workflow_event_ordering_is_correct_with_real_llm"
     },
@@ -1299,7 +1686,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/integration/test_workflow_integration.py",
       "source_location": "L1",
-      "community": 141,
+      "community": 181,
       "norm_label": "integration tests that run the full workflow with real llm providers.  requires",
       "id": "integration_test_workflow_integration_rationale_1"
     },
@@ -1317,7 +1704,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/integration/test_workflow_integration.py",
       "source_location": "L146",
-      "community": 141,
+      "community": 181,
       "norm_label": "verify that agent events fire in the expected order.",
       "id": "integration_test_workflow_integration_rationale_146"
     },
@@ -1380,7 +1767,7 @@
       "file_type": "code",
       "source_file": "backend/tests/integration/test_providers_integration.py",
       "source_location": "L1",
-      "community": 79,
+      "community": 118,
       "norm_label": "test_providers_integration.py",
       "id": "backend_tests_integration_test_providers_integration_py"
     },
@@ -1389,7 +1776,7 @@
       "file_type": "code",
       "source_file": "backend/tests/integration/test_providers_integration.py",
       "source_location": "L22",
-      "community": 79,
+      "community": 118,
       "norm_label": "test_provider_returns_valid_json()",
       "id": "integration_test_providers_integration_test_provider_returns_valid_json"
     },
@@ -1398,7 +1785,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/integration/test_providers_integration.py",
       "source_location": "L1",
-      "community": 79,
+      "community": 118,
       "norm_label": "smoke-test each llm provider individually with real api calls.  requires valid .",
       "id": "integration_test_providers_integration_rationale_1"
     },
@@ -2028,7 +2415,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_run_workflow_cli.py",
       "source_location": "L1",
-      "community": 144,
+      "community": 3,
       "norm_label": "test_run_workflow_cli.py",
       "id": "backend_tests_unit_test_run_workflow_cli_py"
     },
@@ -2037,7 +2424,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_run_workflow_cli.py",
       "source_location": "L8",
-      "community": 144,
+      "community": 3,
       "norm_label": "test_summary_lines_render_concise_workflow_result()",
       "id": "unit_test_run_workflow_cli_test_summary_lines_render_concise_workflow_result"
     },
@@ -2064,7 +2451,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L1",
-      "community": 73,
+      "community": 144,
       "norm_label": "test_llm_tools.py",
       "id": "backend_tests_unit_test_llm_tools_py"
     },
@@ -2100,7 +2487,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L41",
-      "community": 73,
+      "community": 144,
       "norm_label": "testtooldefinition",
       "id": "unit_test_llm_tools_testtooldefinition"
     },
@@ -2109,7 +2496,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L42",
-      "community": 73,
+      "community": 144,
       "norm_label": ".test_creation()",
       "id": "unit_test_llm_tools_testtooldefinition_test_creation"
     },
@@ -2118,7 +2505,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L59",
-      "community": 73,
+      "community": 144,
       "norm_label": ".test_to_openai_format()",
       "id": "unit_test_llm_tools_testtooldefinition_test_to_openai_format"
     },
@@ -2163,7 +2550,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L98",
-      "community": 73,
+      "community": 144,
       "norm_label": "testcallllmtoolswithmocktransport",
       "id": "unit_test_llm_tools_testcallllmtoolswithmocktransport"
     },
@@ -2172,7 +2559,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L99",
-      "community": 118,
+      "community": 144,
       "norm_label": ".test_sends_tools_not_response_format()",
       "id": "unit_test_llm_tools_testcallllmtoolswithmocktransport_test_sends_tools_not_response_format"
     },
@@ -2181,7 +2568,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L153",
-      "community": 118,
+      "community": 144,
       "norm_label": ".test_parses_tool_calls_from_response()",
       "id": "unit_test_llm_tools_testcallllmtoolswithmocktransport_test_parses_tool_calls_from_response"
     },
@@ -2190,7 +2577,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L206",
-      "community": 118,
+      "community": 144,
       "norm_label": ".test_no_tool_calls_in_response()",
       "id": "unit_test_llm_tools_testcallllmtoolswithmocktransport_test_no_tool_calls_in_response"
     },
@@ -2217,7 +2604,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L253",
-      "community": 164,
+      "community": 3,
       "norm_label": ".test_agent_router_has_method()",
       "id": "unit_test_llm_tools_testllmclientgeneratewithtools_test_agent_router_has_method"
     },
@@ -2226,7 +2613,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L260",
-      "community": 73,
+      "community": 164,
       "norm_label": "testagentnameextension",
       "id": "unit_test_llm_tools_testagentnameextension"
     },
@@ -2235,7 +2622,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L261",
-      "community": 73,
+      "community": 164,
       "norm_label": ".test_new_agent_names_accepted()",
       "id": "unit_test_llm_tools_testagentnameextension_test_new_agent_names_accepted"
     },
@@ -2244,7 +2631,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L1",
-      "community": 73,
+      "community": 144,
       "norm_label": "tdd phase 1: tests for llm tool-calling support.  red phase \u2014 these tests define",
       "id": "unit_test_llm_tools_rationale_1"
     },
@@ -2253,7 +2640,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L60",
-      "community": 73,
+      "community": 144,
       "norm_label": "tooldefinition should serialize to openai-compatible tool dict.",
       "id": "unit_test_llm_tools_rationale_60"
     },
@@ -2262,7 +2649,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L100",
-      "community": 118,
+      "community": 144,
       "norm_label": "verify the request body has 'tools' not 'response_format'.",
       "id": "unit_test_llm_tools_rationale_100"
     },
@@ -2271,7 +2658,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L154",
-      "community": 118,
+      "community": 144,
       "norm_label": "verify tool_calls are correctly parsed from the response.",
       "id": "unit_test_llm_tools_rationale_154"
     },
@@ -2280,7 +2667,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L207",
-      "community": 118,
+      "community": 144,
       "norm_label": "response without tool_calls \u2014 returns empty list.",
       "id": "unit_test_llm_tools_rationale_207"
     },
@@ -2298,7 +2685,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L254",
-      "community": 164,
+      "community": 3,
       "norm_label": "agentllmrouter implements generate_with_tools.",
       "id": "unit_test_llm_tools_rationale_254"
     },
@@ -2307,7 +2694,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L262",
-      "community": 73,
+      "community": 164,
       "norm_label": "the new agent names are valid agentname values.",
       "id": "unit_test_llm_tools_rationale_262"
     },
@@ -2586,7 +2973,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L168",
-      "community": 83,
+      "community": 163,
       "norm_label": "testchatanswernode",
       "id": "unit_test_new_agent_nodes_testchatanswernode"
     },
@@ -2595,7 +2982,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L169",
-      "community": 83,
+      "community": 163,
       "norm_label": ".test_reuses_tool_agent_answer_without_second_llm_call()",
       "id": "unit_test_new_agent_nodes_testchatanswernode_test_reuses_tool_agent_answer_without_second_llm_call"
     },
@@ -2604,7 +2991,7 @@
       "file_type": "code",
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L185",
-      "community": 83,
+      "community": 163,
       "norm_label": ".test_generates_answer()",
       "id": "unit_test_new_agent_nodes_testchatanswernode_test_generates_answer"
     },
@@ -3729,7 +4116,7 @@
       "file_type": "code",
       "source_file": "backend/app/agents/diagnosis/node.py",
       "source_location": "L1",
-      "community": 166,
+      "community": 135,
       "norm_label": "node.py",
       "id": "backend_app_agents_diagnosis_node_py"
     },
@@ -3738,7 +4125,7 @@
       "file_type": "code",
       "source_file": "backend/app/agents/diagnosis/node.py",
       "source_location": "L18",
-      "community": 166,
+      "community": 135,
       "norm_label": "build_diagnosis_node()",
       "id": "diagnosis_node_build_diagnosis_node"
     },
@@ -3747,7 +4134,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/agents/diagnosis/node.py",
       "source_location": "L1",
-      "community": 166,
+      "community": 135,
       "norm_label": "diagnosis agent node.",
       "id": "diagnosis_node_rationale_1"
     },
@@ -3972,7 +4359,7 @@
       "file_type": "code",
       "source_file": "backend/app/graph/workflow.py",
       "source_location": "L523",
-      "community": 2,
+      "community": 182,
       "norm_label": "arun_workflow()",
       "id": "graph_workflow_arun_workflow"
     },
@@ -4350,7 +4737,7 @@
       "file_type": "code",
       "source_file": "backend/app/schemas/context.py",
       "source_location": "L1",
-      "community": 2,
+      "community": 182,
       "norm_label": "context.py",
       "id": "backend_app_schemas_context_py"
     },
@@ -4359,7 +4746,7 @@
       "file_type": "code",
       "source_file": "backend/app/schemas/context.py",
       "source_location": "L9",
-      "community": 2,
+      "community": 182,
       "norm_label": "workflowcontext",
       "id": "schemas_context_workflowcontext"
     },
@@ -4368,7 +4755,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/schemas/context.py",
       "source_location": "L1",
-      "community": 2,
+      "community": 182,
       "norm_label": "runtime context passed to langgraph nodes.",
       "id": "schemas_context_rationale_1"
     },
@@ -4422,7 +4809,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L97",
-      "community": 73,
+      "community": 144,
       "norm_label": "tooldefinition",
       "id": "core_llm_tooldefinition"
     },
@@ -4476,7 +4863,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L129",
-      "community": 79,
+      "community": 3,
       "norm_label": "llmconfigurationerror",
       "id": "core_llm_llmconfigurationerror"
     },
@@ -4503,7 +4890,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L136",
-      "community": 151,
+      "community": 3,
       "norm_label": ".__init__()",
       "id": "core_llm_llmprovidererror_init"
     },
@@ -4584,7 +4971,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L304",
-      "community": 79,
+      "community": 118,
       "norm_label": "_strip_json_fence()",
       "id": "core_llm_strip_json_fence"
     },
@@ -4593,7 +4980,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L315",
-      "community": 79,
+      "community": 118,
       "norm_label": "call_llm_json()",
       "id": "core_llm_call_llm_json"
     },
@@ -4611,7 +4998,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L399",
-      "community": 118,
+      "community": 79,
       "norm_label": "call_llm_tools()",
       "id": "core_llm_call_llm_tools"
     },
@@ -4647,7 +5034,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L433",
-      "community": 164,
+      "community": 118,
       "norm_label": ".generate_json()",
       "id": "core_llm_defaultllmclient_generate_json"
     },
@@ -4656,7 +5043,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L438",
-      "community": 118,
+      "community": 164,
       "norm_label": ".generate_with_tools()",
       "id": "core_llm_defaultllmclient_generate_with_tools"
     },
@@ -4665,7 +5052,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L448",
-      "community": 151,
+      "community": 3,
       "norm_label": "agentllmrouter",
       "id": "core_llm_agentllmrouter"
     },
@@ -4674,7 +5061,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L454",
-      "community": 151,
+      "community": 3,
       "norm_label": ".__init__()",
       "id": "core_llm_agentllmrouter_init"
     },
@@ -4683,7 +5070,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L475",
-      "community": 151,
+      "community": 3,
       "norm_label": ".provider_for()",
       "id": "core_llm_agentllmrouter_provider_for"
     },
@@ -4692,7 +5079,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L480",
-      "community": 151,
+      "community": 3,
       "norm_label": ".generate_json()",
       "id": "core_llm_agentllmrouter_generate_json"
     },
@@ -4701,7 +5088,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L489",
-      "community": 151,
+      "community": 3,
       "norm_label": ".generate_with_tools()",
       "id": "core_llm_agentllmrouter_generate_with_tools"
     },
@@ -4719,7 +5106,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L89",
-      "community": 73,
+      "community": 144,
       "norm_label": "a tool call requested by the llm.",
       "id": "core_llm_rationale_89"
     },
@@ -4764,7 +5151,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L130",
-      "community": 79,
+      "community": 3,
       "norm_label": "raised when model provider configuration is incomplete.",
       "id": "core_llm_rationale_130"
     },
@@ -4791,7 +5178,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L449",
-      "community": 151,
+      "community": 3,
       "norm_label": "routes each agent node to its configured provider, falling back to the default p",
       "id": "core_llm_rationale_449"
     },
@@ -4827,7 +5214,7 @@
       "file_type": "code",
       "source_file": "backend/scripts/run_workflow.py",
       "source_location": "L1",
-      "community": 144,
+      "community": 3,
       "norm_label": "run_workflow.py",
       "id": "backend_scripts_run_workflow_py"
     },
@@ -4836,7 +5223,7 @@
       "file_type": "code",
       "source_file": "backend/scripts/run_workflow.py",
       "source_location": "L14",
-      "community": 144,
+      "community": 3,
       "norm_label": "summary_lines()",
       "id": "scripts_run_workflow_summary_lines"
     },
@@ -4845,7 +5232,7 @@
       "file_type": "code",
       "source_file": "backend/scripts/run_workflow.py",
       "source_location": "L54",
-      "community": 144,
+      "community": 3,
       "norm_label": "main()",
       "id": "scripts_run_workflow_main"
     },
@@ -4854,7 +5241,7 @@
       "file_type": "rationale",
       "source_file": "backend/scripts/run_workflow.py",
       "source_location": "L1",
-      "community": 144,
+      "community": 3,
       "norm_label": "run the current workflow with configured real llm providers.",
       "id": "scripts_run_workflow_rationale_1"
     },
@@ -5136,375 +5523,6 @@
       "community": 52,
       "norm_label": "graphify",
       "id": "patent_tutor_agent_agents_graphify"
-    },
-    {
-      "label": "README.md",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L1",
-      "community": 24,
-      "norm_label": "readme.md",
-      "id": "readme_md"
-    },
-    {
-      "label": "Patent Tutor Agent",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L1",
-      "community": 24,
-      "norm_label": "patent tutor agent",
-      "id": "patent_tutor_agent_readme_patent_tutor_agent"
-    },
-    {
-      "label": "\u4ece\u96f6\u5230 LangGraph Studio",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L7",
-      "community": 24,
-      "norm_label": "\u4ece\u96f6\u5230 langgraph studio",
-      "id": "patent_tutor_agent_readme_\u4ece\u96f6\u5230_langgraph_studio"
-    },
-    {
-      "label": "1. \u5b89\u88c5 uv\uff08Python \u5305\u7ba1\u7406\u5668\uff09",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L9",
-      "community": 24,
-      "norm_label": "1. \u5b89\u88c5 uv(python \u5305\u7ba1\u7406\u5668)",
-      "id": "patent_tutor_agent_readme_1_\u5b89\u88c5_uv_python_\u5305\u7ba1\u7406\u5668"
-    },
-    {
-      "label": "code:bash (curl -LsSf https://astral.sh/uv/install.sh | sh)",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L13",
-      "community": 24,
-      "norm_label": "code:bash (curl -lssf https://astral.sh/uv/install.sh | sh)",
-      "id": "patent_tutor_agent_readme_codeblock_1"
-    },
-    {
-      "label": "code:powershell (powershell -ExecutionPolicy ByPass -c \"irm https://astral.sh)",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L21",
-      "community": 24,
-      "norm_label": "code:powershell (powershell -executionpolicy bypass -c \"irm https://astral.sh)",
-      "id": "patent_tutor_agent_readme_codeblock_2"
-    },
-    {
-      "label": "code:powershell (pip install uv          # \u901a\u8fc7 pip)",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L27",
-      "community": 24,
-      "norm_label": "code:powershell (pip install uv          # \u901a\u8fc7 pip)",
-      "id": "patent_tutor_agent_readme_codeblock_3"
-    },
-    {
-      "label": "2. \u514b\u9686\u9879\u76ee\u5e76\u5b89\u88c5\u4f9d\u8d56",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L35",
-      "community": 24,
-      "norm_label": "2. \u514b\u9686\u9879\u76ee\u5e76\u5b89\u88c5\u4f9d\u8d56",
-      "id": "patent_tutor_agent_readme_2_\u514b\u9686\u9879\u76ee\u5e76\u5b89\u88c5\u4f9d\u8d56"
-    },
-    {
-      "label": "code:bash (git clone https://github.com/yuewen-ye/patent-tutor-agent.gi)",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L37",
-      "community": 24,
-      "norm_label": "code:bash (git clone https://github.com/yuewen-ye/patent-tutor-agent.gi)",
-      "id": "patent_tutor_agent_readme_codeblock_4"
-    },
-    {
-      "label": "3. \u914d\u7f6e API Key",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L45",
-      "community": 24,
-      "norm_label": "3. \u914d\u7f6e api key",
-      "id": "patent_tutor_agent_readme_3_\u914d\u7f6e_api_key"
-    },
-    {
-      "label": "code:bash (cp .env.example .env)",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L48",
-      "community": 24,
-      "norm_label": "code:bash (cp .env.example .env)",
-      "id": "patent_tutor_agent_readme_codeblock_5"
-    },
-    {
-      "label": "code:cmd (copy .env.example .env)",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L53",
-      "community": 24,
-      "norm_label": "code:cmd (copy .env.example .env)",
-      "id": "patent_tutor_agent_readme_codeblock_6"
-    },
-    {
-      "label": "code:powershell (Copy-Item .env.example .env)",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L58",
-      "community": 24,
-      "norm_label": "code:powershell (copy-item .env.example .env)",
-      "id": "patent_tutor_agent_readme_codeblock_7"
-    },
-    {
-      "label": "code:env (# LangSmith \u2014 LangGraph Studio \u8fde\u63a5\u9700\u8981\uff08\u5728 https://smith.langchai)",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L64",
-      "community": 24,
-      "norm_label": "code:env (# langsmith \u2014 langgraph studio \u8fde\u63a5\u9700\u8981(\u5728 https://smith.langchai)",
-      "id": "patent_tutor_agent_readme_codeblock_8"
-    },
-    {
-      "label": "code:env (ROUTE_PROVIDER=deepseek)",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L75",
-      "community": 24,
-      "norm_label": "code:env (route_provider=deepseek)",
-      "id": "patent_tutor_agent_readme_codeblock_9"
-    },
-    {
-      "label": "4. \u542f\u52a8 LangGraph Studio",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L87",
-      "community": 24,
-      "norm_label": "4. \u542f\u52a8 langgraph studio",
-      "id": "patent_tutor_agent_readme_4_\u542f\u52a8_langgraph_studio"
-    },
-    {
-      "label": "code:powershell (powershell -ExecutionPolicy Bypass -File .\\scripts\\langgraph)",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L89",
-      "community": 24,
-      "norm_label": "code:powershell (powershell -executionpolicy bypass -file .\\scripts\\langgraph)",
-      "id": "patent_tutor_agent_readme_codeblock_10"
-    },
-    {
-      "label": "code:bash (bash scripts/langgraph-dev.sh)",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L95",
-      "community": 24,
-      "norm_label": "code:bash (bash scripts/langgraph-dev.sh)",
-      "id": "patent_tutor_agent_readme_codeblock_11"
-    },
-    {
-      "label": "code:block12 (- \ud83d\ude80 API: http://127.0.0.1:8124)",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L101",
-      "community": 24,
-      "norm_label": "code:block12 (- \ud83d\ude80 api: http://127.0.0.1:8124)",
-      "id": "patent_tutor_agent_readme_codeblock_12"
-    },
-    {
-      "label": "5. \u672c\u5730\u8bbf\u95ee\uff08\u672c\u673a\u8fd0\u884c\uff09",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L107",
-      "community": 24,
-      "norm_label": "5. \u672c\u5730\u8bbf\u95ee(\u672c\u673a\u8fd0\u884c)",
-      "id": "patent_tutor_agent_readme_5_\u672c\u5730\u8bbf\u95ee_\u672c\u673a\u8fd0\u884c"
-    },
-    {
-      "label": "6. \u8fdc\u7a0b\u8bbf\u95ee\uff08SSH \u96a7\u9053\uff09",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L111",
-      "community": 24,
-      "norm_label": "6. \u8fdc\u7a0b\u8bbf\u95ee(ssh \u96a7\u9053)",
-      "id": "patent_tutor_agent_readme_6_\u8fdc\u7a0b\u8bbf\u95ee_ssh_\u96a7\u9053"
-    },
-    {
-      "label": "code:bash (ssh -L 8124:localhost:8124 wangbin@<\u670d\u52a1\u5668IP>)",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L117",
-      "community": 24,
-      "norm_label": "code:bash (ssh -l 8124:localhost:8124 wangbin@<\u670d\u52a1\u5668ip>)",
-      "id": "patent_tutor_agent_readme_codeblock_13"
-    },
-    {
-      "label": "code:block14 (https://smith.langchain.com/studio/?baseUrl=http://localhost)",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L125",
-      "community": 24,
-      "norm_label": "code:block14 (https://smith.langchain.com/studio/?baseurl=http://localhost)",
-      "id": "patent_tutor_agent_readme_codeblock_14"
-    },
-    {
-      "label": "7. Studio \u91cc\u505a\u4ec0\u4e48",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L129",
-      "community": 24,
-      "norm_label": "7. studio \u91cc\u505a\u4ec0\u4e48",
-      "id": "patent_tutor_agent_readme_7_studio_\u91cc\u505a\u4ec0\u4e48"
-    },
-    {
-      "label": "\u6280\u672f\u6808",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L141",
-      "community": 24,
-      "norm_label": "\u6280\u672f\u6808",
-      "id": "patent_tutor_agent_readme_\u6280\u672f\u6808"
-    },
-    {
-      "label": "\u9879\u76ee\u7ed3\u6784",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L153",
-      "community": 24,
-      "norm_label": "\u9879\u76ee\u7ed3\u6784",
-      "id": "patent_tutor_agent_readme_\u9879\u76ee\u7ed3\u6784"
-    },
-    {
-      "label": "code:text (.)",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L155",
-      "community": 24,
-      "norm_label": "code:text (.)",
-      "id": "patent_tutor_agent_readme_codeblock_15"
-    },
-    {
-      "label": "\u5de5\u4f5c\u6d41\u67b6\u6784",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L191",
-      "community": 24,
-      "norm_label": "\u5de5\u4f5c\u6d41\u67b6\u6784",
-      "id": "patent_tutor_agent_readme_\u5de5\u4f5c\u6d41\u67b6\u6784"
-    },
-    {
-      "label": "code:text (START \u2192 _init \u2192 route \u2500\u2500\u252c\u2500\u2500 diagnose: diagnosis \u2192 END)",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L195",
-      "community": 24,
-      "norm_label": "code:text (start \u2192 _init \u2192 route \u2500\u2500\u252c\u2500\u2500 diagnose: diagnosis \u2192 end)",
-      "id": "patent_tutor_agent_readme_codeblock_16"
-    },
-    {
-      "label": "Agent \u8282\u70b9\u804c\u8d23",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L222",
-      "community": 24,
-      "norm_label": "agent \u8282\u70b9\u804c\u8d23",
-      "id": "patent_tutor_agent_readme_agent_\u8282\u70b9\u804c\u8d23"
-    },
-    {
-      "label": "\u5feb\u901f\u547d\u4ee4",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L244",
-      "community": 24,
-      "norm_label": "\u5feb\u901f\u547d\u4ee4",
-      "id": "patent_tutor_agent_readme_\u5feb\u901f\u547d\u4ee4"
-    },
-    {
-      "label": "code:bash (uv sync                                           # \u5b89\u88c5\u4f9d\u8d56)",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L246",
-      "community": 24,
-      "norm_label": "code:bash (uv sync                                           # \u5b89\u88c5\u4f9d\u8d56)",
-      "id": "patent_tutor_agent_readme_codeblock_17"
-    },
-    {
-      "label": "\u6a21\u578b\u4e0e\u914d\u7f6e",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L267",
-      "community": 24,
-      "norm_label": "\u6a21\u578b\u4e0e\u914d\u7f6e",
-      "id": "patent_tutor_agent_readme_\u6a21\u578b\u4e0e\u914d\u7f6e"
-    },
-    {
-      "label": "code:env (DEEPSEEK_MODEL=deepseek-v4-flash)",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L273",
-      "community": 24,
-      "norm_label": "code:env (deepseek_model=deepseek-v4-flash)",
-      "id": "patent_tutor_agent_readme_codeblock_18"
-    },
-    {
-      "label": "RAG \u5de5\u5177\u51fd\u6570",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L280",
-      "community": 24,
-      "norm_label": "rag \u5de5\u5177\u51fd\u6570",
-      "id": "patent_tutor_agent_readme_rag_\u5de5\u5177\u51fd\u6570"
-    },
-    {
-      "label": "FastAPI \u670d\u52a1",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L286",
-      "community": 24,
-      "norm_label": "fastapi \u670d\u52a1",
-      "id": "patent_tutor_agent_readme_fastapi_\u670d\u52a1"
-    },
-    {
-      "label": "\u77e5\u8bc6\u56fe\u8c31",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L297",
-      "community": 24,
-      "norm_label": "\u77e5\u8bc6\u56fe\u8c31",
-      "id": "patent_tutor_agent_readme_\u77e5\u8bc6\u56fe\u8c31"
-    },
-    {
-      "label": "code:bash (graphify query \"<\u95ee\u9898>\"        # \u56fe\u8c31\u95ee\u7b54)",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L309",
-      "community": 24,
-      "norm_label": "code:bash (graphify query \"<\u95ee\u9898>\"        # \u56fe\u8c31\u95ee\u7b54)",
-      "id": "patent_tutor_agent_readme_codeblock_19"
-    },
-    {
-      "label": "\u4f9d\u8d56\u7ba1\u7406",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L316",
-      "community": 24,
-      "norm_label": "\u4f9d\u8d56\u7ba1\u7406",
-      "id": "patent_tutor_agent_readme_\u4f9d\u8d56\u7ba1\u7406"
-    },
-    {
-      "label": "code:bash (uv export --format requirements-txt --output-file requiremen)",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L320",
-      "community": 24,
-      "norm_label": "code:bash (uv export --format requirements-txt --output-file requiremen)",
-      "id": "patent_tutor_agent_readme_codeblock_20"
-    },
-    {
-      "label": "\u63d0\u4ea4\u89c4\u8303",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L324",
-      "community": 24,
-      "norm_label": "\u63d0\u4ea4\u89c4\u8303",
-      "id": "patent_tutor_agent_readme_\u63d0\u4ea4\u89c4\u8303"
     },
     {
       "label": "CLAUDE.md",
@@ -9876,7 +9894,7 @@
       "file_type": "document",
       "source_file": "docs/implementation-plan.md",
       "source_location": "L370",
-      "community": 132,
+      "community": 158,
       "norm_label": "\u8def\u7531\u8bbe\u8ba1:\u5b8c\u6574\u7aef\u70b9\u5217\u8868",
       "id": "docs_implementation_plan_\u8def\u7531\u8bbe\u8ba1_\u5b8c\u6574\u7aef\u70b9\u5217\u8868"
     },
@@ -9921,7 +9939,7 @@
       "file_type": "document",
       "source_file": "docs/implementation-plan.md",
       "source_location": "L391",
-      "community": 132,
+      "community": 158,
       "norm_label": "\u4e3a\u4ec0\u4e48\u4e0d\u9700\u8981\u66f4\u591a\u8def\u7531?",
       "id": "docs_implementation_plan_\u4e3a\u4ec0\u4e48\u4e0d\u9700\u8981\u66f4\u591a\u8def\u7531"
     },
@@ -10029,7 +10047,7 @@
       "file_type": "document",
       "source_file": "docs/implementation-plan.md",
       "source_location": "L525",
-      "community": 158,
+      "community": 133,
       "norm_label": "code:block16 (user_input (\"\u6211\u60f3\u5b66\u4e60\u4e13\u5229\u65b0\u9896\u6027\"))",
       "id": "docs_implementation_plan_codeblock_16"
     },
@@ -10065,7 +10083,7 @@
       "file_type": "document",
       "source_file": "docs/implementation-plan.md",
       "source_location": "L566",
-      "community": 65,
+      "community": 132,
       "norm_label": "code:block17 (post   /sessions              \u2192 \u804a\u5929\u754c\u9762\u3001\u8bca\u65ad/\u53cd\u9988\u95ee\u5377)",
       "id": "docs_implementation_plan_codeblock_17"
     },
@@ -10110,7 +10128,7 @@
       "file_type": "document",
       "source_file": "docs/implementation-plan.md",
       "source_location": "L605",
-      "community": 131,
+      "community": 65,
       "norm_label": "code:python (from langgraph.errors import nodeerror)",
       "id": "docs_implementation_plan_codeblock_18"
     },
@@ -10119,7 +10137,7 @@
       "file_type": "document",
       "source_file": "docs/implementation-plan.md",
       "source_location": "L630",
-      "community": 65,
+      "community": 133,
       "norm_label": "p5 \u2014 \u8bb0\u5fc6\u7cfb\u7edf",
       "id": "docs_implementation_plan_p5_\u8bb0\u5fc6\u7cfb\u7edf"
     },
@@ -10128,7 +10146,7 @@
       "file_type": "document",
       "source_file": "docs/implementation-plan.md",
       "source_location": "L636",
-      "community": 158,
+      "community": 133,
       "norm_label": "langgraph \u8bb0\u5fc6\u7cfb\u7edf\u67b6\u6784(v1.0+)",
       "id": "docs_implementation_plan_langgraph_\u8bb0\u5fc6\u7cfb\u7edf\u67b6\u6784_v1_0"
     },
@@ -10146,7 +10164,7 @@
       "file_type": "document",
       "source_file": "docs/implementation-plan.md",
       "source_location": "L668",
-      "community": 65,
+      "community": 133,
       "norm_label": "store \u6838\u5fc3\u6982\u5ff5",
       "id": "docs_implementation_plan_store_\u6838\u5fc3\u6982\u5ff5"
     },
@@ -10209,7 +10227,7 @@
       "file_type": "document",
       "source_file": "docs/implementation-plan.md",
       "source_location": "L770",
-      "community": 65,
+      "community": 166,
       "norm_label": "code:block23 ((\"learners\", \"{learner_id}\", \"profile\")   \u2192 \u5386\u53f2\u753b\u50cf\u5217\u8868)",
       "id": "docs_implementation_plan_codeblock_23"
     },
@@ -10218,7 +10236,7 @@
       "file_type": "document",
       "source_file": "docs/implementation-plan.md",
       "source_location": "L787",
-      "community": 65,
+      "community": 133,
       "norm_label": "\u4efb\u52a1\u62c6\u89e3",
       "id": "docs_implementation_plan_\u4efb\u52a1\u62c6\u89e3_787"
     },
@@ -10254,7 +10272,7 @@
       "file_type": "document",
       "source_file": "docs/implementation-plan.md",
       "source_location": "L845",
-      "community": 133,
+      "community": 9,
       "norm_label": "code:block25 (# \u641c\u7d22\u4e0e\u5f53\u524d\u5b66\u4e60\u76ee\u6807\u6700\u76f8\u5173\u7684\u5386\u53f2\u753b\u50cf)",
       "id": "docs_implementation_plan_codeblock_25"
     },
@@ -10263,7 +10281,7 @@
       "file_type": "document",
       "source_file": "docs/implementation-plan.md",
       "source_location": "L852",
-      "community": 65,
+      "community": 133,
       "norm_label": "\u4e0e\u65e7\u7248\u8bbe\u8ba1\u7684\u5173\u952e\u5dee\u5f02",
       "id": "docs_implementation_plan_\u4e0e\u65e7\u7248\u8bbe\u8ba1\u7684\u5173\u952e\u5dee\u5f02"
     },
@@ -10272,7 +10290,7 @@
       "file_type": "document",
       "source_file": "docs/implementation-plan.md",
       "source_location": "L862",
-      "community": 65,
+      "community": 166,
       "norm_label": "\u524d\u7aef\u53d7\u5f71\u54cd\u89c6\u56fe",
       "id": "docs_implementation_plan_\u524d\u7aef\u53d7\u5f71\u54cd\u89c6\u56fe"
     },
@@ -10281,7 +10299,7 @@
       "file_type": "document",
       "source_file": "docs/implementation-plan.md",
       "source_location": "L864",
-      "community": 65,
+      "community": 166,
       "norm_label": "code:block26 (\u5b66\u4e60\u8def\u5f84\u56fe   \u2192 planner \u5229\u7528 bkt \u540e,\u5df2\u638c\u63e1\u8282\u70b9\u6807\u8bb0 \u2713,\u63a8\u8350\u8282\u70b9\u9ad8\u4eae)",
       "id": "docs_implementation_plan_codeblock_26"
     },
@@ -10290,7 +10308,7 @@
       "file_type": "document",
       "source_file": "docs/implementation-plan.md",
       "source_location": "L873",
-      "community": 9,
+      "community": 65,
       "norm_label": "\u4f9d\u8d56\u5173\u7cfb\u603b\u56fe",
       "id": "docs_implementation_plan_\u4f9d\u8d56\u5173\u7cfb\u603b\u56fe"
     },
@@ -10299,7 +10317,7 @@
       "file_type": "document",
       "source_file": "docs/implementation-plan.md",
       "source_location": "L875",
-      "community": 9,
+      "community": 65,
       "norm_label": "code:block27 (\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510)",
       "id": "docs_implementation_plan_codeblock_27"
     },
@@ -10308,7 +10326,7 @@
       "file_type": "document",
       "source_file": "docs/implementation-plan.md",
       "source_location": "L924",
-      "community": 133,
+      "community": 9,
       "norm_label": "\u5efa\u8bae\u6267\u884c\u987a\u5e8f",
       "id": "docs_implementation_plan_\u5efa\u8bae\u6267\u884c\u987a\u5e8f"
     },
@@ -10317,7 +10335,7 @@
       "file_type": "document",
       "source_file": "docs/implementation-plan.md",
       "source_location": "L926",
-      "community": 133,
+      "community": 9,
       "norm_label": "code:block28 (\u7b2c 0 \u6b65: p0 (\u5de5\u4f5c\u6d41\u5b8c\u5584)                    \u2190 \u8fdb\u884c\u4e2d)",
       "id": "docs_implementation_plan_codeblock_28"
     },
@@ -10326,7 +10344,7 @@
       "file_type": "document",
       "source_file": "docs/implementation-plan.md",
       "source_location": "L944",
-      "community": 9,
+      "community": 166,
       "norm_label": "\u9644\u5f55:langgraph \u751f\u4ea7\u90e8\u7f72(`langgraph dev` / `langgraph up`)",
       "id": "docs_implementation_plan_\u9644\u5f55_langgraph_\u751f\u4ea7\u90e8\u7f72_langgraph_dev_langgraph_up"
     },
@@ -10335,7 +10353,7 @@
       "file_type": "document",
       "source_file": "docs/implementation-plan.md",
       "source_location": "L948",
-      "community": 9,
+      "community": 166,
       "norm_label": "code:json (// langgraph.json(\u9879\u76ee\u6839\u76ee\u5f55))",
       "id": "docs_implementation_plan_codeblock_29"
     },
@@ -10344,7 +10362,7 @@
       "file_type": "document",
       "source_file": "docs/implementation-plan.md",
       "source_location": "L959",
-      "community": 9,
+      "community": 166,
       "norm_label": "code:bash (langgraph dev   # \u542f\u52a8\u5f00\u53d1\u670d\u52a1\u5668(\u5185\u5b58\u6a21\u5f0f))",
       "id": "docs_implementation_plan_codeblock_30"
     },
@@ -11388,7 +11406,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L372",
-      "community": 163,
+      "community": 157,
       "norm_label": "\u4e09\u3001\u56db\u5c42\u8bb0\u5fc6\u8be6\u89e3",
       "id": "docs_memory_design_inspiration_\u4e09_\u56db\u5c42\u8bb0\u5fc6\u8be6\u89e3"
     },
@@ -11397,7 +11415,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L374",
-      "community": 163,
+      "community": 157,
       "norm_label": "3.1 \u5c42\u7ea7 1: learner memory(\u5b66\u4e60\u8005\u8bb0\u5fc6)",
       "id": "docs_memory_design_inspiration_3_1_\u5c42\u7ea7_1_learner_memory_\u5b66\u4e60\u8005\u8bb0\u5fc6"
     },
@@ -11442,7 +11460,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L468",
-      "community": 163,
+      "community": 157,
       "norm_label": "3.1.2 \u56db\u79cd\u8bb0\u5fc6\u7c7b\u578b(\u6539\u7f16\u81ea claude code)",
       "id": "docs_memory_design_inspiration_3_1_2_\u56db\u79cd\u8bb0\u5fc6\u7c7b\u578b_\u6539\u7f16\u81ea_claude_code"
     },
@@ -11451,7 +11469,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L477",
-      "community": 163,
+      "community": 157,
       "norm_label": "3.1.3 \u4ec0\u4e48\u4e0d\u8be5\u4fdd\u5b58(\u6392\u9664\u89c4\u5219)",
       "id": "docs_memory_design_inspiration_3_1_3_\u4ec0\u4e48\u4e0d\u8be5\u4fdd\u5b58_\u6392\u9664\u89c4\u5219"
     },
@@ -11460,7 +11478,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L479",
-      "community": 163,
+      "community": 157,
       "norm_label": "code:block12 (\u274c \u5355\u6b21\u53ef\u91cd\u65b0\u8bca\u65ad\u7684\u4fe1\u606f)",
       "id": "docs_memory_design_inspiration_codeblock_12"
     },
@@ -11469,7 +11487,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L504",
-      "community": 149,
+      "community": 157,
       "norm_label": "3.1.4 \u9690\u79c1\u3001\u5b89\u5168\u4e0e\u4fdd\u7559\u671f",
       "id": "docs_memory_design_inspiration_3_1_4_\u9690\u79c1_\u5b89\u5168\u4e0e\u4fdd\u7559\u671f"
     },
@@ -11478,7 +11496,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L506",
-      "community": 149,
+      "community": 157,
       "norm_label": "code:block13 (\u5fc5\u987b\u8131\u654f:)",
       "id": "docs_memory_design_inspiration_codeblock_13"
     },
@@ -11487,7 +11505,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L526",
-      "community": 163,
+      "community": 157,
       "norm_label": "3.2 \u5c42\u7ea7 2: session memory(\u4f1a\u8bdd\u6559\u5b66\u8bb0\u5fc6)",
       "id": "docs_memory_design_inspiration_3_2_\u5c42\u7ea7_2_session_memory_\u4f1a\u8bdd\u6559\u5b66\u8bb0\u5fc6"
     },
@@ -11496,7 +11514,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L528",
-      "community": 163,
+      "community": 157,
       "norm_label": "3.2.1 \u7ed3\u6784\u5316\u6a21\u677f",
       "id": "docs_memory_design_inspiration_3_2_1_\u7ed3\u6784\u5316\u6a21\u677f"
     },
@@ -11505,7 +11523,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L532",
-      "community": 163,
+      "community": 149,
       "norm_label": "code:markdown (# session title)",
       "id": "docs_memory_design_inspiration_codeblock_14"
     },
@@ -11514,7 +11532,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L599",
-      "community": 149,
+      "community": 157,
       "norm_label": "3.2.2 \u89e6\u53d1\u6761\u4ef6",
       "id": "docs_memory_design_inspiration_3_2_2_\u89e6\u53d1\u6761\u4ef6"
     },
@@ -11532,7 +11550,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L616",
-      "community": 163,
+      "community": 149,
       "norm_label": "3.3 \u5c42\u7ea7 3: agent role memory(agent \u89d2\u8272\u8bb0\u5fc6)",
       "id": "docs_memory_design_inspiration_3_3_\u5c42\u7ea7_3_agent_role_memory_agent_\u89d2\u8272\u8bb0\u5fc6"
     },
@@ -11541,7 +11559,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L620",
-      "community": 163,
+      "community": 149,
       "norm_label": "3.3.1 \u5404 agent \u89d2\u8272\u8bb0\u5fc6\u5185\u5bb9",
       "id": "docs_memory_design_inspiration_3_3_1_\u5404_agent_\u89d2\u8272\u8bb0\u5fc6\u5185\u5bb9"
     },
@@ -11595,7 +11613,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L754",
-      "community": 78,
+      "community": 149,
       "norm_label": "\u56db\u3001\u4e09\u5c42\u6ce8\u5165\u8def\u5f84",
       "id": "docs_memory_design_inspiration_\u56db_\u4e09\u5c42\u6ce8\u5165\u8def\u5f84"
     },
@@ -11604,7 +11622,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L756",
-      "community": 78,
+      "community": 149,
       "norm_label": "4.1 \u6574\u4f53\u67b6\u6784\u56fe",
       "id": "docs_memory_design_inspiration_4_1_\u6574\u4f53\u67b6\u6784\u56fe"
     },
@@ -11613,7 +11631,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L758",
-      "community": 78,
+      "community": 149,
       "norm_label": "code:block19 (\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500)",
       "id": "docs_memory_design_inspiration_codeblock_19"
     },
@@ -11622,7 +11640,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L835",
-      "community": 78,
+      "community": 149,
       "norm_label": "4.2 \u4e09\u8def\u5f84\u5bf9\u6bd4",
       "id": "docs_memory_design_inspiration_4_2_\u4e09\u8def\u5f84\u5bf9\u6bd4"
     },
@@ -11631,7 +11649,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L837",
-      "community": 78,
+      "community": 151,
       "norm_label": "code:block20 (\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500)",
       "id": "docs_memory_design_inspiration_codeblock_20"
     },
@@ -11640,7 +11658,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L862",
-      "community": 78,
+      "community": 149,
       "norm_label": "4.3 \u8def\u5f84 c \u5728 patent tutor \u4e2d\u7684\u5b8c\u6574\u6d41\u7a0b",
       "id": "docs_memory_design_inspiration_4_3_\u8def\u5f84_c_\u5728_patent_tutor_\u4e2d\u7684\u5b8c\u6574\u6d41\u7a0b"
     },
@@ -11649,7 +11667,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L864",
-      "community": 78,
+      "community": 151,
       "norm_label": "code:block21 (agent \u8282\u70b9\u5373\u5c06\u6267\u884c (\u4f8b\u5982: diagnosis \u8282\u70b9))",
       "id": "docs_memory_design_inspiration_codeblock_21"
     },
@@ -11658,7 +11676,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L957",
-      "community": 78,
+      "community": 151,
       "norm_label": "\u4e94\u3001\u4e24\u6761\u5199\u5165\u8def\u5f84",
       "id": "docs_memory_design_inspiration_\u4e94_\u4e24\u6761\u5199\u5165\u8def\u5f84"
     },
@@ -11667,7 +11685,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L959",
-      "community": 78,
+      "community": 151,
       "norm_label": "5.1 \u6574\u4f53\u67b6\u6784",
       "id": "docs_memory_design_inspiration_5_1_\u6574\u4f53\u67b6\u6784"
     },
@@ -11676,7 +11694,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L961",
-      "community": 78,
+      "community": 151,
       "norm_label": "code:block22 (\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510)",
       "id": "docs_memory_design_inspiration_codeblock_22"
     },
@@ -11685,7 +11703,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L994",
-      "community": 78,
+      "community": 151,
       "norm_label": "5.2 \u8def\u5f84 a: workflow \u5185\u540c\u6b65\u5199\u5165",
       "id": "docs_memory_design_inspiration_5_2_\u8def\u5f84_a_workflow_\u5185\u540c\u6b65\u5199\u5165"
     },
@@ -11694,7 +11712,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L996",
-      "community": 78,
+      "community": 151,
       "norm_label": "code:block23 (feedback/chat_answer \u8282\u70b9\u6267\u884c)",
       "id": "docs_memory_design_inspiration_codeblock_23"
     },
@@ -11721,7 +11739,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L1065",
-      "community": 78,
+      "community": 151,
       "norm_label": "5.4 \u8de8 session \u5de9\u56fa (consolidation)",
       "id": "docs_memory_design_inspiration_5_4_\u8de8_session_\u5de9\u56fa_consolidation"
     },
@@ -11730,7 +11748,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L1067",
-      "community": 78,
+      "community": 151,
       "norm_label": "code:block25 (\u89e6\u53d1\u6761\u4ef6:)",
       "id": "docs_memory_design_inspiration_codeblock_25"
     },
@@ -11856,7 +11874,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L1505",
-      "community": 78,
+      "community": 155,
       "norm_label": "code:block31 (\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500)",
       "id": "docs_memory_design_inspiration_codeblock_31"
     },
@@ -11865,7 +11883,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L1579",
-      "community": 78,
+      "community": 155,
       "norm_label": "\u9644\u5f55 a: \u5173\u952e\u8bbe\u8ba1\u51b3\u7b56",
       "id": "docs_memory_design_inspiration_\u9644\u5f55_a_\u5173\u952e\u8bbe\u8ba1\u51b3\u7b56"
     },
@@ -11874,7 +11892,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L1581",
-      "community": 78,
+      "community": 155,
       "norm_label": "a.1 store \u4f18\u5148,markdown \u6295\u5f71",
       "id": "docs_memory_design_inspiration_a_1_store_\u4f18\u5148_markdown_\u6295\u5f71"
     },
@@ -11883,7 +11901,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L1583",
-      "community": 78,
+      "community": 155,
       "norm_label": "code:block32 (\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500)",
       "id": "docs_memory_design_inspiration_codeblock_32"
     },
@@ -11892,7 +11910,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L1603",
-      "community": 78,
+      "community": 155,
       "norm_label": "a.2 \u65b0\u9c9c\u5ea6\u9608\u503c: \u6559\u5b66\u573a\u666f\u7684\u7279\u6b8a\u6027",
       "id": "docs_memory_design_inspiration_a_2_\u65b0\u9c9c\u5ea6\u9608\u503c_\u6559\u5b66\u573a\u666f\u7684\u7279\u6b8a\u6027"
     },
@@ -11901,7 +11919,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L1605",
-      "community": 78,
+      "community": 155,
       "norm_label": "code:block33 (claude code:  d \u2265 2 days \u2192 \u8fc7\u671f\u8b66\u544a)",
       "id": "docs_memory_design_inspiration_codeblock_33"
     },
@@ -11910,7 +11928,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L1616",
-      "community": 78,
+      "community": 155,
       "norm_label": "a.3 consolidation \u95e8\u69db: \u6559\u5b66\u573a\u666f\u7684\u8c03\u6574",
       "id": "docs_memory_design_inspiration_a_3_consolidation_\u95e8\u69db_\u6559\u5b66\u573a\u666f\u7684\u8c03\u6574"
     },
@@ -11919,7 +11937,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L1618",
-      "community": 78,
+      "community": 155,
       "norm_label": "code:block34 (claude code: 24h + 5 sessions)",
       "id": "docs_memory_design_inspiration_codeblock_34"
     },
@@ -11928,7 +11946,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L1629",
-      "community": 78,
+      "community": 155,
       "norm_label": "a.4 \u6392\u9664\u89c4\u5219: \u501f\u9274\u5e76\u9002\u914d",
       "id": "docs_memory_design_inspiration_a_4_\u6392\u9664\u89c4\u5219_\u501f\u9274\u5e76\u9002\u914d"
     },
@@ -11937,7 +11955,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L1631",
-      "community": 78,
+      "community": 155,
       "norm_label": "code:block35 (claude code \u7684\u6392\u9664\u89c4\u5219 \u2192 patent tutor \u7684\u9002\u914d:)",
       "id": "docs_memory_design_inspiration_codeblock_35"
     },
@@ -12432,7 +12450,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L1",
-      "community": 155,
+      "community": 156,
       "norm_label": "memory-design-inspiration.md",
       "id": "memory_design_inspiration_md"
     },
@@ -12459,7 +12477,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L915",
-      "community": 78,
+      "community": 151,
       "norm_label": "5.2 \u8def\u5f84 a: feedback \u8282\u70b9\u540c\u6b65\u5199\u5165",
       "id": "docs_memory_design_inspiration_5_2_\u8def\u5f84_a_feedback_\u8282\u70b9\u540c\u6b65\u5199\u5165"
     },
@@ -12468,7 +12486,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L948",
-      "community": 78,
+      "community": 151,
       "norm_label": "5.3 \u8def\u5f84 b: \u540e\u53f0 extractmemories",
       "id": "docs_memory_design_inspiration_5_3_\u8def\u5f84_b_\u540e\u53f0_extractmemories"
     },
@@ -12486,7 +12504,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L1",
-      "community": 155,
+      "community": 156,
       "norm_label": "\u8bb0\u5fc6\u7cfb\u7edf\u8bbe\u8ba1\u501f\u9274:\u4ece claude code \u5230 patent tutor agent",
       "id": "docs_memory_design_inspiration_\u8bb0\u5fc6\u7cfb\u7edf\u8bbe\u8ba1\u501f\u9274_\u4ece_claude_code_\u5230_patent_tutor_agent"
     },
@@ -12567,7 +12585,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L96",
-      "community": 163,
+      "community": 149,
       "norm_label": "\u4e09\u3001\u53ef\u501f\u9274\u7684\u8bbe\u8ba1\u7406\u5ff5",
       "id": "docs_memory_design_inspiration_\u4e09_\u53ef\u501f\u9274\u7684\u8bbe\u8ba1\u7406\u5ff5"
     },
@@ -12666,7 +12684,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L284",
-      "community": 163,
+      "community": 157,
       "norm_label": "\u6a21\u5f0f 6:session memory for long teaching sessions",
       "id": "docs_memory_design_inspiration_\u6a21\u5f0f_6_session_memory_for_long_teaching_sessions"
     },
@@ -12675,7 +12693,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L320",
-      "community": 149,
+      "community": 157,
       "norm_label": "\u6a21\u5f0f 7:what not to save(\u6392\u9664\u89c4\u5219)",
       "id": "docs_memory_design_inspiration_\u6a21\u5f0f_7_what_not_to_save_\u6392\u9664\u89c4\u5219"
     },
@@ -12693,7 +12711,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L364",
-      "community": 163,
+      "community": 149,
       "norm_label": "3.3 \u67b6\u6784\u6539\u8fdb\u8def\u7ebf\u56fe",
       "id": "docs_memory_design_inspiration_3_3_\u67b6\u6784\u6539\u8fdb\u8def\u7ebf\u56fe"
     },
@@ -12747,7 +12765,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L721",
-      "community": 155,
+      "community": 156,
       "norm_label": "\u4e94\u3001\u8bbe\u8ba1\u51b3\u7b56\u4e0e\u6743\u8861",
       "id": "docs_memory_design_inspiration_\u4e94_\u8bbe\u8ba1\u51b3\u7b56\u4e0e\u6743\u8861"
     },
@@ -12756,7 +12774,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L723",
-      "community": 155,
+      "community": 156,
       "norm_label": "5.1 \u4e3a\u4ec0\u4e48\u9009\u62e9\u6587\u4ef6\u800c\u4e0d\u662f\u6570\u636e\u5e93",
       "id": "docs_memory_design_inspiration_5_1_\u4e3a\u4ec0\u4e48\u9009\u62e9\u6587\u4ef6\u800c\u4e0d\u662f\u6570\u636e\u5e93"
     },
@@ -12765,7 +12783,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L739",
-      "community": 155,
+      "community": 156,
       "norm_label": "5.2 \u4e3a\u4ec0\u4e48\u7528\u5b50 agent \u63d0\u53d6\u800c\u4e0d\u662f\u5728 workflow \u5185\u76f4\u63a5\u5199",
       "id": "docs_memory_design_inspiration_5_2_\u4e3a\u4ec0\u4e48\u7528\u5b50_agent_\u63d0\u53d6\u800c\u4e0d\u662f\u5728_workflow_\u5185\u76f4\u63a5\u5199"
     },
@@ -12774,7 +12792,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L751",
-      "community": 155,
+      "community": 156,
       "norm_label": "5.3 \u4e24\u6761\u5199\u5165\u8def\u5f84\u7684\u4e92\u65a5",
       "id": "docs_memory_design_inspiration_5_3_\u4e24\u6761\u5199\u5165\u8def\u5f84\u7684\u4e92\u65a5"
     },
@@ -12783,7 +12801,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L760",
-      "community": 155,
+      "community": 156,
       "norm_label": "\u516d\u3001\u603b\u7ed3",
       "id": "docs_memory_design_inspiration_\u516d_\u603b\u7ed3"
     },
@@ -12792,7 +12810,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L784",
-      "community": 155,
+      "community": 156,
       "norm_label": "\u53c2\u8003\u8d44\u6599",
       "id": "docs_memory_design_inspiration_\u53c2\u8003\u8d44\u6599"
     },
@@ -12900,7 +12918,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/helpers.py",
       "source_location": "L31",
-      "community": 134,
+      "community": 165,
       "norm_label": "assert that a workflow has completed with all expected state keys populated.",
       "id": "tests_helpers_rationale_31"
     },
@@ -12909,7 +12927,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/integration/test_workflow_integration.py",
       "source_location": "L117",
-      "community": 141,
+      "community": 181,
       "norm_label": "verify that agent events fire in the expected order.",
       "id": "integration_test_workflow_integration_rationale_117"
     },
@@ -12945,7 +12963,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L57",
-      "community": 73,
+      "community": 144,
       "norm_label": "tooldefinition should serialize to openai-compatible tool dict.",
       "id": "unit_test_llm_tools_rationale_57"
     },
@@ -12954,7 +12972,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L97",
-      "community": 118,
+      "community": 144,
       "norm_label": "verify the request body has 'tools' not 'response_format'.",
       "id": "unit_test_llm_tools_rationale_97"
     },
@@ -12963,7 +12981,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L151",
-      "community": 118,
+      "community": 144,
       "norm_label": "verify tool_calls are correctly parsed from the response.",
       "id": "unit_test_llm_tools_rationale_151"
     },
@@ -12972,7 +12990,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L204",
-      "community": 118,
+      "community": 144,
       "norm_label": "response without tool_calls \u2014 returns empty list.",
       "id": "unit_test_llm_tools_rationale_204"
     },
@@ -12990,7 +13008,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L251",
-      "community": 164,
+      "community": 3,
       "norm_label": "agentllmrouter implements generate_with_tools.",
       "id": "unit_test_llm_tools_rationale_251"
     },
@@ -12999,7 +13017,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L259",
-      "community": 73,
+      "community": 164,
       "norm_label": "the new agent names are valid agentname values.",
       "id": "unit_test_llm_tools_rationale_259"
     },
@@ -13089,7 +13107,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/helpers.py",
       "source_location": "L25",
-      "community": 134,
+      "community": 165,
       "norm_label": "assert that a workflow has completed with all expected state keys populated.",
       "id": "tests_helpers_rationale_25"
     },
@@ -13125,7 +13143,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L121",
-      "community": 79,
+      "community": 3,
       "norm_label": "raised when model provider configuration is incomplete.",
       "id": "core_llm_rationale_121"
     },
@@ -13152,7 +13170,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L440",
-      "community": 151,
+      "community": 3,
       "norm_label": "routes each agent node to its configured provider, falling back to the default p",
       "id": "core_llm_rationale_440"
     },
@@ -14526,12 +14544,462 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "readme_md",
+      "target": "patent_tutor_agent_readme_patent_tutor_agent"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_patent_tutor_agent",
+      "target": "patent_tutor_agent_readme_\u4ece\u96f6\u5230_langgraph_studio"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L141",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_patent_tutor_agent",
+      "target": "patent_tutor_agent_readme_\u6280\u672f\u6808"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L153",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_patent_tutor_agent",
+      "target": "patent_tutor_agent_readme_\u9879\u76ee\u7ed3\u6784"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L190",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_patent_tutor_agent",
+      "target": "patent_tutor_agent_readme_\u5de5\u4f5c\u6d41\u67b6\u6784"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L227",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_patent_tutor_agent",
+      "target": "patent_tutor_agent_readme_\u5feb\u901f\u547d\u4ee4"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L250",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_patent_tutor_agent",
+      "target": "patent_tutor_agent_readme_\u6a21\u578b\u4e0e\u914d\u7f6e"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L263",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_patent_tutor_agent",
+      "target": "patent_tutor_agent_readme_rag_\u5de5\u5177\u51fd\u6570"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L269",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_patent_tutor_agent",
+      "target": "patent_tutor_agent_readme_fastapi_\u670d\u52a1"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L297",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_patent_tutor_agent",
+      "target": "patent_tutor_agent_readme_\u77e5\u8bc6\u56fe\u8c31"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L280",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_patent_tutor_agent",
+      "target": "patent_tutor_agent_readme_\u4f9d\u8d56\u7ba1\u7406"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L288",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_patent_tutor_agent",
+      "target": "patent_tutor_agent_readme_\u63d0\u4ea4\u89c4\u8303"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_\u4ece\u96f6\u5230_langgraph_studio",
+      "target": "patent_tutor_agent_readme_1_\u5b89\u88c5_uv_python_\u5305\u7ba1\u7406\u5668"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L35",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_\u4ece\u96f6\u5230_langgraph_studio",
+      "target": "patent_tutor_agent_readme_2_\u514b\u9686\u9879\u76ee\u5e76\u5b89\u88c5\u4f9d\u8d56"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L45",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_\u4ece\u96f6\u5230_langgraph_studio",
+      "target": "patent_tutor_agent_readme_3_\u914d\u7f6e_api_key"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L87",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_\u4ece\u96f6\u5230_langgraph_studio",
+      "target": "patent_tutor_agent_readme_4_\u542f\u52a8_langgraph_studio"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L107",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_\u4ece\u96f6\u5230_langgraph_studio",
+      "target": "patent_tutor_agent_readme_5_\u672c\u5730\u8bbf\u95ee_\u672c\u673a\u8fd0\u884c"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L111",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_\u4ece\u96f6\u5230_langgraph_studio",
+      "target": "patent_tutor_agent_readme_6_\u8fdc\u7a0b\u8bbf\u95ee_ssh_\u96a7\u9053"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L129",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_\u4ece\u96f6\u5230_langgraph_studio",
+      "target": "patent_tutor_agent_readme_7_studio_\u91cc\u505a\u4ec0\u4e48"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L13",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_1_\u5b89\u88c5_uv_python_\u5305\u7ba1\u7406\u5668",
+      "target": "patent_tutor_agent_readme_codeblock_1"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L21",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_1_\u5b89\u88c5_uv_python_\u5305\u7ba1\u7406\u5668",
+      "target": "patent_tutor_agent_readme_codeblock_2"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L27",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_1_\u5b89\u88c5_uv_python_\u5305\u7ba1\u7406\u5668",
+      "target": "patent_tutor_agent_readme_codeblock_3"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L37",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_2_\u514b\u9686\u9879\u76ee\u5e76\u5b89\u88c5\u4f9d\u8d56",
+      "target": "patent_tutor_agent_readme_codeblock_4"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L48",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_3_\u914d\u7f6e_api_key",
+      "target": "patent_tutor_agent_readme_codeblock_5"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L53",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_3_\u914d\u7f6e_api_key",
+      "target": "patent_tutor_agent_readme_codeblock_6"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L58",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_3_\u914d\u7f6e_api_key",
+      "target": "patent_tutor_agent_readme_codeblock_7"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L64",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_3_\u914d\u7f6e_api_key",
+      "target": "patent_tutor_agent_readme_codeblock_8"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L75",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_3_\u914d\u7f6e_api_key",
+      "target": "patent_tutor_agent_readme_codeblock_9"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L89",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_4_\u542f\u52a8_langgraph_studio",
+      "target": "patent_tutor_agent_readme_codeblock_10"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L95",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_4_\u542f\u52a8_langgraph_studio",
+      "target": "patent_tutor_agent_readme_codeblock_11"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L101",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_4_\u542f\u52a8_langgraph_studio",
+      "target": "patent_tutor_agent_readme_codeblock_12"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L117",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_6_\u8fdc\u7a0b\u8bbf\u95ee_ssh_\u96a7\u9053",
+      "target": "patent_tutor_agent_readme_codeblock_13"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L125",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_6_\u8fdc\u7a0b\u8bbf\u95ee_ssh_\u96a7\u9053",
+      "target": "patent_tutor_agent_readme_codeblock_14"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L155",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_\u9879\u76ee\u7ed3\u6784",
+      "target": "patent_tutor_agent_readme_codeblock_15"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L194",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_\u5de5\u4f5c\u6d41\u67b6\u6784",
+      "target": "patent_tutor_agent_readme_codeblock_16"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L210",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_\u5de5\u4f5c\u6d41\u67b6\u6784",
+      "target": "patent_tutor_agent_readme_agent_\u8282\u70b9\u804c\u8d23"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L229",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_\u5feb\u901f\u547d\u4ee4",
+      "target": "patent_tutor_agent_readme_codeblock_17"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L256",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_\u6a21\u578b\u4e0e\u914d\u7f6e",
+      "target": "patent_tutor_agent_readme_codeblock_18"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L286",
+      "weight": 1.0,
+      "source": "patent_tutor_agent_readme_rag_\u5de5\u5177\u51fd\u6570",
+      "target": "patent_tutor_agent_readme_\u5f00\u542f\u771f\u5b9e_rag_\u6a21\u5f0f",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L290",
+      "weight": 1.0,
+      "source": "patent_tutor_agent_readme_\u5f00\u542f\u771f\u5b9e_rag_\u6a21\u5f0f",
+      "target": "patent_tutor_agent_readme_codeblock_19",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L309",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_\u77e5\u8bc6\u56fe\u8c31",
+      "target": "patent_tutor_agent_readme_codeblock_19"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L284",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_\u4f9d\u8d56\u7ba1\u7406",
+      "target": "patent_tutor_agent_readme_codeblock_19"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L326",
+      "weight": 1.0,
+      "source": "patent_tutor_agent_readme_\u77e5\u8bc6\u56fe\u8c31",
+      "target": "patent_tutor_agent_readme_codeblock_20",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L322",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_\u4f9d\u8d56\u7ba1\u7406",
+      "target": "patent_tutor_agent_readme_codeblock_20"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L337",
+      "weight": 1.0,
+      "source": "patent_tutor_agent_readme_\u4f9d\u8d56\u7ba1\u7406",
+      "target": "patent_tutor_agent_readme_codeblock_21",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "app/agents/chat_answer/node.py",
       "source_location": "L15",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_chat_answer_node_py",
-      "target": "chat_answer_node_sources_from_retrieval_context",
-      "confidence_score": 1.0
+      "target": "chat_answer_node_sources_from_retrieval_context"
     },
     {
       "relation": "contains",
@@ -14539,9 +15007,9 @@
       "source_file": "app/agents/chat_answer/node.py",
       "source_location": "L28",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_chat_answer_node_py",
-      "target": "chat_answer_node_build_chat_answer_node",
-      "confidence_score": 1.0
+      "target": "chat_answer_node_build_chat_answer_node"
     },
     {
       "relation": "rationale_for",
@@ -14549,9 +15017,9 @@
       "source_file": "app/agents/chat_answer/node.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "chat_answer_node_rationale_1",
-      "target": "app_agents_chat_answer_node_py",
-      "confidence_score": 1.0
+      "target": "app_agents_chat_answer_node_py"
     },
     {
       "relation": "calls",
@@ -14592,9 +15060,9 @@
       "source_file": "app/agents/common.py",
       "source_location": "L24",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_common_py",
-      "target": "agents_common_chat_role",
-      "confidence_score": 1.0
+      "target": "agents_common_chat_role"
     },
     {
       "relation": "contains",
@@ -14602,9 +15070,9 @@
       "source_file": "app/agents/common.py",
       "source_location": "L31",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_common_py",
-      "target": "agents_common_messages_from_prompt",
-      "confidence_score": 1.0
+      "target": "agents_common_messages_from_prompt"
     },
     {
       "relation": "contains",
@@ -14612,9 +15080,9 @@
       "source_file": "app/agents/common.py",
       "source_location": "L38",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_common_py",
-      "target": "agents_common_schema_note",
-      "confidence_score": 1.0
+      "target": "agents_common_schema_note"
     },
     {
       "relation": "contains",
@@ -14622,9 +15090,9 @@
       "source_file": "app/agents/common.py",
       "source_location": "L46",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_common_py",
-      "target": "agents_common_normalize_key_aliases",
-      "confidence_score": 1.0
+      "target": "agents_common_normalize_key_aliases"
     },
     {
       "relation": "contains",
@@ -14632,9 +15100,9 @@
       "source_file": "app/agents/common.py",
       "source_location": "L57",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_common_py",
-      "target": "agents_common_load_prompt",
-      "confidence_score": 1.0
+      "target": "agents_common_load_prompt"
     },
     {
       "relation": "rationale_for",
@@ -14642,9 +15110,9 @@
       "source_file": "app/agents/common.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "agents_common_rationale_1",
-      "target": "app_agents_common_py",
-      "confidence_score": 1.0
+      "target": "app_agents_common_py"
     },
     {
       "relation": "calls",
@@ -14817,9 +15285,9 @@
       "source_file": "app/agents/common.py",
       "source_location": "L47",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "agents_common_rationale_47",
-      "target": "agents_common_normalize_key_aliases",
-      "confidence_score": 1.0
+      "target": "agents_common_normalize_key_aliases"
     },
     {
       "relation": "rationale_for",
@@ -14827,9 +15295,9 @@
       "source_file": "app/agents/common.py",
       "source_location": "L58",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "agents_common_rationale_58",
-      "target": "agents_common_load_prompt",
-      "confidence_score": 1.0
+      "target": "agents_common_load_prompt"
     },
     {
       "relation": "calls",
@@ -14903,9 +15371,9 @@
       "source_file": "app/agents/expert_a/cross_review.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_expert_a_cross_review_py",
-      "target": "expert_a_cross_review_build_expert_a_cross_review_node",
-      "confidence_score": 1.0
+      "target": "expert_a_cross_review_build_expert_a_cross_review_node"
     },
     {
       "relation": "rationale_for",
@@ -14913,9 +15381,9 @@
       "source_file": "app/agents/expert_a/cross_review.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "expert_a_cross_review_rationale_1",
-      "target": "app_agents_expert_a_cross_review_py",
-      "confidence_score": 1.0
+      "target": "app_agents_expert_a_cross_review_py"
     },
     {
       "relation": "calls",
@@ -14934,9 +15402,9 @@
       "source_file": "app/agents/expert_a/node.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_expert_a_node_py",
-      "target": "expert_a_node_build_expert_a_node",
-      "confidence_score": 1.0
+      "target": "expert_a_node_build_expert_a_node"
     },
     {
       "relation": "calls",
@@ -14955,9 +15423,9 @@
       "source_file": "app/agents/expert_a/revise.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_expert_a_revise_py",
-      "target": "expert_a_revise_build_expert_a_revise_node",
-      "confidence_score": 1.0
+      "target": "expert_a_revise_build_expert_a_revise_node"
     },
     {
       "relation": "rationale_for",
@@ -14965,9 +15433,9 @@
       "source_file": "app/agents/expert_a/revise.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "expert_a_revise_rationale_1",
-      "target": "app_agents_expert_a_revise_py",
-      "confidence_score": 1.0
+      "target": "app_agents_expert_a_revise_py"
     },
     {
       "relation": "calls",
@@ -14986,9 +15454,9 @@
       "source_file": "app/agents/expert_b/cross_review.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_expert_b_cross_review_py",
-      "target": "expert_b_cross_review_build_expert_b_cross_review_node",
-      "confidence_score": 1.0
+      "target": "expert_b_cross_review_build_expert_b_cross_review_node"
     },
     {
       "relation": "rationale_for",
@@ -14996,9 +15464,9 @@
       "source_file": "app/agents/expert_b/cross_review.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "expert_b_cross_review_rationale_1",
-      "target": "app_agents_expert_b_cross_review_py",
-      "confidence_score": 1.0
+      "target": "app_agents_expert_b_cross_review_py"
     },
     {
       "relation": "calls",
@@ -15017,9 +15485,9 @@
       "source_file": "app/agents/expert_b/node.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_expert_b_node_py",
-      "target": "expert_b_node_build_expert_b_node",
-      "confidence_score": 1.0
+      "target": "expert_b_node_build_expert_b_node"
     },
     {
       "relation": "calls",
@@ -15049,9 +15517,9 @@
       "source_file": "app/agents/expert_b/revise.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_expert_b_revise_py",
-      "target": "expert_b_revise_build_expert_b_revise_node",
-      "confidence_score": 1.0
+      "target": "expert_b_revise_build_expert_b_revise_node"
     },
     {
       "relation": "rationale_for",
@@ -15059,9 +15527,9 @@
       "source_file": "app/agents/expert_b/revise.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "expert_b_revise_rationale_1",
-      "target": "app_agents_expert_b_revise_py",
-      "confidence_score": 1.0
+      "target": "app_agents_expert_b_revise_py"
     },
     {
       "relation": "calls",
@@ -15080,9 +15548,9 @@
       "source_file": "app/agents/finalize/node.py",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_finalize_node_py",
-      "target": "finalize_node_build_finalize_node",
-      "confidence_score": 1.0
+      "target": "finalize_node_build_finalize_node"
     },
     {
       "relation": "rationale_for",
@@ -15090,9 +15558,9 @@
       "source_file": "app/agents/finalize/node.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "finalize_node_rationale_1",
-      "target": "app_agents_finalize_node_py",
-      "confidence_score": 1.0
+      "target": "app_agents_finalize_node_py"
     },
     {
       "relation": "calls",
@@ -15131,9 +15599,9 @@
       "source_file": "app/agents/joint_synthesis.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_joint_synthesis_py",
-      "target": "agents_joint_synthesis_build_joint_synthesis_node",
-      "confidence_score": 1.0
+      "target": "agents_joint_synthesis_build_joint_synthesis_node"
     },
     {
       "relation": "rationale_for",
@@ -15141,9 +15609,9 @@
       "source_file": "app/agents/joint_synthesis.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "agents_joint_synthesis_rationale_1",
-      "target": "app_agents_joint_synthesis_py",
-      "confidence_score": 1.0
+      "target": "app_agents_joint_synthesis_py"
     },
     {
       "relation": "calls",
@@ -15182,9 +15650,9 @@
       "source_file": "app/agents/judge/node.py",
       "source_location": "L28",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_judge_node_py",
-      "target": "judge_node_normalize_target",
-      "confidence_score": 1.0
+      "target": "judge_node_normalize_target"
     },
     {
       "relation": "contains",
@@ -15192,9 +15660,9 @@
       "source_file": "app/agents/judge/node.py",
       "source_location": "L42",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_judge_node_py",
-      "target": "judge_node_normalize_judge_report",
-      "confidence_score": 1.0
+      "target": "judge_node_normalize_judge_report"
     },
     {
       "relation": "contains",
@@ -15202,9 +15670,9 @@
       "source_file": "app/agents/judge/node.py",
       "source_location": "L76",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_judge_node_py",
-      "target": "judge_node_build_judge_node",
-      "confidence_score": 1.0
+      "target": "judge_node_build_judge_node"
     },
     {
       "relation": "calls",
@@ -15223,9 +15691,9 @@
       "source_file": "app/agents/judge/node.py",
       "source_location": "L29",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "judge_node_rationale_29",
-      "target": "judge_node_normalize_target",
-      "confidence_score": 1.0
+      "target": "judge_node_normalize_target"
     },
     {
       "relation": "calls",
@@ -15277,9 +15745,9 @@
       "source_file": "app/agents/lightweight_review.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_lightweight_review_py",
-      "target": "agents_lightweight_review_build_lightweight_review_node",
-      "confidence_score": 1.0
+      "target": "agents_lightweight_review_build_lightweight_review_node"
     },
     {
       "relation": "rationale_for",
@@ -15287,9 +15755,9 @@
       "source_file": "app/agents/lightweight_review.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "agents_lightweight_review_rationale_1",
-      "target": "app_agents_lightweight_review_py",
-      "confidence_score": 1.0
+      "target": "app_agents_lightweight_review_py"
     },
     {
       "relation": "calls",
@@ -15308,9 +15776,9 @@
       "source_file": "app/agents/planner/node.py",
       "source_location": "L20",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_planner_node_py",
-      "target": "planner_node_normalize_node_id",
-      "confidence_score": 1.0
+      "target": "planner_node_normalize_node_id"
     },
     {
       "relation": "contains",
@@ -15318,9 +15786,9 @@
       "source_file": "app/agents/planner/node.py",
       "source_location": "L27",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_planner_node_py",
-      "target": "planner_node_normalize_learning_path_item",
-      "confidence_score": 1.0
+      "target": "planner_node_normalize_learning_path_item"
     },
     {
       "relation": "contains",
@@ -15328,9 +15796,9 @@
       "source_file": "app/agents/planner/node.py",
       "source_location": "L35",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_planner_node_py",
-      "target": "planner_node_build_planner_node",
-      "confidence_score": 1.0
+      "target": "planner_node_build_planner_node"
     },
     {
       "relation": "calls",
@@ -15371,9 +15839,9 @@
       "source_file": "app/agents/route/node.py",
       "source_location": "L32",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_route_node_py",
-      "target": "route_node_local_intent_hint",
-      "confidence_score": 1.0
+      "target": "route_node_local_intent_hint"
     },
     {
       "relation": "contains",
@@ -15381,9 +15849,9 @@
       "source_file": "app/agents/route/node.py",
       "source_location": "L40",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_route_node_py",
-      "target": "route_node_build_route_node",
-      "confidence_score": 1.0
+      "target": "route_node_build_route_node"
     },
     {
       "relation": "rationale_for",
@@ -15391,9 +15859,9 @@
       "source_file": "app/agents/route/node.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "route_node_rationale_1",
-      "target": "app_agents_route_node_py",
-      "confidence_score": 1.0
+      "target": "app_agents_route_node_py"
     },
     {
       "relation": "calls",
@@ -15478,9 +15946,9 @@
       "source_file": "app/agents/tool_agent/node.py",
       "source_location": "L45",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "app_agents_tool_agent_node_py",
-      "target": "tool_agent_node_build_tool_agent_node",
-      "confidence_score": 1.0
+      "target": "tool_agent_node_build_tool_agent_node"
     },
     {
       "relation": "rationale_for",
@@ -15488,9 +15956,9 @@
       "source_file": "app/agents/tool_agent/node.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tool_agent_node_rationale_1",
-      "target": "app_agents_tool_agent_node_py",
-      "confidence_score": 1.0
+      "target": "app_agents_tool_agent_node_py"
     },
     {
       "relation": "calls",
@@ -15542,9 +16010,9 @@
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L35",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_unit_test_prompt_loader_py",
-      "target": "unit_test_prompt_loader_testpromptfiles",
-      "confidence_score": 1.0
+      "target": "unit_test_prompt_loader_testpromptfiles"
     },
     {
       "relation": "contains",
@@ -15552,9 +16020,9 @@
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L39",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_unit_test_prompt_loader_py",
-      "target": "unit_test_prompt_loader_test_prompt_file_exists",
-      "confidence_score": 1.0
+      "target": "unit_test_prompt_loader_test_prompt_file_exists"
     },
     {
       "relation": "contains",
@@ -15562,9 +16030,9 @@
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L48",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_unit_test_prompt_loader_py",
-      "target": "unit_test_prompt_loader_test_prompt_file_non_empty",
-      "confidence_score": 1.0
+      "target": "unit_test_prompt_loader_test_prompt_file_non_empty"
     },
     {
       "relation": "contains",
@@ -15572,9 +16040,9 @@
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L58",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tests_unit_test_prompt_loader_py",
-      "target": "unit_test_prompt_loader_testloadprompt",
-      "confidence_score": 1.0
+      "target": "unit_test_prompt_loader_testloadprompt"
     },
     {
       "relation": "rationale_for",
@@ -15582,9 +16050,9 @@
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "unit_test_prompt_loader_rationale_1",
-      "target": "tests_unit_test_prompt_loader_py",
-      "confidence_score": 1.0
+      "target": "tests_unit_test_prompt_loader_py"
     },
     {
       "relation": "rationale_for",
@@ -15592,9 +16060,9 @@
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L36",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "unit_test_prompt_loader_rationale_36",
-      "target": "unit_test_prompt_loader_testpromptfiles",
-      "confidence_score": 1.0
+      "target": "unit_test_prompt_loader_testpromptfiles"
     },
     {
       "relation": "method",
@@ -15602,9 +16070,9 @@
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L61",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "unit_test_prompt_loader_testloadprompt",
-      "target": "unit_test_prompt_loader_testloadprompt_test_loads_route_system_prompt",
-      "confidence_score": 1.0
+      "target": "unit_test_prompt_loader_testloadprompt_test_loads_route_system_prompt"
     },
     {
       "relation": "method",
@@ -15612,9 +16080,9 @@
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L67",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "unit_test_prompt_loader_testloadprompt",
-      "target": "unit_test_prompt_loader_testloadprompt_test_loads_judge_system_prompt",
-      "confidence_score": 1.0
+      "target": "unit_test_prompt_loader_testloadprompt_test_loads_judge_system_prompt"
     },
     {
       "relation": "method",
@@ -15622,9 +16090,9 @@
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L73",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "unit_test_prompt_loader_testloadprompt",
-      "target": "unit_test_prompt_loader_testloadprompt_test_loads_custom_filename",
-      "confidence_score": 1.0
+      "target": "unit_test_prompt_loader_testloadprompt_test_loads_custom_filename"
     },
     {
       "relation": "method",
@@ -15632,9 +16100,9 @@
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L79",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "unit_test_prompt_loader_testloadprompt",
-      "target": "unit_test_prompt_loader_testloadprompt_test_loads_flat_file_prompt",
-      "confidence_score": 1.0
+      "target": "unit_test_prompt_loader_testloadprompt_test_loads_flat_file_prompt"
     },
     {
       "relation": "method",
@@ -15642,9 +16110,9 @@
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L85",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "unit_test_prompt_loader_testloadprompt",
-      "target": "unit_test_prompt_loader_testloadprompt_test_raises_on_missing_file",
-      "confidence_score": 1.0
+      "target": "unit_test_prompt_loader_testloadprompt_test_raises_on_missing_file"
     },
     {
       "relation": "method",
@@ -15652,9 +16120,9 @@
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L89",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "unit_test_prompt_loader_testloadprompt",
-      "target": "unit_test_prompt_loader_testloadprompt_test_raises_on_missing_custom_file",
-      "confidence_score": 1.0
+      "target": "unit_test_prompt_loader_testloadprompt_test_raises_on_missing_custom_file"
     },
     {
       "relation": "rationale_for",
@@ -15662,9 +16130,9 @@
       "source_file": "tests/unit/test_prompt_loader.py",
       "source_location": "L59",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "unit_test_prompt_loader_rationale_59",
-      "target": "unit_test_prompt_loader_testloadprompt",
-      "confidence_score": 1.0
+      "target": "unit_test_prompt_loader_testloadprompt"
     },
     {
       "relation": "contains",
@@ -23717,416 +24185,6 @@
       "confidence_score": 1.0,
       "source": "patent_tutor_agent_agents_agent_skills",
       "target": "patent_tutor_agent_agents_domain_docs"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L1",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "readme_md",
-      "target": "patent_tutor_agent_readme_patent_tutor_agent"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L7",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_patent_tutor_agent",
-      "target": "patent_tutor_agent_readme_\u4ece\u96f6\u5230_langgraph_studio"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L141",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_patent_tutor_agent",
-      "target": "patent_tutor_agent_readme_\u6280\u672f\u6808"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L153",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_patent_tutor_agent",
-      "target": "patent_tutor_agent_readme_\u9879\u76ee\u7ed3\u6784"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L190",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_patent_tutor_agent",
-      "target": "patent_tutor_agent_readme_\u5de5\u4f5c\u6d41\u67b6\u6784"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L227",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_patent_tutor_agent",
-      "target": "patent_tutor_agent_readme_\u5feb\u901f\u547d\u4ee4"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L250",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_patent_tutor_agent",
-      "target": "patent_tutor_agent_readme_\u6a21\u578b\u4e0e\u914d\u7f6e"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L263",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_patent_tutor_agent",
-      "target": "patent_tutor_agent_readme_rag_\u5de5\u5177\u51fd\u6570"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L269",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_patent_tutor_agent",
-      "target": "patent_tutor_agent_readme_fastapi_\u670d\u52a1"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L297",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_patent_tutor_agent",
-      "target": "patent_tutor_agent_readme_\u77e5\u8bc6\u56fe\u8c31"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L280",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_patent_tutor_agent",
-      "target": "patent_tutor_agent_readme_\u4f9d\u8d56\u7ba1\u7406"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L288",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_patent_tutor_agent",
-      "target": "patent_tutor_agent_readme_\u63d0\u4ea4\u89c4\u8303"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L9",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_\u4ece\u96f6\u5230_langgraph_studio",
-      "target": "patent_tutor_agent_readme_1_\u5b89\u88c5_uv_python_\u5305\u7ba1\u7406\u5668"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L35",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_\u4ece\u96f6\u5230_langgraph_studio",
-      "target": "patent_tutor_agent_readme_2_\u514b\u9686\u9879\u76ee\u5e76\u5b89\u88c5\u4f9d\u8d56"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L45",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_\u4ece\u96f6\u5230_langgraph_studio",
-      "target": "patent_tutor_agent_readme_3_\u914d\u7f6e_api_key"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L87",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_\u4ece\u96f6\u5230_langgraph_studio",
-      "target": "patent_tutor_agent_readme_4_\u542f\u52a8_langgraph_studio"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L107",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_\u4ece\u96f6\u5230_langgraph_studio",
-      "target": "patent_tutor_agent_readme_5_\u672c\u5730\u8bbf\u95ee_\u672c\u673a\u8fd0\u884c"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L111",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_\u4ece\u96f6\u5230_langgraph_studio",
-      "target": "patent_tutor_agent_readme_6_\u8fdc\u7a0b\u8bbf\u95ee_ssh_\u96a7\u9053"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L129",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_\u4ece\u96f6\u5230_langgraph_studio",
-      "target": "patent_tutor_agent_readme_7_studio_\u91cc\u505a\u4ec0\u4e48"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L13",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_1_\u5b89\u88c5_uv_python_\u5305\u7ba1\u7406\u5668",
-      "target": "patent_tutor_agent_readme_codeblock_1"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L21",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_1_\u5b89\u88c5_uv_python_\u5305\u7ba1\u7406\u5668",
-      "target": "patent_tutor_agent_readme_codeblock_2"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L27",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_1_\u5b89\u88c5_uv_python_\u5305\u7ba1\u7406\u5668",
-      "target": "patent_tutor_agent_readme_codeblock_3"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L37",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_2_\u514b\u9686\u9879\u76ee\u5e76\u5b89\u88c5\u4f9d\u8d56",
-      "target": "patent_tutor_agent_readme_codeblock_4"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L48",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_3_\u914d\u7f6e_api_key",
-      "target": "patent_tutor_agent_readme_codeblock_5"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L53",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_3_\u914d\u7f6e_api_key",
-      "target": "patent_tutor_agent_readme_codeblock_6"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L58",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_3_\u914d\u7f6e_api_key",
-      "target": "patent_tutor_agent_readme_codeblock_7"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L64",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_3_\u914d\u7f6e_api_key",
-      "target": "patent_tutor_agent_readme_codeblock_8"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L75",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_3_\u914d\u7f6e_api_key",
-      "target": "patent_tutor_agent_readme_codeblock_9"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L89",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_4_\u542f\u52a8_langgraph_studio",
-      "target": "patent_tutor_agent_readme_codeblock_10"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L95",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_4_\u542f\u52a8_langgraph_studio",
-      "target": "patent_tutor_agent_readme_codeblock_11"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L101",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_4_\u542f\u52a8_langgraph_studio",
-      "target": "patent_tutor_agent_readme_codeblock_12"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L117",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_6_\u8fdc\u7a0b\u8bbf\u95ee_ssh_\u96a7\u9053",
-      "target": "patent_tutor_agent_readme_codeblock_13"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L125",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_6_\u8fdc\u7a0b\u8bbf\u95ee_ssh_\u96a7\u9053",
-      "target": "patent_tutor_agent_readme_codeblock_14"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L155",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_\u9879\u76ee\u7ed3\u6784",
-      "target": "patent_tutor_agent_readme_codeblock_15"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L194",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_\u5de5\u4f5c\u6d41\u67b6\u6784",
-      "target": "patent_tutor_agent_readme_codeblock_16"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L210",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_\u5de5\u4f5c\u6d41\u67b6\u6784",
-      "target": "patent_tutor_agent_readme_agent_\u8282\u70b9\u804c\u8d23"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L229",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_\u5feb\u901f\u547d\u4ee4",
-      "target": "patent_tutor_agent_readme_codeblock_17"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L256",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_\u6a21\u578b\u4e0e\u914d\u7f6e",
-      "target": "patent_tutor_agent_readme_codeblock_18"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L309",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_\u77e5\u8bc6\u56fe\u8c31",
-      "target": "patent_tutor_agent_readme_codeblock_19"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L284",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_\u4f9d\u8d56\u7ba1\u7406",
-      "target": "patent_tutor_agent_readme_codeblock_19"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L322",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_\u4f9d\u8d56\u7ba1\u7406",
-      "target": "patent_tutor_agent_readme_codeblock_20"
     },
     {
       "relation": "contains",
@@ -33439,5 +33497,5 @@
       "source_file": "backend/tests/integration/test_workflow_integration.py"
     }
   ],
-  "built_at_commit": "3b3ff9a6f368b11e25baa5d2e9cf99dd6f24b914"
+  "built_at_commit": "537b08b8b04b8631d37c8ecca0db770db52cdc0a"
 }
