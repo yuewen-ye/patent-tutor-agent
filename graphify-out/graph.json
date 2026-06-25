@@ -215,391 +215,409 @@
   },
   "nodes": [
     {
+      "label": "langgraph-stop.ps1",
+      "file_type": "code",
+      "source_file": "langgraph-stop.ps1",
+      "source_location": "L1",
+      "id": "langgraph_stop_ps1",
+      "community": 186,
+      "norm_label": "langgraph-stop.ps1"
+    },
+    {
+      "label": "langgraph-stop.sh",
+      "file_type": "code",
+      "source_file": "langgraph-stop.sh",
+      "source_location": "L1",
+      "id": "langgraph_stop_sh",
+      "community": 187,
+      "norm_label": "langgraph-stop.sh"
+    },
+    {
       "label": "README.md",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L1",
-      "id": "readme_md",
       "community": 24,
-      "norm_label": "readme.md"
+      "norm_label": "readme.md",
+      "id": "readme_md"
     },
     {
       "label": "Patent Tutor Agent",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L1",
-      "id": "patent_tutor_agent_readme_patent_tutor_agent",
       "community": 24,
-      "norm_label": "patent tutor agent"
+      "norm_label": "patent tutor agent",
+      "id": "patent_tutor_agent_readme_patent_tutor_agent"
     },
     {
       "label": "\u4ece\u96f6\u5230 LangGraph Studio",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L7",
-      "id": "patent_tutor_agent_readme_\u4ece\u96f6\u5230_langgraph_studio",
       "community": 24,
-      "norm_label": "\u4ece\u96f6\u5230 langgraph studio"
+      "norm_label": "\u4ece\u96f6\u5230 langgraph studio",
+      "id": "patent_tutor_agent_readme_\u4ece\u96f6\u5230_langgraph_studio"
     },
     {
       "label": "1. \u5b89\u88c5 uv\uff08Python \u5305\u7ba1\u7406\u5668\uff09",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L9",
-      "id": "patent_tutor_agent_readme_1_\u5b89\u88c5_uv_python_\u5305\u7ba1\u7406\u5668",
       "community": 24,
-      "norm_label": "1. \u5b89\u88c5 uv(python \u5305\u7ba1\u7406\u5668)"
+      "norm_label": "1. \u5b89\u88c5 uv(python \u5305\u7ba1\u7406\u5668)",
+      "id": "patent_tutor_agent_readme_1_\u5b89\u88c5_uv_python_\u5305\u7ba1\u7406\u5668"
     },
     {
       "label": "code:bash (curl -LsSf https://astral.sh/uv/install.sh | sh)",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L13",
-      "id": "patent_tutor_agent_readme_codeblock_1",
       "community": 24,
-      "norm_label": "code:bash (curl -lssf https://astral.sh/uv/install.sh | sh)"
+      "norm_label": "code:bash (curl -lssf https://astral.sh/uv/install.sh | sh)",
+      "id": "patent_tutor_agent_readme_codeblock_1"
     },
     {
       "label": "code:powershell (powershell -ExecutionPolicy ByPass -c \"irm https://astral.sh)",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L21",
-      "id": "patent_tutor_agent_readme_codeblock_2",
       "community": 24,
-      "norm_label": "code:powershell (powershell -executionpolicy bypass -c \"irm https://astral.sh)"
+      "norm_label": "code:powershell (powershell -executionpolicy bypass -c \"irm https://astral.sh)",
+      "id": "patent_tutor_agent_readme_codeblock_2"
     },
     {
       "label": "code:powershell (pip install uv          # \u901a\u8fc7 pip)",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L27",
-      "id": "patent_tutor_agent_readme_codeblock_3",
       "community": 24,
-      "norm_label": "code:powershell (pip install uv          # \u901a\u8fc7 pip)"
+      "norm_label": "code:powershell (pip install uv          # \u901a\u8fc7 pip)",
+      "id": "patent_tutor_agent_readme_codeblock_3"
     },
     {
       "label": "2. \u514b\u9686\u9879\u76ee\u5e76\u5b89\u88c5\u4f9d\u8d56",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L35",
-      "id": "patent_tutor_agent_readme_2_\u514b\u9686\u9879\u76ee\u5e76\u5b89\u88c5\u4f9d\u8d56",
       "community": 24,
-      "norm_label": "2. \u514b\u9686\u9879\u76ee\u5e76\u5b89\u88c5\u4f9d\u8d56"
+      "norm_label": "2. \u514b\u9686\u9879\u76ee\u5e76\u5b89\u88c5\u4f9d\u8d56",
+      "id": "patent_tutor_agent_readme_2_\u514b\u9686\u9879\u76ee\u5e76\u5b89\u88c5\u4f9d\u8d56"
     },
     {
       "label": "code:bash (git clone https://github.com/yuewen-ye/patent-tutor-agent.gi)",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L37",
-      "id": "patent_tutor_agent_readme_codeblock_4",
       "community": 24,
-      "norm_label": "code:bash (git clone https://github.com/yuewen-ye/patent-tutor-agent.gi)"
+      "norm_label": "code:bash (git clone https://github.com/yuewen-ye/patent-tutor-agent.gi)",
+      "id": "patent_tutor_agent_readme_codeblock_4"
     },
     {
       "label": "3. \u914d\u7f6e API Key",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L45",
-      "id": "patent_tutor_agent_readme_3_\u914d\u7f6e_api_key",
       "community": 24,
-      "norm_label": "3. \u914d\u7f6e api key"
+      "norm_label": "3. \u914d\u7f6e api key",
+      "id": "patent_tutor_agent_readme_3_\u914d\u7f6e_api_key"
     },
     {
       "label": "code:bash (cp .env.example .env)",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L48",
-      "id": "patent_tutor_agent_readme_codeblock_5",
       "community": 24,
-      "norm_label": "code:bash (cp .env.example .env)"
+      "norm_label": "code:bash (cp .env.example .env)",
+      "id": "patent_tutor_agent_readme_codeblock_5"
     },
     {
       "label": "code:cmd (copy .env.example .env)",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L53",
-      "id": "patent_tutor_agent_readme_codeblock_6",
       "community": 24,
-      "norm_label": "code:cmd (copy .env.example .env)"
+      "norm_label": "code:cmd (copy .env.example .env)",
+      "id": "patent_tutor_agent_readme_codeblock_6"
     },
     {
       "label": "code:powershell (Copy-Item .env.example .env)",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L58",
-      "id": "patent_tutor_agent_readme_codeblock_7",
       "community": 24,
-      "norm_label": "code:powershell (copy-item .env.example .env)"
+      "norm_label": "code:powershell (copy-item .env.example .env)",
+      "id": "patent_tutor_agent_readme_codeblock_7"
     },
     {
       "label": "code:env (# LangSmith \u2014 LangGraph Studio \u8fde\u63a5\u9700\u8981\uff08\u5728 https://smith.langchai)",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L64",
-      "id": "patent_tutor_agent_readme_codeblock_8",
       "community": 24,
-      "norm_label": "code:env (# langsmith \u2014 langgraph studio \u8fde\u63a5\u9700\u8981(\u5728 https://smith.langchai)"
+      "norm_label": "code:env (# langsmith \u2014 langgraph studio \u8fde\u63a5\u9700\u8981(\u5728 https://smith.langchai)",
+      "id": "patent_tutor_agent_readme_codeblock_8"
     },
     {
       "label": "code:env (ROUTE_PROVIDER=deepseek)",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L75",
-      "id": "patent_tutor_agent_readme_codeblock_9",
       "community": 24,
-      "norm_label": "code:env (route_provider=deepseek)"
+      "norm_label": "code:env (route_provider=deepseek)",
+      "id": "patent_tutor_agent_readme_codeblock_9"
     },
     {
       "label": "4. \u542f\u52a8 LangGraph Studio",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L87",
-      "id": "patent_tutor_agent_readme_4_\u542f\u52a8_langgraph_studio",
       "community": 24,
-      "norm_label": "4. \u542f\u52a8 langgraph studio"
+      "norm_label": "4. \u542f\u52a8 langgraph studio",
+      "id": "patent_tutor_agent_readme_4_\u542f\u52a8_langgraph_studio"
     },
     {
       "label": "code:powershell (powershell -ExecutionPolicy Bypass -File .\\scripts\\langgraph)",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L89",
-      "id": "patent_tutor_agent_readme_codeblock_10",
       "community": 24,
-      "norm_label": "code:powershell (powershell -executionpolicy bypass -file .\\scripts\\langgraph)"
+      "norm_label": "code:powershell (powershell -executionpolicy bypass -file .\\scripts\\langgraph)",
+      "id": "patent_tutor_agent_readme_codeblock_10"
     },
     {
       "label": "code:bash (bash scripts/langgraph-dev.sh)",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L95",
-      "id": "patent_tutor_agent_readme_codeblock_11",
       "community": 24,
-      "norm_label": "code:bash (bash scripts/langgraph-dev.sh)"
+      "norm_label": "code:bash (bash scripts/langgraph-dev.sh)",
+      "id": "patent_tutor_agent_readme_codeblock_11"
     },
     {
       "label": "code:block12 (- \ud83d\ude80 API: http://127.0.0.1:8124)",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L101",
-      "id": "patent_tutor_agent_readme_codeblock_12",
       "community": 24,
-      "norm_label": "code:block12 (- \ud83d\ude80 api: http://127.0.0.1:8124)"
+      "norm_label": "code:block12 (- \ud83d\ude80 api: http://127.0.0.1:8124)",
+      "id": "patent_tutor_agent_readme_codeblock_12"
     },
     {
       "label": "5. \u672c\u5730\u8bbf\u95ee\uff08\u672c\u673a\u8fd0\u884c\uff09",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L107",
-      "id": "patent_tutor_agent_readme_5_\u672c\u5730\u8bbf\u95ee_\u672c\u673a\u8fd0\u884c",
       "community": 24,
-      "norm_label": "5. \u672c\u5730\u8bbf\u95ee(\u672c\u673a\u8fd0\u884c)"
+      "norm_label": "5. \u672c\u5730\u8bbf\u95ee(\u672c\u673a\u8fd0\u884c)",
+      "id": "patent_tutor_agent_readme_5_\u672c\u5730\u8bbf\u95ee_\u672c\u673a\u8fd0\u884c"
     },
     {
       "label": "6. \u8fdc\u7a0b\u8bbf\u95ee\uff08SSH \u96a7\u9053\uff09",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L111",
-      "id": "patent_tutor_agent_readme_6_\u8fdc\u7a0b\u8bbf\u95ee_ssh_\u96a7\u9053",
       "community": 24,
-      "norm_label": "6. \u8fdc\u7a0b\u8bbf\u95ee(ssh \u96a7\u9053)"
+      "norm_label": "6. \u8fdc\u7a0b\u8bbf\u95ee(ssh \u96a7\u9053)",
+      "id": "patent_tutor_agent_readme_6_\u8fdc\u7a0b\u8bbf\u95ee_ssh_\u96a7\u9053"
     },
     {
       "label": "code:bash (ssh -L 8124:localhost:8124 wangbin@<\u670d\u52a1\u5668IP>)",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L117",
-      "id": "patent_tutor_agent_readme_codeblock_13",
       "community": 24,
-      "norm_label": "code:bash (ssh -l 8124:localhost:8124 wangbin@<\u670d\u52a1\u5668ip>)"
+      "norm_label": "code:bash (ssh -l 8124:localhost:8124 wangbin@<\u670d\u52a1\u5668ip>)",
+      "id": "patent_tutor_agent_readme_codeblock_13"
     },
     {
       "label": "code:block14 (https://smith.langchain.com/studio/?baseUrl=http://localhost)",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L125",
-      "id": "patent_tutor_agent_readme_codeblock_14",
       "community": 24,
-      "norm_label": "code:block14 (https://smith.langchain.com/studio/?baseurl=http://localhost)"
+      "norm_label": "code:block14 (https://smith.langchain.com/studio/?baseurl=http://localhost)",
+      "id": "patent_tutor_agent_readme_codeblock_14"
     },
     {
       "label": "7. Studio \u91cc\u505a\u4ec0\u4e48",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L129",
-      "id": "patent_tutor_agent_readme_7_studio_\u91cc\u505a\u4ec0\u4e48",
       "community": 24,
-      "norm_label": "7. studio \u91cc\u505a\u4ec0\u4e48"
+      "norm_label": "7. studio \u91cc\u505a\u4ec0\u4e48",
+      "id": "patent_tutor_agent_readme_7_studio_\u91cc\u505a\u4ec0\u4e48"
     },
     {
       "label": "\u6280\u672f\u6808",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L141",
-      "id": "patent_tutor_agent_readme_\u6280\u672f\u6808",
       "community": 24,
-      "norm_label": "\u6280\u672f\u6808"
+      "norm_label": "\u6280\u672f\u6808",
+      "id": "patent_tutor_agent_readme_\u6280\u672f\u6808"
     },
     {
       "label": "\u9879\u76ee\u7ed3\u6784",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L153",
-      "id": "patent_tutor_agent_readme_\u9879\u76ee\u7ed3\u6784",
       "community": 24,
-      "norm_label": "\u9879\u76ee\u7ed3\u6784"
+      "norm_label": "\u9879\u76ee\u7ed3\u6784",
+      "id": "patent_tutor_agent_readme_\u9879\u76ee\u7ed3\u6784"
     },
     {
       "label": "code:text (.)",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L155",
-      "id": "patent_tutor_agent_readme_codeblock_15",
       "community": 24,
-      "norm_label": "code:text (.)"
+      "norm_label": "code:text (.)",
+      "id": "patent_tutor_agent_readme_codeblock_15"
     },
     {
       "label": "\u5de5\u4f5c\u6d41\u67b6\u6784",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L191",
-      "id": "patent_tutor_agent_readme_\u5de5\u4f5c\u6d41\u67b6\u6784",
       "community": 24,
-      "norm_label": "\u5de5\u4f5c\u6d41\u67b6\u6784"
+      "norm_label": "\u5de5\u4f5c\u6d41\u67b6\u6784",
+      "id": "patent_tutor_agent_readme_\u5de5\u4f5c\u6d41\u67b6\u6784"
     },
     {
       "label": "code:text (START \u2192 _init \u2192 route \u2500\u2500\u252c\u2500\u2500 diagnose: diagnosis \u2192 END)",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L195",
-      "id": "patent_tutor_agent_readme_codeblock_16",
       "community": 24,
-      "norm_label": "code:text (start \u2192 _init \u2192 route \u2500\u2500\u252c\u2500\u2500 diagnose: diagnosis \u2192 end)"
+      "norm_label": "code:text (start \u2192 _init \u2192 route \u2500\u2500\u252c\u2500\u2500 diagnose: diagnosis \u2192 end)",
+      "id": "patent_tutor_agent_readme_codeblock_16"
     },
     {
       "label": "Agent \u8282\u70b9\u804c\u8d23",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L222",
-      "id": "patent_tutor_agent_readme_agent_\u8282\u70b9\u804c\u8d23",
       "community": 24,
-      "norm_label": "agent \u8282\u70b9\u804c\u8d23"
+      "norm_label": "agent \u8282\u70b9\u804c\u8d23",
+      "id": "patent_tutor_agent_readme_agent_\u8282\u70b9\u804c\u8d23"
     },
     {
       "label": "\u5feb\u901f\u547d\u4ee4",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L244",
-      "id": "patent_tutor_agent_readme_\u5feb\u901f\u547d\u4ee4",
       "community": 24,
-      "norm_label": "\u5feb\u901f\u547d\u4ee4"
+      "norm_label": "\u5feb\u901f\u547d\u4ee4",
+      "id": "patent_tutor_agent_readme_\u5feb\u901f\u547d\u4ee4"
     },
     {
       "label": "code:bash (uv sync                                           # \u5b89\u88c5\u4f9d\u8d56)",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L246",
-      "id": "patent_tutor_agent_readme_codeblock_17",
       "community": 24,
-      "norm_label": "code:bash (uv sync                                           # \u5b89\u88c5\u4f9d\u8d56)"
+      "norm_label": "code:bash (uv sync                                           # \u5b89\u88c5\u4f9d\u8d56)",
+      "id": "patent_tutor_agent_readme_codeblock_17"
     },
     {
       "label": "\u6a21\u578b\u4e0e\u914d\u7f6e",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L267",
-      "id": "patent_tutor_agent_readme_\u6a21\u578b\u4e0e\u914d\u7f6e",
       "community": 24,
-      "norm_label": "\u6a21\u578b\u4e0e\u914d\u7f6e"
+      "norm_label": "\u6a21\u578b\u4e0e\u914d\u7f6e",
+      "id": "patent_tutor_agent_readme_\u6a21\u578b\u4e0e\u914d\u7f6e"
     },
     {
       "label": "code:env (DEEPSEEK_MODEL=deepseek-v4-flash)",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L273",
-      "id": "patent_tutor_agent_readme_codeblock_18",
       "community": 24,
-      "norm_label": "code:env (deepseek_model=deepseek-v4-flash)"
+      "norm_label": "code:env (deepseek_model=deepseek-v4-flash)",
+      "id": "patent_tutor_agent_readme_codeblock_18"
     },
     {
       "label": "RAG \u5de5\u5177\u51fd\u6570",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L280",
-      "id": "patent_tutor_agent_readme_rag_\u5de5\u5177\u51fd\u6570",
       "community": 24,
-      "norm_label": "rag \u5de5\u5177\u51fd\u6570"
+      "norm_label": "rag \u5de5\u5177\u51fd\u6570",
+      "id": "patent_tutor_agent_readme_rag_\u5de5\u5177\u51fd\u6570"
     },
     {
       "label": "\u5f00\u542f\u771f\u5b9e RAG \u6a21\u5f0f",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L286",
-      "id": "patent_tutor_agent_readme_\u5f00\u542f\u771f\u5b9e_rag_\u6a21\u5f0f",
       "community": 24,
-      "norm_label": "\u5f00\u542f\u771f\u5b9e rag \u6a21\u5f0f"
+      "norm_label": "\u5f00\u542f\u771f\u5b9e rag \u6a21\u5f0f",
+      "id": "patent_tutor_agent_readme_\u5f00\u542f\u771f\u5b9e_rag_\u6a21\u5f0f"
     },
     {
       "label": "code:env (RAG_MOCK=0)",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L290",
-      "id": "patent_tutor_agent_readme_codeblock_19",
       "community": 24,
-      "norm_label": "code:env (rag_mock=0)"
+      "norm_label": "code:env (rag_mock=0)",
+      "id": "patent_tutor_agent_readme_codeblock_19"
     },
     {
       "label": "FastAPI \u670d\u52a1",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L303",
-      "id": "patent_tutor_agent_readme_fastapi_\u670d\u52a1",
       "community": 24,
-      "norm_label": "fastapi \u670d\u52a1"
+      "norm_label": "fastapi \u670d\u52a1",
+      "id": "patent_tutor_agent_readme_fastapi_\u670d\u52a1"
     },
     {
       "label": "\u77e5\u8bc6\u56fe\u8c31",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L314",
-      "id": "patent_tutor_agent_readme_\u77e5\u8bc6\u56fe\u8c31",
       "community": 24,
-      "norm_label": "\u77e5\u8bc6\u56fe\u8c31"
+      "norm_label": "\u77e5\u8bc6\u56fe\u8c31",
+      "id": "patent_tutor_agent_readme_\u77e5\u8bc6\u56fe\u8c31"
     },
     {
       "label": "code:bash (graphify query \"<\u95ee\u9898>\"        # \u56fe\u8c31\u95ee\u7b54)",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L326",
-      "id": "patent_tutor_agent_readme_codeblock_20",
       "community": 24,
-      "norm_label": "code:bash (graphify query \"<\u95ee\u9898>\"        # \u56fe\u8c31\u95ee\u7b54)"
+      "norm_label": "code:bash (graphify query \"<\u95ee\u9898>\"        # \u56fe\u8c31\u95ee\u7b54)",
+      "id": "patent_tutor_agent_readme_codeblock_20"
     },
     {
       "label": "\u4f9d\u8d56\u7ba1\u7406",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L333",
-      "id": "patent_tutor_agent_readme_\u4f9d\u8d56\u7ba1\u7406",
       "community": 24,
-      "norm_label": "\u4f9d\u8d56\u7ba1\u7406"
+      "norm_label": "\u4f9d\u8d56\u7ba1\u7406",
+      "id": "patent_tutor_agent_readme_\u4f9d\u8d56\u7ba1\u7406"
     },
     {
       "label": "code:bash (uv export --format requirements-txt --output-file requiremen)",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L337",
-      "id": "patent_tutor_agent_readme_codeblock_21",
       "community": 24,
-      "norm_label": "code:bash (uv export --format requirements-txt --output-file requiremen)"
+      "norm_label": "code:bash (uv export --format requirements-txt --output-file requiremen)",
+      "id": "patent_tutor_agent_readme_codeblock_21"
     },
     {
       "label": "\u63d0\u4ea4\u89c4\u8303",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L341",
-      "id": "patent_tutor_agent_readme_\u63d0\u4ea4\u89c4\u8303",
       "community": 24,
-      "norm_label": "\u63d0\u4ea4\u89c4\u8303"
+      "norm_label": "\u63d0\u4ea4\u89c4\u8303",
+      "id": "patent_tutor_agent_readme_\u63d0\u4ea4\u89c4\u8303"
     },
     {
       "label": "node.py",
@@ -831,7 +849,7 @@
       "file_type": "code",
       "source_file": "app/agents/expert_b/cross_review.py",
       "source_location": "L1",
-      "community": 135,
+      "community": 185,
       "norm_label": "cross_review.py",
       "id": "app_agents_expert_b_cross_review_py"
     },
@@ -840,7 +858,7 @@
       "file_type": "code",
       "source_file": "app/agents/expert_b/cross_review.py",
       "source_location": "L16",
-      "community": 135,
+      "community": 185,
       "norm_label": "build_expert_b_cross_review_node()",
       "id": "expert_b_cross_review_build_expert_b_cross_review_node"
     },
@@ -849,7 +867,7 @@
       "file_type": "rationale",
       "source_file": "app/agents/expert_b/cross_review.py",
       "source_location": "L1",
-      "community": 135,
+      "community": 185,
       "norm_label": "expert b cross-review node \u2014 reviews expert a's draft for accessibility.",
       "id": "expert_b_cross_review_rationale_1"
     },
@@ -1767,7 +1785,7 @@
       "file_type": "code",
       "source_file": "backend/tests/integration/test_providers_integration.py",
       "source_location": "L1",
-      "community": 118,
+      "community": 79,
       "norm_label": "test_providers_integration.py",
       "id": "backend_tests_integration_test_providers_integration_py"
     },
@@ -1776,7 +1794,7 @@
       "file_type": "code",
       "source_file": "backend/tests/integration/test_providers_integration.py",
       "source_location": "L22",
-      "community": 118,
+      "community": 79,
       "norm_label": "test_provider_returns_valid_json()",
       "id": "integration_test_providers_integration_test_provider_returns_valid_json"
     },
@@ -1785,7 +1803,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/integration/test_providers_integration.py",
       "source_location": "L1",
-      "community": 118,
+      "community": 79,
       "norm_label": "smoke-test each llm provider individually with real api calls.  requires valid .",
       "id": "integration_test_providers_integration_rationale_1"
     },
@@ -4971,7 +4989,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L304",
-      "community": 118,
+      "community": 79,
       "norm_label": "_strip_json_fence()",
       "id": "core_llm_strip_json_fence"
     },
@@ -4980,7 +4998,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L315",
-      "community": 118,
+      "community": 79,
       "norm_label": "call_llm_json()",
       "id": "core_llm_call_llm_json"
     },
@@ -5034,7 +5052,7 @@
       "file_type": "code",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L433",
-      "community": 118,
+      "community": 79,
       "norm_label": ".generate_json()",
       "id": "core_llm_defaultllmclient_generate_json"
     },
@@ -11523,7 +11541,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L532",
-      "community": 149,
+      "community": 157,
       "norm_label": "code:markdown (# session title)",
       "id": "docs_memory_design_inspiration_codeblock_14"
     },
@@ -11550,7 +11568,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L616",
-      "community": 149,
+      "community": 157,
       "norm_label": "3.3 \u5c42\u7ea7 3: agent role memory(agent \u89d2\u8272\u8bb0\u5fc6)",
       "id": "docs_memory_design_inspiration_3_3_\u5c42\u7ea7_3_agent_role_memory_agent_\u89d2\u8272\u8bb0\u5fc6"
     },
@@ -11559,7 +11577,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L620",
-      "community": 149,
+      "community": 157,
       "norm_label": "3.3.1 \u5404 agent \u89d2\u8272\u8bb0\u5fc6\u5185\u5bb9",
       "id": "docs_memory_design_inspiration_3_3_1_\u5404_agent_\u89d2\u8272\u8bb0\u5fc6\u5185\u5bb9"
     },
@@ -11667,7 +11685,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L864",
-      "community": 151,
+      "community": 149,
       "norm_label": "code:block21 (agent \u8282\u70b9\u5373\u5c06\u6267\u884c (\u4f8b\u5982: diagnosis \u8282\u70b9))",
       "id": "docs_memory_design_inspiration_codeblock_21"
     },
@@ -11748,7 +11766,7 @@
       "file_type": "document",
       "source_file": "docs/memory-design-inspiration.md",
       "source_location": "L1067",
-      "community": 151,
+      "community": 78,
       "norm_label": "code:block25 (\u89e6\u53d1\u6761\u4ef6:)",
       "id": "docs_memory_design_inspiration_codeblock_25"
     },
@@ -12477,7 +12495,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L915",
-      "community": 151,
+      "community": 149,
       "norm_label": "5.2 \u8def\u5f84 a: feedback \u8282\u70b9\u540c\u6b65\u5199\u5165",
       "id": "docs_memory_design_inspiration_5_2_\u8def\u5f84_a_feedback_\u8282\u70b9\u540c\u6b65\u5199\u5165"
     },
@@ -12585,7 +12603,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L96",
-      "community": 149,
+      "community": 157,
       "norm_label": "\u4e09\u3001\u53ef\u501f\u9274\u7684\u8bbe\u8ba1\u7406\u5ff5",
       "id": "docs_memory_design_inspiration_\u4e09_\u53ef\u501f\u9274\u7684\u8bbe\u8ba1\u7406\u5ff5"
     },
@@ -12711,7 +12729,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L364",
-      "community": 149,
+      "community": 157,
       "norm_label": "3.3 \u67b6\u6784\u6539\u8fdb\u8def\u7ebf\u56fe",
       "id": "docs_memory_design_inspiration_3_3_\u67b6\u6784\u6539\u8fdb\u8def\u7ebf\u56fe"
     },
@@ -14927,9 +14945,9 @@
       "source_file": "README.md",
       "source_location": "L286",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "patent_tutor_agent_readme_rag_\u5de5\u5177\u51fd\u6570",
-      "target": "patent_tutor_agent_readme_\u5f00\u542f\u771f\u5b9e_rag_\u6a21\u5f0f",
-      "confidence_score": 1.0
+      "target": "patent_tutor_agent_readme_\u5f00\u542f\u771f\u5b9e_rag_\u6a21\u5f0f"
     },
     {
       "relation": "contains",
@@ -14937,9 +14955,9 @@
       "source_file": "README.md",
       "source_location": "L290",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "patent_tutor_agent_readme_\u5f00\u542f\u771f\u5b9e_rag_\u6a21\u5f0f",
-      "target": "patent_tutor_agent_readme_codeblock_19",
-      "confidence_score": 1.0
+      "target": "patent_tutor_agent_readme_codeblock_19"
     },
     {
       "relation": "contains",
@@ -14967,9 +14985,9 @@
       "source_file": "README.md",
       "source_location": "L326",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "patent_tutor_agent_readme_\u77e5\u8bc6\u56fe\u8c31",
-      "target": "patent_tutor_agent_readme_codeblock_20",
-      "confidence_score": 1.0
+      "target": "patent_tutor_agent_readme_codeblock_20"
     },
     {
       "relation": "contains",
@@ -14987,9 +15005,9 @@
       "source_file": "README.md",
       "source_location": "L337",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "patent_tutor_agent_readme_\u4f9d\u8d56\u7ba1\u7406",
-      "target": "patent_tutor_agent_readme_codeblock_21",
-      "confidence_score": 1.0
+      "target": "patent_tutor_agent_readme_codeblock_21"
     },
     {
       "relation": "contains",
@@ -33497,5 +33515,5 @@
       "source_file": "backend/tests/integration/test_workflow_integration.py"
     }
   ],
-  "built_at_commit": "537b08b8b04b8631d37c8ecca0db770db52cdc0a"
+  "built_at_commit": "373f3c5db347582fb3e19fde7036a8f2190d88c0"
 }
