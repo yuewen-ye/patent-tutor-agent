@@ -1,4 +1,4 @@
-"""Expert A revision node — responds to Expert B's cross-review."""
+"""Expert B revision node — responds to Expert A's cross-review."""
 
 from __future__ import annotations
 
@@ -10,31 +10,31 @@ from backend.app.agents.common import Node, load_prompt, messages_from_prompt, n
 from backend.app.core.llm import LLMClient
 from backend.app.schemas.state import RevisionRecord, StateDict, completed_event
 
-_REVISE_PROMPT = load_prompt(__file__, "revise_system.md")
+_REVISE_PROMPT = load_prompt(__file__)
 
 
-def build_expert_a_revise_node(llm_client: LLMClient) -> Node:
+def build_expert_b_revise_node(llm_client: LLMClient) -> Node:
     prompt = ChatPromptTemplate.from_messages(
         [
             (
                 "system",
                 schema_note(
                     "RevisionRecord",
-                    '{"agent":"expert_a","revisions":[{"review_id":1,'
-                    '"review_category":"🟡","review_summary":"审查摘要",'
+                    '{"agent":"expert_b","revisions":[{"review_id":1,'
+                    '"review_category":"🔴","review_summary":"审查摘要",'
                     '"response":"回应说明","status":"accepted"}],'
                     '"unresolved_disputes":[],"modified_paragraphs":["段落"],'
-                    '"modification_tags":["[经B审查修正]"]}',
+                    '"modification_tags":["[经A审查修正]"]}',
                 )
                 + _REVISE_PROMPT,
             ),
             (
                 "user",
-                "我（专家 A）的原始草稿：\n{expert_a_draft}\n\n"
-                "专家 B 对我的审查意见：\n{cross_review_b}\n\n"
+                "我（专家 B）的原始草稿：\n{expert_b_draft}\n\n"
+                "专家 A 对我的审查意见：\n{cross_review_a}\n\n"
                 "Judge 打回意见（如有）：\n{judge_report}\n\n"
-                "检索上下文：{retrieval_context}\n\n"
-                "请逐条回应 B 的审查意见，输出 RevisionRecord 格式。",
+                "学习者画像：{learner_profile}\n\n"
+                "请逐条回应 A 的审查意见，输出 RevisionRecord 格式。",
             ),
         ]
     )
@@ -45,7 +45,6 @@ def build_expert_a_revise_node(llm_client: LLMClient) -> Node:
         if not isinstance(raw_obj, dict):
             return raw_obj
         normalized = dict(raw_obj)
-        # Collect modified_paragraphs from individual revision items
         all_modified: list[str] = []
         revisions = normalized.get("revisions")
         if isinstance(revisions, list):
@@ -54,22 +53,21 @@ def build_expert_a_revise_node(llm_client: LLMClient) -> Node:
                     paragraphs = rev.pop("modified_paragraphs")
                     if isinstance(paragraphs, list):
                         all_modified.extend(str(p) for p in paragraphs)
-        # Only set at record level if not already present
         if all_modified and not normalized.get("modified_paragraphs"):
             normalized["modified_paragraphs"] = all_modified
         return normalized
 
-    def expert_a_revise_node(state: StateDict) -> dict[str, Any]:
+    def expert_b_revise_node(state: StateDict) -> dict[str, Any]:
         raw = llm_client.generate_json(
             messages_from_prompt(
                 prompt,
-                expert_a_draft=state.get("expert_a_draft", {}),
-                cross_review_b=state.get("cross_review_b", {}),
+                expert_b_draft=state.get("expert_b_draft", {}),
+                cross_review_a=state.get("cross_review_a", {}),
                 judge_report=state.get("judge_report", {}),
-                retrieval_context=state.get("retrieval_context", []),
+                learner_profile=state.get("learner_profile", {}),
             ),
-            temperature=0.4,
-            agent="expert_a_revise",
+            temperature=0.7,
+            agent="expert_b_revise",
         )
         normalized = _normalize_revision(
             normalize_key_aliases(
@@ -86,11 +84,11 @@ def build_expert_a_revise_node(llm_client: LLMClient) -> Node:
         )
         record = RevisionRecord.model_validate(normalized)
         return {
-            "revision_record_a": record.model_dump(),
+            "revision_record_b": record.model_dump(),
             "events": [completed_event(
-                "expert_a_revise",
-                "revised draft based on expert B or Judge review",
+                "expert_b_revise",
+                "revised draft based on expert A or Judge review",
             )],
         }
 
-    return expert_a_revise_node
+    return expert_b_revise_node

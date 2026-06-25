@@ -10,7 +10,7 @@ from backend.app.agents.common import Node, load_prompt, messages_from_prompt, n
 from backend.app.core.llm import LLMClient
 from backend.app.schemas.state import LightweightReview, StateDict, completed_event
 
-_LIGHTWEIGHT_REVIEW_SYSTEM = load_prompt(__file__, "lightweight_review_system.md")
+_LIGHTWEIGHT_REVIEW_SYSTEM = load_prompt(__file__)
 
 
 def build_lightweight_review_node(llm_client: LLMClient) -> Node:

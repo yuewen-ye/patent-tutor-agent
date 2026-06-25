@@ -10,7 +10,7 @@ from backend.app.agents.common import Node, load_prompt, messages_from_prompt, n
 from backend.app.core.llm import LLMClient
 from backend.app.schemas.state import JointSynthesis, StateDict, completed_event
 
-_JOINT_SYNTHESIS_SYSTEM = load_prompt(__file__, "joint_synthesis_system.md")
+_JOINT_SYNTHESIS_SYSTEM = load_prompt(__file__)
 
 
 def build_joint_synthesis_node(llm_client: LLMClient) -> Node:
