@@ -17,8 +17,6 @@ artifacts/
 
 .langgraph_api/
 
-graphify-out/cache/
-graphify-out/.graphify_*
-graphify-out/manifest.json
+graphify-out/
 
-backend/app/rag/data/rag_chroma_db/
+
