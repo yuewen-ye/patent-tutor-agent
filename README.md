@@ -86,6 +86,8 @@ FEEDBACK_PROVIDER=deepseek
 
 ### 4. 启动 LangGraph Studio
 
+Windows（PowerShell）：
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\langgraph-dev.ps1
 ```
@@ -102,6 +104,18 @@ bash scripts/langgraph-dev.sh
 - 🚀 API: http://127.0.0.1:8124
 - 🎨 Studio UI: https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:8124
 - 📚 API Docs: http://127.0.0.1:8124/docs
+```
+
+停止本地 Studio：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\langgraph-stop.ps1 -Port 8124
+```
+
+macOS / Linux / Git Bash:
+
+```bash
+bash scripts/langgraph-stop.sh 8124
 ```
 
 ### 5. 本地访问（本机运行）
@@ -264,6 +278,8 @@ uv run python backend/scripts/show_workflow.py
 
 # LangGraph Studio
 powershell -ExecutionPolicy Bypass -File .\scripts\langgraph-dev.ps1
+bash scripts/langgraph-dev.sh
+bash scripts/langgraph-stop.sh 8124
 ```
 
 ## 模型与配置
@@ -290,6 +306,35 @@ RAG 工具对 `tool_agent` 暴露为 `rag_retrieve` tool-call。运行时由 `ba
 - 默认：`RAG_RETRIEVAL_MODE` 未设置、为空或为 `real` 时，调用 `backend/app/rag/retriever.py` 的真实检索。
 - Mock：`RAG_RETRIEVAL_MODE=mock` 时，调用 `backend/app/mock_rag.py` 的固定法条片段，便于单元测试和无向量库演示。
 - 其他值会直接报错，避免误配置时静默退回空结果。
+
+### 如何判断是不是真实 RAG
+
+先看配置：
+
+```bash
+printenv RAG_RETRIEVAL_MODE
+```
+
+未输出、输出空值或输出 `real`，表示会走真实 RAG；输出 `mock`，表示会走 mock。配置只说明“会选哪条路径”，最终以检索结果为准。
+
+直接验证检索结果：
+
+```bash
+env -u RAG_RETRIEVAL_MODE uv run python - <<'PY'
+from backend.app.retrieval_selector import retrieve_context
+
+chunks = retrieve_context("专利法 新颖性 第二十二条", top_k=2)
+for chunk in chunks:
+    method = chunk.metadata.retrieval_method if chunk.metadata else None
+    print(chunk.citation, method)
+PY
+```
+
+判断标准：
+
+- 输出的 `method` 是 `vector`：真实 RAG，来自 Milvus Lite + BGE-M3。
+- 输出的 `method` 是 `manual`：mock RAG，来自 `backend/app/mock_rag.py`。
+- 工作流运行日志里 `tool_agent` 行也会显示类似 `片段数=2  方法=vector`；这里的 `vector` 就是真实 RAG。
 
 ### 当前真实 RAG 依赖
 
