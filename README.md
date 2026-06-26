@@ -81,7 +81,6 @@ PLANNER_PROVIDER=deepseek
 EXPERT_A_PROVIDER=deepseek
 EXPERT_B_PROVIDER=deepseek
 JUDGE_PROVIDER=deepseek
-FEEDBACK_PROVIDER=deepseek
 ```
 
 ### 4. 启动 LangGraph Studio
@@ -175,13 +174,12 @@ https://smith.langchain.com/studio/?baseUrl=http://localhost:8124
 │   │   │   ├── route.py            # 意图路由（teach/chat/diagnose）
 │   │   │   ├── tool_agent.py       # ReAct 循环 + rag_retrieve 工具调用
 │   │   │   ├── chat_answer.py      # chat 路径快速回答
-│   │   │   ├── diagnosis/          # 学情诊断
+│   │   │   ├── diagnosis/          # 学情诊断 + feedback 后置阶段
 │   │   │   ├── planner/            # 路径规划
 │   │   │   ├── retrieve_context.py # RAG 检索（保留兼容）
 │   │   │   ├── expert_a.py         # 保守严谨专家
 │   │   │   ├── expert_b.py         # 生动教学专家
 │   │   │   ├── judge/              # 审核裁判
-│   │   │   └── feedback/           # 反馈分析
 │   │   ├── builder/            # LangGraph Studio 入口
 │   │   ├── core/               # LLM provider 配置、call_llm、AgentLLMRouter
 │   │   ├── graph/              # LangGraph StateGraph workflow
@@ -189,7 +187,7 @@ https://smith.langchain.com/studio/?baseUrl=http://localhost:8124
 │   │   ├── memory.py           # learner profile/history Store helper
 │   │   ├── rag/                # 真实 RAG 工具函数（rag_retrieve）
 │   │   ├── mock_rag.py         # 环境变量切换用的 mock 检索，不放入 rag/
-│   │   ├── retrieval_selector.py # RAG_RETRIEVAL_MODE / RAG_VECTOR_ENABLED 选择检索路径
+│   │   ├── retrieval_selector.py # RAG_RETRIEVAL_MODE 选择真实 / mock 检索路径
 │   │   └── schemas/            # StateDict、WorkflowContext、Agent 输出模型与 JSON Schema
 │   ├── scripts/                # show_workflow.py / run_workflow.py
 │   ├── tests/                  # pytest 测试，含真实模型 API smoke
@@ -236,14 +234,14 @@ START → _init → route ──┬── diagnose: diagnosis → END
 | 节点 | 类型 | 职责 | Provider 环境变量 |
 |------|------|------|-----------------|
 | `route` | LLM 调用 + 本地兜底 | 分类用户意图 teach/chat/diagnose；明显学习/诊断请求会覆盖误路由 | `ROUTE_PROVIDER` |
-| `diagnosis` | LLM 调用 | 学情诊断，识别学习背景/水平/薄弱点 | `DIAGNOSIS_PROVIDER` |
+| `diagnosis` | LLM 调用 + Store | 学情诊断；在 `feedback` 阶段生成问卷、下一步动作、画像更新建议 | `DIAGNOSIS_PROVIDER` |
 | `planner` | LLM 调用 | 生成个性化学习路径 | `PLANNER_PROVIDER` |
 | `tool_agent` | LLM + Tool 调用 | ReAct 循环，自主调用 rag_retrieve 检索法条 | `TOOL_AGENT_PROVIDER` |
 | `expert_a` | LLM 调用 | 保守严谨、法条优先；负责草稿、按 Judge 要求修订、最终审核输出 | `EXPERT_A_PROVIDER` |
 | `expert_b` | LLM 调用 | 生动灵活、面向案例；负责草稿和按 Judge 要求修订 | `EXPERT_B_PROVIDER` |
 | `judge` | LLM 调用 | 直接审核两份专家草稿，只评估不写正文 | `JUDGE_PROVIDER` |
 | `revise_experts` | 无 LLM | 增加辩论轮次，并按 Judge target 分派修订专家 | — |
-| `feedback` | LLM 调用 | 生成问卷、下一步动作、画像更新建议 | `FEEDBACK_PROVIDER` |
+| `feedback` | LLM 调用 + Store | `diagnosis` Agent 的反馈阶段，写入反馈闭环和长期记忆 | `DIAGNOSIS_PROVIDER` |
 | `chat_answer` | LLM 调用或复用 | chat 路径优先复用 tool_agent 的最终回答，必要时补答 | `CHAT_ANSWER_PROVIDER` |
 
 接口合同以 `docs/agent-interface-spec.md` 和 `backend/app/schemas/state.py` 为准。
@@ -288,15 +286,14 @@ QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 
 ## RAG 工具函数
 
-RAG 工具对 `tool_agent` 暴露为 `rag_retrieve` tool-call。运行时由 `backend/app/retrieval_selector.py` 根据 `RAG_RETRIEVAL_MODE` 与 `RAG_VECTOR_ENABLED` 选择手工兜底或真实向量检索；`backend/app/rag/` 只保留真实 RAG 实现。
+RAG 工具对 `tool_agent` 暴露为 `rag_retrieve` tool-call。运行时由 `backend/app/retrieval_selector.py` 根据 `RAG_RETRIEVAL_MODE` 选择真实向量检索或 mock 检索；`backend/app/rag/` 只保留真实 RAG 实现。
 
 当前实现使用 Milvus Lite + BGE-M3 嵌入模型做本地向量检索，不再保留旧版向量库兼容路径。
 
 ### 检索模式
 
-- 默认：`RAG_RETRIEVAL_MODE` 未设置或为空，且 `RAG_VECTOR_ENABLED` 未开启时，调用 `backend/app/mock_rag.py` 的固定法条片段，避免本地无向量库时返回空结果或卡在 Milvus 启动。
-- 真实向量：`RAG_VECTOR_ENABLED=true` 或 `RAG_RETRIEVAL_MODE=real` 时，调用 `backend/app/rag/retriever.py` 的真实检索。
-- Mock：`RAG_RETRIEVAL_MODE=mock` 时，强制调用固定法条片段。
+- 默认真实向量：`RAG_RETRIEVAL_MODE` 未设置、为空或为 `real` 时，调用 `backend/app/rag/retriever.py` 的真实检索。
+- Mock：只有 `RAG_RETRIEVAL_MODE=mock` 时，才强制调用固定法条片段。
 - 其他值会直接报错，避免误配置时静默退回空结果。
 
 ### 如何判断是不是真实 RAG
@@ -305,15 +302,14 @@ RAG 工具对 `tool_agent` 暴露为 `rag_retrieve` tool-call。运行时由 `ba
 
 ```bash
 printenv RAG_RETRIEVAL_MODE
-printenv RAG_VECTOR_ENABLED
 ```
 
-`RAG_RETRIEVAL_MODE=real` 或 `RAG_VECTOR_ENABLED=true` 表示会走真实向量 RAG；未输出、空值或 `mock` 表示本地手工兜底。配置只说明“会选哪条路径”，最终以检索结果为准。
+未输出、空值或 `real` 表示会走真实向量 RAG；只有 `mock` 表示固定片段。配置只说明“会选哪条路径”，最终以检索结果为准。
 
 直接验证检索结果：
 
 ```bash
-env -u RAG_RETRIEVAL_MODE -u RAG_VECTOR_ENABLED uv run python - <<'PY'
+env -u RAG_RETRIEVAL_MODE uv run python - <<'PY'
 from backend.app.retrieval_selector import retrieve_context
 
 chunks = retrieve_context("专利法 新颖性 第二十二条", top_k=2)

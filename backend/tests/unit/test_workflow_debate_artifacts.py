@@ -28,6 +28,11 @@ class DebateQueueLLMClient:
                     "weak_points": ["新颖性判断步骤不清"],
                     "learning_goal": "学习专利新颖性",
                 },
+                {
+                    "questionnaire": ["你能否说明什么是现有技术？"],
+                    "next_action": "完成一个新颖性判断案例题",
+                    "profile_update_hint": "继续观察案例判断能力",
+                },
             ],
             "planner": [
                 [
@@ -108,13 +113,6 @@ class DebateQueueLLMClient:
                     "rationale": "修订后可以输出。",
                 },
             ],
-            "feedback": [
-                {
-                    "questionnaire": ["你能否说明什么是现有技术？"],
-                    "next_action": "完成一个新颖性判断案例题",
-                    "profile_update_hint": "继续观察案例判断能力",
-                },
-            ],
         }
 
     def generate_json(
@@ -155,6 +153,8 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     assert agents.count("expert_a") == 3
     assert agents.count("expert_b") == 2
     assert agents.count("judge") == 2
+    assert agents.count("diagnosis") == 2
+    assert "feedback" not in agents
     assert agents[-1] == "expert_a"
     assert {
         "cross_review_a",
@@ -164,6 +164,7 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
         "joint_synthesis",
         "lightweight_review",
         "finalize",
+        "feedback",
     }.isdisjoint(set(agents))
     assert completed["debate_round"] == 2
     assert completed["judge_report"]["decision"] == "accept"

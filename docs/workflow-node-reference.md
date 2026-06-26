@@ -9,14 +9,14 @@
 | `__start__` | LangGraph 内置 | 图入口，不执行业务逻辑。 | 初始输入 | 无 |
 | `_init` | 非 LLM | 兼容 LangGraph Studio；当输入未提供 `session_id` 时自动生成短 UUID。 | `session_id` | `session_id` |
 | `route` | LLM JSON + 本地兜底 | 判断用户意图：`teach`、`chat`、`diagnose`。 | `user_input` | `intent`、事件、路由产物 |
-| `diagnosis` | LLM JSON + Store 读 | 生成学习者画像；会读取长期记忆中的历史画像作为提示上下文。 | `user_input`、历史 profile memory | `learner_profile`、事件、画像产物 |
+| `diagnosis` | LLM JSON + Store 读 | diagnosis Agent 的初始诊断阶段；生成学习者画像，并读取长期记忆中的历史画像作为提示上下文。 | `user_input`、历史 profile memory | `learner_profile`、事件、画像产物 |
 | `planner` | LLM JSON | 根据学习目标和画像生成学习路径；会规范化模型生成的 `node_id`。 | `user_input`、`learner_profile` | `learning_path`、事件、路径产物 |
 | `tool_agent` | LLM tool-calling | ReAct 风格检索协调器；最多 5 轮，自主决定是否调用 `rag_retrieve(query, top_k)`。 | `user_input`、已有 `retrieval_context` | 追加 `retrieval_context`、可选 `tool_agent_answer`、事件、检索产物 |
 | `expert_a` | LLM JSON | 保守严谨的法条优先专家；生成草稿、按 Judge 要求修订，并在 Judge 通过与 feedback 后输出最终答案。 | `user_input`、`retrieval_context`、`debate_round`、`judge_report`、`feedback_result` | `expert_a_draft` 或 `final_answer`、事件、专家草稿/最终答案产物 |
 | `expert_b` | LLM JSON | 生动灵活的教学专家；生成草稿，并在修订轮中按 Judge 要求补强案例和学习适配。 | `user_input`、`learner_profile`、`debate_round`、`judge_report` | `expert_b_draft`、事件、专家草稿产物 |
 | `judge` | LLM JSON | 直接审核专家 A 与专家 B 的草稿，只评估不写正文。 | `expert_a_draft`、`expert_b_draft`、`user_input`、`retrieval_context`、`learner_profile`、`learning_path`、`debate_round` | `judge_report`、事件、裁判报告产物 |
 | `revise_experts` | 非 LLM | 递增 `debate_round`，把 Judge 修订请求写入 `revision_history`，并按 target 分派回专家。 | `judge_report`、`debate_round` | `debate_round`、`revision_history`、事件 |
-| `feedback` | LLM JSON + Store 写 | 生成反馈问卷、下一步动作、画像更新建议；在 teach 路径写入长期学习记忆。 | `user_input`、`judge_report` | `feedback_result`、事件、反馈产物、profile/history memory |
+| `feedback` | LLM JSON + Store 写 | diagnosis Agent 的反馈阶段；生成反馈问卷、下一步动作、画像更新建议，并在 teach 路径写入长期学习记忆。 | `user_input`、`learner_profile`、`judge_report` | `feedback_result`、事件、反馈产物、profile/history memory |
 | `chat_answer` | LLM JSON / 复用 | chat 路径的轻量回答；优先复用 `tool_agent_answer`，否则基于用户问题和检索上下文生成 500 字以内回答。 | `user_input`、`retrieval_context`、可选 `tool_agent_answer` | `chat_answer`、事件、快速回答产物 |
 | `__end__` | LangGraph 内置 | 图终点，不执行业务逻辑。 | 最终状态 | 无 |
 

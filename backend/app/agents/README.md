@@ -7,13 +7,12 @@
 | 目录/文件 | 工作流节点 | 类型 | 角色 | 主要产出 |
 | --- | --- | --- | --- | --- |
 | `route.py` | `route` | LLM | 意图路由，分类 teach/chat/diagnose | `intent` |
-| `diagnosis/` | `diagnosis` | LLM + Store | 学情诊断 Agent | `learner_profile` |
+| `diagnosis/` | `diagnosis` / `feedback` | LLM + Store | 学情诊断 Agent；feedback 是后置阶段 | `learner_profile` / `feedback_result` |
 | `planner/` | `planner` | LLM | 路径规划 Agent | `learning_path` |
 | `tool_agent.py` | `tool_agent` | LLM + Tool | ReAct 循环，自主调用 rag_retrieve | `retrieval_context` |
 | `expert_a/` | `expert_a` | LLM | 领域专家 A，保守严谨；最终审核 | `expert_a_draft` / `final_answer` |
 | `expert_b/` | `expert_b` | LLM | 领域专家 B，生动灵活 | `expert_b_draft` |
 | `judge/` | `judge` | LLM | 审核裁判 Agent | `judge_report` |
-| `feedback/` | `feedback` | LLM + Store | 反馈分析 Agent | `feedback_result` |
 | `chat_answer.py` | `chat_answer` | LLM | chat 路径快速回答 | `chat_answer` |
 
 **三路由分布：**
@@ -34,4 +33,4 @@
 - 模型 provider 不在 Agent README 中写死，运行时由 `.env` 的 `*_PROVIDER` 和 `AgentLLMRouter` 决定。
 - 详细 JSON Schema、错误对象和降级策略以 `docs/agent-interface-spec.md` 为准。
 - `tool_agent` 是唯一使用 `generate_with_tools()` 的节点，其他节点均使用 `generate_json()`。
-- `diagnosis` 和 `feedback` 是仅有的两个通过 `runtime` 参数访问 LangGraph Store 的节点。
+- `diagnosis` Agent 的初始诊断阶段读取 Store，`feedback` 阶段写入 Store。

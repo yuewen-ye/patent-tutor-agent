@@ -173,7 +173,7 @@ A* 启发函数：f(n) = g(n) + h(n)
 |---|---|---|---|
 | P0.3.1 | 重定义 `LearnerProfile` | `backend/app/schemas/state.py` | 扩展为五维结构（knowledge/cognition/style/progress/affect） |
 | P0.3.2 | 更新 `diagnosis` 节点 | `backend/app/agents/diagnosis/node.py` | prompt 改为输出五维画像 |
-| P0.3.3 | 更新 `feedback` 节点 | `backend/app/agents/feedback/node.py` | 输出变化向量 Δ 而非简单 profile_update_hint |
+| P0.3.3 | 更新 `feedback` 阶段 | `backend/app/agents/diagnosis/node.py` | 输出变化向量 Δ 而非简单 profile_update_hint |
 | P0.3.4 | 新增学习者画像 API 模型 | `backend/app/schemas/state.py` | 新增 `LearnerProfileV2`、`ProfileDelta` 等模型 |
 
 ### P0.4 — BKT 贝叶斯知识追踪
@@ -205,7 +205,7 @@ A* 启发函数：f(n) = g(n) + h(n)
 |---|---|---|---|
 | P0.4.1 | BKT 核心算法 | `backend/app/bkt/model.py`（新建） | 实现 4 参数 BKT 模型 + 贝叶斯更新 + 非答题交互启发式 |
 | P0.4.2 | BKT 初始先验 | `backend/app/bkt/priors.py`（新建） | 从领域专家标注或历史数据中加载 P(L₀) 先验 |
-| P0.4.3 | feedback 接入 BKT | `backend/app/agents/feedback/node.py` | 每轮学习后批量更新涉及知识点的 P(L) |
+| P0.4.3 | feedback 接入 BKT | `backend/app/agents/diagnosis/node.py` | 每轮学习后批量更新涉及知识点的 P(L) |
 | P0.4.4 | BKT 持久化 | `backend/app/memory.py` | 通过 Store namespace `("learners", id, "bkt")` 读写 |
 | P0.4.5 | planner 使用 BKT | `backend/app/knowledge_graph/pathfinder.py` | P(L)≥0.75 跳过该节点；P(L) 在 [0.3,0.7) 标记"建议复习" |
 
@@ -257,7 +257,7 @@ feedback 输出变化向量 Δ：
 
 | # | 任务 | 涉及文件 | 说明 |
 |---|---|---|---|
-| P0.6.1 | 变化检测逻辑 | `backend/app/agents/feedback/node.py` | 对比本轮前后画像，检测超阈值变化 |
+| P0.6.1 | 变化检测逻辑 | `backend/app/agents/diagnosis/node.py` | 对比本轮前后画像，检测超阈值变化 |
 | P0.6.2 | 重规划节点 | `backend/app/knowledge_graph/replanner.py`（新建） | 增量路径重搜索 |
 | P0.6.3 | 工作流条件边 | `backend/app/graph/workflow.py` | feedback 输出 `recommend_reroute=true` → 路由到重规划节点 |
 
@@ -793,7 +793,7 @@ graph.invoke(
 | 5.3 | 配置 Checkpointer | `backend/app/graph/workflow.py` | 已完成：开发环境默认 `InMemorySaver`；调用时 `thread_id = session_id`。 |
 | 5.4 | 记忆 helper | `backend/app/memory.py` | 已完成：统一维护 `("learners", learner_id, "profile"/"history")` namespace 与读写逻辑。 |
 | 5.5 | diagnosis 读取历史画像 | `backend/app/agents/diagnosis/node.py` | 已完成：读取 Store 中历史画像并注入 prompt 的“历史学习者画像”段落。 |
-| 5.6 | feedback 写入长期记忆 | `backend/app/agents/feedback/node.py` | 已完成：写入 profile 版本和 session history；暂不写 BKT。 |
+| 5.6 | feedback 写入长期记忆 | `backend/app/agents/diagnosis/node.py` | 已完成：写入 profile 版本和 session history；暂不写 BKT。 |
 | 5.7 | CLI 支持 learner_id | `backend/scripts/run_workflow.py` | 已完成：`--learner-id` 触发 Store 记忆读写。 |
 | 5.8 | Learner API | `backend/app/api/learners.py`（待实现） | FastAPI 服务化后再暴露 profile/history 查询。 |
 | 5.9 | BKT 记忆 | 待定 | 按当前要求后置，不在本轮 MVP 实现。 |

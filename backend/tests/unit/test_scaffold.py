@@ -29,7 +29,6 @@ def test_monorepo_workspace_directories_exist() -> None:
         "backend/app/agents/expert_a",
         "backend/app/agents/expert_b",
         "backend/app/agents/judge",
-        "backend/app/agents/feedback",
         "backend/app/rag",
         "backend/tests",
         "frontend",

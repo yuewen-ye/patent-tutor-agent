@@ -15,8 +15,14 @@ from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponen
 LLMProvider = Literal["deepseek", "qwen", "glm"]
 LLMRole = Literal["system", "user", "assistant", "tool"]
 AgentName = Literal[
-    "diagnosis", "planner", "expert_a", "expert_b", "judge", "feedback",
-    "route", "tool_agent", "chat_answer",
+    "diagnosis",
+    "planner",
+    "expert_a",
+    "expert_b",
+    "judge",
+    "route",
+    "tool_agent",
+    "chat_answer",
 ]
 
 DEFAULT_PROVIDER: LLMProvider = "deepseek"
@@ -49,7 +55,6 @@ AGENT_PROVIDER_ENV: dict[AgentName, str] = {
     "expert_a": "EXPERT_A_PROVIDER",
     "expert_b": "EXPERT_B_PROVIDER",
     "judge": "JUDGE_PROVIDER",
-    "feedback": "FEEDBACK_PROVIDER",
     "route": "ROUTE_PROVIDER",
     "tool_agent": "TOOL_AGENT_PROVIDER",
     "chat_answer": "CHAT_ANSWER_PROVIDER",
