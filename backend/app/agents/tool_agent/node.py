@@ -12,7 +12,7 @@ from backend.app.core.llm import (
     LLMResponseWithTools,
     ToolDefinition,
 )
-from backend.app.rag import rag_retrieve
+from backend.app.retrieval_selector import retrieve_context
 from backend.app.schemas.state import completed_event
 
 MAX_TOOL_ROUNDS = 5
@@ -90,7 +90,7 @@ def build_tool_agent_node(llm_client: LLMClient) -> Node:
                         kwargs = {
                             k: v for k, v in tc.arguments.items() if isinstance(v, str | int)
                         }
-                        chunks = rag_retrieve(**cast(Any, kwargs))
+                        chunks = retrieve_context(**cast(Any, kwargs))
                         chunk_dicts = [c.model_dump() for c in chunks]
                         all_chunks.extend(chunk_dicts)
                         messages.append(LLMMessage(

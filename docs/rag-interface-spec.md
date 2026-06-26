@@ -17,15 +17,15 @@
                    ▼
 ┌─────────────────────────────────────────────┐
 │           rag_retrieve(query, top_k)         │
-│           backend/app/rag/retriever.py       │
+│           backend/app/retrieval_selector.py  │
 │                                             │
-│  当前：Mock 实现，返回硬编码法条               │
-│  目标：调用真实向量数据库 + Embedding 检索    │
+│  默认：调用真实向量数据库 + Embedding 检索    │
+│  可选：RAG_RETRIEVAL_MODE=mock 使用固定法条   │
 └──────────────────┬──────────────────────────┘
                    │ 调用
                    ▼
 ┌─────────────────────────────────────────────┐
-│              RAG 检索模块（待实现）            │
+│              真实 RAG 检索模块                │
 │                                             │
 │  ┌──────────┐  ┌───────────┐  ┌──────────┐ │
 │  │ 文档解析  │→│ 文本切片   │→│ Embedding │ │
@@ -42,10 +42,10 @@
 
 ### tool_agent → RAG 工具
 
-tool_agent 通过 `rag_retrieve()` 函数调用 RAG：
+tool_agent 通过 `rag_retrieve` 工具名触发检索。节点内部调用 `retrieve_context()`，再由环境变量选择真实或 mock 实现：
 
 ```python
-def rag_retrieve(query: str,  top_k: int =5) -> list[RetrievalChunk]:
+def retrieve_context(query: str = "", top_k: int = 5) -> list[RetrievalChunk]:
     """检索专利法律知识库。
 
     Args:
@@ -79,12 +79,22 @@ class RetrievalMetadata(ContractModel):
 
 ## 当前实现
 
-`backend/app/rag/retriever.py` 中的 `rag_retrieve()` 是 Milvus Lite + BGE-M3 的本地向量检索实现：
+默认模式调用 `backend/app/rag/retriever.py` 中的 `rag_retrieve()`，这是 Milvus Lite + BGE-M3 的本地向量检索实现：
 
 - `query` 会被 BGE-M3 编码为向量
 - 从 `backend/app/rag/data/milvus_lite.db/` 的 `law_knowledge_base` collection 检索 Top-K 片段
 - `retrieval_method = "vector"`
 - 检索初始化、编码、搜索或结果解析失败时抛出 `RAGRetrievalError`，不再静默返回空列表
+
+`RAG_RETRIEVAL_MODE=mock` 时调用 `backend/app/mock_rag.py` 中的固定法条片段，`retrieval_method = "manual"`。mock 实现刻意放在 `backend/app/rag/` 之外，确保 `rag/` 目录只承载真实 RAG。
+
+支持的模式：
+
+| 环境变量 | 行为 |
+|------|------|
+| 未设置、空值、`real` | 默认真实 RAG |
+| `mock` | 固定法条 mock RAG |
+| 其他值 | 抛出配置错误 |
 
 ## 目标实现要求
 
@@ -123,7 +133,7 @@ class RetrievalMetadata(ContractModel):
 
 ### 后续增强方向
 
-`rag_retrieve()` 函数签名保持不变，后续可以在函数体内部增强为混合检索：
+真实 RAG 的 `rag_retrieve()` 函数签名保持不变，后续可以在函数体内部增强为混合检索：
 
 ```python
 def rag_retrieve(query: str = "", top_k: int = 5) -> list[RetrievalChunk]:
@@ -133,4 +143,4 @@ def rag_retrieve(query: str = "", top_k: int = 5) -> list[RetrievalChunk]:
     return [chunk.to_retrieval_chunk() for chunk in reranked]
 ```
 
-tool_agent 无需任何修改——接口完全兼容。
+tool_agent 无需感知真实实现细节——接口完全兼容。

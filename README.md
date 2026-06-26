@@ -147,7 +147,7 @@ https://smith.langchain.com/studio/?baseUrl=http://localhost:8124
 - 模型调用层: httpx + tenacity，兼容 OpenAI 风格接口
 - 原生 tool-calling: `generate_with_tools()` + ReAct 循环
 - 数据合同: Pydantic / JSON Schema
-- RAG 模块: 当前为 mock 法条上下文，作为 `rag_retrieve()` 工具函数供 tool_agent 调用
+- RAG 模块: 默认使用 Milvus Lite + BGE-M3 真实检索，测试/演示可通过环境变量切换 mock
 - 前端: React 18 + TypeScript + Vite（待接入）
 
 ## 项目结构
@@ -174,7 +174,9 @@ https://smith.langchain.com/studio/?baseUrl=http://localhost:8124
 │   │   ├── graph/              # LangGraph StateGraph workflow
 │   │   ├── services/           # SessionService 与事件桥接
 │   │   ├── memory.py           # learner profile/history Store helper
-│   │   ├── rag/                # RAG 工具函数（rag_retrieve）
+│   │   ├── rag/                # 真实 RAG 工具函数（rag_retrieve）
+│   │   ├── mock_rag.py         # 环境变量切换用的 mock 检索，不放入 rag/
+│   │   ├── retrieval_selector.py # RAG_RETRIEVAL_MODE 选择真实或 mock 检索
 │   │   └── schemas/            # StateDict、WorkflowContext、Agent 输出模型与 JSON Schema
 │   ├── scripts/                # show_workflow.py / run_workflow.py
 │   ├── tests/                  # pytest 测试，含真实模型 API smoke
@@ -279,9 +281,15 @@ QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 
 ## RAG 工具函数
 
-RAG 检索以 `rag_retrieve()` 函数形式提供，位于 `backend/app/rag/retriever.py`。`tool_agent` 通过原生 tool-calling 调用它，chat 和 teach 路径上 LLM 均自主决定是否检索。
+RAG 工具对 `tool_agent` 暴露为 `rag_retrieve` tool-call。运行时由 `backend/app/retrieval_selector.py` 根据 `RAG_RETRIEVAL_MODE` 选择真实或 mock 检索；`backend/app/rag/` 只保留真实 RAG 实现。
 
 当前实现使用 Milvus Lite + BGE-M3 嵌入模型做本地向量检索，不再保留旧版向量库兼容路径。
+
+### 检索模式
+
+- 默认：`RAG_RETRIEVAL_MODE` 未设置、为空或为 `real` 时，调用 `backend/app/rag/retriever.py` 的真实检索。
+- Mock：`RAG_RETRIEVAL_MODE=mock` 时，调用 `backend/app/mock_rag.py` 的固定法条片段，便于单元测试和无向量库演示。
+- 其他值会直接报错，避免误配置时静默退回空结果。
 
 ### 当前真实 RAG 依赖
 

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
+
 from backend.app.agents.route import build_route_node
 from backend.app.agents.tool_agent import build_tool_agent_node
 from backend.app.agents.chat_answer import build_chat_answer_node
@@ -109,8 +111,9 @@ class TestToolAgentNode:
         assert "retrieval_context" in result
         assert result["tool_agent_answer"] == "新颖性是专利授权的条件之一。"
 
-    def test_tool_call_then_answer(self) -> None:
+    def test_tool_call_then_answer(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """LLM calls tool first, then returns content."""
+        monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
         client = FakeLLMClient(None)  # Will be overridden per call
         call_count = [0]
 
@@ -141,8 +144,10 @@ class TestToolAgentNode:
         assert "retrieval_context" in result
         assert result["tool_agent_answer"] == "根据检索结果，新颖性是指..."
 
-    def test_max_rounds_capped(self) -> None:
+    def test_max_rounds_capped(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """After 5 rounds, force exit."""
+        monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
+
         def always_tool_call(messages, tools, temperature, agent=None):
             return LLMResponseWithTools(
                 content=None,
