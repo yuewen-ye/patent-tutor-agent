@@ -16,9 +16,7 @@ pytestmark = pytest.mark.unit
 class QueueLLMClient:
     def __init__(self) -> None:
         self.responses: list[object] = [
-            # route
             {"intent": "teach", "confidence": 0.95, "reason": "系统学习请求"},
-            # diagnosis
             {
                 "education_background": "patent_exam_candidate",
                 "knowledge_level": "beginner",
@@ -26,7 +24,6 @@ class QueueLLMClient:
                 "weak_points": ["新颖性判断步骤"],
                 "learning_goal": "学习专利新颖性",
             },
-            # planner
             [
                 {
                     "node_id": "novelty-basics",
@@ -36,7 +33,6 @@ class QueueLLMClient:
                     "prerequisites": [],
                 }
             ],
-            # expert_a
             {
                 "expert": "expert_a",
                 "style": "conservative_precise",
@@ -45,7 +41,6 @@ class QueueLLMClient:
                 "teaching_content": "严谨解释新颖性。",
                 "risks": [],
             },
-            # expert_b
             {
                 "expert": "expert_b",
                 "style": "vivid_teaching",
@@ -54,59 +49,6 @@ class QueueLLMClient:
                 "teaching_content": "用案例解释新颖性。",
                 "risks": [],
             },
-            # cross_review_a
-            {
-                "reviewer": "expert_a",
-                "target": "expert_b",
-                "review_opinions": [
-                    {"category": "🟢", "location": "概念", "target_wrote": "...",
-                     "problem": "遗漏", "suggestion": "补充", "basis": "法22条"}
-                ],
-                "positive_confirmation": "引用存在",
-                "overall_assessment": "基本正确",
-            },
-            # cross_review_b
-            {
-                "reviewer": "expert_b",
-                "target": "expert_a",
-                "review_opinions": [
-                    {"category": "🟡", "location": "概念", "target_wrote": "...",
-                     "problem": "抽象", "suggestion": "加案例", "basis": None}
-                ],
-                "positive_confirmation": "准确",
-                "overall_assessment": "法律准确",
-            },
-            # expert_a_revise
-            {
-                "agent": "expert_a",
-                "revisions": [
-                    {"review_id": 1, "review_category": "🟡",
-                     "review_summary": "抽象", "response": "已改进", "status": "accepted"}
-                ],
-                "unresolved_disputes": [],
-                "modified_paragraphs": ["核心"],
-                "modification_tags": ["[经B审查修正]"],
-            },
-            # expert_b_revise
-            {
-                "agent": "expert_b",
-                "revisions": [
-                    {"review_id": 1, "review_category": "🟢",
-                     "review_summary": "遗漏", "response": "已补充", "status": "accepted"}
-                ],
-                "unresolved_disputes": [],
-                "modified_paragraphs": ["核心"],
-                "modification_tags": ["[经A审查修正]"],
-            },
-            # joint_synthesis
-            {
-                "title": "新颖性判断标准",
-                "sections": [
-                    {"heading": "法条", "content": "...", "source": "A", "note": None},
-                    {"heading": "解释", "content": "...", "source": "B", "note": None},
-                ],
-            },
-            # judge
             {
                 "decision": "accept",
                 "accuracy_score": 5,
@@ -115,16 +57,14 @@ class QueueLLMClient:
                 "disputes": [],
                 "rationale": "可以输出。",
             },
-            # feedback
             {
                 "questionnaire": ["你能说明新颖性的判断对象吗？"],
                 "next_action": "完成一个新颖性案例题",
                 "profile_update_hint": "继续观察案例判断能力",
             },
-            # finalize
             {
                 "title": "专利新颖性学习建议",
-                "content": "整合后的教学内容",
+                "content": "专家A最终审核后的教学内容",
                 "sources": ["第二十二条"],
             },
         ]
@@ -187,7 +127,7 @@ def test_session_events_stream_replays_agent_events_and_completion(tmp_path: Pat
 
     assert "event: agent_event" in payload
     assert '"node": "diagnosis"' in payload
-    assert '"node": "finalize"' in payload
+    assert '"node": "expert_a"' in payload
     assert "event: session_status" in payload
     assert '"status": "completed"' in payload
 
@@ -209,7 +149,7 @@ def test_session_websocket_replays_agent_events_until_completion(tmp_path: Path)
 
     event_nodes = [message["event"]["node"] for message in messages if message["type"] == "agent_event"]
     assert "diagnosis" in event_nodes
-    assert "finalize" in event_nodes
+    assert event_nodes[-1] == "expert_a"
     assert messages[-1]["status"] == "completed"
 
 

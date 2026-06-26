@@ -14,16 +14,9 @@ AgentNode = Literal[
     "expert_b",
     "judge",
     "feedback",
-    "finalize",
     "route",
     "tool_agent",
     "chat_answer",
-    "cross_review_a",
-    "cross_review_b",
-    "expert_a_revise",
-    "expert_b_revise",
-    "joint_synthesis",
-    "lightweight_review",
     "revise_experts",
 ]
 ErrorPattern = Literal[
@@ -62,21 +55,13 @@ class MarkdownArtifact(ContractModel):
         "final_answer",
         "route_decision",
         "chat_answer",
-        "cross_review",
-        "joint_synthesis",
     ]
     path: str
     created_by: Literal[
-        "diagnosis", "planner", "retrieve_context", "expert_a", "expert_b", "judge", "feedback", "finalize",
+        "diagnosis", "planner", "retrieve_context", "expert_a", "expert_b", "judge", "feedback",
         "route",
         "tool_agent",
         "chat_answer",
-        "cross_review_a",
-        "cross_review_b",
-        "expert_a_revise",
-        "expert_b_revise",
-        "joint_synthesis",
-        "lightweight_review",
         "revise_experts",
     ]
     title: str
@@ -310,13 +295,6 @@ class StateDict(TypedDict):
     intent: NotRequired[str]  # "teach" | "chat" | "diagnose"
     chat_answer: NotRequired[dict[str, Any]]
     tool_agent_answer: NotRequired[str]
-    # P0.1: Five-stage expert collaboration chain
-    cross_review_a: NotRequired[dict[str, Any]]
-    cross_review_b: NotRequired[dict[str, Any]]
-    revision_record_a: NotRequired[dict[str, Any]]
-    revision_record_b: NotRequired[dict[str, Any]]
-    joint_synthesis_output: NotRequired[dict[str, Any]]
-    lightweight_review_result: NotRequired[dict[str, Any]]
 
 
 def _inline_array_item_schema(schema: dict[str, Any]) -> dict[str, Any]:
@@ -334,10 +312,6 @@ def agent_output_json_schemas() -> dict[str, dict[str, Any]]:
         TypeAdapter(list[LearningPathItem]).json_schema(mode="validation")
     )
     expert_schema = ExpertDraft.model_json_schema(mode="validation")
-    cross_review_schema = CrossReview.model_json_schema(mode="validation")
-    revision_schema = RevisionRecord.model_json_schema(mode="validation")
-    joint_synthesis_schema = JointSynthesis.model_json_schema(mode="validation")
-    lightweight_review_schema = LightweightReview.model_json_schema(mode="validation")
     return {
         "diagnosis": LearnerProfile.model_json_schema(mode="validation"),
         "planner": planner_schema,
@@ -345,15 +319,8 @@ def agent_output_json_schemas() -> dict[str, dict[str, Any]]:
         "expert_b": expert_schema,
         "judge": JudgeReport.model_json_schema(mode="validation"),
         "feedback": FeedbackResult.model_json_schema(mode="validation"),
-        "finalize": FinalAnswer.model_json_schema(mode="validation"),
         "route": IntentResult.model_json_schema(mode="validation"),
         "chat_answer": ChatAnswer.model_json_schema(mode="validation"),
-        "cross_review_a": cross_review_schema,
-        "cross_review_b": cross_review_schema,
-        "revision_record_a": revision_schema,
-        "revision_record_b": revision_schema,
-        "joint_synthesis": joint_synthesis_schema,
-        "lightweight_review": lightweight_review_schema,
     }
 
 

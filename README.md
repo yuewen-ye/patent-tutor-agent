@@ -161,7 +161,7 @@ https://smith.langchain.com/studio/?baseUrl=http://localhost:8124
 - 模型调用层: httpx + tenacity，兼容 OpenAI 风格接口
 - 原生 tool-calling: `generate_with_tools()` + ReAct 循环
 - 数据合同: Pydantic / JSON Schema
-- RAG 模块: 默认使用 Milvus Lite + BGE-M3 真实检索，测试/演示可通过环境变量切换 mock
+- RAG 模块: 默认使用手工法条片段兜底，显式开启后使用 Milvus Lite + BGE-M3 真实检索
 - 前端: React 18 + TypeScript + Vite（待接入）
 
 ## 项目结构
@@ -181,8 +181,7 @@ https://smith.langchain.com/studio/?baseUrl=http://localhost:8124
 │   │   │   ├── expert_a.py         # 保守严谨专家
 │   │   │   ├── expert_b.py         # 生动教学专家
 │   │   │   ├── judge/              # 审核裁判
-│   │   │   ├── feedback/           # 反馈分析
-│   │   │   └── finalize.py         # 答案汇总
+│   │   │   └── feedback/           # 反馈分析
 │   │   ├── builder/            # LangGraph Studio 入口
 │   │   ├── core/               # LLM provider 配置、call_llm、AgentLLMRouter
 │   │   ├── graph/              # LangGraph StateGraph workflow
@@ -190,7 +189,7 @@ https://smith.langchain.com/studio/?baseUrl=http://localhost:8124
 │   │   ├── memory.py           # learner profile/history Store helper
 │   │   ├── rag/                # 真实 RAG 工具函数（rag_retrieve）
 │   │   ├── mock_rag.py         # 环境变量切换用的 mock 检索，不放入 rag/
-│   │   ├── retrieval_selector.py # RAG_RETRIEVAL_MODE 选择真实或 mock 检索
+│   │   ├── retrieval_selector.py # RAG_RETRIEVAL_MODE / RAG_VECTOR_ENABLED 选择检索路径
 │   │   └── schemas/            # StateDict、WorkflowContext、Agent 输出模型与 JSON Schema
 │   ├── scripts/                # show_workflow.py / run_workflow.py
 │   ├── tests/                  # pytest 测试，含真实模型 API smoke
@@ -215,23 +214,20 @@ START → _init → route ──┬── diagnose: diagnosis → END
                                       ↓
                                   expert_a ∥ expert_b
                                       ↓
-                         cross_review_a ∥ cross_review_b
-                                      ↓
-                         expert_a_revise ∥ expert_b_revise
-                                      ↓
-                                joint_synthesis → judge
-                                      ↑             │
-                                      │             ├── accept/minor → feedback → finalize → END
-                                      │             └── revise → revise_experts
-                                      │                            ↓
-                                      └── targeted expert revise → joint_synthesis → lightweight_review
-                                                                                         ↓
-                                                                                       judge
+                                     judge
+                                  /        \
+                       accept/minor        revise + round < max
+                            ↓                       ↓
+                         feedback             revise_experts
+                            ↓                       ↓
+                       expert_a final ← targeted expert_a / expert_b
+                            ↓                       ↓
+                           END                    judge
 ```
 
 | 路由 | 触发条件 | 路径 | LLM 调用次数 | 典型耗时 |
 |------|---------|------|-------------|---------|
-| **teach** | "系统学习"、"学习路径"、"规划" | 诊断→规划→RAG→双专家协作→裁判→反馈 | ~10-14 次 | 2-5 分钟 |
+| **teach** | "系统学习"、"学习路径"、"规划" | 诊断→规划→RAG→双专家循环→裁判→反馈→专家A最终审核 | ~7-10 次 | 1-3 分钟 |
 | **chat** | 单点问答、定义、对比 | RAG(可选)→直接回答 | ~1-2 次 | 5-30 秒 |
 | **diagnose** | "诊断"、"薄弱点"、"评估" | 诊断→结束 | ~1 次 | 2-5 秒 |
 
@@ -243,17 +239,12 @@ START → _init → route ──┬── diagnose: diagnosis → END
 | `diagnosis` | LLM 调用 | 学情诊断，识别学习背景/水平/薄弱点 | `DIAGNOSIS_PROVIDER` |
 | `planner` | LLM 调用 | 生成个性化学习路径 | `PLANNER_PROVIDER` |
 | `tool_agent` | LLM + Tool 调用 | ReAct 循环，自主调用 rag_retrieve 检索法条 | `TOOL_AGENT_PROVIDER` |
-| `expert_a` | LLM 调用 | 保守严谨、法条优先的教学草稿 | `EXPERT_A_PROVIDER` |
-| `expert_b` | LLM 调用 | 生动灵活、面向案例的教学草稿 | `EXPERT_B_PROVIDER` |
-| `cross_review_a` / `cross_review_b` | LLM 调用 | 专家交叉审查对方草稿 | `EXPERT_A_PROVIDER` / `EXPERT_B_PROVIDER` |
-| `expert_a_revise` / `expert_b_revise` | LLM 调用 | 按交叉审查或 Judge 打回意见定向修订 | `EXPERT_A_PROVIDER` / `EXPERT_B_PROVIDER` |
-| `joint_synthesis` | LLM 调用 | 合成一份带来源标注的联合教学稿 | `JOINT_SYNTHESIS_PROVIDER` |
-| `judge` | LLM 调用 | 审核联合稿，只评估不写正文 | `JUDGE_PROVIDER` |
+| `expert_a` | LLM 调用 | 保守严谨、法条优先；负责草稿、按 Judge 要求修订、最终审核输出 | `EXPERT_A_PROVIDER` |
+| `expert_b` | LLM 调用 | 生动灵活、面向案例；负责草稿和按 Judge 要求修订 | `EXPERT_B_PROVIDER` |
+| `judge` | LLM 调用 | 直接审核两份专家草稿，只评估不写正文 | `JUDGE_PROVIDER` |
 | `revise_experts` | 无 LLM | 增加辩论轮次，并按 Judge target 分派修订专家 | — |
-| `lightweight_review` | LLM 调用 | 对打回后的修订稿做轻量复审 | `LIGHTWEIGHT_REVIEW_PROVIDER` |
 | `feedback` | LLM 调用 | 生成问卷、下一步动作、画像更新建议 | `FEEDBACK_PROVIDER` |
 | `chat_answer` | LLM 调用或复用 | chat 路径优先复用 tool_agent 的最终回答，必要时补答 | `CHAT_ANSWER_PROVIDER` |
-| `finalize` | LLM 调用 | 将联合稿、裁判意见和反馈整理为最终答案 | `DEFAULT_LLM_PROVIDER` |
 
 接口合同以 `docs/agent-interface-spec.md` 和 `backend/app/schemas/state.py` 为准。
 
@@ -297,14 +288,15 @@ QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 
 ## RAG 工具函数
 
-RAG 工具对 `tool_agent` 暴露为 `rag_retrieve` tool-call。运行时由 `backend/app/retrieval_selector.py` 根据 `RAG_RETRIEVAL_MODE` 选择真实或 mock 检索；`backend/app/rag/` 只保留真实 RAG 实现。
+RAG 工具对 `tool_agent` 暴露为 `rag_retrieve` tool-call。运行时由 `backend/app/retrieval_selector.py` 根据 `RAG_RETRIEVAL_MODE` 与 `RAG_VECTOR_ENABLED` 选择手工兜底或真实向量检索；`backend/app/rag/` 只保留真实 RAG 实现。
 
 当前实现使用 Milvus Lite + BGE-M3 嵌入模型做本地向量检索，不再保留旧版向量库兼容路径。
 
 ### 检索模式
 
-- 默认：`RAG_RETRIEVAL_MODE` 未设置、为空或为 `real` 时，调用 `backend/app/rag/retriever.py` 的真实检索。
-- Mock：`RAG_RETRIEVAL_MODE=mock` 时，调用 `backend/app/mock_rag.py` 的固定法条片段，便于单元测试和无向量库演示。
+- 默认：`RAG_RETRIEVAL_MODE` 未设置或为空，且 `RAG_VECTOR_ENABLED` 未开启时，调用 `backend/app/mock_rag.py` 的固定法条片段，避免本地无向量库时返回空结果或卡在 Milvus 启动。
+- 真实向量：`RAG_VECTOR_ENABLED=true` 或 `RAG_RETRIEVAL_MODE=real` 时，调用 `backend/app/rag/retriever.py` 的真实检索。
+- Mock：`RAG_RETRIEVAL_MODE=mock` 时，强制调用固定法条片段。
 - 其他值会直接报错，避免误配置时静默退回空结果。
 
 ### 如何判断是不是真实 RAG
@@ -313,14 +305,15 @@ RAG 工具对 `tool_agent` 暴露为 `rag_retrieve` tool-call。运行时由 `ba
 
 ```bash
 printenv RAG_RETRIEVAL_MODE
+printenv RAG_VECTOR_ENABLED
 ```
 
-未输出、输出空值或输出 `real`，表示会走真实 RAG；输出 `mock`，表示会走 mock。配置只说明“会选哪条路径”，最终以检索结果为准。
+`RAG_RETRIEVAL_MODE=real` 或 `RAG_VECTOR_ENABLED=true` 表示会走真实向量 RAG；未输出、空值或 `mock` 表示本地手工兜底。配置只说明“会选哪条路径”，最终以检索结果为准。
 
 直接验证检索结果：
 
 ```bash
-env -u RAG_RETRIEVAL_MODE uv run python - <<'PY'
+env -u RAG_RETRIEVAL_MODE -u RAG_VECTOR_ENABLED uv run python - <<'PY'
 from backend.app.retrieval_selector import retrieve_context
 
 chunks = retrieve_context("专利法 新颖性 第二十二条", top_k=2)

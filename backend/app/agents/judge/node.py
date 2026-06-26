@@ -87,13 +87,14 @@ def build_judge_node(llm_client: LLMClient) -> Node:
             ),
             (
                 "user",
-                "联合合成稿：{joint_synthesis_output}\n"
+                "专家 A 草稿：{expert_a_draft}\n"
+                "专家 B 草稿：{expert_b_draft}\n"
                 "用户问题：{user_input}\n"
                 "检索上下文：{retrieval_context}\n"
                 "学习者画像：{learner_profile}\n"
                 "学习路径：{learning_path}\n"
                 "当前辩论轮次：{debate_round}\n"
-                "请审核联合合成稿并裁决。",
+                "请直接审核两位专家草稿并裁决。judge 只评估，不生成教学正文。",
             ),
         ]
     )
@@ -102,7 +103,8 @@ def build_judge_node(llm_client: LLMClient) -> Node:
         raw = llm_client.generate_json(
             messages_from_prompt(
                 prompt,
-                joint_synthesis_output=state.get("joint_synthesis_output", {}),
+                expert_a_draft=state.get("expert_a_draft", {}),
+                expert_b_draft=state.get("expert_b_draft", {}),
                 user_input=state["user_input"],
                 retrieval_context=state.get("retrieval_context", []),
                 learner_profile=state.get("learner_profile", {}),
@@ -115,7 +117,7 @@ def build_judge_node(llm_client: LLMClient) -> Node:
         report = JudgeReport.model_validate(_normalize_judge_report(raw))
         return {
             "judge_report": report.model_dump(),
-            "events": [completed_event("judge", "reviewed joint synthesis with LLM")],
+            "events": [completed_event("judge", "reviewed expert drafts with LLM")],
         }
 
     return judge_node

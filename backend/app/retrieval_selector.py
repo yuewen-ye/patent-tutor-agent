@@ -10,6 +10,7 @@ from backend.app.schemas.state import RetrievalChunk
 
 
 RAG_RETRIEVAL_MODE_ENV: Final = "RAG_RETRIEVAL_MODE"
+RAG_VECTOR_ENABLED_ENV: Final = "RAG_VECTOR_ENABLED"
 RetrievalMode = Literal["real", "mock"]
 
 
@@ -22,12 +23,19 @@ class RetrievalModeError(RuntimeError):
 
 
 def _retrieval_mode() -> RetrievalMode:
-    raw_mode = os.getenv(RAG_RETRIEVAL_MODE_ENV, "real").strip().lower()
+    raw_mode = os.getenv(RAG_RETRIEVAL_MODE_ENV, "").strip().lower()
     match raw_mode:
-        case "real" | "":
+        case "real":
             return "real"
         case "mock":
             return "mock"
+        case "":
+            vector_enabled = os.getenv(RAG_VECTOR_ENABLED_ENV, "").strip().lower()
+            match vector_enabled:
+                case "1" | "true" | "yes" | "on":
+                    return "real"
+                case _:
+                    return "mock"
         case unsupported:
             raise RetrievalModeError(mode=unsupported)
 

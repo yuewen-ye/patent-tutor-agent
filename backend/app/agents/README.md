@@ -10,18 +10,17 @@
 | `diagnosis/` | `diagnosis` | LLM + Store | 学情诊断 Agent | `learner_profile` |
 | `planner/` | `planner` | LLM | 路径规划 Agent | `learning_path` |
 | `tool_agent.py` | `tool_agent` | LLM + Tool | ReAct 循环，自主调用 rag_retrieve | `retrieval_context` |
-| `expert_a/` | `expert_a` | LLM | 领域专家 A，保守严谨 | `expert_a_draft` |
+| `expert_a/` | `expert_a` | LLM | 领域专家 A，保守严谨；最终审核 | `expert_a_draft` / `final_answer` |
 | `expert_b/` | `expert_b` | LLM | 领域专家 B，生动灵活 | `expert_b_draft` |
 | `judge/` | `judge` | LLM | 审核裁判 Agent | `judge_report` |
 | `feedback/` | `feedback` | LLM + Store | 反馈分析 Agent | `feedback_result` |
 | `chat_answer.py` | `chat_answer` | LLM | chat 路径快速回答 | `chat_answer` |
-| `finalize.py` | `finalize` | LLM | 合并专家草稿为最终答案 | `final_answer` |
 
 **三路由分布：**
 
 | 路由 | 经过的 Agent 节点 |
 |------|-------------------|
-| teach | route → diagnosis → planner → tool_agent → expert_a ∥ expert_b → judge → feedback → finalize |
+| teach | route → diagnosis → planner → tool_agent → expert_a ∥ expert_b → judge → feedback → expert_a |
 | chat | route → tool_agent → chat_answer |
 | diagnose | route → diagnosis |
 

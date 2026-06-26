@@ -8,22 +8,14 @@ import pytest
 
 from backend.app.agents.common import load_prompt
 
-# Every agent node directory that contains a system.md prompt file.
 _EXPECTED_PROMPT_DIRS: list[str] = [
     "route",
     "tool_agent",
     "chat_answer",
-    "finalize",
     "planner",
     "expert_a",
     "expert_b",
     "judge",
-    "cross_review_a",
-    "cross_review_b",
-    "expert_a_revise",
-    "expert_b_revise",
-    "joint_synthesis",
-    "lightweight_review",
 ]
 
 _AGENTS_DIR = Path(__file__).resolve().parents[2] / "app" / "agents"
@@ -58,18 +50,6 @@ class TestLoadPrompt:
         content = load_prompt(module_file)
         assert "审核裁判" in content
         assert "accuracy_score" in content
-
-    def test_loads_cross_review_prompt(self) -> None:
-        module_file = str(_AGENTS_DIR / "cross_review_a" / "node.py")
-        content = load_prompt(module_file)
-        assert "交叉审查模式" in content
-        assert "事实追问" in content
-
-    def test_loads_joint_synthesis_prompt(self) -> None:
-        module_file = str(_AGENTS_DIR / "joint_synthesis" / "node.py")
-        content = load_prompt(module_file)
-        assert "联合合成器" in content
-        assert "合成规则" in content
 
     def test_raises_on_missing_file(self) -> None:
         with pytest.raises(FileNotFoundError, match="Agent prompt file not found"):

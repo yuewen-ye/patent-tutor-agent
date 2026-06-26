@@ -100,38 +100,6 @@ def _print_summary(updates: dict[str, Any], round_num: int | None = None) -> Non
         ca = updates["chat_answer"]
         content_preview = str(ca.get("content", ""))[:80]
         print(f"  └─ chat: {content_preview}...", file=sys.stderr)
-    elif "cross_review_a" in updates:
-        cr = updates["cross_review_a"]
-        opinions = len(cr.get("review_opinions", []))
-        print(
-            f"  └─ A审B  审查意见={opinions}条  评估={cr.get('overall_assessment', '?')[:60]}",
-            file=sys.stderr,
-        )
-    elif "cross_review_b" in updates:
-        cr = updates["cross_review_b"]
-        opinions = len(cr.get("review_opinions", []))
-        print(
-            f"  └─ B审A  审查意见={opinions}条  评估={cr.get('overall_assessment', '?')[:60]}",
-            file=sys.stderr,
-        )
-    elif "revision_record_a" in updates:
-        rr = updates["revision_record_a"]
-        revs = len(rr.get("revisions", []))
-        accepted = sum(1 for r in rr.get("revisions", []) if r.get("status") == "accepted")
-        print(f"  └─ A修订  回应={revs}条  接受={accepted}", file=sys.stderr)
-    elif "revision_record_b" in updates:
-        rr = updates["revision_record_b"]
-        revs = len(rr.get("revisions", []))
-        accepted = sum(1 for r in rr.get("revisions", []) if r.get("status") == "accepted")
-        print(f"  └─ B修订  回应={revs}条  接受={accepted}", file=sys.stderr)
-    elif "joint_synthesis_output" in updates:
-        js = updates["joint_synthesis_output"]
-        sections = len(js.get("sections", []))
-        print(f"  └─ 联合合成  章节={sections}  标题={js.get('title', '?')}", file=sys.stderr)
-    elif "lightweight_review_result" in updates:
-        lr = updates["lightweight_review_result"]
-        verdict = lr.get("verdict", "?")
-        print(f"  └─ 轻量互审  裁决={verdict}", file=sys.stderr)
 
 
 def _call_node(
@@ -154,12 +122,6 @@ _ARTIFACT_FIELDS = (
     "feedback_result",
     "final_answer",
     "chat_answer",
-    "cross_review_a",
-    "cross_review_b",
-    "revision_record_a",
-    "revision_record_b",
-    "joint_synthesis_output",
-    "lightweight_review_result",
 )
 
 
@@ -250,56 +212,51 @@ def _route_after_judge(state: StateDict) -> Literal["revise_experts", "feedback"
 
 def _route_after_revise_experts(
     state: StateDict,
-) -> list[Literal["expert_a_revise", "expert_b_revise"]]:
+) -> list[Literal["expert_a", "expert_b"]]:
     judge_report = state.get("judge_report", {})
     requests = judge_report.get("revision_requests", [])
-    selected: set[Literal["expert_a_revise", "expert_b_revise"]] = set()
+    selected: set[Literal["expert_a", "expert_b"]] = set()
     if isinstance(requests, list):
         for request in requests:
             if not isinstance(request, dict):
                 continue
             match request.get("target"):
                 case "expert_a":
-                    selected.add("expert_a_revise")
+                    selected.add("expert_a")
                 case "expert_b":
-                    selected.add("expert_b_revise")
+                    selected.add("expert_b")
                 case "both":
-                    selected.update({"expert_a_revise", "expert_b_revise"})
+                    selected.update({"expert_a", "expert_b"})
                 case _:
-                    selected.update({"expert_a_revise", "expert_b_revise"})
+                    selected.update({"expert_a", "expert_b"})
     if not selected:
-        selected.update({"expert_a_revise", "expert_b_revise"})
-    ordered: list[Literal["expert_a_revise", "expert_b_revise"]] = []
-    if "expert_a_revise" in selected:
-        ordered.append("expert_a_revise")
-    if "expert_b_revise" in selected:
-        ordered.append("expert_b_revise")
+        selected.update({"expert_a", "expert_b"})
+    ordered: list[Literal["expert_a", "expert_b"]] = []
+    if "expert_a" in selected:
+        ordered.append("expert_a")
+    if "expert_b" in selected:
+        ordered.append("expert_b")
     return ordered
 
 
-def _route_after_joint_synthesis(state: StateDict) -> Literal["lightweight_review", "judge"]:
-    judge_report = state.get("judge_report", {})
-    debate_round = int(state.get("debate_round", 1))
-    if judge_report.get("decision") == "revise" and debate_round > 1:
-        print("▸ [路由] 修订稿已合成 → 进入轻量互审", file=sys.stderr)
-        return "lightweight_review"
-    print("▸ [路由] 联合合成稿 → judge", file=sys.stderr)
+def _route_after_expert_a(state: StateDict) -> Literal["judge", "__end__"]:
+    if "final_answer" in state:
+        print("▸ [路由] expert_a 已完成最终审核 → END", file=sys.stderr)
+        return "__end__"
+    print("▸ [路由] expert_a 草稿/修订 → judge", file=sys.stderr)
     return "judge"
 
 
 def revise_experts_node(
     state: StateDict, runtime: Runtime[WorkflowContext] | None = None
 ) -> dict[str, Any]:
-    """Increment debate round and record revision history for lightweight review loop."""
     next_round = int(state.get("debate_round", 1)) + 1
     judge_report = state.get("judge_report", {})
-    lightweight_result = state.get("lightweight_review_result", {})
     revision_record = {
         "round": next_round,
         "judge_decision": judge_report.get("decision"),
         "revision_requests": judge_report.get("revision_requests", []),
         "rationale": judge_report.get("rationale"),
-        "lightweight_verdict": lightweight_result.get("verdict"),
     }
     event = AgentEvent(
         node="revise_experts",
@@ -333,18 +290,15 @@ def _route_after_diagnosis(state: StateDict) -> Literal["planner", "__end__"]:
     return "planner"
 
 
-def _route_after_tool_agent(state: StateDict) -> Literal["fan_out_experts", "chat_answer"]:
+def _route_after_tool_agent(
+    state: StateDict,
+) -> Literal["chat_answer"] | list[Literal["expert_a", "expert_b"]]:
     intent = state.get("intent", "teach")
     if intent == "chat":
         print("▸ [路由] intent=chat → chat_answer", file=sys.stderr)
         return "chat_answer"
     print("▸ [路由] intent=teach → experts", file=sys.stderr)
-    return "fan_out_experts"
-
-
-def _fan_out_experts_node(state: StateDict) -> dict[str, Any]:
-    """Pass-through node that triggers parallel expert_a + expert_b."""
-    return {}
+    return ["expert_a", "expert_b"]
 
 
 def build_workflow(
@@ -380,22 +334,13 @@ def build_workflow(
     builder.add_node("planner", _wrap("planner"))
     builder.add_node("tool_agent", _wrap("tool_agent"))
     builder.add_node("chat_answer", _wrap("chat_answer"))
-    # P0.1: Five-stage expert collaboration chain
-    builder.add_node("fan_out_experts", _fan_out_experts_node)
     builder.add_node("expert_a", _wrap("expert_a"))
     builder.add_node("expert_b", _wrap("expert_b"))
-    builder.add_node("cross_review_a", _wrap("cross_review_a"))
-    builder.add_node("cross_review_b", _wrap("cross_review_b"))
-    builder.add_node("expert_a_revise", _wrap("expert_a_revise"))
-    builder.add_node("expert_b_revise", _wrap("expert_b_revise"))
-    builder.add_node("joint_synthesis", _wrap("joint_synthesis"))
     builder.add_node("judge", _wrap("judge"))
     builder.add_node("revise_experts", cast(Any, _with_runtime_side_effects(
         revise_experts_node, None, update_sink, event_sink, node_label="revise_experts",
     )))
-    builder.add_node("lightweight_review", _wrap("lightweight_review"))
     builder.add_node("feedback", _wrap("feedback"))
-    builder.add_node("finalize", _wrap("finalize"))
 
     # ── Edges ──
 
@@ -417,35 +362,19 @@ def build_workflow(
         {"planner": "planner", "__end__": END},
     )
 
-    # ── Teach path: 5-stage expert collaboration chain ──
     builder.add_edge("planner", "tool_agent")
     builder.add_conditional_edges(
         "tool_agent",
         _route_after_tool_agent,
-        {"fan_out_experts": "fan_out_experts", "chat_answer": "chat_answer"},
+        {"expert_a": "expert_a", "expert_b": "expert_b", "chat_answer": "chat_answer"},
     )
-
-    # Stage 1: Parallel independent generation
-    builder.add_edge("fan_out_experts", "expert_a")
-    builder.add_edge("fan_out_experts", "expert_b")
-
-    # Stage 2: Cross-review (A reviews B, B reviews A)
-    builder.add_edge("expert_a", "cross_review_a")
-    builder.add_edge("expert_b", "cross_review_b")
-
-    # Stage 3: Revision (each expert responds to the other's review)
-    builder.add_edge("cross_review_a", "expert_a_revise")
-    builder.add_edge("cross_review_b", "expert_b_revise")
-
-    # Stage 4: Joint synthesis (runs after both revises complete)
-    builder.add_edge("expert_a_revise", "joint_synthesis")
-    builder.add_edge("expert_b_revise", "joint_synthesis")
 
     builder.add_conditional_edges(
-        "joint_synthesis",
-        _route_after_joint_synthesis,
-        {"lightweight_review": "lightweight_review", "judge": "judge"},
+        "expert_a",
+        _route_after_expert_a,
+        {"judge": "judge", "__end__": END},
     )
+    builder.add_edge("expert_b", "judge")
 
     builder.add_conditional_edges(
         "judge",
@@ -456,13 +385,10 @@ def build_workflow(
     builder.add_conditional_edges(
         "revise_experts",
         _route_after_revise_experts,
-        {"expert_a_revise": "expert_a_revise", "expert_b_revise": "expert_b_revise"},
+        {"expert_a": "expert_a", "expert_b": "expert_b"},
     )
-    builder.add_edge("lightweight_review", "judge")
 
-    # Feedback → Finalize → END
-    builder.add_edge("feedback", "finalize")
-    builder.add_edge("finalize", END)
+    builder.add_edge("feedback", "expert_a")
 
     # ── Chat path: tool_agent → chat_answer → END ──
     builder.add_edge("chat_answer", END)

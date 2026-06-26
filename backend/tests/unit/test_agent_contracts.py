@@ -15,16 +15,8 @@ def test_agent_output_json_schemas_follow_interface_spec() -> None:
         "expert_b",
         "judge",
         "feedback",
-        "finalize",
         "route",
         "chat_answer",
-        # P0.1: New node schemas
-        "cross_review_a",
-        "cross_review_b",
-        "revision_record_a",
-        "revision_record_b",
-        "joint_synthesis",
-        "lightweight_review",
     }
     assert schemas["diagnosis"]["additionalProperties"] is False
     assert schemas["diagnosis"]["properties"]["knowledge_level"]["enum"] == [
@@ -60,8 +52,3 @@ def test_agent_output_json_schemas_follow_interface_spec() -> None:
     feedback_schema = schemas["feedback"]
     assert feedback_schema["additionalProperties"] is False
     assert "bkt_update" in feedback_schema["properties"]
-
-    final_schema = schemas["finalize"]
-    assert final_schema["additionalProperties"] is False
-    assert "judge_summary" in final_schema["properties"]
-    assert "next_questions" in final_schema["properties"]

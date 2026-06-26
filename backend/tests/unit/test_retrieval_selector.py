@@ -9,7 +9,28 @@ from backend.app.schemas.state import RetrievalChunk
 pytestmark = pytest.mark.unit
 
 
-def test_default_mode_uses_real_rag(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_default_mode_uses_manual_fallback_without_vector_flag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    real_calls: list[tuple[str, int]] = []
+
+    def fake_real(query: str = "", top_k: int = 5) -> list[RetrievalChunk]:
+        real_calls.append((query, top_k))
+        return []
+
+    monkeypatch.delenv("RAG_RETRIEVAL_MODE", raising=False)
+    monkeypatch.delenv("RAG_VECTOR_ENABLED", raising=False)
+    monkeypatch.setattr(retrieval_selector, "rag_retrieve", fake_real)
+
+    chunks = retrieval_selector.retrieve_context("新颖性", top_k=2)
+
+    assert len(chunks) == 2
+    assert real_calls == []
+    assert all(chunk.metadata is not None for chunk in chunks)
+    assert {chunk.metadata.retrieval_method for chunk in chunks if chunk.metadata} == {"manual"}
+
+
+def test_vector_flag_uses_real_rag(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[tuple[str, int]] = []
 
     def fake_real(query: str = "", top_k: int = 5) -> list[RetrievalChunk]:
@@ -17,6 +38,7 @@ def test_default_mode_uses_real_rag(monkeypatch: pytest.MonkeyPatch) -> None:
         return []
 
     monkeypatch.delenv("RAG_RETRIEVAL_MODE", raising=False)
+    monkeypatch.setenv("RAG_VECTOR_ENABLED", "true")
     monkeypatch.setattr(retrieval_selector, "rag_retrieve", fake_real)
 
     assert retrieval_selector.retrieve_context("新颖性", top_k=2) == []

@@ -54,12 +54,10 @@ class TestAgentNodeExtension:
         assert "route" in AgentNode.__args__  # type: ignore[attr-defined]
         assert "tool_agent" in AgentNode.__args__  # type: ignore[attr-defined]
         assert "chat_answer" in AgentNode.__args__  # type: ignore[attr-defined]
-        assert "expert_a_revise" in AgentNode.__args__  # type: ignore[attr-defined]
-        assert "expert_b_revise" in AgentNode.__args__  # type: ignore[attr-defined]
         assert "revise_experts" in AgentNode.__args__  # type: ignore[attr-defined]
 
     def test_existing_nodes_preserved(self) -> None:
-        for name in ("diagnosis", "planner", "expert_a", "expert_b", "judge", "feedback", "finalize"):
+        for name in ("diagnosis", "planner", "expert_a", "expert_b", "judge", "feedback"):
             assert name in AgentNode.__args__  # type: ignore[attr-defined]
 
 
