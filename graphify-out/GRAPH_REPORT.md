@@ -1,16 +1,16 @@
 # Graph Report - patent-tutor-agent  (2026-06-26)
 
 ## Corpus Check
-- 170 files · ~73,188 words
+- 170 files · ~73,155 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1659 nodes · 1982 edges · 220 communities (158 shown, 62 thin omitted)
+- 1659 nodes · 1982 edges · 221 communities (159 shown, 62 thin omitted)
 - Extraction: 84% EXTRACTED · 16% INFERRED · 0% AMBIGUOUS · INFERRED: 310 edges (avg confidence: 0.69)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `54cdd24c`
+- Built from commit: `1e5876af`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -159,6 +159,7 @@
 - [[_COMMUNITY_Community 156|Community 156]]
 - [[_COMMUNITY_Community 157|Community 157]]
 - [[_COMMUNITY_Community 158|Community 158]]
+- [[_COMMUNITY_Community 159|Community 159]]
 - [[_COMMUNITY_Community 160|Community 160]]
 - [[_COMMUNITY_Community 161|Community 161]]
 - [[_COMMUNITY_Community 162|Community 162]]
@@ -226,7 +227,7 @@
 - **Patent Novelty vs Inventiveness Teaching Core** — final_answer_NoveltyPrinciple, final_answer_InventivenessPrinciple, expert_b_draft_SoleComparison, expert_b_draft_CombinationComparison, judge_report_ThreeStepMethod, judge_report_ConflictingApplication, expert_a_draft_GracePeriod, retrieval_context_MockRAGRetrieval [EXTRACTED 1.00]
 - **Workflow Testing Architecture** — test_workflow_integration_FullWorkflow, test_memory_integration_CrossSessionMemory, test_three_routes_RouteWorkflow, test_providers_ProviderRouting, test_schema_extensions_ContractModels, test_run_workflow_CLI, manifest_ArtifactPersistenceSystem [EXTRACTED 1.00]
 
-## Communities (220 total, 62 thin omitted)
+## Communities (221 total, 62 thin omitted)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.05
@@ -532,6 +533,10 @@ Nodes (11): code:block11 (FastAPI 层                     LangGraph 工作流), 
 Cohesion: 0.29
 Nodes (7): code:block15 (┌───────────────────────────────────────────────────────────), code:python (from langgraph.errors import NodeError), LangGraph 内置机制, LangGraph 错误处理模式（替代手写 try/except）, P4 — 数据持久化 + 错误韧性, 任务拆解, 前端数据流说明（P1 当前已提供，可直接用于 P3 开发）
 
+### Community 132 - "Community 132"
+Cohesion: 0.25
+Nodes (7): 5.1 为什么选择文件而不是数据库, 5.2 为什么用子 Agent 提取而不是在 workflow 内直接写, 5.3 两条写入路径的互斥, 五、设计决策与权衡, 六、总结, 参考资料, 记忆系统设计借鉴：从 Claude Code 到 Patent Tutor Agent
+
 ### Community 133 - "Community 133"
 Cohesion: 0.29
 Nodes (7): code:block19 (┌───────────────────────────────────────────────────────────), code:block22 (┌───────────────────────────────────────────────────────────), code:block25 (# 搜索与当前学习目标最相关的历史画像), code:block28 (第 0 步: P0 (工作流完善)                    ← 进行中), Store 语义搜索的后续应用, 建议执行顺序, 记忆系统分段设计
@@ -542,7 +547,7 @@ Nodes (11): completed_state(), completed_teach_state(), Shared test helpers for 
 
 ### Community 135 - "Community 135"
 Cohesion: 0.17
-Nodes (6): build_agent_nodes(), Agent node assembly for the LangGraph workflow., build_diagnosis_node(), Diagnosis Agent node., build_expert_a_node(), build_expert_b_node()
+Nodes (6): build_agent_nodes(), Agent node assembly for the LangGraph workflow., build_expert_a_node(), build_expert_a_revise_node(), Expert A revision node — responds to Expert B's cross-review., build_expert_b_node()
 
 ### Community 136 - "Community 136"
 Cohesion: 0.25
@@ -601,8 +606,8 @@ Cohesion: 0.25
 Nodes (8): 3.1.4 隐私、安全与保留期, 3.2.1 结构化模板, 3.2.2 触发条件, 3.2 层级 2: Session Memory（会话教学记忆）, 3.3 架构改进路线图, code:block13 (必须脱敏:), code:markdown (# Session Title), 模式 7：What NOT to Save（排除规则）
 
 ### Community 156 - "Community 156"
-Cohesion: 0.11
-Nodes (18): 1.1 六层记忆（时间尺度分层）, 1.1 六层记忆架构（时间尺度视角）, 1.2 三条记忆注入路径, 1.3 核心设计原则, 2.1 当前架构, 2.2 当前能力, 2.3 已知问题（来自 docs/memory-persistence.md）, 5.1 为什么选择文件而不是数据库 (+10 more)
+Cohesion: 0.18
+Nodes (11): 1.1 六层记忆（时间尺度分层）, 1.1 六层记忆架构（时间尺度视角）, 1.2 三条记忆注入路径, 1.3 核心设计原则, 2.1 当前架构, 2.2 当前能力, 2.3 已知问题（来自 docs/memory-persistence.md）, code:block1 (▲) (+3 more)
 
 ### Community 157 - "Community 157"
 Cohesion: 0.19
@@ -634,7 +639,7 @@ Nodes (9): _artifact_absolute_path(), _artifact_relative_path(), _dict_markdown(
 
 ### Community 184 - "Community 184"
 Cohesion: 0.17
-Nodes (8): schema_note(), build_lightweight_review_node(), Lightweight review agent node — quick peer review of changed paragraphs only., build_expert_a_cross_review_node(), Expert A cross-review node — reviews Expert B's draft for legal accuracy., build_expert_b_cross_review_node(), Expert B cross-review node — reviews Expert A's draft for accessibility., build_feedback_node()
+Nodes (8): schema_note(), build_diagnosis_node(), Diagnosis Agent node., build_expert_a_cross_review_node(), Expert A cross-review node — reviews Expert B's draft for legal accuracy., build_expert_b_cross_review_node(), Expert B cross-review node — reviews Expert A's draft for accessibility., build_feedback_node()
 
 ### Community 214 - "Community 214"
 Cohesion: 0.14
@@ -673,11 +678,11 @@ Nodes (4): create_sessions_router(), CreateSessionRequest, Session REST endpoint
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `StateDict` connect `Community 1` to `Community 136`, `Community 4`, `Community 6`?**
-  _High betweenness centrality (0.032) - this node is a cross-community bridge._
-- **Why does `build_agent_nodes()` connect `Community 135` to `Community 0`, `Community 2`, `Community 163`, `Community 4`, `Community 165`, `Community 132`, `Community 136`, `Community 141`, `Community 143`, `Community 144`, `Community 81`, `Community 83`, `Community 147`, `Community 181`, `Community 183`, `Community 184`, `Community 153`?**
-  _High betweenness centrality (0.028) - this node is a cross-community bridge._
+  _High betweenness centrality (0.027) - this node is a cross-community bridge._
+- **Why does `build_agent_nodes()` connect `Community 135` to `Community 0`, `Community 2`, `Community 163`, `Community 4`, `Community 165`, `Community 136`, `Community 141`, `Community 143`, `Community 144`, `Community 81`, `Community 83`, `Community 147`, `Community 181`, `Community 183`, `Community 184`, `Community 153`, `Community 159`?**
+  _High betweenness centrality (0.027) - this node is a cross-community bridge._
 - **Why does `SessionService` connect `Community 6` to `Community 1`, `Community 20`, `Community 151`, `Community 216`, `Community 217`, `Community 215`, `Community 221`?**
-  _High betweenness centrality (0.024) - this node is a cross-community bridge._
+  _High betweenness centrality (0.023) - this node is a cross-community bridge._
 - **Are the 26 inferred relationships involving `LLMResponseWithTools` (e.g. with `QueueLLMClient` and `CamelCaseExpertLLMClient`) actually correct?**
   _`LLMResponseWithTools` has 26 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 26 inferred relationships involving `LLMMessage` (e.g. with `QueueLLMClient` and `CamelCaseExpertLLMClient`) actually correct?**
