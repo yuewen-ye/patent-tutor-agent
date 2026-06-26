@@ -52,7 +52,7 @@ def build_tool_agent_node(llm_client: LLMClient) -> Node:
 
         all_chunks: list[dict[str, Any]] = []
         round_idx = 0
-        final_answer: str | None = None
+        assistant_answer: str | None = None
 
         while round_idx < MAX_TOOL_ROUNDS:
             round_idx += 1
@@ -63,7 +63,7 @@ def build_tool_agent_node(llm_client: LLMClient) -> Node:
             # Collect assistant response
             if result.content:
                 content = result.content
-                final_answer = result.content
+                assistant_answer = result.content
             else:
                 content = ""
 
@@ -113,8 +113,8 @@ def build_tool_agent_node(llm_client: LLMClient) -> Node:
                 f"completed after {round_idx} round(s), retrieved {len(all_chunks)} chunks",
             )],
         }
-        if final_answer:
-            updates["tool_agent_answer"] = final_answer
+        if assistant_answer:
+            updates["tool_agent_answer"] = assistant_answer
         return updates
 
     return tool_agent_node

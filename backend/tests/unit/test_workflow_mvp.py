@@ -24,12 +24,7 @@ class QueueLLMClient:
                     "learning_style": "case_first_then_rule",
                     "weak_points": ["法条概念辨析"],
                     "learning_goal": "学习专利新颖性",
-                },
-                {
-                    "questionnaire": ["是否理解新颖性？"],
-                    "next_action": "做一道练习题",
-                    "profile_update_hint": "继续观察",
-                },
+                }
             ],
             "planner": [
                 [
@@ -52,11 +47,12 @@ class QueueLLMClient:
                     "risks": [],
                 },
                 {
-                    "title": "个性化知识产权学习建议",
-                    "content": "由专家A最终审核后的教学内容",
-                    "sources": ["第二十二条"],
-                    "judge_summary": "judge 已通过",
-                    "next_questions": None,
+                    "expert": "expert_a",
+                    "style": "conservative_precise",
+                    "knowledge_points": ["新颖性", "创造性"],
+                    "legal_basis": ["专利法第二十二条"],
+                    "teaching_content": "整合专家A和专家B后的教学内容",
+                    "risks": [],
                 },
             ],
             "expert_b": [
@@ -77,6 +73,14 @@ class QueueLLMClient:
                     "completeness_score": 4,
                     "disputes": [],
                     "rationale": "可以合并",
+                },
+                {
+                    "decision": "accept",
+                    "accuracy_score": 5,
+                    "adaptation_score": 5,
+                    "completeness_score": 5,
+                    "disputes": [],
+                    "rationale": "整合稿可以作为最终教学内容。",
                 }
             ],
         }
@@ -117,10 +121,12 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm() -> None:
     assert completed["learner_profile"]["knowledge_level"] == "beginner"
     assert len(completed["learning_path"]) == 1
     assert completed["expert_a_draft"]["style"] == "conservative_precise"
+    assert completed["expert_a_draft"]["draft_stage"] == "integration"
+    assert completed["expert_a_draft"]["teaching_content"] == "整合专家A和专家B后的教学内容"
     assert completed["expert_b_draft"]["style"] == "vivid_teaching"
-    assert completed["judge_report"]["decision"] == "accept_with_minor_revision"
-    assert completed["feedback_result"]["next_action"] == "做一道练习题"
-    assert completed["final_answer"]["content"] == "由专家A最终审核后的教学内容"
+    assert completed["judge_report"]["decision"] == "accept"
+    assert "feedback_result" not in completed
+    assert "final_answer" not in completed
 
     completed_events = [event for event in state["events"] if event["status"] == "completed"]
     event_names = [event["node"] for event in completed_events]
@@ -132,8 +138,8 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm() -> None:
         "expert_a",
         "expert_b",
         "judge",
-        "feedback",
         "expert_a",
+        "judge",
     ]
     assert all(event["round"] == 1 for event in completed_events)
     assert all(isinstance(event["timestamp"], str) and event["timestamp"] for event in completed_events)
@@ -155,7 +161,7 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm() -> None:
         "feedback",
     }
     assert forbidden_agents.isdisjoint(set(llm_client.agents))
-    assert llm_client.agents[-3:] == ["judge", "diagnosis", "expert_a"]
+    assert llm_client.agents[-3:] == ["judge", "expert_a", "judge"]
 
 
 def test_workflow_compiles_and_exports_mermaid(tmp_path: Path) -> None:
@@ -167,7 +173,7 @@ def test_workflow_compiles_and_exports_mermaid(tmp_path: Path) -> None:
     assert "expert_a" in mermaid
     assert "expert_b" in mermaid
     assert "judge" in mermaid
-    assert "feedback" in mermaid
+    assert "feedback" not in mermaid
     for removed_node in (
         "cross_review_a",
         "cross_review_b",

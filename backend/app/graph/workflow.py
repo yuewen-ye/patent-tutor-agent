@@ -17,11 +17,13 @@ from langgraph.store.memory import InMemoryStore
 from backend.app.agents import Node, build_agent_nodes
 from backend.app.artifacts import attach_markdown_artifact, write_field_artifact, write_manifest
 from backend.app.core.llm import AgentLLMRouter, DefaultLLMClient, LLMClient
+from backend.app.memory import save_learner_memories
 from backend.app.schemas.context import WorkflowContext
 from backend.app.schemas.state import AgentEvent, StateDict
 
 WorkflowUpdateSink = Callable[[dict[str, Any]], None]
 WorkflowEventSink = Callable[[list[dict[str, Any]]], None]
+_ACCEPTED_JUDGE_DECISIONS = {"accept", "accept_with_minor_revision"}
 
 
 def _print_summary(updates: dict[str, Any], round_num: int | None = None) -> None:
@@ -89,11 +91,6 @@ def _print_summary(updates: dict[str, Any], round_num: int | None = None) -> Non
             f"问卷={len(f.get('questionnaire', []))}题",
             file=sys.stderr,
         )
-    elif "final_answer" in updates:
-        fa = updates["final_answer"]
-        title = fa.get("title", "")
-        sources_count = len(fa.get("sources", []))
-        print(f"  └─ 标题={title}  来源数={sources_count}", file=sys.stderr)
     elif "intent" in updates:
         print(f"  └─ 意图={updates['intent']}", file=sys.stderr)
     elif "chat_answer" in updates:
@@ -120,9 +117,43 @@ _ARTIFACT_FIELDS = (
     "expert_b_draft",
     "judge_report",
     "feedback_result",
-    "final_answer",
     "chat_answer",
 )
+
+
+def _judge_decision(report: object) -> str:
+    if isinstance(report, dict):
+        return str(report.get("decision", ""))
+    return ""
+
+
+def _judge_completes_teach(
+    state: StateDict,
+    updates: dict[str, Any],
+    node_label: str,
+) -> bool:
+    if node_label != "judge" or state.get("teach_phase") != "integration":
+        return False
+    decision = _judge_decision(updates.get("judge_report"))
+    if decision in _ACCEPTED_JUDGE_DECISIONS:
+        return True
+    debate_round = int(state.get("debate_round", 1))
+    max_debate_rounds = int(state.get("max_debate_rounds", 3))
+    return decision == "revise" and debate_round >= max_debate_rounds
+
+
+def _memory_summary_from_final_judge(state: StateDict) -> dict[str, Any]:
+    judge_report = state.get("judge_report", {})
+    expert_a_draft = state.get("expert_a_draft", {})
+    rationale = judge_report.get("rationale") if isinstance(judge_report, dict) else None
+    points = expert_a_draft.get("knowledge_points") if isinstance(expert_a_draft, dict) else None
+    next_action = "复习本次专家 A 整合稿并完成一个对应案例题"
+    if isinstance(points, list) and points:
+        next_action = f"围绕{points[0]}完成一个对应案例题"
+    return {
+        "profile_update_hint": str(rationale or "记录本次 teach 路由最终整合稿表现"),
+        "next_action": next_action,
+    }
 
 
 def _with_runtime_side_effects(
@@ -160,6 +191,7 @@ def _with_runtime_side_effects(
         print(f"  [{label}]{round_tag} 完成 ✓  ({duration_ms}ms)", file=sys.stderr)
 
         artifacts: list[dict[str, Any]] = []
+        completed_teach = _judge_completes_teach(state, updates, label)
         if artifact_root is not None:
             round_number = int(state.get("debate_round", 1))
             session_id = state["session_id"]
@@ -179,11 +211,22 @@ def _with_runtime_side_effects(
             if artifacts:
                 updates["artifacts"] = artifacts
 
-            if "final_answer" in updates:
+            if completed_teach:
                 combined = dict(state)
                 combined.update(updates)
                 combined["artifacts"] = list(state.get("artifacts", [])) + artifacts
                 write_manifest(artifact_root=artifact_root, state=combined, status="completed")
+
+        if completed_teach:
+            combined = dict(state)
+            combined.update(updates)
+            if artifacts:
+                combined["artifacts"] = list(state.get("artifacts", [])) + artifacts
+            save_learner_memories(
+                runtime,
+                cast(StateDict, combined),
+                _memory_summary_from_final_judge(cast(StateDict, combined)),
+            )
 
         events = updates.get("events")
         if event_sink is not None and isinstance(events, list):
@@ -196,23 +239,37 @@ def _with_runtime_side_effects(
     return wrapped
 
 
-def _route_after_judge(state: StateDict) -> Literal["revise_experts", "feedback"]:
-    decision = str(state.get("judge_report", {}).get("decision", ""))
+def _route_after_judge(state: StateDict) -> Literal["revise_experts", "expert_a", "__end__"]:
+    decision = _judge_decision(state.get("judge_report", {}))
     debate_round = int(state.get("debate_round", 1))
     max_debate_rounds = int(state.get("max_debate_rounds", 3))
+    if state.get("teach_phase") == "integration":
+        if decision in _ACCEPTED_JUDGE_DECISIONS:
+            print("▸ [路由] judge 通过专家 A 整合稿 → END", file=sys.stderr)
+            return "__end__"
+        if decision == "revise" and debate_round < max_debate_rounds:
+            print(
+                f"▸ [路由] judge 要求修订整合稿 → expert_a（第 {debate_round + 1} 轮）",
+                file=sys.stderr,
+            )
+            return "revise_experts"
+        print("▸ [路由] 整合稿已达到最大辩论轮数 → END", file=sys.stderr)
+        return "__end__"
     if decision == "revise" and debate_round < max_debate_rounds:
         print(
             f"▸ [路由] judge 要求修订 → 进入目标专家修订（第 {debate_round + 1} 轮）",
             file=sys.stderr,
         )
         return "revise_experts"
-    print(f"▸ [路由] judge 决策={decision} → 进入反馈环节", file=sys.stderr)
-    return "feedback"
+    print(f"▸ [路由] A/B 辩论完成，judge 决策={decision} → expert_a 整合", file=sys.stderr)
+    return "expert_a"
 
 
 def _route_after_revise_experts(
     state: StateDict,
 ) -> list[Literal["expert_a", "expert_b"]]:
+    if state.get("teach_phase") == "integration":
+        return ["expert_a"]
     judge_report = state.get("judge_report", {})
     requests = judge_report.get("revision_requests", [])
     selected: set[Literal["expert_a", "expert_b"]] = set()
@@ -239,11 +296,9 @@ def _route_after_revise_experts(
     return ordered
 
 
-def _route_after_expert_a(state: StateDict) -> Literal["judge", "__end__"]:
-    if "final_answer" in state:
-        print("▸ [路由] expert_a 已完成最终审核 → END", file=sys.stderr)
-        return "__end__"
-    print("▸ [路由] expert_a 草稿/修订 → judge", file=sys.stderr)
+def _route_after_expert_a(state: StateDict) -> Literal["judge"]:
+    phase = state.get("teach_phase", "debate")
+    print(f"▸ [路由] expert_a 输出阶段={phase} → judge", file=sys.stderr)
     return "judge"
 
 
@@ -340,7 +395,6 @@ def build_workflow(
     builder.add_node("revise_experts", cast(Any, _with_runtime_side_effects(
         revise_experts_node, None, update_sink, event_sink, node_label="revise_experts",
     )))
-    builder.add_node("feedback", _wrap("feedback"))
 
     # ── Edges ──
 
@@ -372,14 +426,14 @@ def build_workflow(
     builder.add_conditional_edges(
         "expert_a",
         _route_after_expert_a,
-        {"judge": "judge", "__end__": END},
+        {"judge": "judge"},
     )
     builder.add_edge("expert_b", "judge")
 
     builder.add_conditional_edges(
         "judge",
         _route_after_judge,
-        {"revise_experts": "revise_experts", "feedback": "feedback"},
+        {"revise_experts": "revise_experts", "expert_a": "expert_a", "__end__": END},
     )
 
     builder.add_conditional_edges(
@@ -387,8 +441,6 @@ def build_workflow(
         _route_after_revise_experts,
         {"expert_a": "expert_a", "expert_b": "expert_b"},
     )
-
-    builder.add_edge("feedback", "expert_a")
 
     # ── Chat path: tool_agent → chat_answer → END ──
     builder.add_edge("chat_answer", END)
@@ -434,6 +486,7 @@ def run_workflow(
             "debate_round": 1,
             "max_debate_rounds": max_debate_rounds,
             "revision_history": [],
+            "teach_phase": "debate",
         },
         {"configurable": {"thread_id": session_id}},
         context=WorkflowContext(learner_id=learner_id),
@@ -475,6 +528,7 @@ async def arun_workflow(
             "debate_round": 1,
             "max_debate_rounds": max_debate_rounds,
             "revision_history": [],
+            "teach_phase": "debate",
         },
         {"configurable": {"thread_id": session_id}},
         context=WorkflowContext(learner_id=learner_id),

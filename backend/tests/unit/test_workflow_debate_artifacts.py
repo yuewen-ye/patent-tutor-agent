@@ -27,12 +27,7 @@ class DebateQueueLLMClient:
                     "learning_style": "case_based",
                     "weak_points": ["新颖性判断步骤不清"],
                     "learning_goal": "学习专利新颖性",
-                },
-                {
-                    "questionnaire": ["你能否说明什么是现有技术？"],
-                    "next_action": "完成一个新颖性判断案例题",
-                    "profile_update_hint": "继续观察案例判断能力",
-                },
+                }
             ],
             "planner": [
                 [
@@ -63,10 +58,12 @@ class DebateQueueLLMClient:
                     "risks": [],
                 },
                 {
-                    "title": "专利新颖性学习建议",
-                    "content": "专家A最终审核后的教学内容",
-                    "sources": ["第二十二条"],
-                    "judge_summary": "修订后可以输出",
+                    "expert": "expert_a",
+                    "style": "conservative_precise",
+                    "knowledge_points": ["新颖性", "现有技术", "案例判断"],
+                    "legal_basis": ["《专利法》第二十二条"],
+                    "teaching_content": "专家A整合A/B辩论结果后的教学内容",
+                    "risks": [],
                 },
             ],
             "expert_b": [
@@ -110,7 +107,15 @@ class DebateQueueLLMClient:
                     "adaptation_score": 5,
                     "completeness_score": 5,
                     "disputes": [],
-                    "rationale": "修订后可以输出。",
+                    "rationale": "A/B 辩论结束，可以进入专家 A 整合。",
+                },
+                {
+                    "decision": "accept",
+                    "accuracy_score": 5,
+                    "adaptation_score": 5,
+                    "completeness_score": 5,
+                    "disputes": [],
+                    "rationale": "整合稿可以作为最终教学内容。",
                 },
             ],
         }
@@ -152,10 +157,10 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     agents = llm_client.agents
     assert agents.count("expert_a") == 3
     assert agents.count("expert_b") == 2
-    assert agents.count("judge") == 2
-    assert agents.count("diagnosis") == 2
+    assert agents.count("judge") == 3
+    assert agents.count("diagnosis") == 1
     assert "feedback" not in agents
-    assert agents[-1] == "expert_a"
+    assert agents[-1] == "judge"
     assert {
         "cross_review_a",
         "cross_review_b",
@@ -168,7 +173,9 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     }.isdisjoint(set(agents))
     assert completed["debate_round"] == 2
     assert completed["judge_report"]["decision"] == "accept"
-    assert completed["final_answer"]["content"] == "专家A最终审核后的教学内容"
+    assert completed["expert_a_draft"]["draft_stage"] == "integration"
+    assert completed["expert_a_draft"]["teaching_content"] == "专家A整合A/B辩论结果后的教学内容"
+    assert "final_answer" not in completed
 
     debate_events = [event for event in state["events"] if event["status"] == "debate_round"]
     assert len(debate_events) == 1
@@ -184,7 +191,8 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     assert Path("artifacts/sessions/demo-session/round-01/expert_b_draft.md") in artifact_paths
     assert Path("artifacts/sessions/demo-session/round-02/expert_a_draft.md") in artifact_paths
     assert Path("artifacts/sessions/demo-session/round-02/expert_b_draft.md") in artifact_paths
-    assert Path("artifacts/sessions/demo-session/final_answer.md") in artifact_paths
+    assert Path("artifacts/sessions/demo-session/round-02/expert_a_draft-02.md") in artifact_paths
+    assert len(artifact_paths) == len(set(artifact_paths))
 
     manifest_path = tmp_path / "artifacts" / "sessions" / "demo-session" / "manifest.json"
     assert manifest_path.exists()
@@ -192,8 +200,15 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     assert manifest["session_id"] == "demo-session"
     assert manifest["status"] == "completed"
 
-    final_path = tmp_path / "artifacts" / "sessions" / "demo-session" / "final_answer.md"
-    assert final_path.read_text(encoding="utf-8").startswith("# 个性化知识产权学习建议")
+    integration_path = (
+        tmp_path
+        / "artifacts"
+        / "sessions"
+        / "demo-session"
+        / "round-02"
+        / "expert_a_draft-02.md"
+    )
+    assert "专家A整合A/B辩论结果后的教学内容" in integration_path.read_text(encoding="utf-8")
 
 
 def test_workflow_reruns_only_targeted_expert_when_judge_targets_expert_a(
@@ -224,5 +239,7 @@ def test_workflow_reruns_only_targeted_expert_when_judge_targets_expert_a(
     agents = llm_client.agents
     assert agents.count("expert_a") == 3
     assert agents.count("expert_b") == 1
+    assert agents.count("judge") == 3
     assert completed["debate_round"] == 2
     assert completed["judge_report"]["decision"] == "accept"
+    assert completed["expert_a_draft"]["draft_stage"] == "integration"

@@ -53,9 +53,10 @@ class TestTeachRoute:
         assert state["judge_report"]["decision"] in {
             "accept", "accept_with_minor_revision", "revise",
         }
-        assert "feedback_result" in state
-        assert "final_answer" in state
-        assert state["final_answer"]["content"]
+        assert "feedback_result" not in state
+        assert "final_answer" not in state
+        assert state["expert_a_draft"]["draft_stage"] == "integration"
+        assert state["expert_a_draft"]["teaching_content"]
 
     def test_teach_event_order(self, tmp_path: Path) -> None:
         router = _try_router()
@@ -65,7 +66,7 @@ class TestTeachRoute:
         assert "diagnosis" in completed
         assert "planner" in completed
         assert "tool_agent" in completed
-        assert completed[-1] in ("expert_a", "chat_answer")
+        assert completed[-1] == "judge"
 
 
 class TestChatRoute:

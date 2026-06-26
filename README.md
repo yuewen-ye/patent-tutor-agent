@@ -216,16 +216,16 @@ START → _init → route ──┬── diagnose: diagnosis → END
                                   /        \
                        accept/minor        revise + round < max
                             ↓                       ↓
-                         feedback             revise_experts
+                    expert_a integration     revise_experts
                             ↓                       ↓
-                       expert_a final ← targeted expert_a / expert_b
-                            ↓                       ↓
-                           END                    judge
+                           judge ← targeted expert_a / expert_b
+                            ↓
+                           END
 ```
 
 | 路由 | 触发条件 | 路径 | LLM 调用次数 | 典型耗时 |
 |------|---------|------|-------------|---------|
-| **teach** | "系统学习"、"学习路径"、"规划" | 诊断→规划→RAG→双专家循环→裁判→反馈→专家A最终审核 | ~7-10 次 | 1-3 分钟 |
+| **teach** | "系统学习"、"学习路径"、"规划" | 诊断→规划→RAG→双专家辩论→裁判→专家A整合→裁判终审 | ~8-11 次 | 1-3 分钟 |
 | **chat** | 单点问答、定义、对比 | RAG(可选)→直接回答 | ~1-2 次 | 5-30 秒 |
 | **diagnose** | "诊断"、"薄弱点"、"评估" | 诊断→结束 | ~1 次 | 2-5 秒 |
 
@@ -234,14 +234,14 @@ START → _init → route ──┬── diagnose: diagnosis → END
 | 节点 | 类型 | 职责 | Provider 环境变量 |
 |------|------|------|-----------------|
 | `route` | LLM 调用 + 本地兜底 | 分类用户意图 teach/chat/diagnose；明显学习/诊断请求会覆盖误路由 | `ROUTE_PROVIDER` |
-| `diagnosis` | LLM 调用 + Store | 学情诊断；在 `feedback` 阶段生成问卷、下一步动作、画像更新建议 | `DIAGNOSIS_PROVIDER` |
+| `diagnosis` | LLM 调用 + Store | 学情诊断；可复用 `feedback` 阶段生成问卷、下一步动作、画像更新建议 | `DIAGNOSIS_PROVIDER` |
 | `planner` | LLM 调用 | 生成个性化学习路径 | `PLANNER_PROVIDER` |
 | `tool_agent` | LLM + Tool 调用 | ReAct 循环，自主调用 rag_retrieve 检索法条 | `TOOL_AGENT_PROVIDER` |
-| `expert_a` | LLM 调用 | 保守严谨、法条优先；负责草稿、按 Judge 要求修订、最终审核输出 | `EXPERT_A_PROVIDER` |
+| `expert_a` | LLM 调用 | 保守严谨、法条优先；负责草稿、按 Judge 要求修订、最终整合 A/B 结果 | `EXPERT_A_PROVIDER` |
 | `expert_b` | LLM 调用 | 生动灵活、面向案例；负责草稿和按 Judge 要求修订 | `EXPERT_B_PROVIDER` |
 | `judge` | LLM 调用 | 直接审核两份专家草稿，只评估不写正文 | `JUDGE_PROVIDER` |
 | `revise_experts` | 无 LLM | 增加辩论轮次，并按 Judge target 分派修订专家 | — |
-| `feedback` | LLM 调用 + Store | `diagnosis` Agent 的反馈阶段，写入反馈闭环和长期记忆 | `DIAGNOSIS_PROVIDER` |
+| `feedback` | LLM 调用 + Store | `diagnosis` Agent 的反馈阶段，保留为可复用节点；当前 teach 主路径不调用 | `DIAGNOSIS_PROVIDER` |
 | `chat_answer` | LLM 调用或复用 | chat 路径优先复用 tool_agent 的最终回答，必要时补答 | `CHAT_ANSWER_PROVIDER` |
 
 接口合同以 `docs/agent-interface-spec.md` 和 `backend/app/schemas/state.py` 为准。

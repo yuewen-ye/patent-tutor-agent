@@ -19,7 +19,6 @@ pytestmark = pytest.mark.integration
 
 
 def test_workflow_runs_single_round_with_real_llm(tmp_path: Path) -> None:
-    """Full 5-stage workflow with max_debate_rounds=1 — 13 LLM calls."""
     try:
         router = AgentLLMRouter.from_env()
     except LLMConfigurationError as exc:
@@ -66,6 +65,7 @@ def test_workflow_runs_single_round_with_real_llm(tmp_path: Path) -> None:
 
     assert completed["expert_a_draft"]["expert"] == "expert_a"
     assert completed["expert_b_draft"]["expert"] == "expert_b"
+    assert completed["expert_a_draft"]["draft_stage"] == "integration"
     assert completed["expert_a_draft"]["teaching_content"]
     assert completed["expert_b_draft"]["teaching_content"]
 
@@ -78,12 +78,8 @@ def test_workflow_runs_single_round_with_real_llm(tmp_path: Path) -> None:
     assert 1 <= completed["judge_report"]["adaptation_score"] <= 5
     assert 1 <= completed["judge_report"]["completeness_score"] <= 5
 
-    assert len(completed["feedback_result"]["questionnaire"]) >= 1
-    assert completed["feedback_result"]["next_action"]
-
-    assert completed["final_answer"]["title"]
-    assert completed["final_answer"]["content"]
-    assert len(completed["final_answer"]["sources"]) >= 1
+    assert "feedback_result" not in completed
+    assert "final_answer" not in completed
 
     assert completed["artifacts"]
 
@@ -95,8 +91,8 @@ def test_workflow_runs_single_round_with_real_llm(tmp_path: Path) -> None:
         "artifacts/sessions/pytest-integration/round-01/expert_a_draft.md",
         "artifacts/sessions/pytest-integration/round-01/expert_b_draft.md",
         "artifacts/sessions/pytest-integration/round-01/judge_report.md",
-        "artifacts/sessions/pytest-integration/round-01/feedback_report.md",
-        "artifacts/sessions/pytest-integration/final_answer.md",
+        "artifacts/sessions/pytest-integration/round-01/expert_a_draft-02.md",
+        "artifacts/sessions/pytest-integration/round-01/judge_report-02.md",
     ]
     for expected in expected_artifacts:
         assert expected in artifact_paths, f"Missing artifact: {expected}"
@@ -108,10 +104,19 @@ def test_workflow_runs_single_round_with_real_llm(tmp_path: Path) -> None:
     assert manifest["status"] == "completed"
     assert manifest["session_id"] == "pytest-integration"
 
-    final_md = (
+    integration_md = (
         tmp_path / "artifacts" / "sessions" / "pytest-integration" / "final_answer.md"
     )
-    assert final_md.read_text(encoding="utf-8").startswith("# ")
+    assert not integration_md.exists()
+    integration_md = (
+        tmp_path
+        / "artifacts"
+        / "sessions"
+        / "pytest-integration"
+        / "round-01"
+        / "expert_a_draft-02.md"
+    )
+    assert integration_md.read_text(encoding="utf-8").startswith("# 专家 A 教学草稿")
 
 
 def test_workflow_event_ordering_is_correct_with_real_llm(tmp_path: Path) -> None:
@@ -144,4 +149,4 @@ def test_workflow_event_ordering_is_correct_with_real_llm(tmp_path: Path) -> Non
     ]
     assert completed_events[:4] == ["route", "diagnosis", "planner", "tool_agent"]
     assert "expert_a" in completed_events and "expert_b" in completed_events
-    assert completed_events[-2:] == ["feedback", "expert_a"]
+    assert completed_events[-3:] == ["judge", "expert_a", "judge"]

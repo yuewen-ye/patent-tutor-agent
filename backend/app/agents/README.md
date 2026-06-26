@@ -10,7 +10,7 @@
 | `diagnosis/` | `diagnosis` / `feedback` | LLM + Store | 学情诊断 Agent；feedback 是后置阶段 | `learner_profile` / `feedback_result` |
 | `planner/` | `planner` | LLM | 路径规划 Agent | `learning_path` |
 | `tool_agent.py` | `tool_agent` | LLM + Tool | ReAct 循环，自主调用 rag_retrieve | `retrieval_context` |
-| `expert_a/` | `expert_a` | LLM | 领域专家 A，保守严谨；最终审核 | `expert_a_draft` / `final_answer` |
+| `expert_a/` | `expert_a` | LLM | 领域专家 A，保守严谨；辩论草稿与最终整合 | `expert_a_draft` |
 | `expert_b/` | `expert_b` | LLM | 领域专家 B，生动灵活 | `expert_b_draft` |
 | `judge/` | `judge` | LLM | 审核裁判 Agent | `judge_report` |
 | `chat_answer.py` | `chat_answer` | LLM | chat 路径快速回答 | `chat_answer` |
@@ -19,7 +19,7 @@
 
 | 路由 | 经过的 Agent 节点 |
 |------|-------------------|
-| teach | route → diagnosis → planner → tool_agent → expert_a ∥ expert_b → judge → feedback → expert_a |
+| teach | route → diagnosis → planner → tool_agent → expert_a ∥ expert_b → judge → expert_a integration → judge |
 | chat | route → tool_agent → chat_answer |
 | diagnose | route → diagnosis |
 
@@ -33,4 +33,4 @@
 - 模型 provider 不在 Agent README 中写死，运行时由 `.env` 的 `*_PROVIDER` 和 `AgentLLMRouter` 决定。
 - 详细 JSON Schema、错误对象和降级策略以 `docs/agent-interface-spec.md` 为准。
 - `tool_agent` 是唯一使用 `generate_with_tools()` 的节点，其他节点均使用 `generate_json()`。
-- `diagnosis` Agent 的初始诊断阶段读取 Store，`feedback` 阶段写入 Store。
+- `diagnosis` Agent 的初始诊断阶段读取 Store，`feedback` 阶段仍保留为可复用能力，但当前 teach 主路径不调用它。

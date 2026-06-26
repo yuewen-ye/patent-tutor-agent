@@ -12,27 +12,27 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 def summary_lines(state: dict[str, Any]) -> list[str]:
-    final_answer = state.get("final_answer", {})
-    if not isinstance(final_answer, dict):
-        final_answer = {}
+    teaching_result = state.get("expert_a_draft", {})
+    if not isinstance(teaching_result, dict):
+        teaching_result = {}
     artifacts = state.get("artifacts", [])
     artifacts_count = len(artifacts) if isinstance(artifacts, list) else 0
-    sources = final_answer.get("sources", [])
+    sources = teaching_result.get("legal_basis", [])
     source_text = ", ".join(str(source) for source in sources) if isinstance(sources, list) else str(sources)
-    next_questions = final_answer.get("next_questions") or []
+    knowledge_points = teaching_result.get("knowledge_points") or []
     question_text = (
-        ", ".join(str(question) for question in next_questions)
-        if isinstance(next_questions, list)
-        else str(next_questions)
+        ", ".join(str(point) for point in knowledge_points)
+        if isinstance(knowledge_points, list)
+        else str(knowledge_points)
     )
 
     markdown_path = ""
-    markdown_artifact = final_answer.get("markdown_artifact")
+    markdown_artifact = teaching_result.get("markdown_artifact")
     if isinstance(markdown_artifact, dict):
         markdown_path = str(markdown_artifact.get("path") or "")
     if not markdown_path and isinstance(artifacts, list):
-        for artifact in artifacts:
-            if isinstance(artifact, dict) and artifact.get("kind") == "final_answer":
+        for artifact in reversed(artifacts):
+            if isinstance(artifact, dict) and artifact.get("created_by") == "expert_a":
                 markdown_path = str(artifact.get("path") or "")
                 break
 
@@ -40,14 +40,14 @@ def summary_lines(state: dict[str, Any]) -> list[str]:
         "Workflow summary",
         f"Session: {state.get('session_id', '')}",
         f"Debate rounds: {state.get('debate_round', '?')}/{state.get('max_debate_rounds', '?')}",
-        f"Final answer: {final_answer.get('title', '')}",
-        f"Sources: {source_text}",
+        f"Teaching result: {str(teaching_result.get('teaching_content', ''))[:80]}",
+        f"Legal basis: {source_text}",
         f"Artifacts: {artifacts_count} files",
     ]
     if markdown_path:
-        lines.append(f"Final answer markdown: {markdown_path}")
+        lines.append(f"Teaching result markdown: {markdown_path}")
     if question_text:
-        lines.append(f"Next questions: {question_text}")
+        lines.append(f"Knowledge points: {question_text}")
     return lines
 
 

@@ -60,8 +60,10 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
                 },
             )
         )
+        draft_dict = draft.model_dump()
+        draft_dict["draft_stage"] = "debate"
         return {
-            "expert_b_draft": draft.model_dump(),
+            "expert_b_draft": draft_dict,
             "events": [completed_event("expert_b", "generated expert B draft with LLM")],
         }
 

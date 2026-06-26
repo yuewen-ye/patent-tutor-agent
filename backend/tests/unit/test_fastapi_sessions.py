@@ -55,17 +55,23 @@ class QueueLLMClient:
                 "adaptation_score": 4,
                 "completeness_score": 4,
                 "disputes": [],
-                "rationale": "可以输出。",
+                "rationale": "A/B 辩论充分，可以进入整合。",
             },
             {
-                "questionnaire": ["你能说明新颖性的判断对象吗？"],
-                "next_action": "完成一个新颖性案例题",
-                "profile_update_hint": "继续观察案例判断能力",
+                "expert": "expert_a",
+                "style": "conservative_precise",
+                "knowledge_points": ["新颖性"],
+                "legal_basis": ["专利法第二十二条"],
+                "teaching_content": "专家A整合两位专家观点后的最终教学内容。",
+                "risks": [],
             },
             {
-                "title": "专利新颖性学习建议",
-                "content": "专家A最终审核后的教学内容",
-                "sources": ["第二十二条"],
+                "decision": "accept",
+                "accuracy_score": 5,
+                "adaptation_score": 5,
+                "completeness_score": 5,
+                "disputes": [],
+                "rationale": "整合稿可以作为最终教学内容。",
             },
         ]
 
@@ -109,8 +115,10 @@ def test_session_api_creates_background_workflow_and_returns_snapshot(tmp_path: 
     snapshot = fetched.json()
     assert snapshot["session_id"] == session_id
     assert snapshot["status"] == "completed"
-    assert snapshot["state"]["final_answer"]["sources"] == ["第二十二条"]
-    assert snapshot["state"]["final_answer"] == completed["final_answer"]
+    assert snapshot["state"]["expert_a_draft"]["draft_stage"] == "integration"
+    assert snapshot["state"]["expert_a_draft"]["legal_basis"] == ["专利法第二十二条"]
+    assert snapshot["state"]["expert_a_draft"] == completed["expert_a_draft"]
+    assert "final_answer" not in snapshot["state"]
 
 
 def test_session_events_stream_replays_agent_events_and_completion(tmp_path: Path) -> None:
@@ -149,7 +157,7 @@ def test_session_websocket_replays_agent_events_until_completion(tmp_path: Path)
 
     event_nodes = [message["event"]["node"] for message in messages if message["type"] == "agent_event"]
     assert "diagnosis" in event_nodes
-    assert event_nodes[-1] == "expert_a"
+    assert event_nodes[-1] == "judge"
     assert messages[-1]["status"] == "completed"
 
 
@@ -158,12 +166,16 @@ def test_session_artifact_endpoint_serves_markdown_and_blocks_traversal(tmp_path
     session_id = client.post("/sessions", json={"user_input": "我想学习专利新颖性"}).json()[
         "session_id"
     ]
-    service.wait_for_completion(session_id, timeout=5)
+    state = service.wait_for_completion(session_id, timeout=5)
+    completed = completed_state(state)
 
-    artifact = client.get(f"/sessions/{session_id}/artifacts/final_answer.md")
+    artifact_path = Path(completed["expert_a_draft"]["markdown_artifact"]["path"])
+    relative_path = artifact_path.relative_to(Path("artifacts") / "sessions" / session_id)
+    artifact = client.get(f"/sessions/{session_id}/artifacts/{relative_path.as_posix()}")
     assert artifact.status_code == 200
     assert artifact.headers["content-type"].startswith("text/markdown")
-    assert artifact.text.startswith("# 个性化知识产权学习建议")
+    assert artifact.text.startswith("# 专家 A 教学草稿")
+    assert "专家A整合两位专家观点后的最终教学内容" in artifact.text
 
     traversal = client.get(f"/sessions/{session_id}/artifacts/%2E%2E/manifest.json")
     assert traversal.status_code == 400

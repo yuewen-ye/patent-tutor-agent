@@ -15,17 +15,15 @@ graph TD;
 	expert_b(expert_b)
 	judge(judge)
 	revise_experts(revise_experts)
-	feedback(feedback)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> _init;
 	_init --> route;
 	diagnosis -.-> __end__;
 	diagnosis -.-> planner;
-	expert_a -.-> __end__;
 	expert_a -.-> judge;
 	expert_b --> judge;
-	feedback --> expert_a;
-	judge -.-> feedback;
+	judge -.-> __end__;
+	judge -.-> expert_a;
 	judge -.-> revise_experts;
 	planner --> tool_agent;
 	revise_experts -.-> expert_a;

@@ -58,14 +58,20 @@ class MemoryQueueLLMClient:
                 "rationale": "可以输出",
             },
             {
-                "questionnaire": ["你能说出现有技术的含义吗？"],
-                "next_action": "继续做案例题",
-                "profile_update_hint": "保留薄弱点并继续观察案例判断能力",
+                "expert": "expert_a",
+                "style": "conservative_precise",
+                "knowledge_points": ["新颖性"],
+                "legal_basis": ["专利法第二十二条"],
+                "teaching_content": "整合专家 A 和专家 B 后的教学内容",
+                "risks": [],
             },
             {
-                "title": "个性化知识产权学习建议",
-                "content": "专家A最终审核",
-                "sources": ["第二十二条"],
+                "decision": "accept",
+                "accuracy_score": 5,
+                "adaptation_score": 5,
+                "completeness_score": 5,
+                "disputes": [],
+                "rationale": "整合稿可以输出",
             },
         ]
 

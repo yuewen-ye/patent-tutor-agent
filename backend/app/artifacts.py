@@ -18,7 +18,6 @@ ArtifactKind = Literal[
     "expert_draft",
     "judge_report",
     "feedback_report",
-    "final_answer",
     "chat_answer",
 ]
 
@@ -30,7 +29,6 @@ _CREATED_BY = {
     "expert_b_draft": "expert_b",
     "judge_report": "judge",
     "feedback_result": "feedback",
-    "final_answer": "expert_a",
     "chat_answer": "chat_answer",
 }
 _KIND_BY_FIELD: dict[str, ArtifactKind] = {
@@ -41,7 +39,6 @@ _KIND_BY_FIELD: dict[str, ArtifactKind] = {
     "expert_b_draft": "expert_draft",
     "judge_report": "judge_report",
     "feedback_result": "feedback_report",
-    "final_answer": "final_answer",
     "chat_answer": "chat_answer",
 }
 _TITLE_BY_FIELD = {
@@ -52,7 +49,6 @@ _TITLE_BY_FIELD = {
     "expert_b_draft": "专家 B 教学草稿",
     "judge_report": "审核裁判报告",
     "feedback_result": "反馈分析报告",
-    "final_answer": "个性化知识产权学习建议",
     "chat_answer": "快速问答回答",
 }
 _FILE_BY_FIELD = {
@@ -63,7 +59,6 @@ _FILE_BY_FIELD = {
     "expert_b_draft": "expert_b_draft.md",
     "judge_report": "judge_report.md",
     "feedback_result": "feedback_report.md",
-    "final_answer": "final_answer.md",
     "chat_answer": "chat_answer.md",
 }
 _ROUND_FIELDS = {
@@ -99,6 +94,19 @@ def _artifact_absolute_path(
     if field in _ROUND_FIELDS:
         base = base / f"round-{round_number:02d}"
     return base / _FILE_BY_FIELD[field]
+
+
+def _deduplicated_path(path: Path) -> Path:
+    if not path.exists():
+        return path
+    stem = path.stem
+    suffix = path.suffix
+    index = 2
+    while True:
+        candidate = path.with_name(f"{stem}-{index:02d}{suffix}")
+        if not candidate.exists():
+            return candidate
+        index += 1
 
 
 def _markdown_for(field: str, value: object) -> str:
@@ -149,13 +157,17 @@ def write_field_artifact(
     if field not in _KIND_BY_FIELD:
         raise ValueError(f"Unsupported artifact field: {field}")
     content = _markdown_for(field, value)
-    absolute_path = _artifact_absolute_path(artifact_root, session_id, field, round_number)
+    absolute_path = _deduplicated_path(
+        _artifact_absolute_path(artifact_root, session_id, field, round_number)
+    )
     relative_path = _artifact_relative_path(artifact_root, session_id, field, round_number)
+    if absolute_path.name != relative_path.name:
+        relative_path = relative_path.with_name(absolute_path.name)
     absolute_path.parent.mkdir(parents=True, exist_ok=True)
     absolute_path.write_text(content, encoding="utf-8")
     artifact_id = f"{sanitize_session_id(session_id)}-round-{round_number:02d}-{field}"
-    if field == "final_answer":
-        artifact_id = f"{sanitize_session_id(session_id)}-{field}"
+    if absolute_path.stem != Path(_FILE_BY_FIELD[field]).stem:
+        artifact_id = f"{artifact_id}-{absolute_path.stem.rsplit('-', 1)[-1]}"
     artifact = MarkdownArtifact(
         artifact_id=artifact_id,
         kind=_KIND_BY_FIELD[field],

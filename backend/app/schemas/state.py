@@ -52,7 +52,6 @@ class MarkdownArtifact(ContractModel):
         "expert_draft",
         "judge_report",
         "feedback_report",
-        "final_answer",
         "route_decision",
         "chat_answer",
     ]
@@ -124,6 +123,7 @@ class ExpertDraft(ContractModel):
     legal_basis: list[str] = Field(min_length=1)
     teaching_content: str
     risks: list[str] = Field(default_factory=list)
+    draft_stage: Literal["debate", "integration"] | None = None
     irac: IRAC | None = None
     interactive_questions: list[str] | None = None
     markdown_artifact: MarkdownArtifact | None = None
@@ -181,15 +181,6 @@ class FeedbackResult(ContractModel):
     next_action: str
     profile_update_hint: str
     bkt_update: BKTUpdate | None = None
-    markdown_artifact: MarkdownArtifact | None = None
-
-
-class FinalAnswer(ContractModel):
-    title: str
-    content: str
-    sources: list[str]
-    judge_summary: str | None = None
-    next_questions: list[str] | None = None
     markdown_artifact: MarkdownArtifact | None = None
 
 
@@ -288,11 +279,11 @@ class StateDict(TypedDict):
     expert_b_draft: NotRequired[dict[str, Any]]
     judge_report: NotRequired[dict[str, Any]]
     feedback_result: NotRequired[dict[str, Any]]
-    final_answer: NotRequired[dict[str, Any]]
     debate_round: NotRequired[int]
     max_debate_rounds: NotRequired[int]
     revision_history: NotRequired[Annotated[list[dict[str, Any]], operator.add]]
     intent: NotRequired[str]  # "teach" | "chat" | "diagnose"
+    teach_phase: NotRequired[Literal["debate", "integration"]]
     chat_answer: NotRequired[dict[str, Any]]
     tool_agent_answer: NotRequired[str]
 

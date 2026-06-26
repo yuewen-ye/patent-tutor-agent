@@ -11,12 +11,15 @@ def test_summary_lines_render_concise_workflow_result() -> None:
             "session_id": "demo-session",
             "debate_round": 2,
             "max_debate_rounds": 2,
-            "final_answer": {
-                "title": "个性化知识产权学习建议",
-                "sources": ["《专利法》第二十二条"],
-                "next_questions": ["什么是抵触申请？"],
+            "expert_a_draft": {
+                "expert": "expert_a",
+                "style": "conservative_precise",
+                "knowledge_points": ["新颖性"],
+                "legal_basis": ["《专利法》第二十二条"],
+                "teaching_content": "专家 A 整合后的教学内容",
+                "draft_stage": "integration",
                 "markdown_artifact": {
-                    "path": "artifacts/sessions/demo-session/final_answer.md"
+                    "path": "artifacts/sessions/demo-session/round-02/expert_a_draft-02.md"
                 },
             },
             "artifacts": [{"path": "a.md"}, {"path": "b.md"}],
@@ -25,7 +28,10 @@ def test_summary_lines_render_concise_workflow_result() -> None:
 
     assert "Session: demo-session" in lines
     assert "Debate rounds: 2/2" in lines
-    assert "Final answer: 个性化知识产权学习建议" in lines
-    assert "Sources: 《专利法》第二十二条" in lines
+    assert "Teaching result: 专家 A 整合后的教学内容" in lines
+    assert "Legal basis: 《专利法》第二十二条" in lines
     assert "Artifacts: 2 files" in lines
-    assert "Final answer markdown: artifacts/sessions/demo-session/final_answer.md" in lines
+    assert (
+        "Teaching result markdown: artifacts/sessions/demo-session/round-02/expert_a_draft-02.md"
+        in lines
+    )

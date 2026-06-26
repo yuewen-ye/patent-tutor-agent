@@ -13,8 +13,6 @@ _COMPLETED_STATE_KEYS = (
     "expert_a_draft",
     "expert_b_draft",
     "judge_report",
-    "feedback_result",
-    "final_answer",
     "artifacts",
     "debate_round",
     "max_debate_rounds",
@@ -25,7 +23,7 @@ def completed_state(state: StateDict) -> dict[str, Any]:
 
     Use this in tests after ``run_workflow()`` to narrow ``StateDict`` to
     ``dict[str, Any]``, eliminating Pyright/Pylance ``reportTypedDictNotRequiredAccess``
-    warnings when directly indexing optional keys like ``state["final_answer"]``.
+    warnings when directly indexing optional keys like ``state["expert_a_draft"]``.
     """
     for key in _COMPLETED_STATE_KEYS:
         assert key in state, f"Expected workflow to populate {key}"

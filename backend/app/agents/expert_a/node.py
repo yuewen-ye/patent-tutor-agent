@@ -9,7 +9,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from backend.app.agents.common import Node, load_prompt, messages_from_prompt, normalize_key_aliases, schema_note
 from backend.app.core.llm import LLMClient, LLMMessage
-from backend.app.schemas.state import ExpertDraft, FinalAnswer, StateDict, completed_event
+from backend.app.schemas.state import ExpertDraft, StateDict, completed_event
 
 _EXTRA_TEXT = load_prompt(__file__)
 
@@ -21,6 +21,48 @@ def _judge_accepted(state: StateDict) -> bool:
             return True
         case _:
             return False
+
+
+def _is_applying_revision_request(state: StateDict) -> bool:
+    judge_report = state.get("judge_report", {})
+    history = state.get("revision_history", [])
+    if not isinstance(judge_report, dict) or not isinstance(history, list) or not history:
+        return False
+    latest = history[-1]
+    if not isinstance(latest, dict):
+        return False
+    return (
+        latest.get("round") == state.get("debate_round", 1)
+        and latest.get("judge_decision") == judge_report.get("decision")
+        and latest.get("revision_requests") == judge_report.get("revision_requests", [])
+        and latest.get("rationale") == judge_report.get("rationale")
+    )
+
+
+def _should_integrate(state: StateDict) -> bool:
+    if state.get("teach_phase") == "integration":
+        return True
+    decision = str(state.get("judge_report", {}).get("decision", ""))
+    debate_round = int(state.get("debate_round", 1))
+    max_debate_rounds = int(state.get("max_debate_rounds", 3))
+    if decision == "revise" and debate_round >= max_debate_rounds:
+        return not _is_applying_revision_request(state)
+    return _judge_accepted(state)
+
+
+def _normalize_expert_draft(raw: object) -> ExpertDraft:
+    return ExpertDraft.model_validate(
+        normalize_key_aliases(
+            raw,
+            {
+                "knowledgePoints": "knowledge_points",
+                "legalBasis": "legal_basis",
+                "teachingContent": "teaching_content",
+                "interactiveQuestions": "interactive_questions",
+                "draftStage": "draft_stage",
+            },
+        )
+    )
 
 
 def build_expert_a_node(llm_client: LLMClient) -> Node:
@@ -48,19 +90,21 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
     )
 
     def expert_a_node(state: StateDict) -> dict[str, Any]:
-        if _judge_accepted(state) and "feedback_result" in state:
+        if _should_integrate(state):
             raw = llm_client.generate_json(
                 messages=[
                     LLMMessage(
                         role="system",
                         content=schema_note(
-                            "FinalAnswer",
-                            '{"title":"标题","content":"正文","sources":["依据"],'
-                            '"judge_summary":"审核摘要","next_questions":["问题"]}',
+                            "ExpertDraft",
+                            '{"expert":"expert_a","style":"conservative_precise",'
+                            '"knowledge_points":["要点"],"legal_basis":["依据"],'
+                            '"teaching_content":"整合后的教学正文","risks":[]}',
                         )
                         + _EXTRA_TEXT
-                        + "\n你现在执行专家 A 的最终审核职责：不得再做多专家整合，"
-                        "只能基于已通过的专家草稿、judge_report 和反馈结果输出最终答案。",
+                        + "\n你现在执行专家 A 的整合职责：基于专家 A、专家 B 的辩论结果和 "
+                        "judge_report，整合出 teach 路由的最终教学内容候选。"
+                        "不要输出独立最终答案对象；必须仍输出 ExpertDraft，expert 固定为 expert_a。",
                     ),
                     LLMMessage(
                         role="user",
@@ -69,28 +113,20 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                             f"专家A草稿：{json.dumps(state.get('expert_a_draft', {}), ensure_ascii=False)}\n"
                             f"专家B草稿：{json.dumps(state.get('expert_b_draft', {}), ensure_ascii=False)}\n"
                             f"裁判报告：{json.dumps(state.get('judge_report', {}), ensure_ascii=False)}\n"
-                            f"反馈结果：{json.dumps(state.get('feedback_result', {}), ensure_ascii=False)}\n"
-                            "请以专家 A 的严谨口径做最终审核并输出 FinalAnswer。"
+                            "请整合两位专家的有效观点，输出可由 judge 直接审核的 ExpertDraft。"
                         ),
                     ),
                 ],
                 temperature=0.3,
                 agent="expert_a",
             )
-            final_answer = FinalAnswer.model_validate(
-                normalize_key_aliases(
-                    raw,
-                    {
-                        "judgeSummary": "judge_summary",
-                        "nextStudyQuestions": "next_questions",
-                        "next_study_questions": "next_questions",
-                        "follow_up_questions": "next_questions",
-                    },
-                )
-            )
+            draft = _normalize_expert_draft(raw)
+            draft_dict = draft.model_dump()
+            draft_dict["draft_stage"] = "integration"
             return {
-                "final_answer": final_answer.model_dump(),
-                "events": [completed_event("expert_a", "final reviewed teaching answer with LLM")],
+                "expert_a_draft": draft_dict,
+                "teach_phase": "integration",
+                "events": [completed_event("expert_a", "integrated expert debate result with LLM")],
             }
 
         raw = llm_client.generate_json(
@@ -104,19 +140,11 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
             temperature=0.4,
             agent="expert_a",
         )
-        draft = ExpertDraft.model_validate(
-            normalize_key_aliases(
-                raw,
-                {
-                    "knowledgePoints": "knowledge_points",
-                    "legalBasis": "legal_basis",
-                    "teachingContent": "teaching_content",
-                    "interactiveQuestions": "interactive_questions",
-                },
-            )
-        )
+        draft = _normalize_expert_draft(raw)
+        draft_dict = draft.model_dump()
+        draft_dict["draft_stage"] = "debate"
         return {
-            "expert_a_draft": draft.model_dump(),
+            "expert_a_draft": draft_dict,
             "events": [completed_event("expert_a", "generated expert A draft with LLM")],
         }
 
