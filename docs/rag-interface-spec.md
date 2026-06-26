@@ -79,11 +79,12 @@ class RetrievalMetadata(ContractModel):
 
 ## 当前实现
 
-`backend/app/rag/retriever.py` 中的 `rag_retrieve()` 是 **Mock 实现**：
+`backend/app/rag/retriever.py` 中的 `rag_retrieve()` 是 Milvus Lite + BGE-M3 的本地向量检索实现：
 
-- 忽略 `query` 和 `top_k` 参数
-- 返回 3 条硬编码法条（专利法第22、25、29条）
-- `retrieval_method = "manual"`
+- `query` 会被 BGE-M3 编码为向量
+- 从 `backend/app/rag/data/milvus_lite.db/` 的 `law_knowledge_base` collection 检索 Top-K 片段
+- `retrieval_method = "vector"`
+- 检索初始化、编码、搜索或结果解析失败时抛出 `RAGRetrievalError`，不再静默返回空列表
 
 ## 目标实现要求
 
@@ -120,16 +121,11 @@ class RetrievalMetadata(ContractModel):
 - 中文语义：`text-embedding-3-small`（OpenAI 兼容）或 `bge-large-zh-v1.5`（开源）
 - 维度：1024-1536
 
-### 替换 Mock 的方法
+### 后续增强方向
 
-`rag_retrieve()` 函数签名不变，只需替换函数体：
+`rag_retrieve()` 函数签名保持不变，后续可以在函数体内部增强为混合检索：
 
 ```python
-# 当前（mock）
-def rag_retrieve(query: str = "", top_k: int = 5) -> list[RetrievalChunk]:
-    return _MOCK_CHUNKS[:top_k]
-
-# 目标（真实）
 def rag_retrieve(query: str = "", top_k: int = 5) -> list[RetrievalChunk]:
     embedding = embedder.embed(query)
     candidates = vector_db.search(embedding, top_k=top_k * 2)

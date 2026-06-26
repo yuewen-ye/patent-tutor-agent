@@ -454,7 +454,7 @@
       "source_file": "backend/main.py",
       "source_location": "L1",
       "id": "backend_main_py",
-      "community": 6,
+      "community": 20,
       "norm_label": "main.py"
     },
     {
@@ -463,7 +463,7 @@
       "source_file": "backend/main.py",
       "source_location": "L12",
       "id": "backend_main_create_app",
-      "community": 6,
+      "community": 20,
       "norm_label": "create_app()"
     },
     {
@@ -472,7 +472,7 @@
       "source_file": "backend/main.py",
       "source_location": "L24",
       "id": "backend_main_main",
-      "community": 6,
+      "community": 20,
       "norm_label": "main()"
     },
     {
@@ -481,7 +481,7 @@
       "source_file": "backend/main.py",
       "source_location": "L1",
       "id": "backend_main_rationale_1",
-      "community": 6,
+      "community": 20,
       "norm_label": "fastapi entry point for the patent tutor agent service."
     },
     {
@@ -607,7 +607,7 @@
       "source_file": "backend/tests/integration/test_memory_integration.py",
       "source_location": "L1",
       "id": "backend_tests_integration_test_memory_integration_py",
-      "community": 134,
+      "community": 73,
       "norm_label": "test_memory_integration.py"
     },
     {
@@ -616,7 +616,7 @@
       "source_file": "backend/tests/integration/test_memory_integration.py",
       "source_location": "L22",
       "id": "integration_test_memory_integration_make_router",
-      "community": 134,
+      "community": 73,
       "norm_label": "_make_router()"
     },
     {
@@ -625,7 +625,7 @@
       "source_file": "backend/tests/integration/test_memory_integration.py",
       "source_location": "L29",
       "id": "integration_test_memory_integration_run_workflow",
-      "community": 134,
+      "community": 73,
       "norm_label": "_run_workflow()"
     },
     {
@@ -634,7 +634,7 @@
       "source_file": "backend/tests/integration/test_memory_integration.py",
       "source_location": "L47",
       "id": "integration_test_memory_integration_test_first_session_writes_profile_and_history_to_store",
-      "community": 134,
+      "community": 73,
       "norm_label": "test_first_session_writes_profile_and_history_to_store()"
     },
     {
@@ -643,7 +643,7 @@
       "source_file": "backend/tests/integration/test_memory_integration.py",
       "source_location": "L73",
       "id": "integration_test_memory_integration_test_second_session_injects_historical_profile_into_diagnosis",
-      "community": 134,
+      "community": 73,
       "norm_label": "test_second_session_injects_historical_profile_into_diagnosis()"
     },
     {
@@ -652,7 +652,7 @@
       "source_file": "backend/tests/integration/test_memory_integration.py",
       "source_location": "L1",
       "id": "integration_test_memory_integration_rationale_1",
-      "community": 134,
+      "community": 73,
       "norm_label": "cross-session memory integration tests with real llm providers.  requires valid"
     },
     {
@@ -832,7 +832,7 @@
       "source_file": "backend/tests/unit/test_fastapi_sessions.py",
       "source_location": "L1",
       "id": "backend_tests_unit_test_fastapi_sessions_py",
-      "community": 6,
+      "community": 216,
       "norm_label": "test_fastapi_sessions.py"
     },
     {
@@ -841,7 +841,7 @@
       "source_file": "backend/tests/unit/test_fastapi_sessions.py",
       "source_location": "L16",
       "id": "unit_test_fastapi_sessions_queuellmclient",
-      "community": 6,
+      "community": 216,
       "norm_label": "queuellmclient"
     },
     {
@@ -850,7 +850,7 @@
       "source_file": "backend/tests/unit/test_fastapi_sessions.py",
       "source_location": "L17",
       "id": "unit_test_fastapi_sessions_queuellmclient_init",
-      "community": 6,
+      "community": 216,
       "norm_label": ".__init__()"
     },
     {
@@ -859,7 +859,7 @@
       "source_file": "backend/tests/unit/test_fastapi_sessions.py",
       "source_location": "L132",
       "id": "unit_test_fastapi_sessions_queuellmclient_generate_json",
-      "community": 6,
+      "community": 216,
       "norm_label": ".generate_json()"
     },
     {
@@ -868,7 +868,7 @@
       "source_file": "backend/tests/unit/test_fastapi_sessions.py",
       "source_location": "L137",
       "id": "unit_test_fastapi_sessions_queuellmclient_generate_with_tools",
-      "community": 6,
+      "community": 216,
       "norm_label": ".generate_with_tools()"
     },
     {
@@ -877,7 +877,7 @@
       "source_file": "backend/tests/unit/test_fastapi_sessions.py",
       "source_location": "L142",
       "id": "unit_test_fastapi_sessions_make_client",
-      "community": 6,
+      "community": 216,
       "norm_label": "_make_client()"
     },
     {
@@ -886,7 +886,7 @@
       "source_file": "backend/tests/unit/test_fastapi_sessions.py",
       "source_location": "L151",
       "id": "unit_test_fastapi_sessions_test_session_api_creates_background_workflow_and_returns_snapshot",
-      "community": 6,
+      "community": 216,
       "norm_label": "test_session_api_creates_background_workflow_and_returns_snapshot()"
     },
     {
@@ -895,7 +895,7 @@
       "source_file": "backend/tests/unit/test_fastapi_sessions.py",
       "source_location": "L176",
       "id": "unit_test_fastapi_sessions_test_session_events_stream_replays_agent_events_and_completion",
-      "community": 6,
+      "community": 216,
       "norm_label": "test_session_events_stream_replays_agent_events_and_completion()"
     },
     {
@@ -904,7 +904,7 @@
       "source_file": "backend/tests/unit/test_fastapi_sessions.py",
       "source_location": "L195",
       "id": "unit_test_fastapi_sessions_test_session_websocket_replays_agent_events_until_completion",
-      "community": 6,
+      "community": 216,
       "norm_label": "test_session_websocket_replays_agent_events_until_completion()"
     },
     {
@@ -913,7 +913,7 @@
       "source_file": "backend/tests/unit/test_fastapi_sessions.py",
       "source_location": "L216",
       "id": "unit_test_fastapi_sessions_test_session_artifact_endpoint_serves_markdown_and_blocks_traversal",
-      "community": 6,
+      "community": 216,
       "norm_label": "test_session_artifact_endpoint_serves_markdown_and_blocks_traversal()"
     },
     {
@@ -1048,7 +1048,7 @@
       "source_file": "backend/tests/unit/test_workflow_mvp.py",
       "source_location": "L181",
       "id": "unit_test_workflow_mvp_queuellmclient_generate_json",
-      "community": 6,
+      "community": 146,
       "norm_label": ".generate_json()"
     },
     {
@@ -1345,7 +1345,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L1",
       "id": "backend_tests_unit_test_llm_tools_py",
-      "community": 73,
+      "community": 214,
       "norm_label": "test_llm_tools.py"
     },
     {
@@ -1354,7 +1354,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L25",
       "id": "unit_test_llm_tools_testtoolcalldataclass",
-      "community": 73,
+      "community": 214,
       "norm_label": "testtoolcalldataclass"
     },
     {
@@ -1363,7 +1363,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L26",
       "id": "unit_test_llm_tools_testtoolcalldataclass_test_creation",
-      "community": 73,
+      "community": 214,
       "norm_label": ".test_creation()"
     },
     {
@@ -1372,7 +1372,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L36",
       "id": "unit_test_llm_tools_testtoolcalldataclass_test_empty_arguments",
-      "community": 73,
+      "community": 214,
       "norm_label": ".test_empty_arguments()"
     },
     {
@@ -1381,7 +1381,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L41",
       "id": "unit_test_llm_tools_testtooldefinition",
-      "community": 132,
+      "community": 214,
       "norm_label": "testtooldefinition"
     },
     {
@@ -1390,7 +1390,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L42",
       "id": "unit_test_llm_tools_testtooldefinition_test_creation",
-      "community": 132,
+      "community": 214,
       "norm_label": ".test_creation()"
     },
     {
@@ -1399,7 +1399,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L59",
       "id": "unit_test_llm_tools_testtooldefinition_test_to_openai_format",
-      "community": 132,
+      "community": 214,
       "norm_label": ".test_to_openai_format()"
     },
     {
@@ -1408,7 +1408,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L78",
       "id": "unit_test_llm_tools_testllmresponsewithtools",
-      "community": 73,
+      "community": 214,
       "norm_label": "testllmresponsewithtools"
     },
     {
@@ -1417,7 +1417,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L79",
       "id": "unit_test_llm_tools_testllmresponsewithtools_test_content_only",
-      "community": 73,
+      "community": 214,
       "norm_label": ".test_content_only()"
     },
     {
@@ -1426,7 +1426,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L84",
       "id": "unit_test_llm_tools_testllmresponsewithtools_test_tool_call_only",
-      "community": 73,
+      "community": 214,
       "norm_label": ".test_tool_call_only()"
     },
     {
@@ -1435,7 +1435,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L91",
       "id": "unit_test_llm_tools_testllmresponsewithtools_test_content_and_tool_call",
-      "community": 73,
+      "community": 214,
       "norm_label": ".test_content_and_tool_call()"
     },
     {
@@ -1444,7 +1444,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L98",
       "id": "unit_test_llm_tools_testcallllmtoolswithmocktransport",
-      "community": 132,
+      "community": 118,
       "norm_label": "testcallllmtoolswithmocktransport"
     },
     {
@@ -1453,7 +1453,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L99",
       "id": "unit_test_llm_tools_testcallllmtoolswithmocktransport_test_sends_tools_not_response_format",
-      "community": 132,
+      "community": 118,
       "norm_label": ".test_sends_tools_not_response_format()"
     },
     {
@@ -1462,7 +1462,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L153",
       "id": "unit_test_llm_tools_testcallllmtoolswithmocktransport_test_parses_tool_calls_from_response",
-      "community": 132,
+      "community": 118,
       "norm_label": ".test_parses_tool_calls_from_response()"
     },
     {
@@ -1471,7 +1471,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L206",
       "id": "unit_test_llm_tools_testcallllmtoolswithmocktransport_test_no_tool_calls_in_response",
-      "community": 132,
+      "community": 118,
       "norm_label": ".test_no_tool_calls_in_response()"
     },
     {
@@ -1480,7 +1480,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L246",
       "id": "unit_test_llm_tools_testllmclientgeneratewithtools",
-      "community": 73,
+      "community": 151,
       "norm_label": "testllmclientgeneratewithtools"
     },
     {
@@ -1489,7 +1489,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L247",
       "id": "unit_test_llm_tools_testllmclientgeneratewithtools_test_default_llm_client_has_method",
-      "community": 73,
+      "community": 151,
       "norm_label": ".test_default_llm_client_has_method()"
     },
     {
@@ -1507,7 +1507,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L260",
       "id": "unit_test_llm_tools_testagentnameextension",
-      "community": 73,
+      "community": 214,
       "norm_label": "testagentnameextension"
     },
     {
@@ -1516,7 +1516,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L261",
       "id": "unit_test_llm_tools_testagentnameextension_test_new_agent_names_accepted",
-      "community": 73,
+      "community": 214,
       "norm_label": ".test_new_agent_names_accepted()"
     },
     {
@@ -1525,7 +1525,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L1",
       "id": "unit_test_llm_tools_rationale_1",
-      "community": 73,
+      "community": 214,
       "norm_label": "tdd phase 1: tests for llm tool-calling support.  red phase \u2014 these tests define"
     },
     {
@@ -1534,7 +1534,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L60",
       "id": "unit_test_llm_tools_rationale_60",
-      "community": 132,
+      "community": 214,
       "norm_label": "tooldefinition should serialize to openai-compatible tool dict."
     },
     {
@@ -1543,7 +1543,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L100",
       "id": "unit_test_llm_tools_rationale_100",
-      "community": 132,
+      "community": 118,
       "norm_label": "verify the request body has 'tools' not 'response_format'."
     },
     {
@@ -1552,7 +1552,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L154",
       "id": "unit_test_llm_tools_rationale_154",
-      "community": 132,
+      "community": 118,
       "norm_label": "verify tool_calls are correctly parsed from the response."
     },
     {
@@ -1561,7 +1561,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L207",
       "id": "unit_test_llm_tools_rationale_207",
-      "community": 132,
+      "community": 118,
       "norm_label": "response without tool_calls \u2014 returns empty list."
     },
     {
@@ -1570,7 +1570,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L248",
       "id": "unit_test_llm_tools_rationale_248",
-      "community": 73,
+      "community": 151,
       "norm_label": "defaultllmclient implements generate_with_tools."
     },
     {
@@ -1588,7 +1588,7 @@
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L262",
       "id": "unit_test_llm_tools_rationale_262",
-      "community": 73,
+      "community": 214,
       "norm_label": "the new agent names are valid agentname values."
     },
     {
@@ -1777,7 +1777,7 @@
       "source_file": "backend/tests/unit/test_workflow_debate_artifacts.py",
       "source_location": "L1",
       "id": "backend_tests_unit_test_workflow_debate_artifacts_py",
-      "community": 141,
+      "community": 134,
       "norm_label": "test_workflow_debate_artifacts.py"
     },
     {
@@ -1786,7 +1786,7 @@
       "source_file": "backend/tests/unit/test_workflow_debate_artifacts.py",
       "source_location": "L15",
       "id": "unit_test_workflow_debate_artifacts_debatequeuellmclient",
-      "community": 141,
+      "community": 134,
       "norm_label": "debatequeuellmclient"
     },
     {
@@ -1795,7 +1795,7 @@
       "source_file": "backend/tests/unit/test_workflow_debate_artifacts.py",
       "source_location": "L18",
       "id": "unit_test_workflow_debate_artifacts_debatequeuellmclient_init",
-      "community": 141,
+      "community": 134,
       "norm_label": ".__init__()"
     },
     {
@@ -1804,7 +1804,7 @@
       "source_file": "backend/tests/unit/test_workflow_debate_artifacts.py",
       "source_location": "L215",
       "id": "unit_test_workflow_debate_artifacts_debatequeuellmclient_generate_json",
-      "community": 6,
+      "community": 146,
       "norm_label": ".generate_json()"
     },
     {
@@ -1813,7 +1813,7 @@
       "source_file": "backend/tests/unit/test_workflow_debate_artifacts.py",
       "source_location": "L228",
       "id": "unit_test_workflow_debate_artifacts_debatequeuellmclient_generate_with_tools",
-      "community": 141,
+      "community": 214,
       "norm_label": ".generate_with_tools()"
     },
     {
@@ -1822,7 +1822,7 @@
       "source_file": "backend/tests/unit/test_workflow_debate_artifacts.py",
       "source_location": "L234",
       "id": "unit_test_workflow_debate_artifacts_test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts",
-      "community": 141,
+      "community": 134,
       "norm_label": "test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts()"
     },
     {
@@ -1831,7 +1831,7 @@
       "source_file": "backend/tests/unit/test_workflow_debate_artifacts.py",
       "source_location": "L311",
       "id": "unit_test_workflow_debate_artifacts_test_workflow_reruns_only_targeted_expert_when_judge_targets_expert_a",
-      "community": 141,
+      "community": 134,
       "norm_label": "test_workflow_reruns_only_targeted_expert_when_judge_targets_expert_a()"
     },
     {
@@ -1840,7 +1840,7 @@
       "source_file": "backend/tests/unit/test_workflow_debate_artifacts.py",
       "source_location": "L16",
       "id": "unit_test_workflow_debate_artifacts_rationale_16",
-      "community": 141,
+      "community": 134,
       "norm_label": "per-agent response queues for the 5-stage expert collaboration workflow."
     },
     {
@@ -1885,7 +1885,7 @@
       "source_file": "backend/tests/unit/test_new_agent_nodes.py",
       "source_location": "L34",
       "id": "unit_test_new_agent_nodes_fakellmclient_generate_with_tools",
-      "community": 73,
+      "community": 83,
       "norm_label": ".generate_with_tools()"
     },
     {
@@ -2270,19 +2270,28 @@
       "label": ".test_accepts_top_k()",
       "file_type": "code",
       "source_file": "backend/tests/unit/test_schema_extensions.py",
-      "source_location": "L127",
+      "source_location": "L160",
       "id": "unit_test_schema_extensions_testragretrieve_test_accepts_top_k",
       "community": 1,
       "norm_label": ".test_accepts_top_k()"
     },
     {
-      "label": ".test_empty_query_still_returns_mock()",
+      "label": ".test_empty_query_returns_empty_list()",
       "file_type": "code",
       "source_file": "backend/tests/unit/test_schema_extensions.py",
-      "source_location": "L131",
-      "id": "unit_test_schema_extensions_testragretrieve_test_empty_query_still_returns_mock",
+      "source_location": "L186",
+      "id": "unit_test_schema_extensions_testragretrieve_test_empty_query_returns_empty_list",
       "community": 1,
-      "norm_label": ".test_empty_query_still_returns_mock()"
+      "norm_label": ".test_empty_query_returns_empty_list()"
+    },
+    {
+      "label": ".test_surfaces_vector_store_failures()",
+      "file_type": "code",
+      "source_file": "backend/tests/unit/test_schema_extensions.py",
+      "source_location": "L190",
+      "id": "unit_test_schema_extensions_testragretrieve_test_surfaces_vector_store_failures",
+      "community": 1,
+      "norm_label": ".test_surfaces_vector_store_failures()"
     },
     {
       "label": "TDD Phase 2 & 3: Tests for new state models and RAG tool.",
@@ -2353,7 +2362,7 @@
       "source_file": "backend/app/artifacts.py",
       "source_location": "L1",
       "id": "backend_app_artifacts_py",
-      "community": 6,
+      "community": 182,
       "norm_label": "artifacts.py"
     },
     {
@@ -2362,7 +2371,7 @@
       "source_file": "backend/app/artifacts.py",
       "source_location": "L112",
       "id": "app_artifacts_sanitize_session_id",
-      "community": 6,
+      "community": 182,
       "norm_label": "sanitize_session_id()"
     },
     {
@@ -2371,7 +2380,7 @@
       "source_file": "backend/app/artifacts.py",
       "source_location": "L117",
       "id": "app_artifacts_artifact_relative_path",
-      "community": 6,
+      "community": 182,
       "norm_label": "_artifact_relative_path()"
     },
     {
@@ -2380,7 +2389,7 @@
       "source_file": "backend/app/artifacts.py",
       "source_location": "L127",
       "id": "app_artifacts_artifact_absolute_path",
-      "community": 6,
+      "community": 182,
       "norm_label": "_artifact_absolute_path()"
     },
     {
@@ -2389,7 +2398,7 @@
       "source_file": "backend/app/artifacts.py",
       "source_location": "L136",
       "id": "app_artifacts_markdown_for",
-      "community": 6,
+      "community": 182,
       "norm_label": "_markdown_for()"
     },
     {
@@ -2398,7 +2407,7 @@
       "source_file": "backend/app/artifacts.py",
       "source_location": "L147",
       "id": "app_artifacts_dict_markdown",
-      "community": 6,
+      "community": 182,
       "norm_label": "_dict_markdown()"
     },
     {
@@ -2407,7 +2416,7 @@
       "source_file": "backend/app/artifacts.py",
       "source_location": "L168",
       "id": "app_artifacts_list_markdown",
-      "community": 6,
+      "community": 182,
       "norm_label": "_list_markdown()"
     },
     {
@@ -2416,7 +2425,7 @@
       "source_file": "backend/app/artifacts.py",
       "source_location": "L178",
       "id": "app_artifacts_write_field_artifact",
-      "community": 6,
+      "community": 182,
       "norm_label": "write_field_artifact()"
     },
     {
@@ -2425,7 +2434,7 @@
       "source_file": "backend/app/artifacts.py",
       "source_location": "L203",
       "id": "app_artifacts_attach_markdown_artifact",
-      "community": 6,
+      "community": 182,
       "norm_label": "attach_markdown_artifact()"
     },
     {
@@ -2434,7 +2443,7 @@
       "source_file": "backend/app/artifacts.py",
       "source_location": "L211",
       "id": "app_artifacts_write_manifest",
-      "community": 6,
+      "community": 182,
       "norm_label": "write_manifest()"
     },
     {
@@ -2443,7 +2452,7 @@
       "source_file": "backend/app/artifacts.py",
       "source_location": "L1",
       "id": "app_artifacts_rationale_1",
-      "community": 6,
+      "community": 182,
       "norm_label": "markdown artifact persistence for workflow runs."
     },
     {
@@ -2479,7 +2488,7 @@
       "source_file": "backend/app/services/event_bridge.py",
       "source_location": "L1",
       "id": "backend_app_services_event_bridge_py",
-      "community": 6,
+      "community": 215,
       "norm_label": "event_bridge.py"
     },
     {
@@ -2488,7 +2497,7 @@
       "source_file": "backend/app/services/event_bridge.py",
       "source_location": "L14",
       "id": "services_event_bridge_subscriber",
-      "community": 6,
+      "community": 215,
       "norm_label": "_subscriber"
     },
     {
@@ -2497,7 +2506,7 @@
       "source_file": "backend/app/services/event_bridge.py",
       "source_location": "L19",
       "id": "services_event_bridge_sessioneventbridge",
-      "community": 6,
+      "community": 215,
       "norm_label": "sessioneventbridge"
     },
     {
@@ -2506,7 +2515,7 @@
       "source_file": "backend/app/services/event_bridge.py",
       "source_location": "L20",
       "id": "services_event_bridge_sessioneventbridge_init",
-      "community": 6,
+      "community": 215,
       "norm_label": ".__init__()"
     },
     {
@@ -2515,7 +2524,7 @@
       "source_file": "backend/app/services/event_bridge.py",
       "source_location": "L26",
       "id": "services_event_bridge_sessioneventbridge_publish",
-      "community": 6,
+      "community": 215,
       "norm_label": ".publish()"
     },
     {
@@ -2524,7 +2533,7 @@
       "source_file": "backend/app/services/event_bridge.py",
       "source_location": "L36",
       "id": "services_event_bridge_sessioneventbridge_close",
-      "community": 6,
+      "community": 215,
       "norm_label": ".close()"
     },
     {
@@ -2533,7 +2542,7 @@
       "source_file": "backend/app/services/event_bridge.py",
       "source_location": "L43",
       "id": "services_event_bridge_sessioneventbridge_replay",
-      "community": 6,
+      "community": 215,
       "norm_label": ".replay()"
     },
     {
@@ -2542,7 +2551,7 @@
       "source_file": "backend/app/services/event_bridge.py",
       "source_location": "L47",
       "id": "services_event_bridge_sessioneventbridge_subscribe",
-      "community": 6,
+      "community": 215,
       "norm_label": ".subscribe()"
     },
     {
@@ -2551,7 +2560,7 @@
       "source_file": "backend/app/services/event_bridge.py",
       "source_location": "L1",
       "id": "services_event_bridge_rationale_1",
-      "community": 6,
+      "community": 215,
       "norm_label": "thread-safe bridge from workflow agentevents to http stream consumers."
     },
     {
@@ -2587,7 +2596,7 @@
       "source_file": "backend/app/services/session_service.py",
       "source_location": "L41",
       "id": "services_session_service_sessionservice_init",
-      "community": 6,
+      "community": 215,
       "norm_label": ".__init__()"
     },
     {
@@ -2726,42 +2735,6 @@
       "norm_label": "in-memory fastapi session manager for langgraph workflow runs."
     },
     {
-      "label": "build_rag.py",
-      "file_type": "code",
-      "source_file": "backend/app/rag/build_rag.py",
-      "source_location": "L1",
-      "id": "backend_app_rag_build_rag_py",
-      "community": 161,
-      "norm_label": "build_rag.py"
-    },
-    {
-      "label": "load_model()",
-      "file_type": "code",
-      "source_file": "backend/app/rag/build_rag.py",
-      "source_location": "L20",
-      "id": "rag_build_rag_load_model",
-      "community": 161,
-      "norm_label": "load_model()"
-    },
-    {
-      "label": "encode_batch()",
-      "file_type": "code",
-      "source_file": "backend/app/rag/build_rag.py",
-      "source_location": "L26",
-      "id": "rag_build_rag_encode_batch",
-      "community": 161,
-      "norm_label": "encode_batch()"
-    },
-    {
-      "label": "main()",
-      "file_type": "code",
-      "source_file": "backend/app/rag/build_rag.py",
-      "source_location": "L35",
-      "id": "rag_build_rag_main",
-      "community": 161,
-      "norm_label": "main()"
-    },
-    {
       "label": "__init__.py",
       "file_type": "code",
       "source_file": "backend/app/rag/__init__.py",
@@ -2789,19 +2762,64 @@
       "norm_label": "retriever.py"
     },
     {
-      "label": "_is_mock_mode()",
+      "label": "RAGRetrievalError",
       "file_type": "code",
       "source_file": "backend/app/rag/retriever.py",
-      "source_location": "L67",
-      "id": "rag_retriever_is_mock_mode",
+      "source_location": "L22",
+      "id": "rag_retriever_ragretrievalerror",
       "community": 1,
-      "norm_label": "_is_mock_mode()"
+      "norm_label": "ragretrievalerror"
+    },
+    {
+      "label": "RuntimeError",
+      "file_type": "code",
+      "source_file": "",
+      "source_location": "",
+      "id": "runtimeerror",
+      "community": 146,
+      "norm_label": "runtimeerror"
+    },
+    {
+      "label": ".__str__()",
+      "file_type": "code",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L26",
+      "id": "rag_retriever_ragretrievalerror_str",
+      "community": 1,
+      "norm_label": ".__str__()"
+    },
+    {
+      "label": "_get_db_path()",
+      "file_type": "code",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L30",
+      "id": "rag_retriever_get_db_path",
+      "community": 1,
+      "norm_label": "_get_db_path()"
+    },
+    {
+      "label": "_load_class()",
+      "file_type": "code",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L34",
+      "id": "rag_retriever_load_class",
+      "community": 1,
+      "norm_label": "_load_class()"
+    },
+    {
+      "label": "_load_exception_class()",
+      "file_type": "code",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L50",
+      "id": "rag_retriever_load_exception_class",
+      "community": 1,
+      "norm_label": "_load_exception_class()"
     },
     {
       "label": "_lazy_import()",
       "file_type": "code",
       "source_file": "backend/app/rag/retriever.py",
-      "source_location": "L89",
+      "source_location": "L57",
       "id": "rag_retriever_lazy_import",
       "community": 1,
       "norm_label": "_lazy_import()"
@@ -2810,64 +2828,28 @@
       "label": "get_embedding_model()",
       "file_type": "code",
       "source_file": "backend/app/rag/retriever.py",
-      "source_location": "L106",
+      "source_location": "L65",
       "id": "rag_retriever_get_embedding_model",
       "community": 1,
       "norm_label": "get_embedding_model()"
     },
     {
-      "label": "get_chroma_collection()",
+      "label": "get_milvus_client()",
       "file_type": "code",
       "source_file": "backend/app/rag/retriever.py",
-      "source_location": "L121",
-      "id": "rag_retriever_get_chroma_collection",
+      "source_location": "L79",
+      "id": "rag_retriever_get_milvus_client",
       "community": 1,
-      "norm_label": "get_chroma_collection()"
-    },
-    {
-      "label": "encode_query()",
-      "file_type": "code",
-      "source_file": "backend/app/rag/retriever.py",
-      "source_location": "L138",
-      "id": "rag_retriever_encode_query",
-      "community": 1,
-      "norm_label": "encode_query()"
+      "norm_label": "get_milvus_client()"
     },
     {
       "label": "rag_retrieve()",
       "file_type": "code",
       "source_file": "backend/app/rag/retriever.py",
-      "source_location": "L153",
+      "source_location": "L99",
       "id": "rag_retriever_rag_retrieve",
       "community": 1,
       "norm_label": "rag_retrieve()"
-    },
-    {
-      "label": "RAG retrieval tool \u2014 mock-first, real vector search when RAG_MOCK=0.",
-      "file_type": "rationale",
-      "source_file": "backend/app/rag/retriever.py",
-      "source_location": "L1",
-      "id": "rag_retriever_rationale_1",
-      "community": 1,
-      "norm_label": "rag retrieval tool \u2014 mock-first, real vector search when rag_mock=0."
-    },
-    {
-      "label": "Return True unless RAG_MOCK is explicitly set to '0'.",
-      "file_type": "rationale",
-      "source_file": "backend/app/rag/retriever.py",
-      "source_location": "L68",
-      "id": "rag_retriever_rationale_68",
-      "community": 1,
-      "norm_label": "return true unless rag_mock is explicitly set to '0'."
-    },
-    {
-      "label": "Retrieve relevant patent law chunks for *query*.      In mock mode (the default)",
-      "file_type": "rationale",
-      "source_file": "backend/app/rag/retriever.py",
-      "source_location": "L154",
-      "id": "rag_retriever_rationale_154",
-      "community": 1,
-      "norm_label": "retrieve relevant patent law chunks for *query*.      in mock mode (the default)"
     },
     {
       "label": "chunked_txt.json",
@@ -2906,6 +2888,213 @@
       "norm_label": "level3_children"
     },
     {
+      "label": "manifest.json",
+      "file_type": "code",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L1",
+      "id": "backend_app_rag_data_milvus_lite_db_collections_law_knowledge_base_manifest_json",
+      "community": 164,
+      "norm_label": "manifest.json"
+    },
+    {
+      "label": "active_wal_number",
+      "file_type": "code",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L2",
+      "id": "law_knowledge_base_manifest_active_wal_number",
+      "community": 164,
+      "norm_label": "active_wal_number"
+    },
+    {
+      "label": "current_seq",
+      "file_type": "code",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L3",
+      "id": "law_knowledge_base_manifest_current_seq",
+      "community": 164,
+      "norm_label": "current_seq"
+    },
+    {
+      "label": "index_specs",
+      "file_type": "code",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L4",
+      "id": "law_knowledge_base_manifest_index_specs",
+      "community": 164,
+      "norm_label": "index_specs"
+    },
+    {
+      "label": "vector",
+      "file_type": "code",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L5",
+      "id": "law_knowledge_base_manifest_index_specs_vector",
+      "community": 164,
+      "norm_label": "vector"
+    },
+    {
+      "label": "build_params",
+      "file_type": "code",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L6",
+      "id": "law_knowledge_base_manifest_vector_build_params",
+      "community": 164,
+      "norm_label": "build_params"
+    },
+    {
+      "label": "field_name",
+      "file_type": "code",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L7",
+      "id": "law_knowledge_base_manifest_vector_field_name",
+      "community": 164,
+      "norm_label": "field_name"
+    },
+    {
+      "label": "index_type",
+      "file_type": "code",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L8",
+      "id": "law_knowledge_base_manifest_vector_index_type",
+      "community": 164,
+      "norm_label": "index_type"
+    },
+    {
+      "label": "metric_type",
+      "file_type": "code",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L9",
+      "id": "law_knowledge_base_manifest_vector_metric_type",
+      "community": 164,
+      "norm_label": "metric_type"
+    },
+    {
+      "label": "search_params",
+      "file_type": "code",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L10",
+      "id": "law_knowledge_base_manifest_vector_search_params",
+      "community": 164,
+      "norm_label": "search_params"
+    },
+    {
+      "label": "manifest_format_version",
+      "file_type": "code",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L13",
+      "id": "law_knowledge_base_manifest_manifest_format_version",
+      "community": 164,
+      "norm_label": "manifest_format_version"
+    },
+    {
+      "label": "partitions",
+      "file_type": "code",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L14",
+      "id": "law_knowledge_base_manifest_partitions",
+      "community": 164,
+      "norm_label": "partitions"
+    },
+    {
+      "label": "_default",
+      "file_type": "code",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L15",
+      "id": "law_knowledge_base_manifest_partitions_default",
+      "community": 164,
+      "norm_label": "_default"
+    },
+    {
+      "label": "data_files",
+      "file_type": "code",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L16",
+      "id": "law_knowledge_base_manifest_default_data_files",
+      "community": 164,
+      "norm_label": "data_files"
+    },
+    {
+      "label": "delta_files",
+      "file_type": "code",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L17",
+      "id": "law_knowledge_base_manifest_default_delta_files",
+      "community": 164,
+      "norm_label": "delta_files"
+    },
+    {
+      "label": "schema_version",
+      "file_type": "code",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L20",
+      "id": "law_knowledge_base_manifest_schema_version",
+      "community": 164,
+      "norm_label": "schema_version"
+    },
+    {
+      "label": "version",
+      "file_type": "code",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L21",
+      "id": "law_knowledge_base_manifest_version",
+      "community": 164,
+      "norm_label": "version"
+    },
+    {
+      "label": "schema.json",
+      "file_type": "code",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/schema.json",
+      "source_location": "L1",
+      "id": "backend_app_rag_data_milvus_lite_db_collections_law_knowledge_base_schema_json",
+      "community": 218,
+      "norm_label": "schema.json"
+    },
+    {
+      "label": "collection_name",
+      "file_type": "code",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/schema.json",
+      "source_location": "L2",
+      "id": "law_knowledge_base_schema_collection_name",
+      "community": 218,
+      "norm_label": "collection_name"
+    },
+    {
+      "label": "enable_dynamic_field",
+      "file_type": "code",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/schema.json",
+      "source_location": "L3",
+      "id": "law_knowledge_base_schema_enable_dynamic_field",
+      "community": 218,
+      "norm_label": "enable_dynamic_field"
+    },
+    {
+      "label": "fields",
+      "file_type": "code",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/schema.json",
+      "source_location": "L4",
+      "id": "law_knowledge_base_schema_fields",
+      "community": 218,
+      "norm_label": "fields"
+    },
+    {
+      "label": "schema_format_version",
+      "file_type": "code",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/schema.json",
+      "source_location": "L54",
+      "id": "law_knowledge_base_schema_schema_format_version",
+      "community": 218,
+      "norm_label": "schema_format_version"
+    },
+    {
+      "label": "version",
+      "file_type": "code",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/schema.json",
+      "source_location": "L55",
+      "id": "law_knowledge_base_schema_version",
+      "community": 218,
+      "norm_label": "version"
+    },
+    {
       "label": "artifacts.py",
       "file_type": "code",
       "source_file": "backend/app/api/artifacts.py",
@@ -2938,7 +3127,7 @@
       "source_file": "backend/app/api/sessions.py",
       "source_location": "L1",
       "id": "backend_app_api_sessions_py",
-      "community": 20,
+      "community": 221,
       "norm_label": "sessions.py"
     },
     {
@@ -2947,7 +3136,7 @@
       "source_file": "backend/app/api/sessions.py",
       "source_location": "L14",
       "id": "api_sessions_createsessionrequest",
-      "community": 20,
+      "community": 221,
       "norm_label": "createsessionrequest"
     },
     {
@@ -2956,7 +3145,7 @@
       "source_file": "",
       "source_location": "",
       "id": "basemodel",
-      "community": 20,
+      "community": 221,
       "norm_label": "basemodel"
     },
     {
@@ -2965,7 +3154,7 @@
       "source_file": "backend/app/api/sessions.py",
       "source_location": "L21",
       "id": "api_sessions_create_sessions_router",
-      "community": 20,
+      "community": 221,
       "norm_label": "create_sessions_router()"
     },
     {
@@ -2974,7 +3163,7 @@
       "source_file": "backend/app/api/sessions.py",
       "source_location": "L1",
       "id": "api_sessions_rationale_1",
-      "community": 20,
+      "community": 221,
       "norm_label": "session rest endpoints."
     },
     {
@@ -3089,7 +3278,7 @@
       "label": "_chat_role()",
       "file_type": "code",
       "source_file": "backend/app/agents/common.py",
-      "source_location": "L24",
+      "source_location": "L23",
       "id": "agents_common_chat_role",
       "community": 142,
       "norm_label": "_chat_role()"
@@ -3098,7 +3287,7 @@
       "label": "messages_from_prompt()",
       "file_type": "code",
       "source_file": "backend/app/agents/common.py",
-      "source_location": "L31",
+      "source_location": "L30",
       "id": "agents_common_messages_from_prompt",
       "community": 142,
       "norm_label": "messages_from_prompt()"
@@ -3107,7 +3296,7 @@
       "label": "schema_note()",
       "file_type": "code",
       "source_file": "backend/app/agents/common.py",
-      "source_location": "L38",
+      "source_location": "L37",
       "id": "agents_common_schema_note",
       "community": 184,
       "norm_label": "schema_note()"
@@ -3116,19 +3305,10 @@
       "label": "normalize_key_aliases()",
       "file_type": "code",
       "source_file": "backend/app/agents/common.py",
-      "source_location": "L46",
+      "source_location": "L45",
       "id": "agents_common_normalize_key_aliases",
       "community": 142,
       "norm_label": "normalize_key_aliases()"
-    },
-    {
-      "label": "load_prompt()",
-      "file_type": "code",
-      "source_file": "backend/app/agents/common.py",
-      "source_location": "L57",
-      "id": "agents_common_load_prompt",
-      "community": 137,
-      "norm_label": "load_prompt()"
     },
     {
       "label": "Shared helpers for Agent node modules.",
@@ -3143,19 +3323,10 @@
       "label": "Map known provider key variants to the internal contract field names.",
       "file_type": "rationale",
       "source_file": "backend/app/agents/common.py",
-      "source_location": "L47",
-      "id": "agents_common_rationale_47",
+      "source_location": "L46",
+      "id": "agents_common_rationale_46",
       "community": 142,
       "norm_label": "map known provider key variants to the internal contract field names."
-    },
-    {
-      "label": "Load a system prompt file co-located with the agent module.      Args:         m",
-      "file_type": "rationale",
-      "source_file": "backend/app/agents/common.py",
-      "source_location": "L58",
-      "id": "agents_common_rationale_58",
-      "community": 137,
-      "norm_label": "load a system prompt file co-located with the agent module.      args:         m"
     },
     {
       "label": "__init__.py",
@@ -3242,7 +3413,7 @@
       "label": "build_finalize_node()",
       "file_type": "code",
       "source_file": "backend/app/agents/finalize/node.py",
-      "source_location": "L14",
+      "source_location": "L23",
       "id": "finalize_node_build_finalize_node",
       "community": 147,
       "norm_label": "build_finalize_node()"
@@ -3352,16 +3523,16 @@
       "source_file": "backend/app/agents/expert_b/node.py",
       "source_location": "L1",
       "id": "backend_app_agents_expert_b_node_py",
-      "community": 164,
+      "community": 135,
       "norm_label": "node.py"
     },
     {
       "label": "build_expert_b_node()",
       "file_type": "code",
       "source_file": "backend/app/agents/expert_b/node.py",
-      "source_location": "L16",
+      "source_location": "L14",
       "id": "expert_b_node_build_expert_b_node",
-      "community": 164,
+      "community": 135,
       "norm_label": "build_expert_b_node()"
     },
     {
@@ -3388,7 +3559,7 @@
       "source_file": "backend/app/agents/diagnosis/node.py",
       "source_location": "L1",
       "id": "backend_app_agents_diagnosis_node_py",
-      "community": 184,
+      "community": 135,
       "norm_label": "node.py"
     },
     {
@@ -3397,7 +3568,7 @@
       "source_file": "backend/app/agents/diagnosis/node.py",
       "source_location": "L18",
       "id": "diagnosis_node_build_diagnosis_node",
-      "community": 184,
+      "community": 135,
       "norm_label": "build_diagnosis_node()"
     },
     {
@@ -3406,7 +3577,7 @@
       "source_file": "backend/app/agents/diagnosis/node.py",
       "source_location": "L1",
       "id": "diagnosis_node_rationale_1",
-      "community": 184,
+      "community": 135,
       "norm_label": "diagnosis agent node."
     },
     {
@@ -3485,7 +3656,7 @@
       "label": "_normalize_target()",
       "file_type": "code",
       "source_file": "backend/app/agents/judge/node.py",
-      "source_location": "L28",
+      "source_location": "L26",
       "id": "judge_node_normalize_target",
       "community": 4,
       "norm_label": "_normalize_target()"
@@ -3494,7 +3665,7 @@
       "label": "_normalize_judge_report()",
       "file_type": "code",
       "source_file": "backend/app/agents/judge/node.py",
-      "source_location": "L42",
+      "source_location": "L40",
       "id": "judge_node_normalize_judge_report",
       "community": 4,
       "norm_label": "_normalize_judge_report()"
@@ -3503,7 +3674,7 @@
       "label": "build_judge_node()",
       "file_type": "code",
       "source_file": "backend/app/agents/judge/node.py",
-      "source_location": "L76",
+      "source_location": "L74",
       "id": "judge_node_build_judge_node",
       "community": 4,
       "norm_label": "build_judge_node()"
@@ -3512,8 +3683,8 @@
       "label": "\u5c06 LLM \u53ef\u80fd\u8f93\u51fa\u7684\u4e2d\u6587\u63cf\u8ff0\u89c4\u8303\u5316\u4e3a expert_a / expert_b / both.",
       "file_type": "rationale",
       "source_file": "backend/app/agents/judge/node.py",
-      "source_location": "L29",
-      "id": "judge_node_rationale_29",
+      "source_location": "L27",
+      "id": "judge_node_rationale_27",
       "community": 4,
       "norm_label": "\u5c06 llm \u53ef\u80fd\u8f93\u51fa\u7684\u4e2d\u6587\u63cf\u8ff0\u89c4\u8303\u5316\u4e3a expert_a / expert_b / both."
     },
@@ -3629,7 +3800,7 @@
       "label": "build_expert_a_node()",
       "file_type": "code",
       "source_file": "backend/app/agents/expert_a/node.py",
-      "source_location": "L16",
+      "source_location": "L14",
       "id": "expert_a_node_build_expert_a_node",
       "community": 135,
       "norm_label": "build_expert_a_node()"
@@ -3665,7 +3836,7 @@
       "label": "build_tool_agent_node()",
       "file_type": "code",
       "source_file": "backend/app/agents/tool_agent/node.py",
-      "source_location": "L45",
+      "source_location": "L51",
       "id": "tool_agent_node_build_tool_agent_node",
       "community": 81,
       "norm_label": "build_tool_agent_node()"
@@ -3701,7 +3872,7 @@
       "label": "_sources_from_retrieval_context()",
       "file_type": "code",
       "source_file": "backend/app/agents/chat_answer/node.py",
-      "source_location": "L15",
+      "source_location": "L24",
       "id": "chat_answer_node_sources_from_retrieval_context",
       "community": 143,
       "norm_label": "_sources_from_retrieval_context()"
@@ -3710,7 +3881,7 @@
       "label": "build_chat_answer_node()",
       "file_type": "code",
       "source_file": "backend/app/agents/chat_answer/node.py",
-      "source_location": "L28",
+      "source_location": "L38",
       "id": "chat_answer_node_build_chat_answer_node",
       "community": 143,
       "norm_label": "build_chat_answer_node()"
@@ -3746,7 +3917,7 @@
       "label": "_normalize_node_id()",
       "file_type": "code",
       "source_file": "backend/app/agents/planner/node.py",
-      "source_location": "L20",
+      "source_location": "L18",
       "id": "planner_node_normalize_node_id",
       "community": 136,
       "norm_label": "_normalize_node_id()"
@@ -3755,7 +3926,7 @@
       "label": "_normalize_learning_path_item()",
       "file_type": "code",
       "source_file": "backend/app/agents/planner/node.py",
-      "source_location": "L27",
+      "source_location": "L25",
       "id": "planner_node_normalize_learning_path_item",
       "community": 136,
       "norm_label": "_normalize_learning_path_item()"
@@ -3764,7 +3935,7 @@
       "label": "build_planner_node()",
       "file_type": "code",
       "source_file": "backend/app/agents/planner/node.py",
-      "source_location": "L35",
+      "source_location": "L33",
       "id": "planner_node_build_planner_node",
       "community": 136,
       "norm_label": "build_planner_node()"
@@ -3800,7 +3971,7 @@
       "label": "_local_intent_hint()",
       "file_type": "code",
       "source_file": "backend/app/agents/route/node.py",
-      "source_location": "L32",
+      "source_location": "L40",
       "id": "route_node_local_intent_hint",
       "community": 83,
       "norm_label": "_local_intent_hint()"
@@ -3809,7 +3980,7 @@
       "label": "build_route_node()",
       "file_type": "code",
       "source_file": "backend/app/agents/route/node.py",
-      "source_location": "L40",
+      "source_location": "L48",
       "id": "route_node_build_route_node",
       "community": 83,
       "norm_label": "build_route_node()"
@@ -4000,7 +4171,7 @@
       "source_file": "backend/app/graph/workflow.py",
       "source_location": "L480",
       "id": "graph_workflow_run_workflow",
-      "community": 141,
+      "community": 152,
       "norm_label": "run_workflow()"
     },
     {
@@ -4450,7 +4621,7 @@
       "source_file": "backend/app/core/llm.py",
       "source_location": "L88",
       "id": "core_llm_toolcall",
-      "community": 73,
+      "community": 214,
       "norm_label": "toolcall"
     },
     {
@@ -4459,7 +4630,7 @@
       "source_file": "backend/app/core/llm.py",
       "source_location": "L97",
       "id": "core_llm_tooldefinition",
-      "community": 132,
+      "community": 214,
       "norm_label": "tooldefinition"
     },
     {
@@ -4468,7 +4639,7 @@
       "source_file": "backend/app/core/llm.py",
       "source_location": "L106",
       "id": "core_llm_llmresponsewithtools",
-      "community": 73,
+      "community": 214,
       "norm_label": "llmresponsewithtools"
     },
     {
@@ -4477,7 +4648,7 @@
       "source_file": "backend/app/core/llm.py",
       "source_location": "L113",
       "id": "core_llm_llmclient",
-      "community": 6,
+      "community": 217,
       "norm_label": "llmclient"
     },
     {
@@ -4486,7 +4657,7 @@
       "source_file": "",
       "source_location": "",
       "id": "protocol",
-      "community": 6,
+      "community": 217,
       "norm_label": "protocol"
     },
     {
@@ -4495,7 +4666,7 @@
       "source_file": "backend/app/core/llm.py",
       "source_location": "L114",
       "id": "core_llm_llmclient_generate_json",
-      "community": 6,
+      "community": 217,
       "norm_label": ".generate_json()"
     },
     {
@@ -4504,7 +4675,7 @@
       "source_file": "backend/app/core/llm.py",
       "source_location": "L119",
       "id": "core_llm_llmclient_generate_with_tools",
-      "community": 6,
+      "community": 217,
       "norm_label": ".generate_with_tools()"
     },
     {
@@ -4515,15 +4686,6 @@
       "id": "core_llm_llmconfigurationerror",
       "community": 79,
       "norm_label": "llmconfigurationerror"
-    },
-    {
-      "label": "RuntimeError",
-      "file_type": "code",
-      "source_file": "",
-      "source_location": "",
-      "id": "runtimeerror",
-      "community": 6,
-      "norm_label": "runtimeerror"
     },
     {
       "label": "LLMProviderError",
@@ -4657,7 +4819,7 @@
       "source_file": "backend/app/core/llm.py",
       "source_location": "L417",
       "id": "core_llm_defaultllmclient",
-      "community": 73,
+      "community": 151,
       "norm_label": "defaultllmclient"
     },
     {
@@ -4666,7 +4828,7 @@
       "source_file": "backend/app/core/llm.py",
       "source_location": "L422",
       "id": "core_llm_defaultllmclient_init",
-      "community": 73,
+      "community": 151,
       "norm_label": ".__init__()"
     },
     {
@@ -4693,7 +4855,7 @@
       "source_file": "backend/app/core/llm.py",
       "source_location": "L438",
       "id": "core_llm_defaultllmclient_generate_with_tools",
-      "community": 73,
+      "community": 151,
       "norm_label": ".generate_with_tools()"
     },
     {
@@ -4756,7 +4918,7 @@
       "source_file": "backend/app/core/llm.py",
       "source_location": "L89",
       "id": "core_llm_rationale_89",
-      "community": 132,
+      "community": 214,
       "norm_label": "a tool call requested by the llm."
     },
     {
@@ -4765,7 +4927,7 @@
       "source_file": "backend/app/core/llm.py",
       "source_location": "L98",
       "id": "core_llm_rationale_98",
-      "community": 132,
+      "community": 214,
       "norm_label": "definition of a tool that can be called by the llm."
     },
     {
@@ -4774,7 +4936,7 @@
       "source_file": "backend/app/core/llm.py",
       "source_location": "L107",
       "id": "core_llm_rationale_107",
-      "community": 73,
+      "community": 214,
       "norm_label": "response from an llm call that supports tool calling."
     },
     {
@@ -4783,7 +4945,7 @@
       "source_file": "backend/app/core/llm.py",
       "source_location": "L117",
       "id": "core_llm_rationale_117",
-      "community": 6,
+      "community": 217,
       "norm_label": "generate and parse a json response from a chat model."
     },
     {
@@ -4792,7 +4954,7 @@
       "source_file": "backend/app/core/llm.py",
       "source_location": "L126",
       "id": "core_llm_rationale_126",
-      "community": 6,
+      "community": 217,
       "norm_label": "generate a response with tool-calling capability. does not use json_mode."
     },
     {
@@ -4819,7 +4981,7 @@
       "source_file": "backend/app/core/llm.py",
       "source_location": "L418",
       "id": "core_llm_rationale_418",
-      "community": 73,
+      "community": 151,
       "norm_label": "adapter used when all agent nodes should use one provider."
     },
     {
@@ -4871,7 +5033,7 @@
       "label": "summary_lines()",
       "file_type": "code",
       "source_file": "backend/scripts/run_workflow.py",
-      "source_location": "L15",
+      "source_location": "L14",
       "id": "scripts_run_workflow_summary_lines",
       "community": 160,
       "norm_label": "summary_lines()"
@@ -4880,7 +5042,7 @@
       "label": "main()",
       "file_type": "code",
       "source_file": "backend/scripts/run_workflow.py",
-      "source_location": "L55",
+      "source_location": "L54",
       "id": "scripts_run_workflow_main",
       "community": 160,
       "norm_label": "main()"
@@ -5489,28 +5651,19 @@
       "norm_label": "rag \u5de5\u5177\u51fd\u6570"
     },
     {
-      "label": "\u5f00\u542f\u771f\u5b9e RAG \u6a21\u5f0f",
+      "label": "\u5f53\u524d\u771f\u5b9e RAG \u4f9d\u8d56",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L286",
-      "id": "patent_tutor_agent_readme_\u5f00\u542f\u771f\u5b9e_rag_\u6a21\u5f0f",
+      "id": "patent_tutor_agent_readme_\u5f53\u524d\u771f\u5b9e_rag_\u4f9d\u8d56",
       "community": 24,
-      "norm_label": "\u5f00\u542f\u771f\u5b9e rag \u6a21\u5f0f"
-    },
-    {
-      "label": "code:env (RAG_MOCK=0)",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L290",
-      "id": "patent_tutor_agent_readme_codeblock_19",
-      "community": 24,
-      "norm_label": "code:env (rag_mock=0)"
+      "norm_label": "\u5f53\u524d\u771f\u5b9e rag \u4f9d\u8d56"
     },
     {
       "label": "FastAPI \u670d\u52a1",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L303",
+      "source_location": "L298",
       "id": "patent_tutor_agent_readme_fastapi_\u670d\u52a1",
       "community": 24,
       "norm_label": "fastapi \u670d\u52a1"
@@ -5519,7 +5672,7 @@
       "label": "\u77e5\u8bc6\u56fe\u8c31",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L314",
+      "source_location": "L309",
       "id": "patent_tutor_agent_readme_\u77e5\u8bc6\u56fe\u8c31",
       "community": 24,
       "norm_label": "\u77e5\u8bc6\u56fe\u8c31"
@@ -5528,8 +5681,8 @@
       "label": "code:bash (graphify query \"<\u95ee\u9898>\"        # \u56fe\u8c31\u95ee\u7b54)",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L326",
-      "id": "patent_tutor_agent_readme_codeblock_20",
+      "source_location": "L321",
+      "id": "patent_tutor_agent_readme_codeblock_19",
       "community": 24,
       "norm_label": "code:bash (graphify query \"<\u95ee\u9898>\"        # \u56fe\u8c31\u95ee\u7b54)"
     },
@@ -5537,7 +5690,7 @@
       "label": "\u4f9d\u8d56\u7ba1\u7406",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L333",
+      "source_location": "L328",
       "id": "patent_tutor_agent_readme_\u4f9d\u8d56\u7ba1\u7406",
       "community": 24,
       "norm_label": "\u4f9d\u8d56\u7ba1\u7406"
@@ -5546,8 +5699,8 @@
       "label": "code:bash (uv export --format requirements-txt --output-file requiremen)",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L337",
-      "id": "patent_tutor_agent_readme_codeblock_21",
+      "source_location": "L332",
+      "id": "patent_tutor_agent_readme_codeblock_20",
       "community": 24,
       "norm_label": "code:bash (uv export --format requirements-txt --output-file requiremen)"
     },
@@ -5555,7 +5708,7 @@
       "label": "\u63d0\u4ea4\u89c4\u8303",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L341",
+      "source_location": "L336",
       "id": "patent_tutor_agent_readme_\u63d0\u4ea4\u89c4\u8303",
       "community": 24,
       "norm_label": "\u63d0\u4ea4\u89c4\u8303"
@@ -10057,7 +10210,7 @@
       "source_file": "docs/implementation-plan.md",
       "source_location": "L370",
       "id": "docs_implementation_plan_\u8def\u7531\u8bbe\u8ba1_\u5b8c\u6574\u7aef\u70b9\u5217\u8868",
-      "community": 158,
+      "community": 219,
       "norm_label": "\u8def\u7531\u8bbe\u8ba1:\u5b8c\u6574\u7aef\u70b9\u5217\u8868"
     },
     {
@@ -10084,7 +10237,7 @@
       "source_file": "docs/implementation-plan.md",
       "source_location": "L383",
       "id": "docs_implementation_plan_\u5efa\u8bae\u65b0\u589e\u7aef\u70b9",
-      "community": 158,
+      "community": 219,
       "norm_label": "\u5efa\u8bae\u65b0\u589e\u7aef\u70b9"
     },
     {
@@ -10093,7 +10246,7 @@
       "source_file": "docs/implementation-plan.md",
       "source_location": "L385",
       "id": "docs_implementation_plan_codeblock_14",
-      "community": 158,
+      "community": 219,
       "norm_label": "code:block14 (delete /sessions/{session_id}                \u53d6\u6d88\u8fd0\u884c\u4e2d\u7684\u4f1a\u8bdd)"
     },
     {
@@ -10102,7 +10255,7 @@
       "source_file": "docs/implementation-plan.md",
       "source_location": "L391",
       "id": "docs_implementation_plan_\u4e3a\u4ec0\u4e48\u4e0d\u9700\u8981\u66f4\u591a\u8def\u7531",
-      "community": 158,
+      "community": 219,
       "norm_label": "\u4e3a\u4ec0\u4e48\u4e0d\u9700\u8981\u66f4\u591a\u8def\u7531?"
     },
     {
@@ -10210,7 +10363,7 @@
       "source_file": "docs/implementation-plan.md",
       "source_location": "L525",
       "id": "docs_implementation_plan_codeblock_16",
-      "community": 133,
+      "community": 158,
       "norm_label": "code:block16 (user_input (\"\u6211\u60f3\u5b66\u4e60\u4e13\u5229\u65b0\u9896\u6027\"))"
     },
     {
@@ -10219,7 +10372,7 @@
       "source_file": "docs/implementation-plan.md",
       "source_location": "L545",
       "id": "docs_implementation_plan_p3_\u524d\u7aef\u770b\u677f_mvp",
-      "community": 158,
+      "community": 219,
       "norm_label": "p3 \u2014 \u524d\u7aef\u770b\u677f mvp"
     },
     {
@@ -10228,7 +10381,7 @@
       "source_file": "docs/implementation-plan.md",
       "source_location": "L551",
       "id": "docs_implementation_plan_\u4efb\u52a1\u62c6\u89e3_551",
-      "community": 158,
+      "community": 219,
       "norm_label": "\u4efb\u52a1\u62c6\u89e3"
     },
     {
@@ -10237,7 +10390,7 @@
       "source_file": "docs/implementation-plan.md",
       "source_location": "L564",
       "id": "docs_implementation_plan_\u524d\u7aef\u4f9d\u8d56_p1_\u7684\u63a5\u53e3",
-      "community": 158,
+      "community": 219,
       "norm_label": "\u524d\u7aef\u4f9d\u8d56 p1 \u7684\u63a5\u53e3"
     },
     {
@@ -10300,7 +10453,7 @@
       "source_file": "docs/implementation-plan.md",
       "source_location": "L630",
       "id": "docs_implementation_plan_p5_\u8bb0\u5fc6\u7cfb\u7edf",
-      "community": 133,
+      "community": 65,
       "norm_label": "p5 \u2014 \u8bb0\u5fc6\u7cfb\u7edf"
     },
     {
@@ -10309,7 +10462,7 @@
       "source_file": "docs/implementation-plan.md",
       "source_location": "L636",
       "id": "docs_implementation_plan_langgraph_\u8bb0\u5fc6\u7cfb\u7edf\u67b6\u6784_v1_0",
-      "community": 133,
+      "community": 158,
       "norm_label": "langgraph \u8bb0\u5fc6\u7cfb\u7edf\u67b6\u6784(v1.0+)"
     },
     {
@@ -10327,7 +10480,7 @@
       "source_file": "docs/implementation-plan.md",
       "source_location": "L668",
       "id": "docs_implementation_plan_store_\u6838\u5fc3\u6982\u5ff5",
-      "community": 133,
+      "community": 65,
       "norm_label": "store \u6838\u5fc3\u6982\u5ff5"
     },
     {
@@ -10399,7 +10552,7 @@
       "source_file": "docs/implementation-plan.md",
       "source_location": "L787",
       "id": "docs_implementation_plan_\u4efb\u52a1\u62c6\u89e3_787",
-      "community": 133,
+      "community": 65,
       "norm_label": "\u4efb\u52a1\u62c6\u89e3"
     },
     {
@@ -10435,7 +10588,7 @@
       "source_file": "docs/implementation-plan.md",
       "source_location": "L845",
       "id": "docs_implementation_plan_codeblock_25",
-      "community": 9,
+      "community": 133,
       "norm_label": "code:block25 (# \u641c\u7d22\u4e0e\u5f53\u524d\u5b66\u4e60\u76ee\u6807\u6700\u76f8\u5173\u7684\u5386\u53f2\u753b\u50cf)"
     },
     {
@@ -10444,7 +10597,7 @@
       "source_file": "docs/implementation-plan.md",
       "source_location": "L852",
       "id": "docs_implementation_plan_\u4e0e\u65e7\u7248\u8bbe\u8ba1\u7684\u5173\u952e\u5dee\u5f02",
-      "community": 133,
+      "community": 65,
       "norm_label": "\u4e0e\u65e7\u7248\u8bbe\u8ba1\u7684\u5173\u952e\u5dee\u5f02"
     },
     {
@@ -10471,7 +10624,7 @@
       "source_file": "docs/implementation-plan.md",
       "source_location": "L873",
       "id": "docs_implementation_plan_\u4f9d\u8d56\u5173\u7cfb\u603b\u56fe",
-      "community": 65,
+      "community": 9,
       "norm_label": "\u4f9d\u8d56\u5173\u7cfb\u603b\u56fe"
     },
     {
@@ -10480,7 +10633,7 @@
       "source_file": "docs/implementation-plan.md",
       "source_location": "L875",
       "id": "docs_implementation_plan_codeblock_27",
-      "community": 65,
+      "community": 9,
       "norm_label": "code:block27 (\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510)"
     },
     {
@@ -10489,7 +10642,7 @@
       "source_file": "docs/implementation-plan.md",
       "source_location": "L924",
       "id": "docs_implementation_plan_\u5efa\u8bae\u6267\u884c\u987a\u5e8f",
-      "community": 9,
+      "community": 133,
       "norm_label": "\u5efa\u8bae\u6267\u884c\u987a\u5e8f"
     },
     {
@@ -10498,7 +10651,7 @@
       "source_file": "docs/implementation-plan.md",
       "source_location": "L926",
       "id": "docs_implementation_plan_codeblock_28",
-      "community": 9,
+      "community": 133,
       "norm_label": "code:block28 (\u7b2c 0 \u6b65: p0 (\u5de5\u4f5c\u6d41\u5b8c\u5584)                    \u2190 \u8fdb\u884c\u4e2d)"
     },
     {
@@ -10507,7 +10660,7 @@
       "source_file": "docs/implementation-plan.md",
       "source_location": "L944",
       "id": "docs_implementation_plan_\u9644\u5f55_langgraph_\u751f\u4ea7\u90e8\u7f72_langgraph_dev_langgraph_up",
-      "community": 65,
+      "community": 9,
       "norm_label": "\u9644\u5f55:langgraph \u751f\u4ea7\u90e8\u7f72(`langgraph dev` / `langgraph up`)"
     },
     {
@@ -10516,7 +10669,7 @@
       "source_file": "docs/implementation-plan.md",
       "source_location": "L948",
       "id": "docs_implementation_plan_codeblock_29",
-      "community": 65,
+      "community": 9,
       "norm_label": "code:json (// langgraph.json(\u9879\u76ee\u6839\u76ee\u5f55))"
     },
     {
@@ -10525,7 +10678,7 @@
       "source_file": "docs/implementation-plan.md",
       "source_location": "L959",
       "id": "docs_implementation_plan_codeblock_30",
-      "community": 65,
+      "community": 9,
       "norm_label": "code:bash (langgraph dev   # \u542f\u52a8\u5f00\u53d1\u670d\u52a1\u5668(\u5185\u5b58\u6a21\u5f0f))"
     },
     {
@@ -10622,7 +10775,7 @@
       "label": "\u76ee\u6807\u5b9e\u73b0\u8981\u6c42",
       "file_type": "document",
       "source_file": "docs/rag-interface-spec.md",
-      "source_location": "L88",
+      "source_location": "L89",
       "id": "docs_rag_interface_spec_\u76ee\u6807\u5b9e\u73b0\u8981\u6c42",
       "community": 99,
       "norm_label": "\u76ee\u6807\u5b9e\u73b0\u8981\u6c42"
@@ -10631,7 +10784,7 @@
       "label": "RAG \u68c0\u7d22\u6a21\u5757\u9700\u8981\u505a\u7684\u4e8b",
       "file_type": "document",
       "source_file": "docs/rag-interface-spec.md",
-      "source_location": "L90",
+      "source_location": "L91",
       "id": "docs_rag_interface_spec_rag_\u68c0\u7d22\u6a21\u5757\u9700\u8981\u505a\u7684\u4e8b",
       "community": 99,
       "norm_label": "rag \u68c0\u7d22\u6a21\u5757\u9700\u8981\u505a\u7684\u4e8b"
@@ -10640,7 +10793,7 @@
       "label": "\u68c0\u7d22\u65b9\u6cd5",
       "file_type": "document",
       "source_file": "docs/rag-interface-spec.md",
-      "source_location": "L100",
+      "source_location": "L101",
       "id": "docs_rag_interface_spec_\u68c0\u7d22\u65b9\u6cd5",
       "community": 99,
       "norm_label": "\u68c0\u7d22\u65b9\u6cd5"
@@ -10649,7 +10802,7 @@
       "label": "\u9700\u8981\u5165\u5e93\u7684\u6587\u6863",
       "file_type": "document",
       "source_file": "docs/rag-interface-spec.md",
-      "source_location": "L110",
+      "source_location": "L111",
       "id": "docs_rag_interface_spec_\u9700\u8981\u5165\u5e93\u7684\u6587\u6863",
       "community": 99,
       "norm_label": "\u9700\u8981\u5165\u5e93\u7684\u6587\u6863"
@@ -10658,28 +10811,28 @@
       "label": "\u5d4c\u5165\u6a21\u578b\u5efa\u8bae",
       "file_type": "document",
       "source_file": "docs/rag-interface-spec.md",
-      "source_location": "L118",
+      "source_location": "L119",
       "id": "docs_rag_interface_spec_\u5d4c\u5165\u6a21\u578b\u5efa\u8bae",
       "community": 99,
       "norm_label": "\u5d4c\u5165\u6a21\u578b\u5efa\u8bae"
     },
     {
-      "label": "\u66ff\u6362 Mock \u7684\u65b9\u6cd5",
+      "label": "\u540e\u7eed\u589e\u5f3a\u65b9\u5411",
       "file_type": "document",
       "source_file": "docs/rag-interface-spec.md",
-      "source_location": "L123",
-      "id": "docs_rag_interface_spec_\u66ff\u6362_mock_\u7684\u65b9\u6cd5",
+      "source_location": "L124",
+      "id": "docs_rag_interface_spec_\u540e\u7eed\u589e\u5f3a\u65b9\u5411",
       "community": 99,
-      "norm_label": "\u66ff\u6362 mock \u7684\u65b9\u6cd5"
+      "norm_label": "\u540e\u7eed\u589e\u5f3a\u65b9\u5411"
     },
     {
-      "label": "code:python (# \u5f53\u524d\uff08mock\uff09)",
+      "label": "code:python (def rag_retrieve(query: str = \"\", top_k: int = 5) -> list[Re)",
       "file_type": "document",
       "source_file": "docs/rag-interface-spec.md",
-      "source_location": "L127",
+      "source_location": "L128",
       "id": "docs_rag_interface_spec_codeblock_4",
       "community": 99,
-      "norm_label": "code:python (# \u5f53\u524d(mock))"
+      "norm_label": "code:python (def rag_retrieve(query: str = \"\", top_k: int = 5) -> list[re)"
     },
     {
       "label": "\u7ade\u8d5b\u65b9\u6848\u6c47\u62a5_293993d0.md",
@@ -12599,6 +12752,168 @@
       "norm_label": "frontend contract placeholder"
     },
     {
+      "label": ".test_empty_query_still_returns_mock()",
+      "file_type": "code",
+      "source_file": "backend/tests/unit/test_schema_extensions.py",
+      "source_location": "L186",
+      "community": 1,
+      "norm_label": ".test_empty_query_still_returns_mock()",
+      "id": "unit_test_schema_extensions_testragretrieve_test_empty_query_still_returns_mock"
+    },
+    {
+      "label": "build_rag.py",
+      "file_type": "code",
+      "source_file": "backend/app/rag/build_rag.py",
+      "source_location": "L1",
+      "community": 161,
+      "norm_label": "build_rag.py",
+      "id": "backend_app_rag_build_rag_py"
+    },
+    {
+      "label": "load_model()",
+      "file_type": "code",
+      "source_file": "backend/app/rag/build_rag.py",
+      "source_location": "L20",
+      "community": 161,
+      "norm_label": "load_model()",
+      "id": "rag_build_rag_load_model"
+    },
+    {
+      "label": "encode_batch()",
+      "file_type": "code",
+      "source_file": "backend/app/rag/build_rag.py",
+      "source_location": "L26",
+      "community": 161,
+      "norm_label": "encode_batch()",
+      "id": "rag_build_rag_encode_batch"
+    },
+    {
+      "label": "main()",
+      "file_type": "code",
+      "source_file": "backend/app/rag/build_rag.py",
+      "source_location": "L35",
+      "community": 161,
+      "norm_label": "main()",
+      "id": "rag_build_rag_main"
+    },
+    {
+      "label": "_is_mock_mode()",
+      "file_type": "code",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L67",
+      "community": 1,
+      "norm_label": "_is_mock_mode()",
+      "id": "rag_retriever_is_mock_mode"
+    },
+    {
+      "label": "get_chroma_collection()",
+      "file_type": "code",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L121",
+      "community": 1,
+      "norm_label": "get_chroma_collection()",
+      "id": "rag_retriever_get_chroma_collection"
+    },
+    {
+      "label": "encode_query()",
+      "file_type": "code",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L138",
+      "community": 1,
+      "norm_label": "encode_query()",
+      "id": "rag_retriever_encode_query"
+    },
+    {
+      "label": "RAG retrieval tool \u2014 mock-first, real vector search when RAG_MOCK=0.",
+      "file_type": "rationale",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L1",
+      "community": 1,
+      "norm_label": "rag retrieval tool \u2014 mock-first, real vector search when rag_mock=0.",
+      "id": "rag_retriever_rationale_1"
+    },
+    {
+      "label": "Return True unless RAG_MOCK is explicitly set to '0'.",
+      "file_type": "rationale",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L68",
+      "community": 1,
+      "norm_label": "return true unless rag_mock is explicitly set to '0'.",
+      "id": "rag_retriever_rationale_68"
+    },
+    {
+      "label": "Retrieve relevant patent law chunks for *query*.      In mock mode (the default)",
+      "file_type": "rationale",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L154",
+      "community": 1,
+      "norm_label": "retrieve relevant patent law chunks for *query*.      in mock mode (the default)",
+      "id": "rag_retriever_rationale_154"
+    },
+    {
+      "label": "load_prompt()",
+      "file_type": "code",
+      "source_file": "backend/app/agents/common.py",
+      "source_location": "L57",
+      "community": 137,
+      "norm_label": "load_prompt()",
+      "id": "agents_common_load_prompt"
+    },
+    {
+      "label": "Map known provider key variants to the internal contract field names.",
+      "file_type": "rationale",
+      "source_file": "backend/app/agents/common.py",
+      "source_location": "L47",
+      "community": 142,
+      "norm_label": "map known provider key variants to the internal contract field names.",
+      "id": "agents_common_rationale_47"
+    },
+    {
+      "label": "Load a system prompt file co-located with the agent module.      Args:         m",
+      "file_type": "rationale",
+      "source_file": "backend/app/agents/common.py",
+      "source_location": "L58",
+      "community": 137,
+      "norm_label": "load a system prompt file co-located with the agent module.      args:         m",
+      "id": "agents_common_rationale_58"
+    },
+    {
+      "label": "\u5c06 LLM \u53ef\u80fd\u8f93\u51fa\u7684\u4e2d\u6587\u63cf\u8ff0\u89c4\u8303\u5316\u4e3a expert_a / expert_b / both.",
+      "file_type": "rationale",
+      "source_file": "backend/app/agents/judge/node.py",
+      "source_location": "L29",
+      "community": 4,
+      "norm_label": "\u5c06 llm \u53ef\u80fd\u8f93\u51fa\u7684\u4e2d\u6587\u63cf\u8ff0\u89c4\u8303\u5316\u4e3a expert_a / expert_b / both.",
+      "id": "judge_node_rationale_29"
+    },
+    {
+      "label": "\u5f00\u542f\u771f\u5b9e RAG \u6a21\u5f0f",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L286",
+      "community": 24,
+      "norm_label": "\u5f00\u542f\u771f\u5b9e rag \u6a21\u5f0f",
+      "id": "patent_tutor_agent_readme_\u5f00\u542f\u771f\u5b9e_rag_\u6a21\u5f0f"
+    },
+    {
+      "label": "code:bash (uv export --format requirements-txt --output-file requiremen)",
+      "file_type": "document",
+      "source_file": "README.md",
+      "source_location": "L337",
+      "community": 24,
+      "norm_label": "code:bash (uv export --format requirements-txt --output-file requiremen)",
+      "id": "patent_tutor_agent_readme_codeblock_21"
+    },
+    {
+      "label": "\u66ff\u6362 Mock \u7684\u65b9\u6cd5",
+      "file_type": "document",
+      "source_file": "docs/rag-interface-spec.md",
+      "source_location": "L123",
+      "community": 99,
+      "norm_label": "\u66ff\u6362 mock \u7684\u65b9\u6cd5",
+      "id": "docs_rag_interface_spec_\u66ff\u6362_mock_\u7684\u65b9\u6cd5"
+    },
+    {
       "label": "__init__.py",
       "file_type": "code",
       "source_file": "app/agents/__init__.py",
@@ -12828,7 +13143,7 @@
       "file_type": "code",
       "source_file": "app/agents/expert_a/cross_review.py",
       "source_location": "L1",
-      "community": 135,
+      "community": 184,
       "norm_label": "cross_review.py",
       "id": "app_agents_expert_a_cross_review_py"
     },
@@ -12837,7 +13152,7 @@
       "file_type": "code",
       "source_file": "app/agents/expert_a/cross_review.py",
       "source_location": "L16",
-      "community": 135,
+      "community": 184,
       "norm_label": "build_expert_a_cross_review_node()",
       "id": "expert_a_cross_review_build_expert_a_cross_review_node"
     },
@@ -12846,7 +13161,7 @@
       "file_type": "rationale",
       "source_file": "app/agents/expert_a/cross_review.py",
       "source_location": "L1",
-      "community": 135,
+      "community": 184,
       "norm_label": "expert a cross-review node \u2014 reviews expert b's draft for legal accuracy.",
       "id": "expert_a_cross_review_rationale_1"
     },
@@ -12873,7 +13188,7 @@
       "file_type": "code",
       "source_file": "app/agents/expert_a/revise.py",
       "source_location": "L1",
-      "community": 184,
+      "community": 132,
       "norm_label": "revise.py",
       "id": "app_agents_expert_a_revise_py"
     },
@@ -12882,7 +13197,7 @@
       "file_type": "code",
       "source_file": "app/agents/expert_a/revise.py",
       "source_location": "L16",
-      "community": 184,
+      "community": 132,
       "norm_label": "build_expert_a_revise_node()",
       "id": "expert_a_revise_build_expert_a_revise_node"
     },
@@ -12891,7 +13206,7 @@
       "file_type": "rationale",
       "source_file": "app/agents/expert_a/revise.py",
       "source_location": "L1",
-      "community": 184,
+      "community": 132,
       "norm_label": "expert a revision node \u2014 responds to expert b's cross-review.",
       "id": "expert_a_revise_rationale_1"
     },
@@ -12945,7 +13260,7 @@
       "file_type": "code",
       "source_file": "app/agents/expert_b/node.py",
       "source_location": "L1",
-      "community": 164,
+      "community": 135,
       "norm_label": "node.py",
       "id": "app_agents_expert_b_node_py"
     },
@@ -12954,7 +13269,7 @@
       "file_type": "code",
       "source_file": "app/agents/expert_b/revise.py",
       "source_location": "L1",
-      "community": 182,
+      "community": 141,
       "norm_label": "revise.py",
       "id": "app_agents_expert_b_revise_py"
     },
@@ -12963,7 +13278,7 @@
       "file_type": "code",
       "source_file": "app/agents/expert_b/revise.py",
       "source_location": "L16",
-      "community": 182,
+      "community": 141,
       "norm_label": "build_expert_b_revise_node()",
       "id": "expert_b_revise_build_expert_b_revise_node"
     },
@@ -12972,7 +13287,7 @@
       "file_type": "rationale",
       "source_file": "app/agents/expert_b/revise.py",
       "source_location": "L1",
-      "community": 182,
+      "community": 141,
       "norm_label": "expert b revision node \u2014 responds to expert a's cross-review.",
       "id": "expert_b_revise_rationale_1"
     },
@@ -13053,7 +13368,7 @@
       "file_type": "code",
       "source_file": "app/agents/lightweight_review.py",
       "source_location": "L1",
-      "community": 135,
+      "community": 184,
       "norm_label": "lightweight_review.py",
       "id": "app_agents_lightweight_review_py"
     },
@@ -13062,7 +13377,7 @@
       "file_type": "code",
       "source_file": "app/agents/lightweight_review.py",
       "source_location": "L16",
-      "community": 135,
+      "community": 184,
       "norm_label": "build_lightweight_review_node()",
       "id": "agents_lightweight_review_build_lightweight_review_node"
     },
@@ -13071,7 +13386,7 @@
       "file_type": "rationale",
       "source_file": "app/agents/lightweight_review.py",
       "source_location": "L1",
-      "community": 135,
+      "community": 184,
       "norm_label": "lightweight review agent node \u2014 quick peer review of changed paragraphs only.",
       "id": "agents_lightweight_review_rationale_1"
     },
@@ -13179,7 +13494,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L1",
-      "community": 159,
+      "community": 156,
       "norm_label": "memory-design-inspiration.md",
       "id": "memory_design_inspiration_md"
     },
@@ -13233,7 +13548,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L1",
-      "community": 159,
+      "community": 156,
       "norm_label": "\u8bb0\u5fc6\u7cfb\u7edf\u8bbe\u8ba1\u501f\u9274:\u4ece claude code \u5230 patent tutor agent",
       "id": "docs_memory_design_inspiration_\u8bb0\u5fc6\u7cfb\u7edf\u8bbe\u8ba1\u501f\u9274_\u4ece_claude_code_\u5230_patent_tutor_agent"
     },
@@ -13494,7 +13809,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L721",
-      "community": 159,
+      "community": 156,
       "norm_label": "\u4e94\u3001\u8bbe\u8ba1\u51b3\u7b56\u4e0e\u6743\u8861",
       "id": "docs_memory_design_inspiration_\u4e94_\u8bbe\u8ba1\u51b3\u7b56\u4e0e\u6743\u8861"
     },
@@ -13503,7 +13818,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L723",
-      "community": 159,
+      "community": 156,
       "norm_label": "5.1 \u4e3a\u4ec0\u4e48\u9009\u62e9\u6587\u4ef6\u800c\u4e0d\u662f\u6570\u636e\u5e93",
       "id": "docs_memory_design_inspiration_5_1_\u4e3a\u4ec0\u4e48\u9009\u62e9\u6587\u4ef6\u800c\u4e0d\u662f\u6570\u636e\u5e93"
     },
@@ -13512,7 +13827,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L739",
-      "community": 159,
+      "community": 156,
       "norm_label": "5.2 \u4e3a\u4ec0\u4e48\u7528\u5b50 agent \u63d0\u53d6\u800c\u4e0d\u662f\u5728 workflow \u5185\u76f4\u63a5\u5199",
       "id": "docs_memory_design_inspiration_5_2_\u4e3a\u4ec0\u4e48\u7528\u5b50_agent_\u63d0\u53d6\u800c\u4e0d\u662f\u5728_workflow_\u5185\u76f4\u63a5\u5199"
     },
@@ -13521,7 +13836,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L751",
-      "community": 159,
+      "community": 156,
       "norm_label": "5.3 \u4e24\u6761\u5199\u5165\u8def\u5f84\u7684\u4e92\u65a5",
       "id": "docs_memory_design_inspiration_5_3_\u4e24\u6761\u5199\u5165\u8def\u5f84\u7684\u4e92\u65a5"
     },
@@ -13530,7 +13845,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L760",
-      "community": 159,
+      "community": 156,
       "norm_label": "\u516d\u3001\u603b\u7ed3",
       "id": "docs_memory_design_inspiration_\u516d_\u603b\u7ed3"
     },
@@ -13539,7 +13854,7 @@
       "file_type": "document",
       "source_file": "memory-design-inspiration.md",
       "source_location": "L784",
-      "community": 159,
+      "community": 156,
       "norm_label": "\u53c2\u8003\u8d44\u6599",
       "id": "docs_memory_design_inspiration_\u53c2\u8003\u8d44\u6599"
     },
@@ -13683,7 +13998,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L57",
-      "community": 132,
+      "community": 214,
       "norm_label": "tooldefinition should serialize to openai-compatible tool dict.",
       "id": "unit_test_llm_tools_rationale_57"
     },
@@ -13692,7 +14007,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L97",
-      "community": 132,
+      "community": 118,
       "norm_label": "verify the request body has 'tools' not 'response_format'.",
       "id": "unit_test_llm_tools_rationale_97"
     },
@@ -13701,7 +14016,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L151",
-      "community": 132,
+      "community": 118,
       "norm_label": "verify tool_calls are correctly parsed from the response.",
       "id": "unit_test_llm_tools_rationale_151"
     },
@@ -13710,7 +14025,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L204",
-      "community": 132,
+      "community": 118,
       "norm_label": "response without tool_calls \u2014 returns empty list.",
       "id": "unit_test_llm_tools_rationale_204"
     },
@@ -13719,7 +14034,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L245",
-      "community": 73,
+      "community": 151,
       "norm_label": "defaultllmclient implements generate_with_tools.",
       "id": "unit_test_llm_tools_rationale_245"
     },
@@ -13737,7 +14052,7 @@
       "file_type": "rationale",
       "source_file": "backend/tests/unit/test_llm_tools.py",
       "source_location": "L259",
-      "community": 73,
+      "community": 214,
       "norm_label": "the new agent names are valid agentname values.",
       "id": "unit_test_llm_tools_rationale_259"
     },
@@ -13845,7 +14160,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L80",
-      "community": 73,
+      "community": 214,
       "norm_label": "a tool call requested by the llm.",
       "id": "core_llm_rationale_80"
     },
@@ -13854,7 +14169,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L108",
-      "community": 6,
+      "community": 217,
       "norm_label": "generate and parse a json response from a chat model.",
       "id": "core_llm_rationale_108"
     },
@@ -13881,7 +14196,7 @@
       "file_type": "rationale",
       "source_file": "backend/app/core/llm.py",
       "source_location": "L409",
-      "community": 73,
+      "community": 151,
       "norm_label": "adapter used when all agent nodes should use one provider.",
       "id": "core_llm_rationale_409"
     },
@@ -18412,9 +18727,9 @@
       "source_file": "backend/tests/unit/test_prompt_loader.py",
       "source_location": "L32",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_tests_unit_test_prompt_loader_py",
-      "target": "unit_test_prompt_loader_testpromptfiles",
-      "confidence_score": 1.0
+      "target": "unit_test_prompt_loader_testpromptfiles"
     },
     {
       "relation": "contains",
@@ -18422,9 +18737,9 @@
       "source_file": "backend/tests/unit/test_prompt_loader.py",
       "source_location": "L36",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_tests_unit_test_prompt_loader_py",
-      "target": "unit_test_prompt_loader_test_prompt_file_exists",
-      "confidence_score": 1.0
+      "target": "unit_test_prompt_loader_test_prompt_file_exists"
     },
     {
       "relation": "contains",
@@ -18432,9 +18747,9 @@
       "source_file": "backend/tests/unit/test_prompt_loader.py",
       "source_location": "L41",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_tests_unit_test_prompt_loader_py",
-      "target": "unit_test_prompt_loader_test_prompt_file_non_empty",
-      "confidence_score": 1.0
+      "target": "unit_test_prompt_loader_test_prompt_file_non_empty"
     },
     {
       "relation": "contains",
@@ -18442,9 +18757,9 @@
       "source_file": "backend/tests/unit/test_prompt_loader.py",
       "source_location": "L47",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_tests_unit_test_prompt_loader_py",
-      "target": "unit_test_prompt_loader_testloadprompt",
-      "confidence_score": 1.0
+      "target": "unit_test_prompt_loader_testloadprompt"
     },
     {
       "relation": "rationale_for",
@@ -18452,9 +18767,9 @@
       "source_file": "backend/tests/unit/test_prompt_loader.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "unit_test_prompt_loader_rationale_1",
-      "target": "backend_tests_unit_test_prompt_loader_py",
-      "confidence_score": 1.0
+      "target": "backend_tests_unit_test_prompt_loader_py"
     },
     {
       "relation": "rationale_for",
@@ -20106,11 +20421,21 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "backend/tests/unit/test_schema_extensions.py",
-      "source_location": "L119",
+      "source_location": "L186",
+      "weight": 1.0,
+      "source": "unit_test_schema_extensions_testragretrieve",
+      "target": "unit_test_schema_extensions_testragretrieve_test_empty_query_returns_empty_list",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/tests/unit/test_schema_extensions.py",
+      "source_location": "L190",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "unit_test_schema_extensions_testragretrieve",
-      "target": "unit_test_schema_extensions_testragretrieve_test_empty_query_still_returns_mock"
+      "target": "unit_test_schema_extensions_testragretrieve_test_surfaces_vector_store_failures"
     },
     {
       "relation": "uses",
@@ -20143,6 +20468,16 @@
       "target": "schemas_state_statedict"
     },
     {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/tests/unit/test_schema_extensions.py",
+      "source_location": "L119",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "unit_test_schema_extensions_testragretrieve",
+      "target": "unit_test_schema_extensions_testragretrieve_test_empty_query_still_returns_mock"
+    },
+    {
       "relation": "calls",
       "context": "call",
       "confidence": "INFERRED",
@@ -20162,17 +20497,6 @@
       "source_location": "L116",
       "weight": 1.0,
       "source": "unit_test_schema_extensions_testragretrieve_test_accepts_top_k",
-      "target": "rag_retriever_rag_retrieve"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "backend/tests/unit/test_schema_extensions.py",
-      "source_location": "L120",
-      "weight": 1.0,
-      "source": "unit_test_schema_extensions_testragretrieve_test_empty_query_still_returns_mock",
       "target": "rag_retriever_rag_retrieve"
     },
     {
@@ -21060,58 +21384,6 @@
       "target": "services_session_service_compact_state"
     },
     {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "backend/app/rag/build_rag.py",
-      "source_location": "L20",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "backend_app_rag_build_rag_py",
-      "target": "rag_build_rag_load_model"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "backend/app/rag/build_rag.py",
-      "source_location": "L26",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "backend_app_rag_build_rag_py",
-      "target": "rag_build_rag_encode_batch"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "backend/app/rag/build_rag.py",
-      "source_location": "L35",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "backend_app_rag_build_rag_py",
-      "target": "rag_build_rag_main"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "backend/app/rag/build_rag.py",
-      "source_location": "L56",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "rag_build_rag_main",
-      "target": "rag_build_rag_load_model"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "source_file": "backend/app/rag/build_rag.py",
-      "source_location": "L63",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "rag_build_rag_main",
-      "target": "rag_build_rag_encode_batch"
-    },
-    {
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "backend/app/rag/__init__.py",
@@ -21125,11 +21397,41 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "backend/app/rag/retriever.py",
-      "source_location": "L67",
+      "source_location": "L22",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_rag_retriever_py",
-      "target": "rag_retriever_is_mock_mode",
-      "confidence_score": 1.0
+      "target": "rag_retriever_ragretrievalerror"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L30",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "backend_app_rag_retriever_py",
+      "target": "rag_retriever_get_db_path"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L34",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "backend_app_rag_retriever_py",
+      "target": "rag_retriever_load_class"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L50",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "backend_app_rag_retriever_py",
+      "target": "rag_retriever_load_exception_class"
     },
     {
       "relation": "contains",
@@ -21155,6 +21457,36 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L79",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "backend_app_rag_retriever_py",
+      "target": "rag_retriever_get_milvus_client"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L35",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "backend_app_rag_retriever_py",
+      "target": "rag_retriever_rag_retrieve"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L67",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "backend_app_rag_retriever_py",
+      "target": "rag_retriever_is_mock_mode"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/retriever.py",
       "source_location": "L50",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -21170,16 +21502,6 @@
       "confidence_score": 1.0,
       "source": "backend_app_rag_retriever_py",
       "target": "rag_retriever_encode_query"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "backend/app/rag/retriever.py",
-      "source_location": "L35",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "backend_app_rag_retriever_py",
-      "target": "rag_retriever_rag_retrieve"
     },
     {
       "relation": "rationale_for",
@@ -21202,25 +21524,185 @@
       "target": "backend_app_rag_retriever_py"
     },
     {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L22",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_retriever_ragretrievalerror",
+      "target": "runtimeerror"
+    },
+    {
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L26",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_retriever_ragretrievalerror",
+      "target": "rag_retriever_ragretrievalerror_str"
+    },
+    {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "backend/app/rag/retriever.py",
-      "source_location": "L163",
+      "source_location": "L38",
       "weight": 1.0,
-      "source": "rag_retriever_rag_retrieve",
-      "target": "rag_retriever_is_mock_mode",
-      "confidence_score": 1.0
+      "confidence_score": 1.0,
+      "source": "rag_retriever_load_class",
+      "target": "rag_retriever_ragretrievalerror"
     },
     {
-      "relation": "rationale_for",
+      "relation": "calls",
+      "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "backend/app/rag/retriever.py",
-      "source_location": "L68",
+      "source_location": "L53",
       "weight": 1.0,
-      "source": "rag_retriever_rationale_68",
-      "target": "rag_retriever_is_mock_mode",
-      "confidence_score": 1.0
+      "confidence_score": 1.0,
+      "source": "rag_retriever_load_exception_class",
+      "target": "rag_retriever_ragretrievalerror"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L71",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_retriever_get_embedding_model",
+      "target": "rag_retriever_ragretrievalerror"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L93",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_retriever_get_milvus_client",
+      "target": "rag_retriever_ragretrievalerror"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L109",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_retriever_rag_retrieve",
+      "target": "rag_retriever_ragretrievalerror"
+    },
+    {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L9",
+      "weight": 0.8,
+      "confidence_score": 0.5,
+      "source": "rag_retriever_ragretrievalerror",
+      "target": "schemas_state_retrievalchunk"
+    },
+    {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L9",
+      "weight": 0.8,
+      "confidence_score": 0.5,
+      "source": "rag_retriever_ragretrievalerror",
+      "target": "schemas_state_retrievalmetadata"
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/core/llm.py",
+      "source_location": "L120",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_llm_llmconfigurationerror",
+      "target": "runtimeerror"
+    },
+    {
+      "relation": "inherits",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/core/llm.py",
+      "source_location": "L124",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "core_llm_llmprovidererror",
+      "target": "runtimeerror"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L87",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_retriever_get_milvus_client",
+      "target": "rag_retriever_get_db_path"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L51",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_retriever_load_exception_class",
+      "target": "rag_retriever_load_class"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L60",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_retriever_lazy_import",
+      "target": "rag_retriever_load_class"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L86",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_retriever_get_milvus_client",
+      "target": "rag_retriever_load_class"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L82",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_retriever_get_milvus_client",
+      "target": "rag_retriever_load_exception_class"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L119",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_retriever_rag_retrieve",
+      "target": "rag_retriever_load_exception_class"
     },
     {
       "relation": "calls",
@@ -21249,11 +21731,77 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L105",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_retriever_rag_retrieve",
+      "target": "rag_retriever_get_embedding_model"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/retriever.py",
       "source_location": "L68",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "rag_retriever_encode_query",
       "target": "rag_retriever_get_embedding_model"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L104",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_retriever_rag_retrieve",
+      "target": "rag_retriever_get_milvus_client"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L98",
+      "weight": 1.0,
+      "source": "rag_retriever_rag_retrieve",
+      "target": "schemas_state_retrievalchunk"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L104",
+      "weight": 1.0,
+      "source": "rag_retriever_rag_retrieve",
+      "target": "schemas_state_retrievalmetadata"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "backend/tests/unit/test_schema_extensions.py",
+      "source_location": "L120",
+      "weight": 1.0,
+      "source": "unit_test_schema_extensions_testragretrieve_test_empty_query_still_returns_mock",
+      "target": "rag_retriever_rag_retrieve"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L163",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_retriever_rag_retrieve",
+      "target": "rag_retriever_is_mock_mode"
     },
     {
       "relation": "calls",
@@ -21283,31 +21831,9 @@
       "source_file": "backend/app/rag/retriever.py",
       "source_location": "L154",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "rag_retriever_rationale_154",
-      "target": "rag_retriever_rag_retrieve",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "backend/app/rag/retriever.py",
-      "source_location": "L98",
-      "weight": 1.0,
-      "source": "rag_retriever_rag_retrieve",
-      "target": "schemas_state_retrievalchunk"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "backend/app/rag/retriever.py",
-      "source_location": "L104",
-      "weight": 1.0,
-      "source": "rag_retriever_rag_retrieve",
-      "target": "schemas_state_retrievalmetadata"
+      "target": "rag_retriever_rag_retrieve"
     },
     {
       "relation": "rationale_for",
@@ -21348,6 +21874,216 @@
       "confidence_score": 1.0,
       "source": "backend_app_rag_data_chunked_txt_json",
       "target": "data_chunked_txt_level3_children"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "backend_app_rag_data_milvus_lite_db_collections_law_knowledge_base_manifest_json",
+      "target": "law_knowledge_base_manifest_active_wal_number"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "backend_app_rag_data_milvus_lite_db_collections_law_knowledge_base_manifest_json",
+      "target": "law_knowledge_base_manifest_current_seq"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "backend_app_rag_data_milvus_lite_db_collections_law_knowledge_base_manifest_json",
+      "target": "law_knowledge_base_manifest_index_specs"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L13",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "backend_app_rag_data_milvus_lite_db_collections_law_knowledge_base_manifest_json",
+      "target": "law_knowledge_base_manifest_manifest_format_version"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L14",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "backend_app_rag_data_milvus_lite_db_collections_law_knowledge_base_manifest_json",
+      "target": "law_knowledge_base_manifest_partitions"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L20",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "backend_app_rag_data_milvus_lite_db_collections_law_knowledge_base_manifest_json",
+      "target": "law_knowledge_base_manifest_schema_version"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L21",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "backend_app_rag_data_milvus_lite_db_collections_law_knowledge_base_manifest_json",
+      "target": "law_knowledge_base_manifest_version"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L5",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "law_knowledge_base_manifest_index_specs",
+      "target": "law_knowledge_base_manifest_index_specs_vector"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L6",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "law_knowledge_base_manifest_index_specs_vector",
+      "target": "law_knowledge_base_manifest_vector_build_params"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L7",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "law_knowledge_base_manifest_index_specs_vector",
+      "target": "law_knowledge_base_manifest_vector_field_name"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L8",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "law_knowledge_base_manifest_index_specs_vector",
+      "target": "law_knowledge_base_manifest_vector_index_type"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L9",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "law_knowledge_base_manifest_index_specs_vector",
+      "target": "law_knowledge_base_manifest_vector_metric_type"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L10",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "law_knowledge_base_manifest_index_specs_vector",
+      "target": "law_knowledge_base_manifest_vector_search_params"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L15",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "law_knowledge_base_manifest_partitions",
+      "target": "law_knowledge_base_manifest_partitions_default"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L16",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "law_knowledge_base_manifest_partitions_default",
+      "target": "law_knowledge_base_manifest_default_data_files"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/manifest.json",
+      "source_location": "L17",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "law_knowledge_base_manifest_partitions_default",
+      "target": "law_knowledge_base_manifest_default_delta_files"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/schema.json",
+      "source_location": "L2",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "backend_app_rag_data_milvus_lite_db_collections_law_knowledge_base_schema_json",
+      "target": "law_knowledge_base_schema_collection_name"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/schema.json",
+      "source_location": "L3",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "backend_app_rag_data_milvus_lite_db_collections_law_knowledge_base_schema_json",
+      "target": "law_knowledge_base_schema_enable_dynamic_field"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/schema.json",
+      "source_location": "L4",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "backend_app_rag_data_milvus_lite_db_collections_law_knowledge_base_schema_json",
+      "target": "law_knowledge_base_schema_fields"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/schema.json",
+      "source_location": "L54",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "backend_app_rag_data_milvus_lite_db_collections_law_knowledge_base_schema_json",
+      "target": "law_knowledge_base_schema_schema_format_version"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/data/milvus_lite.db/collections/law_knowledge_base/schema.json",
+      "source_location": "L55",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "backend_app_rag_data_milvus_lite_db_collections_law_knowledge_base_schema_json",
+      "target": "law_knowledge_base_schema_version"
     },
     {
       "relation": "contains",
@@ -21539,9 +22275,9 @@
       "source_file": "backend/app/agents/common.py",
       "source_location": "L24",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_common_py",
-      "target": "agents_common_chat_role",
-      "confidence_score": 1.0
+      "target": "agents_common_chat_role"
     },
     {
       "relation": "contains",
@@ -21549,9 +22285,9 @@
       "source_file": "backend/app/agents/common.py",
       "source_location": "L31",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_common_py",
-      "target": "agents_common_messages_from_prompt",
-      "confidence_score": 1.0
+      "target": "agents_common_messages_from_prompt"
     },
     {
       "relation": "contains",
@@ -21559,9 +22295,9 @@
       "source_file": "backend/app/agents/common.py",
       "source_location": "L38",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_common_py",
-      "target": "agents_common_schema_note",
-      "confidence_score": 1.0
+      "target": "agents_common_schema_note"
     },
     {
       "relation": "contains",
@@ -21569,19 +22305,9 @@
       "source_file": "backend/app/agents/common.py",
       "source_location": "L46",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_common_py",
-      "target": "agents_common_normalize_key_aliases",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "backend/app/agents/common.py",
-      "source_location": "L57",
-      "weight": 1.0,
-      "source": "backend_app_agents_common_py",
-      "target": "agents_common_load_prompt",
-      "confidence_score": 1.0
+      "target": "agents_common_normalize_key_aliases"
     },
     {
       "relation": "rationale_for",
@@ -21589,9 +22315,19 @@
       "source_file": "backend/app/agents/common.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "agents_common_rationale_1",
-      "target": "backend_app_agents_common_py",
-      "confidence_score": 1.0
+      "target": "backend_app_agents_common_py"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/agents/common.py",
+      "source_location": "L57",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "backend_app_agents_common_py",
+      "target": "agents_common_load_prompt"
     },
     {
       "relation": "calls",
@@ -21846,6 +22582,16 @@
     {
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
+      "source_file": "backend/app/agents/common.py",
+      "source_location": "L46",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_common_rationale_46",
+      "target": "agents_common_normalize_key_aliases"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
       "source_file": "app/agents/common.py",
       "source_location": "L47",
       "weight": 1.0,
@@ -21867,48 +22613,6 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "app/agents/common.py",
-      "source_location": "L58",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "agents_common_rationale_58",
-      "target": "agents_common_load_prompt"
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "app/agents/common.py",
-      "source_location": "L57",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "app_agents_common_py",
-      "target": "agents_common_load_prompt"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L75",
-      "weight": 1.0,
-      "source": "unit_test_prompt_loader_testloadprompt_test_loads_custom_filename",
-      "target": "agents_common_load_prompt"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "INFERRED",
-      "confidence_score": 0.8,
-      "source_file": "tests/unit/test_prompt_loader.py",
-      "source_location": "L81",
-      "weight": 1.0,
-      "source": "unit_test_prompt_loader_testloadprompt_test_loads_flat_file_prompt",
-      "target": "agents_common_load_prompt"
-    },
-    {
-      "relation": "rationale_for",
-      "confidence": "EXTRACTED",
-      "source_file": "app/agents/common.py",
       "source_location": "L1",
       "weight": 1.0,
       "confidence_score": 1.0,
@@ -21921,9 +22625,9 @@
       "source_file": "backend/app/agents/__init__.py",
       "source_location": "L25",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_init_py",
-      "target": "agents_init_build_agent_nodes",
-      "confidence_score": 1.0
+      "target": "agents_init_build_agent_nodes"
     },
     {
       "relation": "rationale_for",
@@ -21931,9 +22635,9 @@
       "source_file": "backend/app/agents/__init__.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "agents_init_rationale_1",
-      "target": "backend_app_agents_init_py",
-      "confidence_score": 1.0
+      "target": "backend_app_agents_init_py"
     },
     {
       "relation": "calls",
@@ -22214,9 +22918,9 @@
       "source_file": "backend/app/agents/cross_review_a/node.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_cross_review_a_node_py",
-      "target": "cross_review_a_node_build_expert_a_cross_review_node",
-      "confidence_score": 1.0
+      "target": "cross_review_a_node_build_expert_a_cross_review_node"
     },
     {
       "relation": "rationale_for",
@@ -22224,9 +22928,9 @@
       "source_file": "backend/app/agents/cross_review_a/node.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "cross_review_a_node_rationale_1",
-      "target": "backend_app_agents_cross_review_a_node_py",
-      "confidence_score": 1.0
+      "target": "backend_app_agents_cross_review_a_node_py"
     },
     {
       "relation": "contains",
@@ -22254,9 +22958,9 @@
       "source_file": "backend/app/agents/cross_review_a/__init__.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "cross_review_a_init_rationale_1",
-      "target": "backend_app_agents_cross_review_a_init_py",
-      "confidence_score": 1.0
+      "target": "backend_app_agents_cross_review_a_init_py"
     },
     {
       "relation": "rationale_for",
@@ -22274,9 +22978,9 @@
       "source_file": "backend/app/agents/finalize/node.py",
       "source_location": "L14",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_finalize_node_py",
-      "target": "finalize_node_build_finalize_node",
-      "confidence_score": 1.0
+      "target": "finalize_node_build_finalize_node"
     },
     {
       "relation": "rationale_for",
@@ -22284,9 +22988,9 @@
       "source_file": "backend/app/agents/finalize/node.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "finalize_node_rationale_1",
-      "target": "backend_app_agents_finalize_node_py",
-      "confidence_score": 1.0
+      "target": "backend_app_agents_finalize_node_py"
     },
     {
       "relation": "contains",
@@ -22354,9 +23058,9 @@
       "source_file": "backend/app/agents/expert_a_revise/node.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_expert_a_revise_node_py",
-      "target": "expert_a_revise_node_build_expert_a_revise_node",
-      "confidence_score": 1.0
+      "target": "expert_a_revise_node_build_expert_a_revise_node"
     },
     {
       "relation": "rationale_for",
@@ -22364,9 +23068,9 @@
       "source_file": "backend/app/agents/expert_a_revise/node.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "expert_a_revise_node_rationale_1",
-      "target": "backend_app_agents_expert_a_revise_node_py",
-      "confidence_score": 1.0
+      "target": "backend_app_agents_expert_a_revise_node_py"
     },
     {
       "relation": "contains",
@@ -22394,9 +23098,9 @@
       "source_file": "backend/app/agents/expert_a_revise/__init__.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "expert_a_revise_init_rationale_1",
-      "target": "backend_app_agents_expert_a_revise_init_py",
-      "confidence_score": 1.0
+      "target": "backend_app_agents_expert_a_revise_init_py"
     },
     {
       "relation": "rationale_for",
@@ -22414,9 +23118,9 @@
       "source_file": "backend/app/agents/expert_b/node.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_expert_b_node_py",
-      "target": "expert_b_node_build_expert_b_node",
-      "confidence_score": 1.0
+      "target": "expert_b_node_build_expert_b_node"
     },
     {
       "relation": "contains",
@@ -22474,9 +23178,9 @@
       "source_file": "backend/app/agents/cross_review_b/node.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_cross_review_b_node_py",
-      "target": "cross_review_b_node_build_expert_b_cross_review_node",
-      "confidence_score": 1.0
+      "target": "cross_review_b_node_build_expert_b_cross_review_node"
     },
     {
       "relation": "rationale_for",
@@ -22484,9 +23188,9 @@
       "source_file": "backend/app/agents/cross_review_b/node.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "cross_review_b_node_rationale_1",
-      "target": "backend_app_agents_cross_review_b_node_py",
-      "confidence_score": 1.0
+      "target": "backend_app_agents_cross_review_b_node_py"
     },
     {
       "relation": "contains",
@@ -22514,9 +23218,9 @@
       "source_file": "backend/app/agents/cross_review_b/__init__.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "cross_review_b_init_rationale_1",
-      "target": "backend_app_agents_cross_review_b_init_py",
-      "confidence_score": 1.0
+      "target": "backend_app_agents_cross_review_b_init_py"
     },
     {
       "relation": "rationale_for",
@@ -22534,9 +23238,9 @@
       "source_file": "backend/app/agents/judge/node.py",
       "source_location": "L28",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_judge_node_py",
-      "target": "judge_node_normalize_target",
-      "confidence_score": 1.0
+      "target": "judge_node_normalize_target"
     },
     {
       "relation": "contains",
@@ -22544,9 +23248,9 @@
       "source_file": "backend/app/agents/judge/node.py",
       "source_location": "L42",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_judge_node_py",
-      "target": "judge_node_normalize_judge_report",
-      "confidence_score": 1.0
+      "target": "judge_node_normalize_judge_report"
     },
     {
       "relation": "contains",
@@ -22554,9 +23258,9 @@
       "source_file": "backend/app/agents/judge/node.py",
       "source_location": "L76",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_judge_node_py",
-      "target": "judge_node_build_judge_node",
-      "confidence_score": 1.0
+      "target": "judge_node_build_judge_node"
     },
     {
       "relation": "calls",
@@ -22567,6 +23271,16 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "judge_node_normalize_judge_report",
+      "target": "judge_node_normalize_target"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/agents/judge/node.py",
+      "source_location": "L27",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "judge_node_rationale_27",
       "target": "judge_node_normalize_target"
     },
     {
@@ -22615,9 +23329,9 @@
       "source_file": "backend/app/agents/lightweight_review/node.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_lightweight_review_node_py",
-      "target": "lightweight_review_node_build_lightweight_review_node",
-      "confidence_score": 1.0
+      "target": "lightweight_review_node_build_lightweight_review_node"
     },
     {
       "relation": "rationale_for",
@@ -22625,9 +23339,9 @@
       "source_file": "backend/app/agents/lightweight_review/node.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lightweight_review_node_rationale_1",
-      "target": "backend_app_agents_lightweight_review_node_py",
-      "confidence_score": 1.0
+      "target": "backend_app_agents_lightweight_review_node_py"
     },
     {
       "relation": "contains",
@@ -22655,9 +23369,9 @@
       "source_file": "backend/app/agents/lightweight_review/__init__.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "lightweight_review_init_rationale_1",
-      "target": "backend_app_agents_lightweight_review_init_py",
-      "confidence_score": 1.0
+      "target": "backend_app_agents_lightweight_review_init_py"
     },
     {
       "relation": "rationale_for",
@@ -22675,9 +23389,9 @@
       "source_file": "backend/app/agents/expert_b_revise/node.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_expert_b_revise_node_py",
-      "target": "expert_b_revise_node_build_expert_b_revise_node",
-      "confidence_score": 1.0
+      "target": "expert_b_revise_node_build_expert_b_revise_node"
     },
     {
       "relation": "rationale_for",
@@ -22685,9 +23399,9 @@
       "source_file": "backend/app/agents/expert_b_revise/node.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "expert_b_revise_node_rationale_1",
-      "target": "backend_app_agents_expert_b_revise_node_py",
-      "confidence_score": 1.0
+      "target": "backend_app_agents_expert_b_revise_node_py"
     },
     {
       "relation": "contains",
@@ -22715,9 +23429,9 @@
       "source_file": "backend/app/agents/expert_b_revise/__init__.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "expert_b_revise_init_rationale_1",
-      "target": "backend_app_agents_expert_b_revise_init_py",
-      "confidence_score": 1.0
+      "target": "backend_app_agents_expert_b_revise_init_py"
     },
     {
       "relation": "rationale_for",
@@ -22735,9 +23449,9 @@
       "source_file": "backend/app/agents/expert_a/node.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_expert_a_node_py",
-      "target": "expert_a_node_build_expert_a_node",
-      "confidence_score": 1.0
+      "target": "expert_a_node_build_expert_a_node"
     },
     {
       "relation": "contains",
@@ -22765,9 +23479,9 @@
       "source_file": "backend/app/agents/tool_agent/node.py",
       "source_location": "L45",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_tool_agent_node_py",
-      "target": "tool_agent_node_build_tool_agent_node",
-      "confidence_score": 1.0
+      "target": "tool_agent_node_build_tool_agent_node"
     },
     {
       "relation": "rationale_for",
@@ -22775,9 +23489,9 @@
       "source_file": "backend/app/agents/tool_agent/node.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "tool_agent_node_rationale_1",
-      "target": "backend_app_agents_tool_agent_node_py",
-      "confidence_score": 1.0
+      "target": "backend_app_agents_tool_agent_node_py"
     },
     {
       "relation": "contains",
@@ -22805,9 +23519,9 @@
       "source_file": "backend/app/agents/chat_answer/node.py",
       "source_location": "L15",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_chat_answer_node_py",
-      "target": "chat_answer_node_sources_from_retrieval_context",
-      "confidence_score": 1.0
+      "target": "chat_answer_node_sources_from_retrieval_context"
     },
     {
       "relation": "contains",
@@ -22815,9 +23529,9 @@
       "source_file": "backend/app/agents/chat_answer/node.py",
       "source_location": "L28",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_chat_answer_node_py",
-      "target": "chat_answer_node_build_chat_answer_node",
-      "confidence_score": 1.0
+      "target": "chat_answer_node_build_chat_answer_node"
     },
     {
       "relation": "rationale_for",
@@ -22825,9 +23539,9 @@
       "source_file": "backend/app/agents/chat_answer/node.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "chat_answer_node_rationale_1",
-      "target": "backend_app_agents_chat_answer_node_py",
-      "confidence_score": 1.0
+      "target": "backend_app_agents_chat_answer_node_py"
     },
     {
       "relation": "contains",
@@ -22865,9 +23579,9 @@
       "source_file": "backend/app/agents/planner/node.py",
       "source_location": "L20",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_planner_node_py",
-      "target": "planner_node_normalize_node_id",
-      "confidence_score": 1.0
+      "target": "planner_node_normalize_node_id"
     },
     {
       "relation": "contains",
@@ -22875,9 +23589,9 @@
       "source_file": "backend/app/agents/planner/node.py",
       "source_location": "L27",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_planner_node_py",
-      "target": "planner_node_normalize_learning_path_item",
-      "confidence_score": 1.0
+      "target": "planner_node_normalize_learning_path_item"
     },
     {
       "relation": "contains",
@@ -22885,9 +23599,9 @@
       "source_file": "backend/app/agents/planner/node.py",
       "source_location": "L35",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_planner_node_py",
-      "target": "planner_node_build_planner_node",
-      "confidence_score": 1.0
+      "target": "planner_node_build_planner_node"
     },
     {
       "relation": "calls",
@@ -22946,9 +23660,9 @@
       "source_file": "backend/app/agents/route/node.py",
       "source_location": "L32",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_route_node_py",
-      "target": "route_node_local_intent_hint",
-      "confidence_score": 1.0
+      "target": "route_node_local_intent_hint"
     },
     {
       "relation": "contains",
@@ -22956,9 +23670,9 @@
       "source_file": "backend/app/agents/route/node.py",
       "source_location": "L40",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_route_node_py",
-      "target": "route_node_build_route_node",
-      "confidence_score": 1.0
+      "target": "route_node_build_route_node"
     },
     {
       "relation": "rationale_for",
@@ -22966,9 +23680,9 @@
       "source_file": "backend/app/agents/route/node.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "route_node_rationale_1",
-      "target": "backend_app_agents_route_node_py",
-      "confidence_score": 1.0
+      "target": "backend_app_agents_route_node_py"
     },
     {
       "relation": "contains",
@@ -23006,9 +23720,9 @@
       "source_file": "backend/app/agents/joint_synthesis/node.py",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "backend_app_agents_joint_synthesis_node_py",
-      "target": "joint_synthesis_node_build_joint_synthesis_node",
-      "confidence_score": 1.0
+      "target": "joint_synthesis_node_build_joint_synthesis_node"
     },
     {
       "relation": "rationale_for",
@@ -23016,9 +23730,9 @@
       "source_file": "backend/app/agents/joint_synthesis/node.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "joint_synthesis_node_rationale_1",
-      "target": "backend_app_agents_joint_synthesis_node_py",
-      "confidence_score": 1.0
+      "target": "backend_app_agents_joint_synthesis_node_py"
     },
     {
       "relation": "contains",
@@ -23046,9 +23760,9 @@
       "source_file": "backend/app/agents/joint_synthesis/__init__.py",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "joint_synthesis_init_rationale_1",
-      "target": "backend_app_agents_joint_synthesis_init_py",
-      "confidence_score": 1.0
+      "target": "backend_app_agents_joint_synthesis_init_py"
     },
     {
       "relation": "rationale_for",
@@ -24437,16 +25151,6 @@
       "target": "core_llm_llmclient_generate_with_tools"
     },
     {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "backend/app/core/llm.py",
-      "source_location": "L120",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "core_llm_llmconfigurationerror",
-      "target": "runtimeerror"
-    },
-    {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
@@ -24487,16 +25191,6 @@
       "confidence_score": 1.0,
       "source": "core_llm_rationale_121",
       "target": "core_llm_llmconfigurationerror"
-    },
-    {
-      "relation": "inherits",
-      "confidence": "EXTRACTED",
-      "source_file": "backend/app/core/llm.py",
-      "source_location": "L124",
-      "weight": 1.0,
-      "confidence_score": 1.0,
-      "source": "core_llm_llmprovidererror",
-      "target": "runtimeerror"
     },
     {
       "relation": "method",
@@ -25596,17 +26290,17 @@
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "patent_tutor_agent_readme_rag_\u5de5\u5177\u51fd\u6570",
-      "target": "patent_tutor_agent_readme_\u5f00\u542f\u771f\u5b9e_rag_\u6a21\u5f0f"
+      "target": "patent_tutor_agent_readme_\u5f53\u524d\u771f\u5b9e_rag_\u4f9d\u8d56"
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L290",
+      "source_location": "L286",
       "weight": 1.0,
       "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_\u5f00\u542f\u771f\u5b9e_rag_\u6a21\u5f0f",
-      "target": "patent_tutor_agent_readme_codeblock_19"
+      "source": "patent_tutor_agent_readme_rag_\u5de5\u5177\u51fd\u6570",
+      "target": "patent_tutor_agent_readme_\u5f00\u542f\u771f\u5b9e_rag_\u6a21\u5f0f"
     },
     {
       "relation": "contains",
@@ -25622,21 +26316,31 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L284",
+      "source_location": "L326",
       "weight": 1.0,
       "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_\u4f9d\u8d56\u7ba1\u7406",
+      "source": "patent_tutor_agent_readme_\u77e5\u8bc6\u56fe\u8c31",
+      "target": "patent_tutor_agent_readme_codeblock_20"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "README.md",
+      "source_location": "L290",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "patent_tutor_agent_readme_\u5f00\u542f\u771f\u5b9e_rag_\u6a21\u5f0f",
       "target": "patent_tutor_agent_readme_codeblock_19"
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L326",
+      "source_location": "L284",
       "weight": 1.0,
       "confidence_score": 1.0,
-      "source": "patent_tutor_agent_readme_\u77e5\u8bc6\u56fe\u8c31",
-      "target": "patent_tutor_agent_readme_codeblock_20"
+      "source": "patent_tutor_agent_readme_\u4f9d\u8d56\u7ba1\u7406",
+      "target": "patent_tutor_agent_readme_codeblock_19"
     },
     {
       "relation": "contains",
@@ -31012,11 +31716,31 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/rag-interface-spec.md",
+      "source_location": "L124",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "docs_rag_interface_spec_\u76ee\u6807\u5b9e\u73b0\u8981\u6c42",
+      "target": "docs_rag_interface_spec_\u540e\u7eed\u589e\u5f3a\u65b9\u5411"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rag-interface-spec.md",
       "source_location": "L123",
       "weight": 1.0,
       "confidence_score": 1.0,
       "source": "docs_rag_interface_spec_\u76ee\u6807\u5b9e\u73b0\u8981\u6c42",
       "target": "docs_rag_interface_spec_\u66ff\u6362_mock_\u7684\u65b9\u6cd5"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/rag-interface-spec.md",
+      "source_location": "L128",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "docs_rag_interface_spec_\u540e\u7eed\u589e\u5f3a\u65b9\u5411",
+      "target": "docs_rag_interface_spec_codeblock_4"
     },
     {
       "relation": "contains",
@@ -33561,6 +34285,110 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/build_rag.py",
+      "source_location": "L20",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "backend_app_rag_build_rag_py",
+      "target": "rag_build_rag_load_model"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/build_rag.py",
+      "source_location": "L26",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "backend_app_rag_build_rag_py",
+      "target": "rag_build_rag_encode_batch"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/build_rag.py",
+      "source_location": "L35",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "backend_app_rag_build_rag_py",
+      "target": "rag_build_rag_main"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/build_rag.py",
+      "source_location": "L56",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_build_rag_main",
+      "target": "rag_build_rag_load_model"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/build_rag.py",
+      "source_location": "L63",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_build_rag_main",
+      "target": "rag_build_rag_encode_batch"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "backend/app/rag/retriever.py",
+      "source_location": "L68",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "rag_retriever_rationale_68",
+      "target": "rag_retriever_is_mock_mode"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "app/agents/common.py",
+      "source_location": "L58",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "agents_common_rationale_58",
+      "target": "agents_common_load_prompt"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "app/agents/common.py",
+      "source_location": "L57",
+      "weight": 1.0,
+      "confidence_score": 1.0,
+      "source": "app_agents_common_py",
+      "target": "agents_common_load_prompt"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L75",
+      "weight": 1.0,
+      "source": "unit_test_prompt_loader_testloadprompt_test_loads_custom_filename",
+      "target": "agents_common_load_prompt"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "tests/unit/test_prompt_loader.py",
+      "source_location": "L81",
+      "weight": 1.0,
+      "source": "unit_test_prompt_loader_testloadprompt_test_loads_flat_file_prompt",
+      "target": "agents_common_load_prompt"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "app/agents/expert_a/cross_review.py",
       "source_location": "L16",
       "weight": 1.0,
@@ -35059,5 +35887,5 @@
       "source_file": "backend/tests/integration/test_workflow_integration.py"
     }
   ],
-  "built_at_commit": "8f60a914133ad1d40292fae3ef64dd63a37a8258"
+  "built_at_commit": "54cdd24cc4bdda93ad44e345fa4f0bf5df07d5c4"
 }

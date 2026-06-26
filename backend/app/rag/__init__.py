@@ -1,5 +1,5 @@
 """RAG module — patent law knowledge retrieval."""
 
-from backend.app.rag.retriever import rag_retrieve
+from backend.app.rag.retriever import RAGRetrievalError, rag_retrieve
 
-__all__ = ["rag_retrieve"]
+__all__ = ["RAGRetrievalError", "rag_retrieve"]

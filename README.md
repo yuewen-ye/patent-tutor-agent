@@ -281,22 +281,17 @@ QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 
 RAG 检索以 `rag_retrieve()` 函数形式提供，位于 `backend/app/rag/retriever.py`。`tool_agent` 通过原生 tool-calling 调用它，chat 和 teach 路径上 LLM 均自主决定是否检索。
 
-**默认使用 mock 模式**（`RAG_MOCK=1`），返回 3 条硬编码专利法条文（第 22、25、29 条），无需任何外部依赖。适合开发调试和快速验证。
+当前实现使用 Milvus Lite + BGE-M3 嵌入模型做本地向量检索，不再保留旧版向量库兼容路径。
 
-### 开启真实 RAG 模式
+### 当前真实 RAG 依赖
 
-真实模式使用 ChromaDB + BGE-M3 嵌入模型做向量检索。在 `.env` 中设置：
+真实 RAG 需要：
 
-```env
-RAG_MOCK=0
-```
-
-启动脚本会自动加载 `.env`，即可切换到真实 RAG。真实模式需要：
-- ChromaDB 持久化数据位于 `backend/app/rag/data/rag_chroma_db/`（或通过 `RAG_DB_PATH` 指定）
-- Collection 名称默认为 `patent_law_kb`（或通过 `RAG_COLLECTION_NAME` 指定）
+- Milvus Lite 持久化数据位于 `backend/app/rag/data/milvus_lite.db/`
+- Collection 名称为 `law_knowledge_base`
 - 首次运行自动从 HuggingFace 镜像下载 BGE-M3 模型
 
-`RetrievalChunk.metadata.retrieval_method` 字段标识数据来源：mock 为 `"manual"`，真实检索为 `"vector"`。
+`RetrievalChunk.metadata.retrieval_method` 字段标识数据来源，当前真实检索为 `"vector"`。检索初始化、编码、搜索或结果解析失败时，`rag_retrieve()` 会抛出 `RAGRetrievalError`，不会把失败伪装成空结果。
 
 真实检索实现可替换为 BM25、混合检索等，只需修改 `rag_retrieve()` 函数体，保持接口不变。
 

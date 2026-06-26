@@ -12,7 +12,7 @@ from backend.app.schemas.state import (
     StateDict,
     agent_output_json_schemas,
 )
-from backend.app.rag import rag_retrieve
+from backend.app.rag import retriever
 
 
 class TestIntentResult:
@@ -117,17 +117,81 @@ class TestAgentOutputJsonSchemas:
 
 
 class TestRagRetrieve:
-    def test_returns_list_of_chunks(self) -> None:
-        results = rag_retrieve("新颖性")
-        assert isinstance(results, list)
-        assert len(results) > 0
-        assert hasattr(results[0], "chunk_id")
-        assert hasattr(results[0], "text")
+    def test_returns_list_of_chunks(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        class FakeVector:
+            def tolist(self) -> list[float]:
+                return [0.1, 0.2, 0.3]
 
-    def test_accepts_top_k(self) -> None:
-        results = rag_retrieve("专利法", top_k=3)
+        class FakeModel:
+            def encode(self, texts: list[str], normalize_embeddings: bool) -> list[FakeVector]:
+                assert texts == ["新颖性"]
+                assert normalize_embeddings is True
+                return [FakeVector()]
+
+        class FakeClient:
+            def search(
+                self,
+                collection_name: str,
+                data: list[list[float]],
+                limit: int,
+                output_fields: list[str],
+            ) -> list[list[dict[str, object]]]:
+                assert collection_name == retriever.COLLECTION_NAME
+                assert data == [[0.1, 0.2, 0.3]]
+                assert limit == 5
+                assert output_fields == ["text", "source"]
+                return [[{
+                    "id": "chunk-1",
+                    "distance": 0.9,
+                    "entity": {"source": "专利法", "text": "新颖性条文"},
+                }]]
+
+        monkeypatch.setattr(retriever, "get_milvus_client", lambda: FakeClient())
+        monkeypatch.setattr(retriever, "get_embedding_model", lambda: FakeModel())
+
+        results = retriever.rag_retrieve("新颖性")
+        assert isinstance(results, list)
+        assert len(results) == 1
+        assert results[0].chunk_id == "chunk-1"
+        assert results[0].text == "新颖性条文"
+        assert results[0].metadata is not None
+        assert results[0].metadata.retrieval_method == "vector"
+
+    def test_accepts_top_k(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        class FakeVector:
+            def tolist(self) -> list[float]:
+                return [0.1]
+
+        class FakeModel:
+            def encode(self, texts: list[str], normalize_embeddings: bool) -> list[FakeVector]:
+                return [FakeVector()]
+
+        class FakeClient:
+            def search(
+                self,
+                collection_name: str,
+                data: list[list[float]],
+                limit: int,
+                output_fields: list[str],
+            ) -> list[list[dict[str, object]]]:
+                assert limit == 3
+                return [[]]
+
+        monkeypatch.setattr(retriever, "get_milvus_client", lambda: FakeClient())
+        monkeypatch.setattr(retriever, "get_embedding_model", lambda: FakeModel())
+
+        results = retriever.rag_retrieve("专利法", top_k=3)
         assert isinstance(results, list)
 
-    def test_empty_query_still_returns_mock(self) -> None:
-        results = rag_retrieve("")
+    def test_empty_query_returns_empty_list(self) -> None:
+        results = retriever.rag_retrieve("")
         assert isinstance(results, list)
+
+    def test_surfaces_vector_store_failures(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        def unavailable_client() -> None:
+            raise RuntimeError("milvus unavailable")
+
+        monkeypatch.setattr(retriever, "get_milvus_client", unavailable_client)
+
+        with pytest.raises(retriever.RAGRetrievalError, match="milvus unavailable"):
+            retriever.rag_retrieve("新颖性")

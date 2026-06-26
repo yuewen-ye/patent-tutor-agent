@@ -514,7 +514,7 @@ GET    /health/ready                         就绪检查（验证 LLM provider 
 | 2.1 | 文档收集与清洗 | `data/raw/`（新建） | 收集《专利法》《专利法实施细则》《审查指南》文本，按法条/章节拆分 |
 | 2.2 | 文档解析 + 语义切片 | `backend/app/rag/parser.py`（新建） | 解析原始文档，按法条/段落切 chunk（200-500字），保留 `law_article`、`doc_type` 等元数据 |
 | 2.3 | Embedding 向量化 | `backend/app/rag/embedder.py`（新建） | 调用 text-embedding-3-small 或本地 bge-m3 生成向量 |
-| 2.4 | 向量库搭建 | `backend/app/rag/vector_store.py`（新建） | ChromaDB 本地持久化，支持按 `doc_type` 过滤 |
+| 2.4 | 向量库搭建 | `backend/app/rag/vector_store.py`（新建） | Milvus Lite 本地持久化，支持按 `doc_type` 过滤 |
 | 2.5 | BM25 关键词检索 | `backend/app/rag/bm25.py`（新建） | 精确匹配法条号、关键词，与向量检索互补 |
 | 2.6 | 混合检索 + Reranker | `backend/app/rag/retriever.py`（新建） | BM25 + Vector 结果融合 → Reranker 精排 → 取 top-k |
 | 2.7 | 替换 mock 节点 | `backend/app/agents/retrieve_context.py` | 改为调用 `Retriever.search(user_input, learning_path)` 返回真实 `RetrievalChunk[]` |

@@ -17,7 +17,6 @@ dependencies = [
     "tenacity>=8.5.0",
     "uvicorn[standard]>=0.30.0",
     "langgraph-cli[inmem]>=0.4.29",
-    "chromadb>=0.6.0",
     "transformers>=4.45.0",
     "torch>=2.4.0",
     "pymilvus>=3.0.0",
