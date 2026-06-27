@@ -46,7 +46,7 @@ START → _init → route ──┬── diagnose: diagnosis → END
 | 领域专家 A | `expert_a` | 保守严谨、法条优先：自行决定是否调用 RAG，生成辩论草稿，并在 A/B 辩论完成后整合两方结果 | `expert_a_draft`、可选 `retrieval_context` | `EXPERT_A_PROVIDER` | ✅ |
 | 领域专家 B | `expert_b` | 生动灵活、面向案例：自行决定是否调用 RAG，生成辩论草稿并参考专家 A 上轮草稿继续辩论 | `expert_b_draft`、可选 `retrieval_context` | `EXPERT_B_PROVIDER` | ✅ |
 | 审核裁判 Agent | `judge` | 只审核专家 A 整合稿是否通过，不生成教学正文或过程输出 | `judge_report` | `JUDGE_PROVIDER` | ✅ |
-| 反馈 Agent | `feedback` | 生成问卷、下一步动作、画像变化向量 Δ | `feedback_result`、`profile_delta` | `FEEDBACK_PROVIDER` | ✅（当前无 Δ 输出 [P0.3]） |
+| 学情诊断 Agent feedback 阶段 | `feedback` | 生成问卷、下一步动作、画像变化向量 Δ | `feedback_result`、`profile_delta` | `DIAGNOSIS_PROVIDER` | ✅（当前无 Δ 输出 [P0.3]） |
 | 快速回答 Agent | `chat_answer` | chat 路径基于检索上下文生成直接回答 | `chat_answer` | `CHAT_ANSWER_PROVIDER` | ✅ |
 | 路径搜索器 | `pathfinder` | A* 在知识图谱上搜索 3 条候选路径 [P0.2] | `learning_path_candidates` | — | [P0.2] |
 

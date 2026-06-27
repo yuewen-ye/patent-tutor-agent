@@ -261,7 +261,8 @@ class TestAgentNameExtension:
     def test_new_agent_names_accepted(self) -> None:
         """The new agent names are valid AgentName values."""
         # These should pass type checking at runtime
-        names: list[AgentName] = ["route", "feedback", "chat_answer"]
+        names: list[AgentName] = ["route", "diagnosis", "chat_answer"]
         for name in names:
             assert name in AgentName.__args__  # type: ignore[attr-defined]
+        assert "feedback" not in AgentName.__args__  # type: ignore[attr-defined]
         assert "tool_agent" not in AgentName.__args__  # type: ignore[attr-defined]

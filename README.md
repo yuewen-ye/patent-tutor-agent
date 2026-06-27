@@ -80,7 +80,6 @@ PLANNER_PROVIDER=deepseek
 EXPERT_A_PROVIDER=deepseek
 EXPERT_B_PROVIDER=deepseek
 JUDGE_PROVIDER=deepseek
-FEEDBACK_PROVIDER=deepseek
 ```
 
 ### 4. 启动 LangGraph Studio
@@ -240,7 +239,7 @@ START → _init → route ──┬── diagnose: diagnosis → END
 | `expert_b` | LLM + Tool 调用 | 生动灵活、面向案例；自行决定是否调用 RAG；负责辩论草稿和参考专家 A 上轮草稿补强 | `EXPERT_B_PROVIDER` |
 | `judge` | LLM 调用 | 只审核专家 A 整合稿是否通过，不写正文、不做过程输出 | `JUDGE_PROVIDER` |
 | `revise_experts` | 无 LLM | 增加辩论轮次，并分派下一轮 A/B 辩论 | — |
-| `feedback` | LLM 调用 + Store | teach 后置反馈阶段，生成问卷、下一步动作和画像更新建议 | `FEEDBACK_PROVIDER` |
+| `feedback` | diagnosis Agent 后置阶段 + Store | teach 后置反馈阶段，生成问卷、下一步动作和画像更新建议 | `DIAGNOSIS_PROVIDER` |
 | `chat_answer` | LLM 调用 | chat 路径基于检索上下文生成短答 | `CHAT_ANSWER_PROVIDER` |
 
 接口合同以 `docs/agent-interface-spec.md` 和 `backend/app/schemas/state.py` 为准。

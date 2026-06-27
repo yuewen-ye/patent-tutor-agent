@@ -20,7 +20,6 @@ AgentName = Literal[
     "expert_a",
     "expert_b",
     "judge",
-    "feedback",
     "route",
     "chat_answer",
 ]
@@ -55,7 +54,6 @@ AGENT_PROVIDER_ENV: dict[AgentName, str] = {
     "expert_a": "EXPERT_A_PROVIDER",
     "expert_b": "EXPERT_B_PROVIDER",
     "judge": "JUDGE_PROVIDER",
-    "feedback": "FEEDBACK_PROVIDER",
     "route": "ROUTE_PROVIDER",
     "chat_answer": "CHAT_ANSWER_PROVIDER",
 }

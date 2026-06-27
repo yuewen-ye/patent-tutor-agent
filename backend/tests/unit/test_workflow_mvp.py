@@ -25,7 +25,12 @@ class QueueLLMClient:
                     "learning_style": "case_first_then_rule",
                     "weak_points": ["法条概念辨析"],
                     "learning_goal": "学习专利新颖性",
-                }
+                },
+                {
+                    "questionnaire": ["你能用一句话说明新颖性和创造性的区别吗？"],
+                    "next_action": "完成一个新颖性案例判断题。",
+                    "profile_update_hint": "继续强化法条概念辨析。",
+                },
             ],
             "planner": [
                 [
@@ -74,13 +79,6 @@ class QueueLLMClient:
                     "completeness_score": 5,
                     "disputes": [],
                     "rationale": "整合稿可以作为最终教学内容。",
-                }
-            ],
-            "feedback": [
-                {
-                    "questionnaire": ["你能用一句话说明新颖性和创造性的区别吗？"],
-                    "next_action": "完成一个新颖性案例判断题。",
-                    "profile_update_hint": "继续强化法条概念辨析。",
                 }
             ],
         }
@@ -165,7 +163,9 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm(monkeypatch: pytest.M
     assert "expert_a" in llm_client.agents
     assert "expert_b" in llm_client.agents
     assert llm_client.agents.count("judge") == 1
-    assert llm_client.agents[-1] == "feedback"
+    assert llm_client.agents.count("diagnosis") == 2
+    assert "feedback" not in llm_client.agents
+    assert llm_client.agents[-1] == "diagnosis"
     forbidden_agents = {
         "cross_review_a",
         "cross_review_b",
@@ -175,9 +175,10 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm(monkeypatch: pytest.M
         "lightweight_review",
         "finalize",
         "tool_agent",
+        "feedback",
     }
     assert forbidden_agents.isdisjoint(set(llm_client.agents))
-    assert llm_client.agents[-3:] == ["expert_a", "judge", "feedback"]
+    assert llm_client.agents[-3:] == ["expert_a", "judge", "diagnosis"]
 
 
 def test_workflow_compiles_and_exports_mermaid(tmp_path: Path) -> None:

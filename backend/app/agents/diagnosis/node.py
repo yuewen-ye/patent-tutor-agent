@@ -93,7 +93,7 @@ def build_diagnosis_feedback_node(llm_client: LLMClient) -> Node:
                 judge_report=state.get("judge_report", {}),
             ),
             temperature=0.5,
-            agent="feedback",
+            agent="diagnosis",
         )
         feedback = FeedbackResult.model_validate(raw)
         feedback_dict = feedback.model_dump()

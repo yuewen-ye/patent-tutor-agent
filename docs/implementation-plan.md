@@ -136,7 +136,7 @@ A* 启发函数：f(n) = g(n) + h(n)
 | P0.2.2 | 知识图谱加载器 | `backend/app/knowledge_graph/loader.py`（新建） | 解析 YAML → 内存图结构 |
 | P0.2.3 | A* 路径搜索 | `backend/app/knowledge_graph/pathfinder.py`（新建） | 实现 A* + 认知负荷系数 + 3 条候选路径生成 |
 | P0.2.4 | 重写 planner 节点 | `backend/app/agents/planner/node.py` | 替换 LLM 调用为 A* 搜索调用（LLM 仅用于解释路径选择理由） |
-| P0.2.5 | 动态重规划 | `backend/app/knowledge_graph/replanner.py`（新建） | 反馈 Agent 发出 `recommend_reroute=true` 时触发，从当前节点重新搜索 |
+| P0.2.5 | 动态重规划 | `backend/app/knowledge_graph/replanner.py`（新建） | diagnosis Agent 的 feedback 阶段发出 `recommend_reroute=true` 时触发，从当前节点重新搜索 |
 
 ### P0.3 — 五维学习者画像
 

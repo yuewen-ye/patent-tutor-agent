@@ -28,7 +28,17 @@ class DebateQueueLLMClient:
                     "learning_style": "case_based",
                     "weak_points": ["新颖性判断步骤不清"],
                     "learning_goal": "学习专利新颖性",
-                }
+                },
+                {
+                    "questionnaire": ["本轮整合稿中哪个判断步骤最容易混淆？"],
+                    "next_action": "完成一个新颖性案例判断题。",
+                    "profile_update_hint": "继续巩固新颖性判断步骤。",
+                },
+                {
+                    "questionnaire": ["请复述新颖性判断的三步法。"],
+                    "next_action": "复盘 A/B 辩论中的案例判断。",
+                    "profile_update_hint": "案例判断仍需加强。",
+                },
             ],
             "planner": [
                 [
@@ -95,18 +105,6 @@ class DebateQueueLLMClient:
                     "rationale": "整合稿可以作为最终教学内容。",
                 },
             ],
-            "feedback": [
-                {
-                    "questionnaire": ["本轮整合稿中哪个判断步骤最容易混淆？"],
-                    "next_action": "完成一个新颖性案例判断题。",
-                    "profile_update_hint": "继续巩固新颖性判断步骤。",
-                },
-                {
-                    "questionnaire": ["请复述新颖性判断的三步法。"],
-                    "next_action": "复盘 A/B 辩论中的案例判断。",
-                    "profile_update_hint": "案例判断仍需加强。",
-                },
-            ],
         }
 
     def generate_json(
@@ -153,12 +151,12 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     assert agents.count("expert_a") == 3
     assert agents.count("expert_b") == 2
     assert agents.count("judge") == 1
-    assert agents.count("diagnosis") == 1
-    assert agents.count("feedback") == 1
+    assert agents.count("diagnosis") == 2
+    assert "feedback" not in agents
     assert llm_client.tool_call_agents.count("expert_a") == 3
     assert llm_client.tool_call_agents.count("expert_b") == 2
     assert "tool_agent" not in agents
-    assert agents[-1] == "feedback"
+    assert agents[-1] == "diagnosis"
     assert {
         "cross_review_a",
         "cross_review_b",
@@ -168,6 +166,7 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
         "lightweight_review",
         "finalize",
         "tool_agent",
+        "feedback",
     }.isdisjoint(set(agents))
     assert completed["debate_round"] == 2
     assert completed["judge_report"]["decision"] == "accept"
@@ -231,7 +230,8 @@ def test_workflow_runs_both_experts_for_each_debate_round_before_integration(
     assert agents.count("expert_a") == 3
     assert agents.count("expert_b") == 2
     assert agents.count("judge") == 1
-    assert agents.count("feedback") == 1
+    assert agents.count("diagnosis") == 2
+    assert "feedback" not in agents
     assert llm_client.tool_call_agents.count("expert_a") == 3
     assert llm_client.tool_call_agents.count("expert_b") == 2
     assert "tool_agent" not in agents
