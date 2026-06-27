@@ -87,9 +87,9 @@ planner 独立调用 RAG                 每个 Agent 独立调用 RAG [P0.5]
 | P0.1.4 | 新增 `expert_b` 修订节点 | `backend/app/agents/expert_b/revise.py` | 接收 A 的审查意见，逐条回应，输出 RevisionRecord | ✅ |
 | P0.1.5 | 新增联合合成节点 | `backend/app/agents/joint_synthesis.py` | 接收双方修订稿，协作整合为 JointSynthesis（标注 [A]/[B]/[A+B融合]） | ✅ |
 | P0.1.6 | 新增轻量互审节点 | `backend/app/agents/lightweight_review.py` | Judge 打回后，只审变更段落+前后各一段，输出 LightweightReview | ✅ |
-| P0.1.7 | 重构工作流图 | `backend/app/graph/workflow.py` | 五阶段协作链接入 teach 路径：generation→cross_review→revise→joint_synthesis→judge+lightweight_review | ✅ |
+| P0.1.7 | 重构工作流图 | `backend/app/graph/workflow.py` | 基础版 teach 路径：A/B 辩论轮次门控 → 专家 A 整合 → judge 审核 → feedback | ✅ |
 | P0.1.8 | 扩展 StateDict + 新增 Pydantic 模型 | `backend/app/schemas/state.py` | 新增 CrossReview 等 7 个 ContractModel + 6 个 StateDict 字段 + completeness_score | ✅ |
-| P0.1.9 | 扩展 Judge + Finalize | `backend/app/agents/judge/node.py` + `finalize/node.py` | Judge 审核联合合成稿（三维度评分）；Finalize 格式化联合合成稿 | ✅ |
+| P0.1.9 | 扩展 Judge + Feedback | `backend/app/agents/judge/node.py` + `diagnosis/node.py` | Judge 只审核专家 A 整合稿（三维度评分）；feedback 负责后置反馈闭环 | ✅ |
 | P0.1.10 | 扩展 max_debate_rounds | `backend/app/graph/workflow.py` + `session_service.py` + `run_workflow.py` | 从默认 2 轮改为 3 轮 | ✅ |
 
 ### P0.2 — 知识图谱 + A* 路径搜索（替换 LLM 路径生成）
@@ -211,7 +211,7 @@ A* 启发函数：f(n) = g(n) + h(n)
 
 ### P0.5 — 各 Agent 独立 RAG 检索
 
-**当前**：仅 `tool_agent` 通过 ReAct 循环调用 `rag_retrieve()`。其他 Agent 依赖 `tool_agent` 写入 `retrieval_context`。
+**当前**：`retrieve_context` 是非 LLM workflow 节点，统一调用 `rag_retrieve()` 并写入 `retrieval_context`；专家、judge、chat_answer 只读取检索上下文，不自行决定是否调工具。
 
 **目标**：每个 Agent 根据自己的职责独立检索不同内容。
 
@@ -229,8 +229,8 @@ feedback:   检索问卷模板、BKT 参数校准数据
 | # | 任务 | 涉及文件 | 说明 |
 |---|---|---|---|
 | P0.5.1 | RAG 检索接口扩展 | `backend/app/rag/retriever.py` | 支持按 `doc_type`/`检索目标` 过滤（法条/指南/案例/误区/题库） |
-| P0.5.2 | 各 Agent 接入独立 RAG | 各 `node.py` | 将 RAG 调用从 tool_agent 独占改为各 Agent 按需调用 |
-| P0.5.3 | tool_agent 角色调整 | `backend/app/agents/tool_agent.py` | 从唯一 RAG 调用者变为 teach/chat 路径的检索协调者 |
+| P0.5.2 | 各 Agent 接入独立 RAG | 各 `node.py` | 将 RAG 调用从统一 `retrieve_context` 扩展为各 Agent 按需调用 |
+| P0.5.3 | 检索协调策略调整 | `backend/app/graph/workflow.py` / `backend/app/rag/retriever.py` | 明确哪些检索仍由统一节点承担，哪些检索下放到具体 Agent |
 
 ### P0.6 — 动态重规划
 

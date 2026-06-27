@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from backend.app.core.llm import LLMMessage
+from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinition
 from backend.app.graph.workflow import run_workflow
 from backend.tests.helpers import completed_teach_state
 
@@ -94,6 +94,18 @@ class DebateQueueLLMClient:
                     "rationale": "整合稿可以作为最终教学内容。",
                 },
             ],
+            "feedback": [
+                {
+                    "questionnaire": ["本轮整合稿中哪个判断步骤最容易混淆？"],
+                    "next_action": "完成一个新颖性案例判断题。",
+                    "profile_update_hint": "继续巩固新颖性判断步骤。",
+                },
+                {
+                    "questionnaire": ["请复述新颖性判断的三步法。"],
+                    "next_action": "复盘 A/B 辩论中的案例判断。",
+                    "profile_update_hint": "案例判断仍需加强。",
+                },
+            ],
         }
 
     def generate_json(
@@ -109,16 +121,21 @@ class DebateQueueLLMClient:
                 return queue.pop(0)
         raise RuntimeError(f"No queued response for agent={agent}")
 
-    def generate_with_tools(self, messages, tools, temperature, agent=None):
-        from backend.app.core.llm import LLMResponseWithTools
-
-        self.agents.append(agent)
-        return LLMResponseWithTools(content="RAG context provided.", tool_calls=[])
+    def generate_with_tools(
+        self,
+        messages: list[LLMMessage],
+        tools: list[ToolDefinition],
+        temperature: float,
+        agent: str | None = None,
+    ) -> LLMResponseWithTools:
+        raise AssertionError("debate workflow tests must not call tool-capable LLM mode")
 
 
 def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
     llm_client = DebateQueueLLMClient()
 
     state = run_workflow(
@@ -135,8 +152,9 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     assert agents.count("expert_b") == 2
     assert agents.count("judge") == 1
     assert agents.count("diagnosis") == 1
-    assert "feedback" not in agents
-    assert agents[-1] == "judge"
+    assert agents.count("feedback") == 1
+    assert "tool_agent" not in agents
+    assert agents[-1] == "feedback"
     assert {
         "cross_review_a",
         "cross_review_b",
@@ -145,10 +163,11 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
         "joint_synthesis",
         "lightweight_review",
         "finalize",
-        "feedback",
+        "tool_agent",
     }.isdisjoint(set(agents))
     assert completed["debate_round"] == 2
     assert completed["judge_report"]["decision"] == "accept"
+    assert completed["feedback_result"]["next_action"] == "完成一个新颖性案例判断题。"
     assert completed["expert_a_draft"]["draft_stage"] == "integration"
     assert completed["expert_a_draft"]["teaching_content"] == "专家A整合A/B辩论结果后的教学内容"
     assert "final_answer" not in completed
@@ -168,6 +187,7 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     assert Path("artifacts/sessions/demo-session/round-02/expert_a_draft.md") in artifact_paths
     assert Path("artifacts/sessions/demo-session/round-02/expert_b_draft.md") in artifact_paths
     assert Path("artifacts/sessions/demo-session/round-02/expert_a_draft-02.md") in artifact_paths
+    assert Path("artifacts/sessions/demo-session/round-02/feedback_report.md") in artifact_paths
     assert len(artifact_paths) == len(set(artifact_paths))
 
     manifest_path = tmp_path / "artifacts" / "sessions" / "demo-session" / "manifest.json"
@@ -189,7 +209,9 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
 
 def test_workflow_runs_both_experts_for_each_debate_round_before_integration(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
     llm_client = DebateQueueLLMClient()
 
     state = run_workflow(
@@ -205,6 +227,8 @@ def test_workflow_runs_both_experts_for_each_debate_round_before_integration(
     assert agents.count("expert_a") == 3
     assert agents.count("expert_b") == 2
     assert agents.count("judge") == 1
+    assert agents.count("feedback") == 1
+    assert "tool_agent" not in agents
     assert completed["debate_round"] == 2
     assert completed["judge_report"]["decision"] == "accept"
     assert completed["expert_a_draft"]["draft_stage"] == "integration"

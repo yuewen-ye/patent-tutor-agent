@@ -14,6 +14,7 @@ from backend.app.memory import load_profile_memories, save_learner_memories
 from backend.app.schemas.context import WorkflowContext
 from backend.app.schemas.state import FeedbackResult, LearnerProfile, StateDict, completed_event
 
+_DIAGNOSIS_PROMPT = load_prompt(__file__)
 _FEEDBACK_PHASE_PROMPT = load_prompt(__file__, "feedback_phase.md")
 
 
@@ -27,7 +28,8 @@ def build_diagnosis_node(llm_client: LLMClient) -> Node:
                     '{"education_background":"patent_exam_candidate","knowledge_level":"beginner",'
                     '"learning_style":"case_first_then_rule","weak_points":["概念辨析"],'
                     '"learning_goal":"学习目标"}',
-                ),
+                )
+                + _DIAGNOSIS_PROMPT,
             ),
             ("user", "当前学习需求：{user_input}\n历史学习者画像：{historical_profiles}\n请诊断该学习需求对应的学习者画像。"),
         ]
@@ -75,7 +77,7 @@ def build_diagnosis_feedback_node(llm_client: LLMClient) -> Node:
                 "当前学习需求：{user_input}\n"
                 "初始学习者画像：{learner_profile}\n"
                 "裁判报告：{judge_report}\n"
-                "请作为 diagnosis Agent 的反馈阶段，生成本轮反馈闭环建议。",
+                "请作为 feedback 阶段，生成本轮反馈闭环建议。",
             ),
         ]
     )
@@ -91,7 +93,7 @@ def build_diagnosis_feedback_node(llm_client: LLMClient) -> Node:
                 judge_report=state.get("judge_report", {}),
             ),
             temperature=0.5,
-            agent="diagnosis",
+            agent="feedback",
         )
         feedback = FeedbackResult.model_validate(raw)
         feedback_dict = feedback.model_dump()

@@ -53,7 +53,7 @@ class TestTeachRoute:
         assert state["judge_report"]["decision"] in {
             "accept", "accept_with_minor_revision", "revise",
         }
-        assert "feedback_result" not in state
+        assert "feedback_result" in state
         assert "final_answer" not in state
         assert state["expert_a_draft"]["draft_stage"] == "integration"
         assert state["expert_a_draft"]["teaching_content"]
@@ -65,13 +65,12 @@ class TestTeachRoute:
         assert "route" == completed[0]
         assert "diagnosis" in completed
         assert "planner" in completed
-        assert "tool_agent" in completed
-        assert completed[-1] == "judge"
+        assert "retrieve_context" in completed
+        assert "tool_agent" not in completed
+        assert completed[-1] == "feedback"
 
 
 class TestChatRoute:
-    """Quick Q&A path: route→tool_agent→chat_answer→END."""
-
     def test_chat_path_produces_chat_answer(self, tmp_path: Path) -> None:
         router = _try_router()
         state = _try_run(router, "integ-chat", "什么是抵触申请", tmp_path)
@@ -87,7 +86,7 @@ class TestChatRoute:
         router = _try_router()
         state = _try_run(router, "integ-chat-events", "新颖性和创造性有什么区别", tmp_path)
         completed = [e["node"] for e in state["events"] if e["status"] == "completed"]
-        assert completed == ["route", "tool_agent", "chat_answer"]
+        assert completed == ["route", "retrieve_context", "chat_answer"]
 
 
 class TestDiagnoseRoute:

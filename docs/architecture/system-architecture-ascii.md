@@ -88,7 +88,7 @@
 │   │       │                                                    │   │                              │
 │   │       ▼                                                    │   │                              │
 │   │  ┌────────────────┐                                        │   │                              │
-│   │  │  tool_agent   │  ReAct + rag_retrieve                    │   │                              │
+│   │  │retrieve_context│  rag_retrieve                          │   │                              │
 │   │  └───────┬────────┘                                        │   │                              │
 │   │          │                                                  │   │                              │
 │   │     ┌────┴────┐                                             │   │                              │
@@ -445,11 +445,11 @@
       │       │            │
       │       └─────┬──────┘
       │             ▼
-      ├── judge → judge_report ──→ [Agent 状态动画] (辩论过程)
-      │       │
-      │       ├──(revise)→ revise_experts → expert_a/b → judge (循环)
-      │       │
-      │       └──(accept)→ feedback → feedback_result ──→ [反馈问卷]
+      ├── revise_experts → expert_a/b (until max rounds)
+      │
+      ├── expert_a integration → judge → judge_report ──→ [Agent 状态动画]
+      │
+      └── feedback → feedback_result ──→ [反馈问卷]
       │                               │
       │                               ▼
       └── finalize → final_answer ──→ [课程页面] [聊天界面]

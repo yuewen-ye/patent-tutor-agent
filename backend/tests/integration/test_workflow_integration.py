@@ -78,7 +78,7 @@ def test_workflow_runs_single_round_with_real_llm(tmp_path: Path) -> None:
     assert 1 <= completed["judge_report"]["adaptation_score"] <= 5
     assert 1 <= completed["judge_report"]["completeness_score"] <= 5
 
-    assert "feedback_result" not in completed
+    assert "feedback_result" in completed
     assert "final_answer" not in completed
 
     assert completed["artifacts"]
@@ -92,7 +92,7 @@ def test_workflow_runs_single_round_with_real_llm(tmp_path: Path) -> None:
         "artifacts/sessions/pytest-integration/round-01/expert_b_draft.md",
         "artifacts/sessions/pytest-integration/round-01/judge_report.md",
         "artifacts/sessions/pytest-integration/round-01/expert_a_draft-02.md",
-        "artifacts/sessions/pytest-integration/round-01/judge_report-02.md",
+        "artifacts/sessions/pytest-integration/round-01/feedback_report.md",
     ]
     for expected in expected_artifacts:
         assert expected in artifact_paths, f"Missing artifact: {expected}"
@@ -147,6 +147,6 @@ def test_workflow_event_ordering_is_correct_with_real_llm(tmp_path: Path) -> Non
     completed_events = [
         e["node"] for e in state["events"] if e["status"] == "completed"
     ]
-    assert completed_events[:4] == ["route", "diagnosis", "planner", "tool_agent"]
+    assert completed_events[:4] == ["route", "diagnosis", "planner", "retrieve_context"]
     assert "expert_a" in completed_events and "expert_b" in completed_events
-    assert completed_events[-2:] == ["expert_a", "judge"]
+    assert completed_events[-3:] == ["expert_a", "judge", "feedback"]

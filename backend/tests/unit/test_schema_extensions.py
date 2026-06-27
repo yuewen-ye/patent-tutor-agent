@@ -52,9 +52,10 @@ class TestChatAnswer:
 class TestAgentNodeExtension:
     def test_new_nodes_in_literal(self) -> None:
         assert "route" in AgentNode.__args__  # type: ignore[attr-defined]
-        assert "tool_agent" in AgentNode.__args__  # type: ignore[attr-defined]
+        assert "retrieve_context" in AgentNode.__args__  # type: ignore[attr-defined]
         assert "chat_answer" in AgentNode.__args__  # type: ignore[attr-defined]
         assert "revise_experts" in AgentNode.__args__  # type: ignore[attr-defined]
+        assert "tool_agent" not in AgentNode.__args__  # type: ignore[attr-defined]
 
     def test_existing_nodes_preserved(self) -> None:
         for name in ("diagnosis", "planner", "expert_a", "expert_b", "judge", "feedback"):
@@ -79,15 +80,6 @@ class TestStateDictNewFields:
             "chat_answer": {"content": "回答", "sources": []},
         }
         assert s["chat_answer"]["content"] == "回答"
-
-    def test_tool_agent_answer_field(self) -> None:
-        s: StateDict = {
-            "session_id": "s1",
-            "user_input": "test",
-            "events": [],
-            "tool_agent_answer": "可直接复用的回答",
-        }
-        assert s["tool_agent_answer"] == "可直接复用的回答"
 
     def test_both_new_fields(self) -> None:
         s: StateDict = {

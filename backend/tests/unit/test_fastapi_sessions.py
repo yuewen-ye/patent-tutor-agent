@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from backend.app.core.llm import LLMMessage
+from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinition
 from backend.app.services.session_service import SessionService
 from backend.main import create_app
 from backend.tests.helpers import completed_state
@@ -65,6 +65,11 @@ class QueueLLMClient:
                 "disputes": [],
                 "rationale": "整合稿可以作为最终教学内容。",
             },
+            {
+                "questionnaire": ["你是否能独立判断一个方案是否具备新颖性？"],
+                "next_action": "完成一个新颖性案例题。",
+                "profile_update_hint": "继续强化新颖性判断步骤。",
+            },
         ]
 
     def generate_json(
@@ -72,12 +77,18 @@ class QueueLLMClient:
     ) -> object:
         return self.responses.pop(0)
 
-    def generate_with_tools(self, messages, tools, temperature, agent=None):
-        from backend.app.core.llm import LLMResponseWithTools
-        return LLMResponseWithTools(content="RAG context provided.", tool_calls=[])
+    def generate_with_tools(
+        self,
+        messages: list[LLMMessage],
+        tools: list[ToolDefinition],
+        temperature: float,
+        agent: str | None = None,
+    ) -> LLMResponseWithTools:
+        raise AssertionError("session API tests must not call tool-capable LLM mode")
 
 
-def _make_client(tmp_path: Path) -> tuple[TestClient, SessionService]:
+def _make_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[TestClient, SessionService]:
+    monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
     service = SessionService(
         artifact_root=tmp_path / "artifacts",
         llm_client=QueueLLMClient(),
@@ -86,8 +97,10 @@ def _make_client(tmp_path: Path) -> tuple[TestClient, SessionService]:
     return TestClient(app), service
 
 
-def test_session_api_creates_background_workflow_and_returns_snapshot(tmp_path: Path) -> None:
-    client, service = _make_client(tmp_path)
+def test_session_api_creates_background_workflow_and_returns_snapshot(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client, service = _make_client(tmp_path, monkeypatch)
 
     created = client.post(
         "/sessions",
@@ -114,11 +127,14 @@ def test_session_api_creates_background_workflow_and_returns_snapshot(tmp_path: 
     assert snapshot["state"]["expert_a_draft"]["draft_stage"] == "integration"
     assert snapshot["state"]["expert_a_draft"]["legal_basis"] == ["专利法第二十二条"]
     assert snapshot["state"]["expert_a_draft"] == completed["expert_a_draft"]
+    assert snapshot["state"]["feedback_result"]["next_action"] == "完成一个新颖性案例题。"
     assert "final_answer" not in snapshot["state"]
 
 
-def test_session_events_stream_replays_agent_events_and_completion(tmp_path: Path) -> None:
-    client, service = _make_client(tmp_path)
+def test_session_events_stream_replays_agent_events_and_completion(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client, service = _make_client(tmp_path, monkeypatch)
     session_id = client.post(
         "/sessions",
         json={"user_input": "我想学习专利新颖性", "max_debate_rounds": 1},
@@ -135,12 +151,15 @@ def test_session_events_stream_replays_agent_events_and_completion(tmp_path: Pat
     assert "event: agent_event" in payload
     assert '"node": "diagnosis"' in payload
     assert '"node": "expert_a"' in payload
+    assert '"node": "feedback"' in payload
     assert "event: session_status" in payload
     assert '"status": "completed"' in payload
 
 
-def test_session_websocket_replays_agent_events_until_completion(tmp_path: Path) -> None:
-    client, service = _make_client(tmp_path)
+def test_session_websocket_replays_agent_events_until_completion(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client, service = _make_client(tmp_path, monkeypatch)
     session_id = client.post(
         "/sessions",
         json={"user_input": "我想学习专利新颖性", "max_debate_rounds": 1},
@@ -159,12 +178,14 @@ def test_session_websocket_replays_agent_events_until_completion(tmp_path: Path)
 
     event_nodes = [message["event"]["node"] for message in messages if message["type"] == "agent_event"]
     assert "diagnosis" in event_nodes
-    assert event_nodes[-1] == "judge"
+    assert event_nodes[-1] == "feedback"
     assert messages[-1]["status"] == "completed"
 
 
-def test_session_artifact_endpoint_serves_markdown_and_blocks_traversal(tmp_path: Path) -> None:
-    client, service = _make_client(tmp_path)
+def test_session_artifact_endpoint_serves_markdown_and_blocks_traversal(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client, service = _make_client(tmp_path, monkeypatch)
     session_id = client.post(
         "/sessions",
         json={"user_input": "我想学习专利新颖性", "max_debate_rounds": 1},

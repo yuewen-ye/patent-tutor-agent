@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from backend.app.core.llm import LLMMessage
+from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinition
 from backend.app.graph.workflow import build_workflow, export_workflow_mermaid, run_workflow
 from backend.tests.helpers import completed_teach_state
 
@@ -75,6 +75,13 @@ class QueueLLMClient:
                     "rationale": "整合稿可以作为最终教学内容。",
                 }
             ],
+            "feedback": [
+                {
+                    "questionnaire": ["你能用一句话说明新颖性和创造性的区别吗？"],
+                    "next_action": "完成一个新颖性案例判断题。",
+                    "profile_update_hint": "继续强化法条概念辨析。",
+                }
+            ],
         }
 
     def generate_json(
@@ -90,15 +97,17 @@ class QueueLLMClient:
         return queue.pop(0)
 
     def generate_with_tools(
-        self, messages, tools, temperature, agent=None,
-    ):
-        from backend.app.core.llm import LLMResponseWithTools
-        self.agents.append(agent)
-        # tool_agent: return empty tool_calls to skip RAG, then provide content
-        return LLMResponseWithTools(content="RAG context provided.", tool_calls=[])
+        self,
+        messages: list[LLMMessage],
+        tools: list[ToolDefinition],
+        temperature: float,
+        agent: str | None = None,
+    ) -> LLMResponseWithTools:
+        raise AssertionError("workflow tests must not call tool-capable LLM mode")
 
 
-def test_real_workflow_runs_full_agent_chain_with_fake_llm() -> None:
+def test_real_workflow_runs_full_agent_chain_with_fake_llm(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
     llm_client = QueueLLMClient()
 
     state = run_workflow(
@@ -109,7 +118,7 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm() -> None:
     )
 
     completed = completed_teach_state(state)
-    assert len(llm_client.calls) == 7
+    assert len(llm_client.calls) == 8
     assert completed["session_id"] == "demo-session"
     assert completed["learner_profile"]["knowledge_level"] == "beginner"
     assert len(completed["learning_path"]) == 1
@@ -118,7 +127,7 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm() -> None:
     assert completed["expert_a_draft"]["teaching_content"] == "整合专家A和专家B后的教学内容"
     assert completed["expert_b_draft"]["style"] == "vivid_teaching"
     assert completed["judge_report"]["decision"] == "accept"
-    assert "feedback_result" not in completed
+    assert completed["feedback_result"]["next_action"] == "完成一个新颖性案例判断题。"
     assert "final_answer" not in completed
 
     completed_events = [event for event in state["events"] if event["status"] == "completed"]
@@ -127,22 +136,23 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm() -> None:
         "route",
         "diagnosis",
         "planner",
-        "tool_agent",
+        "retrieve_context",
         "expert_a",
         "expert_b",
         "expert_a",
         "judge",
+        "feedback",
     ]
     assert all(event["round"] == 1 for event in completed_events)
     assert all(isinstance(event["timestamp"], str) and event["timestamp"] for event in completed_events)
     assert all(isinstance(event["duration_ms"], int) for event in completed_events)
     # Verify agent call order
     assert llm_client.agents[:3] == ["route", "diagnosis", "planner"]
-    assert "tool_agent" in llm_client.agents
+    assert "tool_agent" not in llm_client.agents
     assert "expert_a" in llm_client.agents
     assert "expert_b" in llm_client.agents
     assert llm_client.agents.count("judge") == 1
-    assert "feedback" not in llm_client.agents
+    assert llm_client.agents[-1] == "feedback"
     forbidden_agents = {
         "cross_review_a",
         "cross_review_b",
@@ -151,10 +161,10 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm() -> None:
         "joint_synthesis",
         "lightweight_review",
         "finalize",
-        "feedback",
+        "tool_agent",
     }
     assert forbidden_agents.isdisjoint(set(llm_client.agents))
-    assert llm_client.agents[-2:] == ["expert_a", "judge"]
+    assert llm_client.agents[-3:] == ["expert_a", "judge", "feedback"]
 
 
 def test_workflow_compiles_and_exports_mermaid(tmp_path: Path) -> None:
@@ -166,7 +176,9 @@ def test_workflow_compiles_and_exports_mermaid(tmp_path: Path) -> None:
     assert "expert_a" in mermaid
     assert "expert_b" in mermaid
     assert "judge" in mermaid
-    assert "feedback" not in mermaid
+    assert "feedback" in mermaid
+    assert "retrieve_context" in mermaid
+    assert "tool_agent" not in mermaid
     for removed_node in (
         "cross_review_a",
         "cross_review_b",

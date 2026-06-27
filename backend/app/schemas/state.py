@@ -15,7 +15,7 @@ AgentNode = Literal[
     "judge",
     "feedback",
     "route",
-    "tool_agent",
+    "retrieve_context",
     "chat_answer",
     "revise_experts",
 ]
@@ -57,9 +57,14 @@ class MarkdownArtifact(ContractModel):
     ]
     path: str
     created_by: Literal[
-        "diagnosis", "planner", "retrieve_context", "expert_a", "expert_b", "judge", "feedback",
+        "diagnosis",
+        "planner",
+        "retrieve_context",
+        "expert_a",
+        "expert_b",
+        "judge",
+        "feedback",
         "route",
-        "tool_agent",
         "chat_answer",
         "revise_experts",
     ]
@@ -285,7 +290,6 @@ class StateDict(TypedDict):
     intent: NotRequired[str]  # "teach" | "chat" | "diagnose"
     teach_phase: NotRequired[Literal["debate", "integration"]]
     chat_answer: NotRequired[dict[str, Any]]
-    tool_agent_answer: NotRequired[str]
 
 
 def _inline_array_item_schema(schema: dict[str, Any]) -> dict[str, Any]:

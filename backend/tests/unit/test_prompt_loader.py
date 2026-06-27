@@ -10,7 +10,7 @@ from backend.app.agents.common import load_prompt
 
 _EXPECTED_PROMPT_DIRS: list[str] = [
     "route",
-    "tool_agent",
+    "diagnosis",
     "chat_answer",
     "planner",
     "expert_a",

@@ -13,6 +13,7 @@ _COMPLETED_STATE_KEYS = (
     "expert_a_draft",
     "expert_b_draft",
     "judge_report",
+    "feedback_result",
     "artifacts",
     "debate_round",
     "max_debate_rounds",

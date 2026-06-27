@@ -118,7 +118,7 @@ def build_judge_node(llm_client: LLMClient) -> Node:
         report = JudgeReport.model_validate(_normalize_judge_report(raw))
         return {
             "judge_report": report.model_dump(),
-            "events": [completed_event("judge", "reviewed expert drafts with LLM")],
+            "events": [completed_event("judge", "reviewed expert A integration draft with LLM")],
         }
 
     return judge_node

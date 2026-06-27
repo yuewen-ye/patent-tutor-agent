@@ -2,7 +2,7 @@
 
 知识产权管理与专利代理实务多 Agent 系统。仓库采用 **Monorepo 单仓库 + 前后端分离**：后端负责 FastAPI 服务、LangGraph 多 Agent 编排、统一模型调用和 RAG 知识库模块；前端负责后续 React 交互与 Agent 运行状态可视化。
 
-当前已完成：三路由工作流（teach/chat/diagnose）、原生 tool-calling（ReAct 循环 + RAG 工具）、DeepSeek/Qwen/GLM 统一 `call_llm` 封装、Agent 级 provider 路由、JSON Schema 合同、LangGraph Checkpointer/Store 记忆底座、LangGraph Studio 可视化调试、FastAPI 会话服务。
+当前已完成：三路由工作流（teach/chat/diagnose）、确定性 RAG 检索节点、DeepSeek/Qwen/GLM 统一 `call_llm` 封装、Agent 级 provider 路由、JSON Schema 合同、LangGraph Checkpointer/Store 记忆底座、LangGraph Studio 可视化调试、FastAPI 会话服务。
 
 ## 从零到 LangGraph Studio
 
@@ -74,13 +74,13 @@ DEFAULT_LLM_PROVIDER=deepseek
 
 ```env
 ROUTE_PROVIDER=deepseek
-TOOL_AGENT_PROVIDER=deepseek
 CHAT_ANSWER_PROVIDER=deepseek
 DIAGNOSIS_PROVIDER=deepseek
 PLANNER_PROVIDER=deepseek
 EXPERT_A_PROVIDER=deepseek
 EXPERT_B_PROVIDER=deepseek
 JUDGE_PROVIDER=deepseek
+FEEDBACK_PROVIDER=deepseek
 ```
 
 ### 4. 启动 LangGraph Studio
@@ -172,11 +172,9 @@ https://smith.langchain.com/studio/?baseUrl=http://localhost:8124
 │   │   ├── api/                # REST API / WebSocket 路由
 │   │   ├── agents/             # Agent 节点
 │   │   │   ├── route.py            # 意图路由（teach/chat/diagnose）
-│   │   │   ├── tool_agent.py       # ReAct 循环 + rag_retrieve 工具调用
 │   │   │   ├── chat_answer.py      # chat 路径快速回答
 │   │   │   ├── diagnosis/          # 学情诊断 + feedback 后置阶段
 │   │   │   ├── planner/            # 路径规划
-│   │   │   ├── retrieve_context.py # RAG 检索（保留兼容）
 │   │   │   ├── expert_a.py         # 保守严谨专家
 │   │   │   ├── expert_b.py         # 生动教学专家
 │   │   │   ├── judge/              # 审核裁判
@@ -207,8 +205,8 @@ https://smith.langchain.com/studio/?baseUrl=http://localhost:8124
 
 ```text
 START → _init → route ──┬── diagnose: diagnosis → END
-                         ├── chat: tool_agent ──(rag_retrieve 工具)──→ chat_answer → END
-                         └── teach: diagnosis → planner → tool_agent
+                         ├── chat: retrieve_context → chat_answer → END
+                         └── teach: diagnosis → planner → retrieve_context
                                       ↓
                                   expert_a ∥ expert_b
                                       ↓
@@ -219,13 +217,15 @@ START → _init → route ──┬── diagnose: diagnosis → END
                                       ↓
                                      judge
                                       ↓
+                                   feedback
+                                      ↓
                                      END
 ```
 
 | 路由 | 触发条件 | 路径 | LLM 调用次数 | 典型耗时 |
 |------|---------|------|-------------|---------|
-| **teach** | "系统学习"、"学习路径"、"规划" | 诊断→规划→RAG→双专家辩论→专家A整合→裁判终审 | ~7-10 次 | 1-3 分钟 |
-| **chat** | 单点问答、定义、对比 | RAG(可选)→直接回答 | ~1-2 次 | 5-30 秒 |
+| **teach** | "系统学习"、"学习路径"、"规划" | 诊断→规划→RAG→双专家辩论→专家A整合→裁判终审→反馈 | ~8-11 次 | 1-3 分钟 |
+| **chat** | 单点问答、定义、对比 | RAG→直接回答 | ~1 次 | 5-30 秒 |
 | **diagnose** | "诊断"、"薄弱点"、"评估" | 诊断→结束 | ~1 次 | 2-5 秒 |
 
 ### Agent 节点职责
@@ -235,13 +235,13 @@ START → _init → route ──┬── diagnose: diagnosis → END
 | `route` | LLM 调用 + 本地兜底 | 分类用户意图 teach/chat/diagnose；明显学习/诊断请求会覆盖误路由 | `ROUTE_PROVIDER` |
 | `diagnosis` | LLM 调用 + Store | 学情诊断；可复用 `feedback` 阶段生成问卷、下一步动作、画像更新建议 | `DIAGNOSIS_PROVIDER` |
 | `planner` | LLM 调用 | 生成个性化学习路径 | `PLANNER_PROVIDER` |
-| `tool_agent` | LLM + Tool 调用 | ReAct 循环，自主调用 rag_retrieve 检索法条 | `TOOL_AGENT_PROVIDER` |
+| `retrieve_context` | 无 LLM | 确定性调用 `retrieve_context()` 检索法条上下文，不由模型决定是否检索 | — |
 | `expert_a` | LLM 调用 | 保守严谨、法条优先；负责辩论草稿和最终整合 A/B 结果 | `EXPERT_A_PROVIDER` |
 | `expert_b` | LLM 调用 | 生动灵活、面向案例；负责辩论草稿和参考专家 A 上轮草稿补强 | `EXPERT_B_PROVIDER` |
 | `judge` | LLM 调用 | 只审核专家 A 整合稿是否通过，不写正文、不做过程输出 | `JUDGE_PROVIDER` |
 | `revise_experts` | 无 LLM | 增加辩论轮次，并分派下一轮 A/B 辩论 | — |
-| `feedback` | LLM 调用 + Store | `diagnosis` Agent 的反馈阶段，保留为可复用节点；当前 teach 主路径不调用 | `DIAGNOSIS_PROVIDER` |
-| `chat_answer` | LLM 调用或复用 | chat 路径优先复用 tool_agent 的最终回答，必要时补答 | `CHAT_ANSWER_PROVIDER` |
+| `feedback` | LLM 调用 + Store | teach 后置反馈阶段，生成问卷、下一步动作和画像更新建议 | `FEEDBACK_PROVIDER` |
+| `chat_answer` | LLM 调用 | chat 路径基于检索上下文生成短答 | `CHAT_ANSWER_PROVIDER` |
 
 接口合同以 `docs/agent-interface-spec.md` 和 `backend/app/schemas/state.py` 为准。
 
@@ -285,7 +285,7 @@ QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 
 ## RAG 工具函数
 
-RAG 工具对 `tool_agent` 暴露为 `rag_retrieve` tool-call。运行时由 `backend/app/retrieval_selector.py` 根据 `RAG_RETRIEVAL_MODE` 选择真实向量检索或 mock 检索；`backend/app/rag/` 只保留真实 RAG 实现。
+工作流通过非 LLM 的 `retrieve_context` 节点确定性调用 `backend/app/retrieval_selector.py`。运行时根据 `RAG_RETRIEVAL_MODE` 选择真实向量检索或 mock 检索；`backend/app/rag/` 只保留真实 RAG 实现。
 
 当前实现使用 Milvus Lite + BGE-M3 嵌入模型做本地向量检索，不再保留旧版向量库兼容路径。
 
@@ -322,7 +322,7 @@ PY
 
 - 输出的 `method` 是 `vector`：真实 RAG，来自 Milvus Lite + BGE-M3。
 - 输出的 `method` 是 `manual`：mock RAG，来自 `backend/app/mock_rag.py`。
-- 工作流运行日志里 `tool_agent` 行也会显示类似 `片段数=2  方法=vector`；这里的 `vector` 就是真实 RAG。
+- 工作流运行日志里 `retrieve_context` 行也会显示类似 `片段数=2  方法=vector`；这里的 `vector` 就是真实 RAG。
 
 ### 当前真实 RAG 依赖
 

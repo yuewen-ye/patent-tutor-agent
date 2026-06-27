@@ -6,7 +6,7 @@ import pytest
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.store.memory import InMemoryStore
 
-from backend.app.core.llm import LLMMessage
+from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinition
 from backend.app.graph.workflow import run_workflow
 
 pytestmark = pytest.mark.unit
@@ -65,6 +65,11 @@ class MemoryQueueLLMClient:
                 "disputes": [],
                 "rationale": "整合稿可以输出",
             },
+            {
+                "questionnaire": ["本轮学习后还有哪个概念不清楚？"],
+                "next_action": "完成一个案例题。",
+                "profile_update_hint": "继续跟踪新颖性掌握情况。",
+            },
         ]
 
     def generate_json(
@@ -76,12 +81,20 @@ class MemoryQueueLLMClient:
             )
         return self.responses.pop(0)
 
-    def generate_with_tools(self, messages, tools, temperature, agent=None):
-        from backend.app.core.llm import LLMResponseWithTools
-        return LLMResponseWithTools(content="RAG context provided.", tool_calls=[])
+    def generate_with_tools(
+        self,
+        messages: list[LLMMessage],
+        tools: list[ToolDefinition],
+        temperature: float,
+        agent: str | None = None,
+    ) -> LLMResponseWithTools:
+        raise AssertionError("workflow memory tests must not call tool-capable LLM mode")
 
 
-def test_workflow_uses_checkpointer_and_store_for_learner_memory() -> None:
+def test_workflow_uses_checkpointer_and_store_for_learner_memory(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
     checkpointer = InMemorySaver()
     store = InMemoryStore()
 

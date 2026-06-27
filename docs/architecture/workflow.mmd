@@ -9,11 +9,12 @@ graph TD;
 	route(route)
 	diagnosis(diagnosis)
 	planner(planner)
-	tool_agent(tool_agent)
+	retrieve_context(retrieve_context)
 	chat_answer(chat_answer)
 	expert_a(expert_a)
 	expert_b(expert_b)
 	judge(judge)
+	feedback(feedback)
 	revise_experts(revise_experts)
 	_prepare_integration(_prepare_integration)
 	__end__([<p>__end__</p>]):::last
@@ -27,16 +28,17 @@ graph TD;
 	expert_a -.-> revise_experts;
 	expert_b -.-> _prepare_integration;
 	expert_b -.-> revise_experts;
-	planner --> tool_agent;
+	judge -.-> feedback;
+	planner --> retrieve_context;
+	retrieve_context -.-> chat_answer;
+	retrieve_context -.-> expert_a;
+	retrieve_context -.-> expert_b;
 	revise_experts -.-> expert_a;
 	revise_experts -.-> expert_b;
 	route -.-> diagnosis;
-	route -.-> tool_agent;
-	tool_agent -.-> chat_answer;
-	tool_agent -.-> expert_a;
-	tool_agent -.-> expert_b;
+	route -.-> retrieve_context;
 	chat_answer --> __end__;
-	judge --> __end__;
+	feedback --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
 	classDef last fill:#bfb6fc

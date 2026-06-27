@@ -145,5 +145,5 @@ store = PostgresStore.from_conn_string(
 
 1. **Phase 1**：SQLite 持久化 — 改 `build_workflow()` 加 SQLite 支持，解决重启丢失
 2. **Phase 2**：Studio 传 learner_id — 在 `_init` 节点生成默认 learner_id
-3. **Phase 3**：chat 路径写记忆 — tool_agent 完成后写问答摘要
+3. **Phase 3**：chat 路径写记忆 — chat_answer 完成后写问答摘要
 4. **Phase 4**：PostgreSQL 迁移 — 多 worker 部署时切换

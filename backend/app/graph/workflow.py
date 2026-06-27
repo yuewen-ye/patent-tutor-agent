@@ -18,8 +18,9 @@ from backend.app.agents import Node, build_agent_nodes
 from backend.app.artifacts import attach_markdown_artifact, write_field_artifact, write_manifest
 from backend.app.core.llm import AgentLLMRouter, DefaultLLMClient, LLMClient
 from backend.app.memory import save_learner_memories
+from backend.app.retrieval_selector import retrieve_context
 from backend.app.schemas.context import WorkflowContext
-from backend.app.schemas.state import AgentEvent, StateDict
+from backend.app.schemas.state import AgentEvent, StateDict, completed_event
 
 WorkflowUpdateSink = Callable[[dict[str, Any]], None]
 WorkflowEventSink = Callable[[list[dict[str, Any]]], None]
@@ -127,14 +128,25 @@ def _judge_decision(report: object) -> str:
     return ""
 
 
-def _judge_completes_teach(
+def _feedback_completes_teach(
     state: StateDict,
     updates: dict[str, Any],
     node_label: str,
 ) -> bool:
-    if node_label != "judge" or state.get("teach_phase") != "integration":
+    return (
+        node_label == "feedback"
+        and state.get("teach_phase") == "integration"
+        and "judge_report" in state
+        and "feedback_result" in updates
+    )
+
+
+def _judge_accepts_teach(
+    state: StateDict,
+) -> bool:
+    if state.get("teach_phase") != "integration":
         return False
-    decision = _judge_decision(updates.get("judge_report"))
+    decision = _judge_decision(state.get("judge_report"))
     if decision in _ACCEPTED_JUDGE_DECISIONS:
         return True
     debate_round = int(state.get("debate_round", 1))
@@ -191,7 +203,7 @@ def _with_runtime_side_effects(
         print(f"  [{label}]{round_tag} 完成 ✓  ({duration_ms}ms)", file=sys.stderr)
 
         artifacts: list[dict[str, Any]] = []
-        completed_teach = _judge_completes_teach(state, updates, label)
+        completed_teach = _feedback_completes_teach(state, updates, label)
         if artifact_root is not None:
             round_number = int(state.get("debate_round", 1))
             session_id = state["session_id"]
@@ -299,11 +311,28 @@ def prepare_integration_node(
     return {"teach_phase": "integration"}
 
 
-def _route_after_route(state: StateDict) -> Literal["diagnosis", "tool_agent"]:
+def retrieve_context_node(
+    state: StateDict, runtime: Runtime[WorkflowContext] | None = None
+) -> dict[str, Any]:
+    chunks = retrieve_context(query=state["user_input"], top_k=5)
+    existing = list(state.get("retrieval_context", []) or [])
+    existing.extend(chunk.model_dump() for chunk in chunks)
+    return {
+        "retrieval_context": existing,
+        "events": [
+            completed_event(
+                "retrieve_context",
+                f"retrieved {len(chunks)} chunk(s) deterministically",
+            )
+        ],
+    }
+
+
+def _route_after_route(state: StateDict) -> Literal["diagnosis", "retrieve_context"]:
     intent = state.get("intent", "teach")
     if intent == "chat":
         print("▸ [路由] intent=chat → 快速问答路径", file=sys.stderr)
-        return "tool_agent"
+        return "retrieve_context"
     # teach and diagnose both go through diagnosis first
     print(f"▸ [路由] intent={intent} → diagnosis", file=sys.stderr)
     return "diagnosis"
@@ -318,7 +347,7 @@ def _route_after_diagnosis(state: StateDict) -> Literal["planner", "__end__"]:
     return "planner"
 
 
-def _route_after_tool_agent(
+def _route_after_retrieve_context(
     state: StateDict,
 ) -> Literal["chat_answer"] | list[Literal["expert_a", "expert_b"]]:
     intent = state.get("intent", "teach")
@@ -327,6 +356,14 @@ def _route_after_tool_agent(
         return "chat_answer"
     print("▸ [路由] intent=teach → experts", file=sys.stderr)
     return ["expert_a", "expert_b"]
+
+
+def _route_after_judge(state: StateDict) -> Literal["feedback"]:
+    if _judge_accepts_teach(state):
+        print("▸ [路由] judge 已完成整合稿审核 → feedback", file=sys.stderr)
+    else:
+        print("▸ [路由] judge 未通过整合稿 → feedback", file=sys.stderr)
+    return "feedback"
 
 
 def build_workflow(
@@ -360,11 +397,14 @@ def build_workflow(
     builder.add_node("route", _wrap("route"))
     builder.add_node("diagnosis", _wrap("diagnosis"))
     builder.add_node("planner", _wrap("planner"))
-    builder.add_node("tool_agent", _wrap("tool_agent"))
+    builder.add_node("retrieve_context", cast(Any, _with_runtime_side_effects(
+        retrieve_context_node, root_path, update_sink, event_sink, node_label="retrieve_context",
+    )))
     builder.add_node("chat_answer", _wrap("chat_answer"))
     builder.add_node("expert_a", _wrap("expert_a"))
     builder.add_node("expert_b", _wrap("expert_b"))
     builder.add_node("judge", _wrap("judge"))
+    builder.add_node("feedback", _wrap("feedback"))
     builder.add_node("revise_experts", cast(Any, _with_runtime_side_effects(
         revise_experts_node, None, update_sink, event_sink, node_label="revise_experts",
     )))
@@ -376,11 +416,10 @@ def build_workflow(
     builder.add_edge(START, "_init")
     builder.add_edge("_init", "route")
 
-    # Route splits: teach/diagnose → diagnosis, chat → tool_agent
     builder.add_conditional_edges(
         "route",
         _route_after_route,
-        {"diagnosis": "diagnosis", "tool_agent": "tool_agent"},
+        {"diagnosis": "diagnosis", "retrieve_context": "retrieve_context"},
     )
 
     # After diagnosis: teach → planner, diagnose → END
@@ -390,10 +429,10 @@ def build_workflow(
         {"planner": "planner", "__end__": END},
     )
 
-    builder.add_edge("planner", "tool_agent")
+    builder.add_edge("planner", "retrieve_context")
     builder.add_conditional_edges(
-        "tool_agent",
-        _route_after_tool_agent,
+        "retrieve_context",
+        _route_after_retrieve_context,
         {"expert_a": "expert_a", "expert_b": "expert_b", "chat_answer": "chat_answer"},
     )
 
@@ -409,7 +448,8 @@ def build_workflow(
     )
 
     builder.add_edge("_prepare_integration", "expert_a")
-    builder.add_edge("judge", END)
+    builder.add_conditional_edges("judge", _route_after_judge, {"feedback": "feedback"})
+    builder.add_edge("feedback", END)
 
     builder.add_conditional_edges(
         "revise_experts",
@@ -417,7 +457,6 @@ def build_workflow(
         {"expert_a": "expert_a", "expert_b": "expert_b"},
     )
 
-    # ── Chat path: tool_agent → chat_answer → END ──
     builder.add_edge("chat_answer", END)
 
     _cp = checkpointer

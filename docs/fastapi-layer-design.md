@@ -246,7 +246,7 @@ event: agent_event
 data: {"node":"planner","status":"completed","message":"生成 1 个学习节点","round":1,"duration_ms":1892}
 
 event: agent_event
-data: {"node":"tool_agent","status":"completed","message":"检索完成","round":1,"duration_ms":3102}
+data: {"node":"retrieve_context","status":"completed","message":"检索完成","round":1,"duration_ms":3102}
 
 event: agent_event
 data: {"node":"expert_a","status":"completed","message":"保守严谨草稿","round":1,"duration_ms":4520}
@@ -345,7 +345,7 @@ artifacts/sessions/abc123/
 ├── round-01/
 │   ├── learner_profile.md            ← diagnosis 节点输出
 │   ├── learning_path.md              ← planner 节点输出
-│   ├── retrieval_context.md          ← tool_agent 节点检索结果
+│   ├── retrieval_context.md          ← retrieve_context 节点检索结果
 │   ├── expert_a_draft.md             ← 专家 A 教学草稿
 │   ├── expert_b_draft.md             ← 专家 B 教学草稿
 │   ├── cross_review_a.md             ← A 审查 B 的意见

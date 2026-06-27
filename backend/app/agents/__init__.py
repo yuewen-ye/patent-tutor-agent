@@ -10,7 +10,6 @@ from backend.app.agents.expert_b import build_expert_b_node
 from backend.app.agents.judge import build_judge_node
 from backend.app.agents.planner import build_planner_node
 from backend.app.agents.route import build_route_node
-from backend.app.agents.tool_agent import build_tool_agent_node
 from backend.app.core.llm import LLMClient
 
 
@@ -23,7 +22,6 @@ def build_agent_nodes(llm_client: LLMClient) -> dict[str, Node]:
         "judge": build_judge_node(llm_client),
         "feedback": build_diagnosis_feedback_node(llm_client),
         "route": build_route_node(llm_client),
-        "tool_agent": build_tool_agent_node(llm_client),
         "chat_answer": build_chat_answer_node(llm_client),
     }
 
