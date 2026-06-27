@@ -279,7 +279,7 @@ class StateDict(TypedDict):
     artifacts: NotRequired[Annotated[list[dict[str, Any]], operator.add]]
     learner_profile: NotRequired[dict[str, Any]]
     learning_path: NotRequired[list[dict[str, Any]]]
-    retrieval_context: NotRequired[list[dict[str, Any]]]
+    retrieval_context: NotRequired[Annotated[list[dict[str, Any]], operator.add]]
     expert_a_draft: NotRequired[dict[str, Any]]
     expert_b_draft: NotRequired[dict[str, Any]]
     judge_report: NotRequired[dict[str, Any]]

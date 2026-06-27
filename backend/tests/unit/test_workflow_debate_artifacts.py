@@ -15,6 +15,7 @@ pytestmark = pytest.mark.unit
 class DebateQueueLLMClient:
     def __init__(self) -> None:
         self.agents: list[str | None] = []
+        self.tool_call_agents: list[str | None] = []
         self.messages_by_agent: dict[str, list[str]] = {}
         self._queues: dict[str, list[object]] = {
             "route": [
@@ -128,7 +129,8 @@ class DebateQueueLLMClient:
         temperature: float,
         agent: str | None = None,
     ) -> LLMResponseWithTools:
-        raise AssertionError("debate workflow tests must not call tool-capable LLM mode")
+        self.tool_call_agents.append(agent)
+        return LLMResponseWithTools(content=None, tool_calls=[])
 
 
 def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
@@ -153,6 +155,8 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     assert agents.count("judge") == 1
     assert agents.count("diagnosis") == 1
     assert agents.count("feedback") == 1
+    assert llm_client.tool_call_agents.count("expert_a") == 3
+    assert llm_client.tool_call_agents.count("expert_b") == 2
     assert "tool_agent" not in agents
     assert agents[-1] == "feedback"
     assert {
@@ -228,6 +232,8 @@ def test_workflow_runs_both_experts_for_each_debate_round_before_integration(
     assert agents.count("expert_b") == 2
     assert agents.count("judge") == 1
     assert agents.count("feedback") == 1
+    assert llm_client.tool_call_agents.count("expert_a") == 3
+    assert llm_client.tool_call_agents.count("expert_b") == 2
     assert "tool_agent" not in agents
     assert completed["debate_round"] == 2
     assert completed["judge_report"]["decision"] == "accept"

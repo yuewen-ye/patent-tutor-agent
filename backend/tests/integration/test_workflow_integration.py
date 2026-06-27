@@ -61,8 +61,6 @@ def test_workflow_runs_single_round_with_real_llm(tmp_path: Path) -> None:
     assert len(completed["learning_path"]) >= 1
     assert completed["learning_path"][0]["node_id"]
 
-    assert len(completed["retrieval_context"]) >= 1
-
     assert completed["expert_a_draft"]["expert"] == "expert_a"
     assert completed["expert_b_draft"]["expert"] == "expert_b"
     assert completed["expert_a_draft"]["draft_stage"] == "integration"
@@ -87,7 +85,6 @@ def test_workflow_runs_single_round_with_real_llm(tmp_path: Path) -> None:
     expected_artifacts = [
         "artifacts/sessions/pytest-integration/round-01/learner_profile.md",
         "artifacts/sessions/pytest-integration/round-01/learning_path.md",
-        "artifacts/sessions/pytest-integration/round-01/retrieval_context.md",
         "artifacts/sessions/pytest-integration/round-01/expert_a_draft.md",
         "artifacts/sessions/pytest-integration/round-01/expert_b_draft.md",
         "artifacts/sessions/pytest-integration/round-01/judge_report.md",
@@ -147,6 +144,7 @@ def test_workflow_event_ordering_is_correct_with_real_llm(tmp_path: Path) -> Non
     completed_events = [
         e["node"] for e in state["events"] if e["status"] == "completed"
     ]
-    assert completed_events[:4] == ["route", "diagnosis", "planner", "retrieve_context"]
+    assert completed_events[:3] == ["route", "diagnosis", "planner"]
+    assert "retrieve_context" not in completed_events
     assert "expert_a" in completed_events and "expert_b" in completed_events
     assert completed_events[-3:] == ["expert_a", "judge", "feedback"]

@@ -15,6 +15,7 @@ pytestmark = pytest.mark.unit
 class MemoryQueueLLMClient:
     def __init__(self, learning_goal: str, weak_point: str) -> None:
         self.messages_by_agent: dict[str, list[str]] = {}
+        self.tool_call_agents: list[str | None] = []
         self.responses: list[object] = [
             {"intent": "teach", "confidence": 0.95, "reason": "系统学习请求"},
             {
@@ -88,7 +89,8 @@ class MemoryQueueLLMClient:
         temperature: float,
         agent: str | None = None,
     ) -> LLMResponseWithTools:
-        raise AssertionError("workflow memory tests must not call tool-capable LLM mode")
+        self.tool_call_agents.append(agent)
+        return LLMResponseWithTools(content=None, tool_calls=[])
 
 
 def test_workflow_uses_checkpointer_and_store_for_learner_memory(

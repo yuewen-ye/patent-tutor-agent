@@ -84,7 +84,7 @@ class QueueLLMClient:
         temperature: float,
         agent: str | None = None,
     ) -> LLMResponseWithTools:
-        raise AssertionError("session API tests must not call tool-capable LLM mode")
+        return LLMResponseWithTools(content=None, tool_calls=[])
 
 
 def _make_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[TestClient, SessionService]:

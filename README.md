@@ -206,7 +206,7 @@ https://smith.langchain.com/studio/?baseUrl=http://localhost:8124
 ```text
 START → _init → route ──┬── diagnose: diagnosis → END
                          ├── chat: retrieve_context → chat_answer → END
-                         └── teach: diagnosis → planner → retrieve_context
+                         └── teach: diagnosis → planner
                                       ↓
                                   expert_a ∥ expert_b
                                       ↓
@@ -224,7 +224,7 @@ START → _init → route ──┬── diagnose: diagnosis → END
 
 | 路由 | 触发条件 | 路径 | LLM 调用次数 | 典型耗时 |
 |------|---------|------|-------------|---------|
-| **teach** | "系统学习"、"学习路径"、"规划" | 诊断→规划→RAG→双专家辩论→专家A整合→裁判终审→反馈 | ~8-11 次 | 1-3 分钟 |
+| **teach** | "系统学习"、"学习路径"、"规划" | 诊断→规划→专家按需RAG→双专家辩论→专家A整合→裁判终审→反馈 | ~8-11 次 | 1-3 分钟 |
 | **chat** | 单点问答、定义、对比 | RAG→直接回答 | ~1 次 | 5-30 秒 |
 | **diagnose** | "诊断"、"薄弱点"、"评估" | 诊断→结束 | ~1 次 | 2-5 秒 |
 
@@ -235,9 +235,9 @@ START → _init → route ──┬── diagnose: diagnosis → END
 | `route` | LLM 调用 + 本地兜底 | 分类用户意图 teach/chat/diagnose；明显学习/诊断请求会覆盖误路由 | `ROUTE_PROVIDER` |
 | `diagnosis` | LLM 调用 + Store | 学情诊断；可复用 `feedback` 阶段生成问卷、下一步动作、画像更新建议 | `DIAGNOSIS_PROVIDER` |
 | `planner` | LLM 调用 | 生成个性化学习路径 | `PLANNER_PROVIDER` |
-| `retrieve_context` | 无 LLM | 确定性调用 `retrieve_context()` 检索法条上下文，不由模型决定是否检索 | — |
-| `expert_a` | LLM 调用 | 保守严谨、法条优先；负责辩论草稿和最终整合 A/B 结果 | `EXPERT_A_PROVIDER` |
-| `expert_b` | LLM 调用 | 生动灵活、面向案例；负责辩论草稿和参考专家 A 上轮草稿补强 | `EXPERT_B_PROVIDER` |
+| `retrieve_context` | 无 LLM | chat 路径固定检索法条上下文 | — |
+| `expert_a` | LLM + Tool 调用 | 保守严谨、法条优先；自行决定是否调用 RAG；负责辩论草稿和最终整合 A/B 结果 | `EXPERT_A_PROVIDER` |
+| `expert_b` | LLM + Tool 调用 | 生动灵活、面向案例；自行决定是否调用 RAG；负责辩论草稿和参考专家 A 上轮草稿补强 | `EXPERT_B_PROVIDER` |
 | `judge` | LLM 调用 | 只审核专家 A 整合稿是否通过，不写正文、不做过程输出 | `JUDGE_PROVIDER` |
 | `revise_experts` | 无 LLM | 增加辩论轮次，并分派下一轮 A/B 辩论 | — |
 | `feedback` | LLM 调用 + Store | teach 后置反馈阶段，生成问卷、下一步动作和画像更新建议 | `FEEDBACK_PROVIDER` |
@@ -285,7 +285,7 @@ QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 
 ## RAG 工具函数
 
-工作流通过非 LLM 的 `retrieve_context` 节点确定性调用 `backend/app/retrieval_selector.py`。运行时根据 `RAG_RETRIEVAL_MODE` 选择真实向量检索或 mock 检索；`backend/app/rag/` 只保留真实 RAG 实现。
+chat 路径通过非 LLM 的 `retrieve_context` 节点确定性调用 `backend/app/retrieval_selector.py`。teach 路径由 `expert_a` / `expert_b` 通过 `generate_with_tools()` 自行决定是否调用 RAG。运行时根据 `RAG_RETRIEVAL_MODE` 选择真实向量检索或 mock 检索；`backend/app/rag/` 只保留真实 RAG 实现。
 
 当前实现使用 Milvus Lite + BGE-M3 嵌入模型做本地向量检索，不再保留旧版向量库兼容路径。
 

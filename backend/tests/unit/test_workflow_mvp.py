@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinition
+from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolCall, ToolDefinition
 from backend.app.graph.workflow import build_workflow, export_workflow_mermaid, run_workflow
 from backend.tests.helpers import completed_teach_state
 
@@ -13,6 +13,7 @@ class QueueLLMClient:
     def __init__(self) -> None:
         self.calls: list[list[LLMMessage]] = []
         self.agents: list[str | None] = []
+        self.tool_call_agents: list[str | None] = []
         self.responses_by_agent: dict[str, list[object]] = {
             "route": [
                 {"intent": "teach", "confidence": 0.95, "reason": "系统学习请求"},
@@ -103,7 +104,17 @@ class QueueLLMClient:
         temperature: float,
         agent: str | None = None,
     ) -> LLMResponseWithTools:
-        raise AssertionError("workflow tests must not call tool-capable LLM mode")
+        self.tool_call_agents.append(agent)
+        return LLMResponseWithTools(
+            content=None,
+            tool_calls=[
+                ToolCall(
+                    id=f"{agent}-call",
+                    name="rag_retrieve",
+                    arguments={"query": "专利法 新颖性", "top_k": 1},
+                )
+            ] if agent == "expert_a" else [],
+        )
 
 
 def test_real_workflow_runs_full_agent_chain_with_fake_llm(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -136,7 +147,6 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm(monkeypatch: pytest.M
         "route",
         "diagnosis",
         "planner",
-        "retrieve_context",
         "expert_a",
         "expert_b",
         "expert_a",
@@ -146,6 +156,9 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm(monkeypatch: pytest.M
     assert all(event["round"] == 1 for event in completed_events)
     assert all(isinstance(event["timestamp"], str) and event["timestamp"] for event in completed_events)
     assert all(isinstance(event["duration_ms"], int) for event in completed_events)
+    assert llm_client.tool_call_agents.count("expert_a") == 2
+    assert llm_client.tool_call_agents.count("expert_b") == 1
+    assert len(completed["retrieval_context"]) >= 1
     # Verify agent call order
     assert llm_client.agents[:3] == ["route", "diagnosis", "planner"]
     assert "tool_agent" not in llm_client.agents
@@ -178,6 +191,7 @@ def test_workflow_compiles_and_exports_mermaid(tmp_path: Path) -> None:
     assert "judge" in mermaid
     assert "feedback" in mermaid
     assert "retrieve_context" in mermaid
+    assert "planner -.-> expert_a" in mermaid or "planner --> expert_a" in mermaid
     assert "tool_agent" not in mermaid
     for removed_node in (
         "cross_review_a",

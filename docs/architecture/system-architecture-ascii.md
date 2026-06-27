@@ -87,9 +87,9 @@
 │   │  └────┬─────┘                                              │   │                              │
 │   │       │                                                    │   │                              │
 │   │       ▼                                                    │   │                              │
-│   │  ┌────────────────┐                                        │   │                              │
-│   │  │retrieve_context│  rag_retrieve                          │   │                              │
-│   │  └───────┬────────┘                                        │   │                              │
+│   │     ┌──────────┐                                            │   │                              │
+│   │     │ expert   │  generate_with_tools + rag_retrieve         │   │                              │
+│   │     └────┬─────┘                                            │   │                              │
 │   │          │                                                  │   │                              │
 │   │     ┌────┴────┐                                             │   │                              │
 │   │     ▼         ▼                                             │   │                              │
@@ -440,8 +440,7 @@
   ─────────────────────────────────────────────────────────────────────
   [聊天界面/课程入口] → POST /sessions → LangGraph.invoke()
       │
-      ├── retrieve_context → retrieval_context (RAG)
-      ├── expert_a ←→ expert_b  并行生成
+      ├── expert_a ←→ expert_b  并行生成 + 按需 RAG
       │       │            │
       │       └─────┬──────┘
       │             ▼

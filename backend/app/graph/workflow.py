@@ -315,10 +315,8 @@ def retrieve_context_node(
     state: StateDict, runtime: Runtime[WorkflowContext] | None = None
 ) -> dict[str, Any]:
     chunks = retrieve_context(query=state["user_input"], top_k=5)
-    existing = list(state.get("retrieval_context", []) or [])
-    existing.extend(chunk.model_dump() for chunk in chunks)
     return {
-        "retrieval_context": existing,
+        "retrieval_context": [chunk.model_dump() for chunk in chunks],
         "events": [
             completed_event(
                 "retrieve_context",
@@ -347,15 +345,18 @@ def _route_after_diagnosis(state: StateDict) -> Literal["planner", "__end__"]:
     return "planner"
 
 
-def _route_after_retrieve_context(
+def _route_after_planner(
     state: StateDict,
-) -> Literal["chat_answer"] | list[Literal["expert_a", "expert_b"]]:
-    intent = state.get("intent", "teach")
-    if intent == "chat":
-        print("▸ [路由] intent=chat → chat_answer", file=sys.stderr)
-        return "chat_answer"
+) -> list[Literal["expert_a", "expert_b"]]:
     print("▸ [路由] intent=teach → experts", file=sys.stderr)
     return ["expert_a", "expert_b"]
+
+
+def _route_after_retrieve_context(
+    state: StateDict,
+) -> Literal["chat_answer"]:
+    print("▸ [路由] intent=chat → chat_answer", file=sys.stderr)
+    return "chat_answer"
 
 
 def _route_after_judge(state: StateDict) -> Literal["feedback"]:
@@ -429,11 +430,15 @@ def build_workflow(
         {"planner": "planner", "__end__": END},
     )
 
-    builder.add_edge("planner", "retrieve_context")
+    builder.add_conditional_edges(
+        "planner",
+        _route_after_planner,
+        {"expert_a": "expert_a", "expert_b": "expert_b"},
+    )
     builder.add_conditional_edges(
         "retrieve_context",
         _route_after_retrieve_context,
-        {"expert_a": "expert_a", "expert_b": "expert_b", "chat_answer": "chat_answer"},
+        {"chat_answer": "chat_answer"},
     )
 
     builder.add_conditional_edges(

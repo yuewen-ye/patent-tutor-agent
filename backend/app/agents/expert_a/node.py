@@ -8,6 +8,7 @@ from typing import Any
 from langchain_core.prompts import ChatPromptTemplate
 
 from backend.app.agents.common import Node, load_prompt, messages_from_prompt, normalize_key_aliases, schema_note
+from backend.app.agents.rag_tools import collect_expert_retrieval_context
 from backend.app.core.llm import LLMClient, LLMMessage
 from backend.app.schemas.state import ExpertDraft, StateDict, completed_event
 
@@ -59,6 +60,30 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
 
     def expert_a_node(state: StateDict) -> dict[str, Any]:
         if _should_integrate(state):
+            tool_messages = [
+                LLMMessage(
+                    role="system",
+                    content=_EXTRA_TEXT
+                    + "\n你是专家 A。整合前如需核验法条、案例或概念边界，可以调用 rag_retrieve；"
+                    "如果已有材料足够，可以直接不调用工具。",
+                ),
+                LLMMessage(
+                    role="user",
+                    content=(
+                        f"用户问题：{state['user_input']}\n"
+                        f"专家A草稿：{json.dumps(state.get('expert_a_draft', {}), ensure_ascii=False)}\n"
+                        f"专家B草稿：{json.dumps(state.get('expert_b_draft', {}), ensure_ascii=False)}\n"
+                        "请判断整合前是否需要补充检索。"
+                    ),
+                ),
+            ]
+            retrieved_context = collect_expert_retrieval_context(
+                llm_client,
+                messages=tool_messages,
+                temperature=0.2,
+                agent="expert_a",
+            )
+            retrieval_context = list(state.get("retrieval_context", []) or []) + retrieved_context
             raw = llm_client.generate_json(
                 messages=[
                     LLMMessage(
@@ -81,6 +106,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                             f"专家A草稿：{json.dumps(state.get('expert_a_draft', {}), ensure_ascii=False)}\n"
                             f"专家B草稿：{json.dumps(state.get('expert_b_draft', {}), ensure_ascii=False)}\n"
                             f"裁判报告：{json.dumps(state.get('judge_report', {}), ensure_ascii=False)}\n"
+                            f"检索上下文：{json.dumps(retrieval_context, ensure_ascii=False)}\n"
                             "请整合两位专家的有效观点，输出可由 judge 直接审核的 ExpertDraft。"
                         ),
                     ),
@@ -94,14 +120,29 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
             return {
                 "expert_a_draft": draft_dict,
                 "teach_phase": "integration",
+                **({"retrieval_context": retrieved_context} if retrieved_context else {}),
                 "events": [completed_event("expert_a", "integrated expert debate result with LLM")],
             }
 
+        prompt_messages = messages_from_prompt(
+            prompt,
+            user_input=state["user_input"],
+            retrieval_context=state.get("retrieval_context", []),
+            debate_round=state.get("debate_round", 1),
+            revision_context=state.get("expert_b_draft", {}),
+        )
+        retrieved_context = collect_expert_retrieval_context(
+            llm_client,
+            messages=prompt_messages,
+            temperature=0.2,
+            agent="expert_a",
+        )
+        retrieval_context = list(state.get("retrieval_context", []) or []) + retrieved_context
         raw = llm_client.generate_json(
             messages_from_prompt(
                 prompt,
                 user_input=state["user_input"],
-                retrieval_context=state.get("retrieval_context", []),
+                retrieval_context=retrieval_context,
                 debate_round=state.get("debate_round", 1),
                 revision_context=state.get("expert_b_draft", {}),
             ),
@@ -113,6 +154,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
         draft_dict["draft_stage"] = "debate"
         return {
             "expert_a_draft": draft_dict,
+            **({"retrieval_context": retrieved_context} if retrieved_context else {}),
             "events": [completed_event("expert_a", "generated expert A draft with LLM")],
         }
 

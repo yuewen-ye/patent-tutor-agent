@@ -1,15 +1,24 @@
-# RAG 模块与 retrieve_context 节点接口规范
+# RAG 模块与专家工具调用接口规范
 
 ## 架构关系
 
 ```
 ┌─────────────────────────────────────────────┐
-│           retrieve_context 节点              │
-│  (非 LLM，确定性调用检索接口)                 │
+│       chat: retrieve_context 节点             │
+│  (非 LLM，固定调用检索接口)                    │
 │                                             │
 │  1. 读取 user_input                          │
 │  2. 调用 retrieve_context(query, top_k)      │
 │  3. 将结果写入 StateDict.retrieval_context   │
+└──────────────────┬──────────────────────────┘
+                   │
+┌──────────────────┴──────────────────────────┐
+│       teach: expert_a / expert_b             │
+│  (LLM tool-calling，自行决定是否检索)          │
+│                                             │
+│  1. generate_with_tools(..., rag_retrieve)   │
+│  2. 按模型 tool_call 参数调用 retrieve_context │
+│  3. 将结果追加到 StateDict.retrieval_context  │
 └──────────────────┬──────────────────────────┘
                    │ 调用
                    ▼
@@ -38,9 +47,9 @@
 
 ## 接口合同
 
-### workflow → RAG 检索
+### workflow / expert → RAG 检索
 
-工作流的 `retrieve_context` 节点直接调用 `retrieve_context()`，再由环境变量选择真实或 mock 实现：
+chat 路径的 `retrieve_context` 节点会直接调用 `retrieve_context()`。teach 路径中，`expert_a` / `expert_b` 先通过 `generate_with_tools()` 判断是否需要检索；当模型请求 `rag_retrieve` 时，节点按 tool-call 参数调用同一个 `retrieve_context()`。两条路径都由环境变量选择真实或 mock 实现：
 
 ```python
 def retrieve_context(query: str = "", top_k: int = 5) -> list[RetrievalChunk]:

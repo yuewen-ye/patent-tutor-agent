@@ -9,7 +9,6 @@ from backend.app.schemas.state import StateDict
 _COMPLETED_STATE_KEYS = (
     "learner_profile",
     "learning_path",
-    "retrieval_context",
     "expert_a_draft",
     "expert_b_draft",
     "judge_report",

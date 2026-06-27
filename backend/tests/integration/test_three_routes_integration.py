@@ -65,7 +65,7 @@ class TestTeachRoute:
         assert "route" == completed[0]
         assert "diagnosis" in completed
         assert "planner" in completed
-        assert "retrieve_context" in completed
+        assert "retrieve_context" not in completed
         assert "tool_agent" not in completed
         assert completed[-1] == "feedback"
 

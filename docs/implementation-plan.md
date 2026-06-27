@@ -211,7 +211,7 @@ A* 启发函数：f(n) = g(n) + h(n)
 
 ### P0.5 — 各 Agent 独立 RAG 检索
 
-**当前**：`retrieve_context` 是非 LLM workflow 节点，统一调用 `rag_retrieve()` 并写入 `retrieval_context`；专家、judge、chat_answer 只读取检索上下文，不自行决定是否调工具。
+**当前**：teach 路径已由 `expert_a` / `expert_b` 通过 tool-calling 自行决定是否调用 `rag_retrieve()`；chat 路径仍由非 LLM `retrieve_context` 节点固定检索。
 
 **目标**：每个 Agent 根据自己的职责独立检索不同内容。
 
@@ -229,7 +229,7 @@ feedback:   检索问卷模板、BKT 参数校准数据
 | # | 任务 | 涉及文件 | 说明 |
 |---|---|---|---|
 | P0.5.1 | RAG 检索接口扩展 | `backend/app/rag/retriever.py` | 支持按 `doc_type`/`检索目标` 过滤（法条/指南/案例/误区/题库） |
-| P0.5.2 | 各 Agent 接入独立 RAG | 各 `node.py` | 将 RAG 调用从统一 `retrieve_context` 扩展为各 Agent 按需调用 |
+| P0.5.2 | 各 Agent 接入独立 RAG | 各 `node.py` | 已完成专家 A/B 按需调用；后续扩展 diagnosis/planner/judge/feedback |
 | P0.5.3 | 检索协调策略调整 | `backend/app/graph/workflow.py` / `backend/app/rag/retriever.py` | 明确哪些检索仍由统一节点承担，哪些检索下放到具体 Agent |
 
 ### P0.6 — 动态重规划
