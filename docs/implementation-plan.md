@@ -467,7 +467,7 @@ GET    /health/ready                         就绪检查（验证 LLM provider 
 │  学情看板               │  GET /sessions/{id}     │  JSON               │
 │                        │  → learner_profile      │  LearnerProfile     │
 │                        │  → feedback_result      │  + BKT 数据         │
-│                        │  + GET /learners/{id}    │  (P5 记忆系统)      │
+│                        │  + GET /learners/{id}    │  learner memory     │
 │                        │    → 历史画像/BKT 曲线   │                     │
 ├────────────────────────┼────────────────────────┼─────────────────────┤
 │  课程页面               │  GET /sessions/{id}     │  Markdown 原文      │
@@ -497,7 +497,7 @@ GET    /health/ready                         就绪检查（验证 LLM provider 
   - 方案 B：从 Artifact Router 拉取 `.md` 文件原文，前端直接渲染
   - **MVP 建议用方案 A**（简单），Artifact Router 作为补充
 - **实时事件**（节点状态、辩论轮次）→ SSE 为主（单向流足够，浏览器原生支持），WebSocket 用于双向场景
-- **历史画像/BKT** → 等 P5 记忆系统完成后，新增 `GET /learners/{id}` 路由
+- **历史画像/学习历史** → 通过 `GET /learners/{id}`、`/profiles`、`/history`、`/sessions` 获取；BKT 仍后置
 
 ---
 
@@ -795,7 +795,7 @@ graph.invoke(
 | 5.5 | diagnosis 读取历史画像 | `backend/app/agents/diagnosis/node.py` | 已完成：读取 Store 中历史画像并注入 prompt 的“历史学习者画像”段落。 |
 | 5.6 | feedback 写入长期记忆 | `backend/app/agents/diagnosis/node.py` | 已完成：写入 profile 版本和 session history；暂不写 BKT。 |
 | 5.7 | CLI 支持 learner_id | `backend/scripts/run_workflow.py` | 已完成：`--learner-id` 触发 Store 记忆读写。 |
-| 5.8 | Learner API | `backend/app/api/learners.py`（待实现） | FastAPI 服务化后再暴露 profile/history 查询。 |
+| 5.8 | Learner API | `backend/app/api/learners.py` | 已完成：FastAPI 暴露 profile/history/session 摘要查询。 |
 | 5.9 | BKT 记忆 | 待定 | 按当前要求后置，不在本轮 MVP 实现。 |
 
 ### BKT 后续数据流（暂不实现）

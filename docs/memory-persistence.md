@@ -6,7 +6,7 @@
 ┌───────────────────────────────────────────────────────┐
 │                     LangGraph 进程                     │
 │                                                       │
-│  短期记忆 (InMemorySaver)           长期记忆 (InMemoryStore)│
+│  短期记忆 (InMemorySaver)           长期记忆 (Store)        │
 │  ┌─────────────────────┐           ┌─────────────────┐ │
 │  │ key: thread_id       │           │ namespace:       │ │
 │  │ value: state 快照    │           │  learners/{id}/  │ │
@@ -16,8 +16,8 @@
 │           │                                 │          │
 │           └─────────┬───────────────────────┘          │
 │                     │                                  │
-│              纯 Python dict                            │
-│              进程重启 → 全部丢失                        │
+│              API 默认 FileLearnerMemoryStore             │
+│              CLI/测试可继续注入 InMemoryStore            │
 └───────────────────────────────────────────────────────┘
 ```
 
@@ -31,7 +31,7 @@
 
 ### 长期记忆（Store）
 
-- **实现**：`InMemoryStore`
+- **实现**：FastAPI 默认使用 `FileLearnerMemoryStore`；CLI/测试可注入 `InMemoryStore` 或其他 LangGraph Store
 - **粒度**：以 `("learners", learner_id, kind)` 为命名空间
 - **写入**：feedback 节点调用 `save_learner_memories()`
 - **读取**：diagnosis 节点调用 `load_profile_memories()`
@@ -53,12 +53,11 @@
 
 ## 当前问题
 
-### 问题 1：进程重启即丢失
+### 问题 1：短期 checkpoint 仍随进程丢失
 
-`InMemorySaver` 和 `InMemoryStore` 都是纯内存字典。服务停止、崩溃、重启后，所有记忆清零。
+FastAPI 默认已将 learner profile/history 持久化到本地 JSON 文件；但 `InMemorySaver` 仍是纯内存字典。服务停止、崩溃、重启后，workflow checkpoint 不能恢复。
 
 **影响**：
-- Alice 学了 3 次专利法，每次 diagnosis 都当她是新人
 - debate 辩论中走了一半，重启后无法恢复
 
 ### 问题 2：learner_id 在 Studio 中不可控
@@ -74,9 +73,24 @@
 
 chat 和 diagnose 路径不经过 feedback 节点，不写 Store。chat 路径的用户问答只在当次有效，不积累。
 
-### 问题 4：无持久化的并发支持
+### 问题 4：文件型 Store 只适合单进程 MVP
 
-当前 `InMemoryStore` 不支持多进程共享。如果部署多个 worker（如 FastAPI + uvicorn workers），每个进程各有一份独立的 dict，数据不一致。
+`FileLearnerMemoryStore` 使用单进程文件锁保护写入，适合本地 MVP 和单 worker FastAPI。多 worker 或多机部署仍应替换为 SQLite/Postgres Store。
+
+## 当前 FastAPI 持久化
+
+FastAPI 默认使用 `FileLearnerMemoryStore` 将长期 learner memory 写入 `data/learner_memory.json`。可通过环境变量覆盖：
+
+```env
+LEARNER_MEMORY_STORE_PATH=data/learner_memory.json
+```
+
+已暴露的 learner API：
+
+- `GET /learners/{learner_id}`
+- `GET /learners/{learner_id}/profiles`
+- `GET /learners/{learner_id}/history`
+- `GET /learners/{learner_id}/sessions`
 
 ## 持久化方案
 

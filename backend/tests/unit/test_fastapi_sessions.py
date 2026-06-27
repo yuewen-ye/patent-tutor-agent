@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinition
+from backend.app.memory import FileLearnerMemoryStore
 from backend.app.services.session_service import SessionService
 from backend.main import create_app
 from backend.tests.helpers import completed_state
@@ -95,6 +96,15 @@ def _make_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[TestC
     )
     app = create_app(session_service=service)
     return TestClient(app), service
+
+
+def _make_memory_client(tmp_path: Path) -> tuple[TestClient, SessionService]:
+    service = SessionService(
+        artifact_root=tmp_path / "artifacts",
+        llm_client=QueueLLMClient(),
+        store=FileLearnerMemoryStore(tmp_path / "learner-memory.json"),
+    )
+    return TestClient(create_app(session_service=service)), service
 
 
 def test_session_api_creates_background_workflow_and_returns_snapshot(
@@ -205,3 +215,76 @@ def test_session_artifact_endpoint_serves_markdown_and_blocks_traversal(
 
     traversal = client.get(f"/sessions/{session_id}/artifacts/%2E%2E/manifest.json")
     assert traversal.status_code == 400
+
+
+def test_learner_api_returns_memory_and_session_history(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Given: a completed workflow with durable learner memory enabled.
+    monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
+    client, service = _make_memory_client(tmp_path)
+    created = client.post(
+        "/sessions",
+        json={
+            "user_input": "我想学习专利新颖性",
+            "learner_id": "learner-api",
+            "max_debate_rounds": 1,
+        },
+    )
+    session_id = created.json()["session_id"]
+    service.wait_for_completion(session_id, timeout=5)
+
+    # When: the learner memory API is queried.
+    learner = client.get("/learners/learner-api")
+    learner_profiles = client.get("/learners/learner-api/profiles")
+    learner_history = client.get("/learners/learner-api/history")
+    learner_sessions = client.get("/learners/learner-api/sessions")
+
+    # Then: profile, learning history, and related session data are visible.
+    assert learner.status_code == 200
+    learner_body = learner.json()
+    assert learner_body["learner_id"] == "learner-api"
+    assert learner_body["latest_profile"]["learning_goal"] == "学习专利新颖性"
+    assert learner_body["history"][0]["session_id"] == session_id
+    assert learner_body["history"][0]["knowledge_points"] == ["新颖性基础"]
+    assert learner_profiles.json()["profiles"][0]["learning_goal"] == "学习专利新颖性"
+    history_actions = {item["next_action"] for item in learner_history.json()["history"]}
+    assert "完成一个新颖性案例题。" in history_actions
+    assert "围绕新颖性完成一个对应案例题" in history_actions
+    assert learner_sessions.status_code == 200
+    assert learner_sessions.json()["sessions"][0]["session_id"] == session_id
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/learners/learner-api",
+        "/learners/learner-api/profiles",
+        "/learners/learner-api/history",
+        "/learners/learner-api/sessions",
+    ],
+)
+def test_learner_api_returns_controlled_error_for_corrupt_memory_store(
+    path: str,
+    tmp_path: Path,
+) -> None:
+    # Given: a learner memory store file containing invalid JSON.
+    memory_path = tmp_path / "learner-memory.json"
+    memory_path.write_text("{not valid json", encoding="utf-8")
+    service = SessionService(
+        artifact_root=tmp_path / "artifacts",
+        llm_client=QueueLLMClient(),
+        store=FileLearnerMemoryStore(memory_path),
+    )
+    client = TestClient(create_app(session_service=service), raise_server_exceptions=False)
+
+    # When: the learner memory API reads the corrupt store.
+    learner = client.get(path)
+    sessions = client.get("/sessions")
+
+    # Then: the learner API returns a controlled JSON error without breaking sessions.
+    assert learner.status_code == 500
+    detail = learner.json()["detail"]
+    assert detail["error"] == "memory_store_corrupt"
+    assert detail["store"] == "learner-memory.json"
+    assert sessions.status_code == 200

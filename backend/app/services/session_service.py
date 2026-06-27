@@ -16,6 +16,7 @@ from langgraph.store.memory import InMemoryStore
 from backend.app.artifacts import sanitize_session_id
 from backend.app.core.llm import AgentLLMRouter, AgentName, LLMClient, LLMProvider
 from backend.app.graph.workflow import arun_workflow
+from backend.app.memory import learner_memory_snapshot
 from backend.app.schemas.state import StateDict
 from backend.app.services.event_bridge import SessionEventBridge
 
@@ -145,6 +146,36 @@ class SessionService:
         if not candidate.is_file():
             raise FileNotFoundError(artifact_path)
         return candidate.read_text(encoding="utf-8")
+
+    def learner_memory(self, learner_id: str, *, limit: int = 10) -> dict[str, Any]:
+        return learner_memory_snapshot(self._store, learner_id=learner_id, limit=limit)
+
+    def learner_sessions(self, learner_id: str, *, limit: int = 10) -> list[dict[str, Any]]:
+        with self._lock:
+            current_sessions = [
+                _record_to_response(record)
+                for record in self.list_sessions()
+                if record.learner_id == learner_id
+            ]
+        known_session_ids = {
+            str(session["session_id"])
+            for session in current_sessions
+            if session.get("session_id") is not None
+        }
+        memory = self.learner_memory(learner_id, limit=limit)
+        historical_sessions = [
+            {
+                "session_id": history["session_id"],
+                "status": "historical",
+                "topic": history.get("topic"),
+                "knowledge_points": history.get("knowledge_points", []),
+                "created_at": history.get("created_at"),
+            }
+            for history in memory["history"]
+            if history.get("session_id") is not None
+            and str(history["session_id"]) not in known_session_ids
+        ]
+        return (current_sessions + historical_sessions)[:limit]
 
     def _resolve_llm_client(
         self, provider_overrides: Mapping[AgentName, LLMProvider] | None
