@@ -80,4 +80,4 @@ route → diagnosis → END
 | `feedback` | LLM Agent + Store 写 | 生成反馈、下一步动作、画像更新建议 |
 | `chat_answer` | LLM Agent | chat 路径轻量回答 |
 
-系统提示词统一放在各节点目录的 `system.md`，代码通过 `backend/app/agents/common.py::load_prompt()` 加载。
+系统提示词统一放在各节点目录，代码通过 `backend/app/agents/common.py::load_prompt()` 加载。单阶段 Agent 使用 `system.md`；多阶段 Agent 使用 `<阶段名>_system.md`，例如 `diagnosis_system.md`、`feedback_system.md`、`debate_system.md`、`integration_system.md`。

@@ -12,7 +12,8 @@ from backend.app.agents.rag_tools import collect_expert_retrieval_context
 from backend.app.core.llm import LLMClient, LLMMessage
 from backend.app.schemas.state import ExpertDraft, StateDict, completed_event
 
-_EXTRA_TEXT = load_prompt(__file__)
+_DEBATE_SYSTEM_PROMPT = load_prompt(__file__, "debate_system.md")
+_INTEGRATION_SYSTEM_PROMPT = load_prompt(__file__, "integration_system.md")
 
 
 def _should_integrate(state: StateDict) -> bool:
@@ -45,7 +46,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                     '"knowledge_points":["要点"],"legal_basis":["依据"],'
                     '"teaching_content":"正文","risks":[]}',
                 )
-                + _EXTRA_TEXT,
+                + _DEBATE_SYSTEM_PROMPT,
             ),
             (
                 "user",
@@ -63,9 +64,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
             tool_messages = [
                 LLMMessage(
                     role="system",
-                    content=_EXTRA_TEXT
-                    + "\n你是专家 A。整合前如需核验法条、案例或概念边界，可以调用 rag_retrieve；"
-                    "如果已有材料足够，可以直接不调用工具。",
+                    content=_INTEGRATION_SYSTEM_PROMPT,
                 ),
                 LLMMessage(
                     role="user",
@@ -94,10 +93,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                             '"knowledge_points":["要点"],"legal_basis":["依据"],'
                             '"teaching_content":"整合后的教学正文","risks":[]}',
                         )
-                        + _EXTRA_TEXT
-                        + "\n你现在执行专家 A 的整合职责：基于专家 A、专家 B 的辩论结果和 "
-                        "judge_report，整合出 teach 路由的最终教学内容候选。"
-                        "不要输出独立最终答案对象；必须仍输出 ExpertDraft，expert 固定为 expert_a。",
+                        + _INTEGRATION_SYSTEM_PROMPT,
                     ),
                     LLMMessage(
                         role="user",

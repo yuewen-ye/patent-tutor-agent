@@ -105,6 +105,7 @@ def build_<name>_node(llm_client: LLMClient) -> Node:
 Key conventions:
 - `Node = Callable[..., dict[str, Any]]`; nodes may accept `runtime` when they need LangGraph Store/context
 - `messages_from_prompt()` converts LangChain `ChatPromptTemplate` → `list[LLMMessage]`
+- Prompt files live next to each Agent node. Single-phase Agents use `system.md`; multi-phase Agents must define one file per phase named `<phase>_system.md` and load it explicitly with `load_prompt(__file__, "<phase>_system.md")`.
 - `schema_note()` appends strict JSON-only output instructions (Chinese)
 - Raw LLM output must pass Pydantic validation before entering shared state
 - Each node writes a `completed_event` to the `events` list
@@ -287,6 +288,7 @@ Provider choice must never be hardcoded inside Agent nodes; always route via `Ag
 - **Field alignment**: New state/context fields must be reflected in `state.py` or `context.py`, `agent-interface-spec.md`, workflow nodes, docs, and relevant tests.
 - **`call_llm_json` forbids Markdown-wrapped JSON**: Raw LLM output must be pure JSON. `_strip_json_fence()` handles accidental fences defensively.
 - **Agent node = factory function**: Every node receives `LLMClient` via `build_<name>_node(llm_client)`. No global provider state.
+- **Multi-phase Agent prompts are phase files**: If one Agent has multiple phases, do not put phase-specific instructions inline in `node.py` or in a shared `system.md`; each phase owns `<phase>_system.md`.
 - **tool_agent is the only tool-calling node**: All other nodes use `generate_json()`. Do not add tool-calling to other nodes without explicit design review.
 - **Normalization before validation**: Defensive LLM output normalization (camelCase keys, Chinese literals, slug formatting) happens before Pydantic validation in applicable nodes.
 

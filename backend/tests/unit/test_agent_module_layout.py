@@ -14,7 +14,10 @@ def test_each_agent_has_its_own_node_module() -> None:
     assert not (agents_dir / "real_nodes.py").exists()
     for module in AGENT_MODULES:
         assert (agents_dir / module / "node.py").exists(), module
-    assert (agents_dir / "diagnosis" / "feedback_phase.md").exists()
+    assert (agents_dir / "diagnosis" / "diagnosis_system.md").exists()
+    assert (agents_dir / "diagnosis" / "feedback_system.md").exists()
+    assert (agents_dir / "expert_a" / "debate_system.md").exists()
+    assert (agents_dir / "expert_a" / "integration_system.md").exists()
     assert not (agents_dir / "feedback").exists()
 
 

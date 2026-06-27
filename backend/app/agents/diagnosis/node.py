@@ -14,8 +14,8 @@ from backend.app.memory import load_profile_memories, save_learner_memories
 from backend.app.schemas.context import WorkflowContext
 from backend.app.schemas.state import FeedbackResult, LearnerProfile, StateDict, completed_event
 
-_DIAGNOSIS_PROMPT = load_prompt(__file__)
-_FEEDBACK_PHASE_PROMPT = load_prompt(__file__, "feedback_phase.md")
+_DIAGNOSIS_PROMPT = load_prompt(__file__, "diagnosis_system.md")
+_FEEDBACK_PHASE_PROMPT = load_prompt(__file__, "feedback_system.md")
 
 
 def build_diagnosis_node(llm_client: LLMClient) -> Node:

@@ -34,3 +34,4 @@
 - 详细 JSON Schema、错误对象和降级策略以 `docs/agent-interface-spec.md` 为准。
 - teach 主工作流由 `expert_a` / `expert_b` 使用 `generate_with_tools()` 按需检索；其他 LLM 节点仍使用 `generate_json()`。
 - `diagnosis` Agent 的初始诊断阶段读取 Store，`feedback` 阶段在 teach 主路径的 judge 后执行并写入反馈结果。
+- 多阶段 Agent 必须为每个阶段提供独立提示词文件，命名为 `<阶段名>_system.md`。当前 `diagnosis/` 使用 `diagnosis_system.md` / `feedback_system.md`，`expert_a/` 使用 `debate_system.md` / `integration_system.md`。
