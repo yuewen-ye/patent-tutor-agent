@@ -88,16 +88,14 @@ def build_judge_node(llm_client: LLMClient) -> Node:
             (
                 "user",
                 "教学阶段：{teach_phase}\n"
-                "专家 A 草稿：{expert_a_draft}\n"
-                "专家 B 草稿：{expert_b_draft}\n"
+                "专家 A 整合稿：{expert_a_draft}\n"
                 "用户问题：{user_input}\n"
                 "检索上下文：{retrieval_context}\n"
                 "学习者画像：{learner_profile}\n"
                 "学习路径：{learning_path}\n"
                 "当前辩论轮次：{debate_round}\n"
-                "如果教学阶段是 debate，请审核 A/B 两位专家的辩论草稿并裁决是否进入整合或修订。"
-                "如果教学阶段是 integration，请只审核专家 A 的整合教学稿；通过后它就是 teach 路由的最终教学内容。"
-                "judge 只评估，不生成教学正文。",
+                "请只审核专家 A 的整合教学稿。通过后它就是 teach 路由的最终教学内容。"
+                "judge 只判断是否通过并说明理由，不生成教学正文，不承担整合过程输出。",
             ),
         ]
     )
@@ -107,7 +105,6 @@ def build_judge_node(llm_client: LLMClient) -> Node:
             messages_from_prompt(
                 prompt,
                 expert_a_draft=state.get("expert_a_draft", {}),
-                expert_b_draft=state.get("expert_b_draft", {}),
                 teach_phase=state.get("teach_phase", "debate"),
                 user_input=state["user_input"],
                 retrieval_context=state.get("retrieval_context", []),

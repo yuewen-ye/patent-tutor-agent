@@ -14,40 +14,8 @@ from backend.app.schemas.state import ExpertDraft, StateDict, completed_event
 _EXTRA_TEXT = load_prompt(__file__)
 
 
-def _judge_accepted(state: StateDict) -> bool:
-    decision = str(state.get("judge_report", {}).get("decision", ""))
-    match decision:
-        case "accept" | "accept_with_minor_revision":
-            return True
-        case _:
-            return False
-
-
-def _is_applying_revision_request(state: StateDict) -> bool:
-    judge_report = state.get("judge_report", {})
-    history = state.get("revision_history", [])
-    if not isinstance(judge_report, dict) or not isinstance(history, list) or not history:
-        return False
-    latest = history[-1]
-    if not isinstance(latest, dict):
-        return False
-    return (
-        latest.get("round") == state.get("debate_round", 1)
-        and latest.get("judge_decision") == judge_report.get("decision")
-        and latest.get("revision_requests") == judge_report.get("revision_requests", [])
-        and latest.get("rationale") == judge_report.get("rationale")
-    )
-
-
 def _should_integrate(state: StateDict) -> bool:
-    if state.get("teach_phase") == "integration":
-        return True
-    decision = str(state.get("judge_report", {}).get("decision", ""))
-    debate_round = int(state.get("debate_round", 1))
-    max_debate_rounds = int(state.get("max_debate_rounds", 3))
-    if decision == "revise" and debate_round >= max_debate_rounds:
-        return not _is_applying_revision_request(state)
-    return _judge_accepted(state)
+    return state.get("teach_phase") == "integration"
 
 
 def _normalize_expert_draft(raw: object) -> ExpertDraft:
@@ -83,7 +51,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                 "问题：{user_input}\n"
                 "检索上下文：{retrieval_context}\n"
                 "当前辩论轮次：{debate_round}\n"
-                "修订上下文：{revision_context}\n"
+                "辩论上下文：{revision_context}\n"
                 "请生成专家 A 草稿。",
             ),
         ]
@@ -135,7 +103,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                 user_input=state["user_input"],
                 retrieval_context=state.get("retrieval_context", []),
                 debate_round=state.get("debate_round", 1),
-                revision_context=state.get("judge_report", {}),
+                revision_context=state.get("expert_b_draft", {}),
             ),
             temperature=0.4,
             agent="expert_a",

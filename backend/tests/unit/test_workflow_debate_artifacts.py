@@ -86,30 +86,6 @@ class DebateQueueLLMClient:
             ],
             "judge": [
                 {
-                    "decision": "revise",
-                    "accuracy_score": 3,
-                    "adaptation_score": 3,
-                    "completeness_score": 3,
-                    "disputes": ["法条回扣和案例适配不足"],
-                    "rationale": "需要按裁判意见修订后再审。",
-                    "revision_requests": [
-                        {
-                            "target": "both",
-                            "issue": "法条回扣和案例适配不足",
-                            "required_change": "补充《专利法》第二十二条，并用案例说明新颖性判断。",
-                            "basis": "retrieval_context:patent-law-article-22",
-                        },
-                    ],
-                },
-                {
-                    "decision": "accept",
-                    "accuracy_score": 5,
-                    "adaptation_score": 5,
-                    "completeness_score": 5,
-                    "disputes": [],
-                    "rationale": "A/B 辩论结束，可以进入专家 A 整合。",
-                },
-                {
                     "decision": "accept",
                     "accuracy_score": 5,
                     "adaptation_score": 5,
@@ -157,7 +133,7 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     agents = llm_client.agents
     assert agents.count("expert_a") == 3
     assert agents.count("expert_b") == 2
-    assert agents.count("judge") == 3
+    assert agents.count("judge") == 1
     assert agents.count("diagnosis") == 1
     assert "feedback" not in agents
     assert agents[-1] == "judge"
@@ -211,24 +187,13 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     assert "专家A整合A/B辩论结果后的教学内容" in integration_path.read_text(encoding="utf-8")
 
 
-def test_workflow_reruns_only_targeted_expert_when_judge_targets_expert_a(
+def test_workflow_runs_both_experts_for_each_debate_round_before_integration(
     tmp_path: Path,
 ) -> None:
     llm_client = DebateQueueLLMClient()
-    first_judge = llm_client._queues["judge"][0]
-    assert isinstance(first_judge, dict)
-    first_judge["revision_requests"] = [
-        {
-            "target": "expert_a",
-            "issue": "A 的法条骨架仍不完整",
-            "required_change": "只要求专家 A 补充法条判断步骤。",
-            "basis": "judge",
-        }
-    ]
-    llm_client._queues["expert_b"] = llm_client._queues["expert_b"][:1]
 
     state = run_workflow(
-        session_id="target-a-session",
+        session_id="two-round-session",
         user_input="我想学习专利新颖性",
         llm_client=llm_client,
         artifact_root=tmp_path / "artifacts",
@@ -238,8 +203,8 @@ def test_workflow_reruns_only_targeted_expert_when_judge_targets_expert_a(
     completed = completed_teach_state(state)
     agents = llm_client.agents
     assert agents.count("expert_a") == 3
-    assert agents.count("expert_b") == 1
-    assert agents.count("judge") == 3
+    assert agents.count("expert_b") == 2
+    assert agents.count("judge") == 1
     assert completed["debate_round"] == 2
     assert completed["judge_report"]["decision"] == "accept"
     assert completed["expert_a_draft"]["draft_stage"] == "integration"

@@ -239,84 +239,51 @@ def _with_runtime_side_effects(
     return wrapped
 
 
-def _route_after_judge(state: StateDict) -> Literal["revise_experts", "expert_a", "__end__"]:
-    decision = _judge_decision(state.get("judge_report", {}))
+def _route_after_debate_expert(
+    state: StateDict,
+) -> Literal["revise_experts", "_prepare_integration"]:
     debate_round = int(state.get("debate_round", 1))
     max_debate_rounds = int(state.get("max_debate_rounds", 3))
-    if state.get("teach_phase") == "integration":
-        if decision in _ACCEPTED_JUDGE_DECISIONS:
-            print("▸ [路由] judge 通过专家 A 整合稿 → END", file=sys.stderr)
-            return "__end__"
-        if decision == "revise" and debate_round < max_debate_rounds:
-            print(
-                f"▸ [路由] judge 要求修订整合稿 → expert_a（第 {debate_round + 1} 轮）",
-                file=sys.stderr,
-            )
-            return "revise_experts"
-        print("▸ [路由] 整合稿已达到最大辩论轮数 → END", file=sys.stderr)
-        return "__end__"
-    if decision == "revise" and debate_round < max_debate_rounds:
+    if debate_round < max_debate_rounds:
         print(
-            f"▸ [路由] judge 要求修订 → 进入目标专家修订（第 {debate_round + 1} 轮）",
+            f"▸ [路由] A/B 辩论第 {debate_round} 轮完成 → 进入第 {debate_round + 1} 轮",
             file=sys.stderr,
         )
         return "revise_experts"
-    print(f"▸ [路由] A/B 辩论完成，judge 决策={decision} → expert_a 整合", file=sys.stderr)
-    return "expert_a"
+    print("▸ [路由] A/B 辩论轮次已完成 → expert_a 整合", file=sys.stderr)
+    return "_prepare_integration"
 
 
 def _route_after_revise_experts(
     state: StateDict,
 ) -> list[Literal["expert_a", "expert_b"]]:
-    if state.get("teach_phase") == "integration":
-        return ["expert_a"]
-    judge_report = state.get("judge_report", {})
-    requests = judge_report.get("revision_requests", [])
-    selected: set[Literal["expert_a", "expert_b"]] = set()
-    if isinstance(requests, list):
-        for request in requests:
-            if not isinstance(request, dict):
-                continue
-            match request.get("target"):
-                case "expert_a":
-                    selected.add("expert_a")
-                case "expert_b":
-                    selected.add("expert_b")
-                case "both":
-                    selected.update({"expert_a", "expert_b"})
-                case _:
-                    selected.update({"expert_a", "expert_b"})
-    if not selected:
-        selected.update({"expert_a", "expert_b"})
-    ordered: list[Literal["expert_a", "expert_b"]] = []
-    if "expert_a" in selected:
-        ordered.append("expert_a")
-    if "expert_b" in selected:
-        ordered.append("expert_b")
-    return ordered
+    return ["expert_a", "expert_b"]
 
 
-def _route_after_expert_a(state: StateDict) -> Literal["judge"]:
+def _route_after_expert_a(
+    state: StateDict,
+) -> Literal["judge", "revise_experts", "_prepare_integration"]:
     phase = state.get("teach_phase", "debate")
-    print(f"▸ [路由] expert_a 输出阶段={phase} → judge", file=sys.stderr)
-    return "judge"
+    if phase == "integration":
+        print("▸ [路由] expert_a 整合稿 → judge", file=sys.stderr)
+        return "judge"
+    return _route_after_debate_expert(state)
 
 
 def revise_experts_node(
     state: StateDict, runtime: Runtime[WorkflowContext] | None = None
 ) -> dict[str, Any]:
     next_round = int(state.get("debate_round", 1)) + 1
-    judge_report = state.get("judge_report", {})
     revision_record = {
         "round": next_round,
-        "judge_decision": judge_report.get("decision"),
-        "revision_requests": judge_report.get("revision_requests", []),
-        "rationale": judge_report.get("rationale"),
+        "source": "expert_debate",
+        "expert_a_points": state.get("expert_a_draft", {}).get("knowledge_points", []),
+        "expert_b_points": state.get("expert_b_draft", {}).get("knowledge_points", []),
     }
     event = AgentEvent(
         node="revise_experts",
         status="debate_round",
-        message=f"judge requested targeted revision round {next_round}",
+        message=f"starting expert debate round {next_round}",
         round=next_round,
     ).model_dump()
     return {
@@ -324,6 +291,12 @@ def revise_experts_node(
         "revision_history": [revision_record],
         "events": [event],
     }
+
+
+def prepare_integration_node(
+    state: StateDict, runtime: Runtime[WorkflowContext] | None = None
+) -> dict[str, Any]:
+    return {"teach_phase": "integration"}
 
 
 def _route_after_route(state: StateDict) -> Literal["diagnosis", "tool_agent"]:
@@ -395,6 +368,7 @@ def build_workflow(
     builder.add_node("revise_experts", cast(Any, _with_runtime_side_effects(
         revise_experts_node, None, update_sink, event_sink, node_label="revise_experts",
     )))
+    builder.add_node("_prepare_integration", prepare_integration_node)
 
     # ── Edges ──
 
@@ -426,15 +400,16 @@ def build_workflow(
     builder.add_conditional_edges(
         "expert_a",
         _route_after_expert_a,
-        {"judge": "judge"},
+        {"judge": "judge", "revise_experts": "revise_experts", "_prepare_integration": "_prepare_integration"},
     )
-    builder.add_edge("expert_b", "judge")
-
     builder.add_conditional_edges(
-        "judge",
-        _route_after_judge,
-        {"revise_experts": "revise_experts", "expert_a": "expert_a", "__end__": END},
+        "expert_b",
+        _route_after_debate_expert,
+        {"revise_experts": "revise_experts", "_prepare_integration": "_prepare_integration"},
     )
+
+    builder.add_edge("_prepare_integration", "expert_a")
+    builder.add_edge("judge", END)
 
     builder.add_conditional_edges(
         "revise_experts",

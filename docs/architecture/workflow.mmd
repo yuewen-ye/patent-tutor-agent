@@ -15,16 +15,18 @@ graph TD;
 	expert_b(expert_b)
 	judge(judge)
 	revise_experts(revise_experts)
+	_prepare_integration(_prepare_integration)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> _init;
 	_init --> route;
+	_prepare_integration --> expert_a;
 	diagnosis -.-> __end__;
 	diagnosis -.-> planner;
+	expert_a -.-> _prepare_integration;
 	expert_a -.-> judge;
-	expert_b --> judge;
-	judge -.-> __end__;
-	judge -.-> expert_a;
-	judge -.-> revise_experts;
+	expert_a -.-> revise_experts;
+	expert_b -.-> _prepare_integration;
+	expert_b -.-> revise_experts;
 	planner --> tool_agent;
 	revise_experts -.-> expert_a;
 	revise_experts -.-> expert_b;
@@ -34,6 +36,7 @@ graph TD;
 	tool_agent -.-> expert_a;
 	tool_agent -.-> expert_b;
 	chat_answer --> __end__;
+	judge --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
 	classDef last fill:#bfb6fc

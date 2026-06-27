@@ -50,14 +50,6 @@ class QueueLLMClient:
                 "risks": [],
             },
             {
-                "decision": "accept",
-                "accuracy_score": 5,
-                "adaptation_score": 4,
-                "completeness_score": 4,
-                "disputes": [],
-                "rationale": "A/B 辩论充分，可以进入整合。",
-            },
-            {
                 "expert": "expert_a",
                 "style": "conservative_precise",
                 "knowledge_points": ["新颖性"],
@@ -99,7 +91,11 @@ def test_session_api_creates_background_workflow_and_returns_snapshot(tmp_path: 
 
     created = client.post(
         "/sessions",
-        json={"user_input": "我想学习专利新颖性", "learner_id": "learner-api"},
+        json={
+            "user_input": "我想学习专利新颖性",
+            "learner_id": "learner-api",
+            "max_debate_rounds": 1,
+        },
     )
 
     assert created.status_code == 200
@@ -123,7 +119,10 @@ def test_session_api_creates_background_workflow_and_returns_snapshot(tmp_path: 
 
 def test_session_events_stream_replays_agent_events_and_completion(tmp_path: Path) -> None:
     client, service = _make_client(tmp_path)
-    session_id = client.post("/sessions", json={"user_input": "我想学习专利新颖性"}).json()[
+    session_id = client.post(
+        "/sessions",
+        json={"user_input": "我想学习专利新颖性", "max_debate_rounds": 1},
+    ).json()[
         "session_id"
     ]
     service.wait_for_completion(session_id, timeout=5)
@@ -142,7 +141,10 @@ def test_session_events_stream_replays_agent_events_and_completion(tmp_path: Pat
 
 def test_session_websocket_replays_agent_events_until_completion(tmp_path: Path) -> None:
     client, service = _make_client(tmp_path)
-    session_id = client.post("/sessions", json={"user_input": "我想学习专利新颖性"}).json()[
+    session_id = client.post(
+        "/sessions",
+        json={"user_input": "我想学习专利新颖性", "max_debate_rounds": 1},
+    ).json()[
         "session_id"
     ]
     service.wait_for_completion(session_id, timeout=5)
@@ -163,7 +165,10 @@ def test_session_websocket_replays_agent_events_until_completion(tmp_path: Path)
 
 def test_session_artifact_endpoint_serves_markdown_and_blocks_traversal(tmp_path: Path) -> None:
     client, service = _make_client(tmp_path)
-    session_id = client.post("/sessions", json={"user_input": "我想学习专利新颖性"}).json()[
+    session_id = client.post(
+        "/sessions",
+        json={"user_input": "我想学习专利新颖性", "max_debate_rounds": 1},
+    ).json()[
         "session_id"
     ]
     state = service.wait_for_completion(session_id, timeout=5)

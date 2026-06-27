@@ -19,7 +19,7 @@
 
 | 路由 | 经过的 Agent 节点 |
 |------|-------------------|
-| teach | route → diagnosis → planner → tool_agent → expert_a ∥ expert_b → judge → expert_a integration → judge |
+| teach | route → diagnosis → planner → tool_agent → expert_a ∥ expert_b → revise_experts(轮次门控) → expert_a integration → judge |
 | chat | route → tool_agent → chat_answer |
 | diagnose | route → diagnosis |
 

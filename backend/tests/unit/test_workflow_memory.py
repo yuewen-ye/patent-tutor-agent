@@ -50,14 +50,6 @@ class MemoryQueueLLMClient:
                 "risks": [],
             },
             {
-                "decision": "accept",
-                "accuracy_score": 5,
-                "adaptation_score": 4,
-                "completeness_score": 4,
-                "disputes": [],
-                "rationale": "可以输出",
-            },
-            {
                 "expert": "expert_a",
                 "style": "conservative_precise",
                 "knowledge_points": ["新颖性"],
@@ -101,6 +93,7 @@ def test_workflow_uses_checkpointer_and_store_for_learner_memory() -> None:
         checkpointer=checkpointer,
         store=store,
         learner_id="learner-alice",
+        max_debate_rounds=1,
     )
 
     checkpoint_config: Any = {"configurable": {"thread_id": "memory-session-1"}}
@@ -122,6 +115,7 @@ def test_workflow_uses_checkpointer_and_store_for_learner_memory() -> None:
         checkpointer=checkpointer,
         store=store,
         learner_id="learner-alice",
+        max_debate_rounds=1,
     )
 
     diagnosis_prompt = second_llm.messages_by_agent["diagnosis"][0]

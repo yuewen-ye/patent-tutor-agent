@@ -149,4 +149,4 @@ def test_workflow_event_ordering_is_correct_with_real_llm(tmp_path: Path) -> Non
     ]
     assert completed_events[:4] == ["route", "diagnosis", "planner", "tool_agent"]
     assert "expert_a" in completed_events and "expert_b" in completed_events
-    assert completed_events[-3:] == ["judge", "expert_a", "judge"]
+    assert completed_events[-2:] == ["expert_a", "judge"]

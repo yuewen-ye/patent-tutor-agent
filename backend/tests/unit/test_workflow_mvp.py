@@ -67,14 +67,6 @@ class QueueLLMClient:
             ],
             "judge": [
                 {
-                    "decision": "accept_with_minor_revision",
-                    "accuracy_score": 5,
-                    "adaptation_score": 4,
-                    "completeness_score": 4,
-                    "disputes": [],
-                    "rationale": "可以合并",
-                },
-                {
                     "decision": "accept",
                     "accuracy_score": 5,
                     "adaptation_score": 5,
@@ -113,10 +105,11 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm() -> None:
         session_id="demo-session",
         user_input="我想学习专利新颖性和创造性的区别",
         llm_client=llm_client,
+        max_debate_rounds=1,
     )
 
     completed = completed_teach_state(state)
-    assert len(llm_client.calls) == 8
+    assert len(llm_client.calls) == 7
     assert completed["session_id"] == "demo-session"
     assert completed["learner_profile"]["knowledge_level"] == "beginner"
     assert len(completed["learning_path"]) == 1
@@ -137,7 +130,6 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm() -> None:
         "tool_agent",
         "expert_a",
         "expert_b",
-        "judge",
         "expert_a",
         "judge",
     ]
@@ -149,6 +141,7 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm() -> None:
     assert "tool_agent" in llm_client.agents
     assert "expert_a" in llm_client.agents
     assert "expert_b" in llm_client.agents
+    assert llm_client.agents.count("judge") == 1
     assert "feedback" not in llm_client.agents
     forbidden_agents = {
         "cross_review_a",
@@ -161,7 +154,7 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm() -> None:
         "feedback",
     }
     assert forbidden_agents.isdisjoint(set(llm_client.agents))
-    assert llm_client.agents[-3:] == ["judge", "expert_a", "judge"]
+    assert llm_client.agents[-2:] == ["expert_a", "judge"]
 
 
 def test_workflow_compiles_and_exports_mermaid(tmp_path: Path) -> None:
