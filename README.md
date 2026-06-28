@@ -65,22 +65,28 @@ Copy-Item .env.example .env
 # LangSmith — LangGraph Studio 连接需要（在 https://smith.langchain.com 获取）
 LANGSMITH_API_KEY=lsv2_pt_...
 
-# LLM Provider — 至少填一个
+# LLM Provider — 至少填一个 API Key
 DEEPSEEK_API_KEY=sk-your-key-here
-DEFAULT_LLM_PROVIDER=deepseek
+
+# 非密钥模型参数从 YAML 读取
+AGENT_CONFIG_PATH=config/agents.yaml
 LEARNER_MEMORY_STORE_PATH=data/learner_memory.json
 ```
 
-支持 `deepseek`、`qwen`、`glm` 三个 provider。每个 Agent 可单独指定 provider：
+支持 `deepseek`、`qwen`、`glm` 三个 provider。每个 Agent 的 provider、model、temperature、top_k 等非密钥参数在 `config/agents.yaml` 里调整：
 
-```env
-ROUTE_PROVIDER=deepseek
-CHAT_ANSWER_PROVIDER=deepseek
-DIAGNOSIS_PROVIDER=deepseek
-PLANNER_PROVIDER=deepseek
-EXPERT_A_PROVIDER=deepseek
-EXPERT_B_PROVIDER=deepseek
-JUDGE_PROVIDER=deepseek
+```yaml
+agents:
+  planner:
+    provider: deepseek
+    model_name: deepseek-v4-flash
+    temperature: 0.5
+  expert_b:
+    provider: qwen
+    model_name: qwen3.7-max
+    temperature: 0.7
+    tool_temperature: 0.3
+    top_k: 5
 ```
 
 ### 4. 启动 LangGraph Studio
@@ -243,18 +249,18 @@ START → _init → route ──┬── diagnose: diagnosis → END
 
 ### Agent 节点职责
 
-| 节点 | 类型 | 职责 | Provider 环境变量 |
+| 节点 | 类型 | 职责 | YAML 配置项 |
 |------|------|------|-----------------|
-| `route` | LLM 调用 + 本地兜底 | 分类用户意图 teach/chat/diagnose；明显学习/诊断请求会覆盖误路由 | `ROUTE_PROVIDER` |
-| `diagnosis` | LLM 调用 + Store | 学情诊断；可复用 `feedback` 阶段生成问卷、下一步动作、画像更新建议 | `DIAGNOSIS_PROVIDER` |
-| `planner` | LLM 调用 | 生成个性化学习路径 | `PLANNER_PROVIDER` |
+| `route` | LLM 调用 + 本地兜底 | 分类用户意图 teach/chat/diagnose；明显学习/诊断请求会覆盖误路由 | `agents.route` |
+| `diagnosis` | LLM 调用 + Store | 学情诊断；可复用 `feedback` 阶段生成问卷、下一步动作、画像更新建议 | `agents.diagnosis` |
+| `planner` | LLM 调用 | 生成个性化学习路径 | `agents.planner` |
 | `retrieve_context` | 无 LLM | chat 路径固定检索法条上下文 | — |
-| `expert_a` | LLM + Tool 调用 | 保守严谨、法条优先；自行决定是否调用 RAG；负责辩论草稿和最终整合 A/B 结果 | `EXPERT_A_PROVIDER` |
-| `expert_b` | LLM + Tool 调用 | 生动灵活、面向案例；自行决定是否调用 RAG；负责辩论草稿和参考专家 A 上轮草稿补强 | `EXPERT_B_PROVIDER` |
-| `judge` | LLM 调用 | 只审核专家 A 整合稿是否通过，不写正文、不做过程输出 | `JUDGE_PROVIDER` |
+| `expert_a` | LLM + Tool 调用 | 保守严谨、法条优先；自行决定是否调用 RAG；负责辩论草稿和最终整合 A/B 结果 | `agents.expert_a` |
+| `expert_b` | LLM + Tool 调用 | 生动灵活、面向案例；自行决定是否调用 RAG；负责辩论草稿和参考专家 A 上轮草稿补强 | `agents.expert_b` |
+| `judge` | LLM 调用 | 只审核专家 A 整合稿是否通过，不写正文、不做过程输出 | `agents.judge` |
 | `revise_experts` | 无 LLM | 增加辩论轮次，并分派下一轮 A/B 辩论 | — |
-| `feedback` | diagnosis Agent 后置阶段 + Store | teach 后置反馈阶段，生成问卷、下一步动作和画像更新建议 | `DIAGNOSIS_PROVIDER` |
-| `chat_answer` | LLM 调用 | chat 路径基于检索上下文生成短答 | `CHAT_ANSWER_PROVIDER` |
+| `feedback` | diagnosis Agent 后置阶段 + Store | teach 后置反馈阶段，生成问卷、下一步动作和画像更新建议 | `agents.feedback` |
+| `chat_answer` | LLM 调用 | chat 路径基于检索上下文生成短答 | `agents.chat_answer` |
 
 接口合同以 `docs/agent-interface-spec.md` 和 `backend/app/schemas/state.py` 为准。
 
@@ -287,14 +293,41 @@ bash scripts/langgraph-stop.sh 8124
 
 复制 `.env.example` 为 `.env`，填入真实 key。**不要提交 `.env` 或任何密钥。**
 
-当前支持 provider：`deepseek`、`qwen`、`glm`。每个 provider 的模型和 Base URL 可单独配置：
+`.env` 只放密钥和本机路径；模型、provider、temperature、top_k 等非密钥参数放在 `config/agents.yaml`。当前支持 provider：`deepseek`、`qwen`、`glm`。
 
 ```env
-DEEPSEEK_MODEL=deepseek-v4-flash
-DEEPSEEK_BASE_URL=https://api.deepseek.com
-QWEN_MODEL=qwen3.7-max
-QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+DEEPSEEK_API_KEY=sk-...
+QWEN_API_KEY=
+GLM_API_KEY=
+AGENT_CONFIG_PATH=config/agents.yaml
 ```
+
+```yaml
+llm:
+  default_provider: deepseek
+  timeout_seconds: 90
+  retry_times: 3
+
+providers:
+  deepseek:
+    model_name: deepseek-v4-flash
+    base_url: https://api.deepseek.com
+
+agents:
+  judge:
+    provider: deepseek
+    model_name: deepseek-v4-flash
+    temperature: 0.0
+  expert_a:
+    provider: deepseek
+    model_name: deepseek-v4-flash
+    temperature: 0.4
+    tool_temperature: 0.2
+    integration_temperature: 0.3
+    top_k: 5
+```
+
+可用 Agent 参数：`provider`、`model_name`、`temperature`、`tool_temperature`、`integration_temperature`、`top_k`。旧的 `DEFAULT_LLM_PROVIDER`、`*_PROVIDER`、`*_MODEL`、`*_BASE_URL` 环境变量仍作为兼容回退，但新配置优先使用 YAML。
 
 ## RAG 工具函数
 

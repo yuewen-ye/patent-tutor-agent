@@ -187,9 +187,15 @@ class SessionService:
             return router
         overrides: dict[AgentName, LLMProvider] = dict(router.agent_providers)
         overrides.update(provider_overrides)
+        agent_model_names = {
+            agent: model_name
+            for agent, model_name in router.agent_model_names.items()
+            if agent not in provider_overrides
+        }
         return AgentLLMRouter(
             default_provider=router.default_provider,
             agent_providers=overrides,
+            agent_model_names=agent_model_names,
         )
 
     def _run_session(

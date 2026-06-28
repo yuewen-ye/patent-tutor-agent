@@ -7,6 +7,7 @@ from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
 
+from backend.app.agent_runtime_config import agent_temperature
 from backend.app.agents.common import Node, load_prompt, messages_from_prompt, schema_note
 from backend.app.core.llm import LLMClient, LLMProviderError
 from backend.app.schemas.state import LearningPathItem, StateDict, completed_event
@@ -58,7 +59,7 @@ def build_planner_node(llm_client: LLMClient) -> Node:
                 user_input=state["user_input"],
                 learner_profile=state.get("learner_profile", {}),
             ),
-            temperature=0.5,
+            temperature=agent_temperature("planner", 0.5),
             agent="planner",
         )
         if not isinstance(raw, list):

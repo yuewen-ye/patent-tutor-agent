@@ -7,6 +7,7 @@ from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
 
+from backend.app.agent_runtime_config import agent_temperature
 from backend.app.agents.common import Node, load_prompt, messages_from_prompt, normalize_key_aliases, schema_note
 from backend.app.agents.rag_tools import collect_expert_retrieval_context
 from backend.app.core.llm import LLMClient, LLMMessage
@@ -79,7 +80,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
             retrieved_context = collect_expert_retrieval_context(
                 llm_client,
                 messages=tool_messages,
-                temperature=0.2,
+                temperature=agent_temperature("expert_a", 0.2, "tool_temperature"),
                 agent="expert_a",
             )
             retrieval_context = list(state.get("retrieval_context", []) or []) + retrieved_context
@@ -107,7 +108,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                         ),
                     ),
                 ],
-                temperature=0.3,
+                temperature=agent_temperature("expert_a", 0.3, "integration_temperature"),
                 agent="expert_a",
             )
             draft = _normalize_expert_draft(raw)
@@ -130,7 +131,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
         retrieved_context = collect_expert_retrieval_context(
             llm_client,
             messages=prompt_messages,
-            temperature=0.2,
+            temperature=agent_temperature("expert_a", 0.2, "tool_temperature"),
             agent="expert_a",
         )
         retrieval_context = list(state.get("retrieval_context", []) or []) + retrieved_context
@@ -142,7 +143,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                 debate_round=state.get("debate_round", 1),
                 revision_context=state.get("expert_b_draft", {}),
             ),
-            temperature=0.4,
+            temperature=agent_temperature("expert_a", 0.4),
             agent="expert_a",
         )
         draft = _normalize_expert_draft(raw)

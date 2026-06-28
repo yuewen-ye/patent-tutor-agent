@@ -1,10 +1,12 @@
 import json
 import os
+from collections.abc import Iterator
 from typing import Any, cast
 
 import httpx
 import pytest
 
+from backend.app.agent_runtime_config import clear_agent_runtime_config_cache
 from backend.app.core.llm import (
     AGENT_PROVIDER_ENV,
     AgentLLMRouter,
@@ -16,6 +18,13 @@ from backend.app.core.llm import (
 )
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.fixture(autouse=True)
+def clear_config_cache() -> Iterator[None]:
+    clear_agent_runtime_config_cache()
+    yield
+    clear_agent_runtime_config_cache()
 
 
 def _json_response(content: str) -> httpx.Response:
@@ -111,6 +120,25 @@ def test_call_llm_json_adds_json_mode_and_parses_response(monkeypatch) -> None:
     assert cast(dict[str, Any], captured["body"])["response_format"] == {"type": "json_object"}
 
 
+def test_call_llm_uses_explicit_model_name_override(monkeypatch) -> None:
+    monkeypatch.setenv("QWEN_API_KEY", "qwen-key")
+    captured: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = json.loads(request.content.decode("utf-8"))
+        return _json_response("ok")
+
+    result = call_llm(
+        provider="qwen",
+        messages=[LLMMessage(role="user", content="你好")],
+        model_name="qwen-plus",
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    assert result == "ok"
+    assert cast(dict[str, Any], captured["body"])["model"] == "qwen-plus"
+
+
 def test_call_llm_wraps_provider_error_body(monkeypatch) -> None:
     monkeypatch.setenv("DEEPSEEK_API_KEY", "deepseek-key")
     monkeypatch.setenv("DEEPSEEK_MODEL", "deepseek-v4-flash")
@@ -145,7 +173,8 @@ def test_call_llm_normalizes_socks_proxy(monkeypatch) -> None:
     assert os.environ["HTTPS_PROXY"] == "socks5://127.0.0.1:64193/"
 
 
-def test_agent_llm_router_reads_agent_specific_provider_config(monkeypatch) -> None:
+def test_agent_llm_router_reads_agent_specific_provider_config(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("AGENT_CONFIG_PATH", str(tmp_path / "missing-agents.yaml"))
     for env_name in AGENT_PROVIDER_ENV.values():
         monkeypatch.setenv(env_name, "")
     monkeypatch.setenv("DEFAULT_LLM_PROVIDER", "deepseek")

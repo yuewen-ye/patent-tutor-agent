@@ -12,10 +12,17 @@ import httpx
 from dotenv import load_dotenv
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
+from backend.app.agent_runtime_config import (
+    agent_runtime_settings,
+    llm_runtime_config,
+    provider_runtime_config,
+)
+
 LLMProvider = Literal["deepseek", "qwen", "glm"]
 LLMRole = Literal["system", "user", "assistant", "tool"]
 AgentName = Literal[
     "diagnosis",
+    "feedback",
     "planner",
     "expert_a",
     "expert_b",
@@ -50,6 +57,7 @@ DEFAULT_CONFIG: dict[LLMProvider, dict[str, str]] = {
 }
 AGENT_PROVIDER_ENV: dict[AgentName, str] = {
     "diagnosis": "DIAGNOSIS_PROVIDER",
+    "feedback": "FEEDBACK_PROVIDER",
     "planner": "PLANNER_PROVIDER",
     "expert_a": "EXPERT_A_PROVIDER",
     "expert_b": "EXPERT_B_PROVIDER",
@@ -155,20 +163,34 @@ def _validate_provider(value: str, source: str) -> LLMProvider:
     return cast(LLMProvider, provider)
 
 
-def load_provider_config(provider: LLMProvider) -> LLMProviderConfig:
+def load_provider_config(provider: LLMProvider, model_name: str | None = None) -> LLMProviderConfig:
     load_dotenv(encoding="utf-8")
     normalize_socks_proxy_env()
     defaults = DEFAULT_CONFIG[provider]
+    provider_config = provider_runtime_config(provider)
+    llm_config = llm_runtime_config()
     api_key = os.getenv(defaults["api_key_env"], "")
     if not api_key:
         raise LLMConfigurationError(f"{defaults['api_key_env']} is required for {provider} calls.")
+    configured_model = (
+        model_name
+        or provider_config.model_name
+        or os.getenv(defaults["model_env"])
+        or defaults["model"]
+    )
+    configured_base_url = (
+        provider_config.base_url
+        or os.getenv(defaults["base_url_env"])
+        or defaults["base_url"]
+    )
     return LLMProviderConfig(
         provider=provider,
         api_key=api_key,
-        model=os.getenv(defaults["model_env"], defaults["model"]),
-        base_url=os.getenv(defaults["base_url_env"], defaults["base_url"]).rstrip("/"),
-        timeout_seconds=float(os.getenv("LLM_TIMEOUT_SECONDS", "30")),
-        retry_times=int(os.getenv("LLM_RETRY_TIMES", "3")),
+        model=configured_model,
+        base_url=configured_base_url.rstrip("/"),
+        timeout_seconds=llm_config.timeout_seconds
+        or float(os.getenv("LLM_TIMEOUT_SECONDS", "30")),
+        retry_times=llm_config.retry_times or int(os.getenv("LLM_RETRY_TIMES", "3")),
     )
 
 
@@ -284,8 +306,9 @@ def call_llm(
     temperature: float = 0.5,
     json_mode: bool = False,
     http_client: httpx.Client | None = None,
+    model_name: str | None = None,
 ) -> str:
-    config = load_provider_config(provider)
+    config = load_provider_config(provider, model_name=model_name)
     retrying = retry(
         stop=stop_after_attempt(config.retry_times),
         wait=wait_exponential(multiplier=0.5, min=0.5, max=4),
@@ -312,6 +335,7 @@ def call_llm_json(
     messages: list[LLMMessage],
     temperature: float = 0.5,
     http_client: httpx.Client | None = None,
+    model_name: str | None = None,
 ) -> object:
     content = call_llm(
         provider=provider,
@@ -319,6 +343,7 @@ def call_llm_json(
         temperature=temperature,
         json_mode=True,
         http_client=http_client,
+        model_name=model_name,
     )
     cleaned = _strip_json_fence(content)
     try:
@@ -397,8 +422,9 @@ def call_llm_tools(
     tools: list[ToolDefinition],
     temperature: float = 0.5,
     http_client: httpx.Client | None = None,
+    model_name: str | None = None,
 ) -> LLMResponseWithTools:
-    config = load_provider_config(provider)
+    config = load_provider_config(provider, model_name=model_name)
     retrying = retry(
         stop=stop_after_attempt(config.retry_times),
         wait=wait_exponential(multiplier=0.5, min=0.5, max=4),
@@ -412,22 +438,34 @@ class DefaultLLMClient:
     """Adapter used when all Agent nodes should use one provider."""
 
     provider: LLMProvider
+    model_name: str | None
 
-    def __init__(self, provider: LLMProvider = DEFAULT_PROVIDER) -> None:
+    def __init__(self, provider: LLMProvider = DEFAULT_PROVIDER, model_name: str | None = None) -> None:
         self.provider = provider
+        self.model_name = model_name
 
     @classmethod
     def from_env(cls) -> Self:
         load_dotenv(encoding="utf-8")
+        llm_config = llm_runtime_config()
+        default_provider_name = (
+            llm_config.default_provider or os.getenv("DEFAULT_LLM_PROVIDER") or DEFAULT_PROVIDER
+        )
         provider = _validate_provider(
-            os.getenv("DEFAULT_LLM_PROVIDER", DEFAULT_PROVIDER), "DEFAULT_LLM_PROVIDER"
+            default_provider_name,
+            "DEFAULT_LLM_PROVIDER",
         )
         return cls(provider=provider)
 
     def generate_json(
         self, messages: list[LLMMessage], temperature: float, agent: AgentName | None = None
     ) -> object:
-        return call_llm_json(provider=self.provider, messages=messages, temperature=temperature)
+        return call_llm_json(
+            provider=self.provider,
+            messages=messages,
+            temperature=temperature,
+            model_name=self.model_name,
+        )
 
     def generate_with_tools(
         self,
@@ -436,7 +474,13 @@ class DefaultLLMClient:
         temperature: float,
         agent: AgentName | None = None,
     ) -> LLMResponseWithTools:
-        return call_llm_tools(provider=self.provider, messages=messages, tools=tools, temperature=temperature)
+        return call_llm_tools(
+            provider=self.provider,
+            messages=messages,
+            tools=tools,
+            temperature=temperature,
+            model_name=self.model_name,
+        )
 
 
 class AgentLLMRouter:
@@ -444,32 +488,53 @@ class AgentLLMRouter:
 
     default_provider: LLMProvider
     agent_providers: dict[AgentName, LLMProvider]
+    agent_model_names: dict[AgentName, str]
 
     def __init__(
         self,
         default_provider: LLMProvider = DEFAULT_PROVIDER,
         agent_providers: Mapping[AgentName, LLMProvider] | None = None,
+        agent_model_names: Mapping[AgentName, str] | None = None,
     ) -> None:
         self.default_provider = default_provider
         self.agent_providers = dict(agent_providers or {})
+        self.agent_model_names = dict(agent_model_names or {})
 
     @classmethod
     def from_env(cls) -> Self:
         load_dotenv(encoding="utf-8")
+        llm_config = llm_runtime_config()
+        default_provider_name = (
+            llm_config.default_provider or os.getenv("DEFAULT_LLM_PROVIDER") or DEFAULT_PROVIDER
+        )
         default_provider = _validate_provider(
-            os.getenv("DEFAULT_LLM_PROVIDER", DEFAULT_PROVIDER), "DEFAULT_LLM_PROVIDER"
+            default_provider_name,
+            "DEFAULT_LLM_PROVIDER",
         )
         agent_providers: dict[AgentName, LLMProvider] = {}
+        agent_model_names: dict[AgentName, str] = {}
         for agent, env_name in AGENT_PROVIDER_ENV.items():
-            value = os.getenv(env_name)
+            settings = agent_runtime_settings(agent)
+            value = settings.provider or os.getenv(env_name)
             if value:
                 agent_providers[agent] = _validate_provider(value, env_name)
-        return cls(default_provider=default_provider, agent_providers=agent_providers)
+            if settings.model_name:
+                agent_model_names[agent] = settings.model_name
+        return cls(
+            default_provider=default_provider,
+            agent_providers=agent_providers,
+            agent_model_names=agent_model_names,
+        )
 
     def provider_for(self, agent: AgentName | None) -> LLMProvider:
         if agent is None:
             return self.default_provider
         return self.agent_providers.get(agent, self.default_provider)
+
+    def model_for(self, agent: AgentName | None) -> str | None:
+        if agent is None:
+            return None
+        return self.agent_model_names.get(agent)
 
     def generate_json(
         self, messages: list[LLMMessage], temperature: float, agent: AgentName | None = None
@@ -478,6 +543,7 @@ class AgentLLMRouter:
             provider=self.provider_for(agent),
             messages=messages,
             temperature=temperature,
+            model_name=self.model_for(agent),
         )
 
     def generate_with_tools(
@@ -492,4 +558,5 @@ class AgentLLMRouter:
             messages=messages,
             tools=tools,
             temperature=temperature,
+            model_name=self.model_for(agent),
         )

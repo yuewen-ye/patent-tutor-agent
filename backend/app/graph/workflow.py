@@ -14,6 +14,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.runtime import Runtime
 from langgraph.store.memory import InMemoryStore
 
+from backend.app.agent_runtime_config import agent_top_k
 from backend.app.agents import Node, build_agent_nodes
 from backend.app.artifacts import attach_markdown_artifact, write_field_artifact, write_manifest
 from backend.app.core.llm import AgentLLMRouter, DefaultLLMClient, LLMClient
@@ -342,7 +343,7 @@ def prepare_integration_node(
 def retrieve_context_node(
     state: StateDict, runtime: Runtime[WorkflowContext] | None = None
 ) -> dict[str, Any]:
-    chunks = retrieve_context(query=state["user_input"], top_k=5)
+    chunks = retrieve_context(query=state["user_input"], top_k=agent_top_k("chat_answer", 5))
     return {
         "retrieval_context": [chunk.model_dump() for chunk in chunks],
         "events": [

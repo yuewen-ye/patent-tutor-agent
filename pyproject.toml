@@ -22,6 +22,7 @@ dependencies = [
     "pymilvus>=3.0.0",
     "milvus-lite>=3.0",
     "sentence-transformers>=5.6.0",
+    "pyyaml>=6.0.2",
 ]
 
 [dependency-groups]
@@ -30,6 +31,7 @@ dev = [
     "pytest>=8.3.0",
     "pytest-asyncio>=0.23.0",
     "ruff>=0.5.0",
+    "types-pyyaml>=6.0.12.20250516",
 ]
 
 [tool.uv]
@@ -48,4 +50,3 @@ markers = [
     "unit: Tests using fake/mock LLM clients — fast, deterministic, no external API calls.",
     "integration: Tests that call real LLM APIs (requires valid .env API keys).",
 ]
-

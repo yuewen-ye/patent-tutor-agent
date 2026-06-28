@@ -8,6 +8,7 @@ from typing import Any
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.runtime import Runtime
 
+from backend.app.agent_runtime_config import agent_temperature
 from backend.app.agents.common import Node, load_prompt, messages_from_prompt, schema_note
 from backend.app.core.llm import LLMClient
 from backend.app.memory import load_profile_memories, save_learner_memories
@@ -48,7 +49,7 @@ def build_diagnosis_node(llm_client: LLMClient) -> Node:
                 user_input=state["user_input"],
                 historical_profiles=historical_profiles,
             ),
-            temperature=0.5,
+            temperature=agent_temperature("diagnosis", 0.5),
             agent="diagnosis",
         )
         profile = LearnerProfile.model_validate(raw)
@@ -92,8 +93,8 @@ def build_diagnosis_feedback_node(llm_client: LLMClient) -> Node:
                 learner_profile=state.get("learner_profile", {}),
                 judge_report=state.get("judge_report", {}),
             ),
-            temperature=0.5,
-            agent="diagnosis",
+            temperature=agent_temperature("feedback", 0.5),
+            agent="feedback",
         )
         feedback = FeedbackResult.model_validate(raw)
         feedback_dict = feedback.model_dump()

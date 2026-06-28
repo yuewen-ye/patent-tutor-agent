@@ -30,7 +30,7 @@
 - 每个 Agent 只读取自己需要的 `StateDict` 字段，只写自己负责的输出字段。
 - 输出必须是 JSON-serializable，并能通过 `backend/app/schemas/state.py` 中的 Pydantic 模型校验。
 - 长篇正文、教案、裁判报告等可以落盘为 Markdown，但 JSON 中必须返回 `markdown_artifact` 或 `artifacts` 引用。
-- 模型 provider 不在 Agent README 中写死，运行时由 `.env` 的 `*_PROVIDER` 和 `AgentLLMRouter` 决定。
+- 模型 provider/model/temperature/top_k 不在 Agent 节点中写死，运行时优先由 `config/agents.yaml` 和 `AgentLLMRouter` 决定；`.env` 只放 API key 和本机路径，旧 `*_PROVIDER` 等环境变量仅作兼容回退。
 - 详细 JSON Schema、错误对象和降级策略以 `docs/agent-interface-spec.md` 为准。
 - teach 主工作流由 `expert_a` / `expert_b` 使用 `generate_with_tools()` 按需检索；其他 LLM 节点仍使用 `generate_json()`。
 - `diagnosis` Agent 的初始诊断阶段读取 Store，`feedback` 阶段在 teach 主路径的 judge 后执行并写入反馈结果。

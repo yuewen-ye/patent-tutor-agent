@@ -1,0 +1,55 @@
+llm:
+  default_provider: deepseek
+  timeout_seconds: 90
+  retry_times: 3
+
+providers:
+  deepseek:
+    model_name: deepseek-v4-flash
+    base_url: https://api.deepseek.com
+  qwen:
+    model_name: qwen3.7-max
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+  glm:
+    model_name: glm-5.1
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+
+agents:
+  route:
+    provider: deepseek
+    model_name: deepseek-v4-flash
+    temperature: 0.0
+  diagnosis:
+    provider: deepseek
+    model_name: deepseek-v4-flash
+    temperature: 0.5
+  planner:
+    provider: deepseek
+    model_name: deepseek-v4-flash
+    temperature: 0.5
+  expert_a:
+    provider: deepseek
+    model_name: deepseek-v4-flash
+    temperature: 0.4
+    tool_temperature: 0.2
+    integration_temperature: 0.3
+    top_k: 5
+  expert_b:
+    provider: deepseek
+    model_name: deepseek-v4-flash
+    temperature: 0.7
+    tool_temperature: 0.3
+    top_k: 5
+  judge:
+    provider: deepseek
+    model_name: deepseek-v4-flash
+    temperature: 0.0
+  feedback:
+    provider: deepseek
+    model_name: deepseek-v4-flash
+    temperature: 0.5
+  chat_answer:
+    provider: deepseek
+    model_name: deepseek-v4-flash
+    temperature: 0.3
+    top_k: 5
