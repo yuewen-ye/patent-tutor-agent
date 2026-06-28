@@ -1,9 +1,12 @@
 from pathlib import Path
 
 import pytest
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.store.memory import InMemoryStore
 
 from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolCall, ToolDefinition
 from backend.app.graph.workflow import build_workflow, export_workflow_mermaid, run_workflow
+from backend.app.memory import learner_namespace
 from backend.tests.helpers import completed_teach_state
 
 pytestmark = pytest.mark.unit
@@ -117,7 +120,10 @@ class QueueLLMClient:
         )
 
 
-def test_real_workflow_runs_full_agent_chain_with_fake_llm(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_real_workflow_runs_full_agent_chain_with_fake_llm(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
     llm_client = QueueLLMClient()
 
@@ -180,6 +186,29 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm(monkeypatch: pytest.M
     }
     assert forbidden_agents.isdisjoint(set(llm_client.agents))
     assert llm_client.agents[-3:] == ["expert_a", "judge", "feedback"]
+    stderr = capsys.readouterr().err
+    assert stderr.count("A/B 辩论轮次已完成 → expert_a 整合") == 1
+
+
+def test_teach_workflow_persists_learner_memory_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
+    llm_client = QueueLLMClient()
+    store = InMemoryStore()
+
+    run_workflow(
+        session_id="memory-once-session",
+        user_input="我想学习专利新颖性和创造性的区别",
+        llm_client=llm_client,
+        max_debate_rounds=1,
+        learner_id="learner-unit",
+        checkpointer=InMemorySaver(),
+        store=store,
+    )
+
+    profiles = store.search(learner_namespace("learner-unit", "profile"), limit=5)
+    histories = store.search(learner_namespace("learner-unit", "history"), limit=5)
+    assert len(profiles) == 1
+    assert len(histories) == 1
 
 
 def test_workflow_compiles_and_exports_mermaid(tmp_path: Path) -> None:

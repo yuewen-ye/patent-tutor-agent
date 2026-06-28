@@ -329,6 +329,48 @@ agents:
 
 可用 Agent 参数：`provider`、`model_name`、`temperature`、`tool_temperature`、`integration_temperature`、`top_k`。旧的 `DEFAULT_LLM_PROVIDER`、`*_PROVIDER`、`*_MODEL`、`*_BASE_URL` 环境变量仍作为兼容回退，但新配置优先使用 YAML。
 
+当前只有这些 YAML 字段会被运行时代码读取。Prompt、系统消息、辩论轮数、RAG 模式、日志目录、learner memory 路径仍分别由 prompt 文件、CLI/API 参数或 `.env` 控制。
+
+### 验证 YAML 配置是否生效
+
+不调用真实模型，只看运行时解析结果：
+
+```bash
+uv run python - <<'PY'
+from backend.app.agent_runtime_config import (
+    agent_runtime_settings,
+    agent_temperature,
+    agent_top_k,
+    llm_runtime_config,
+    provider_runtime_config,
+)
+from backend.app.core.llm import AgentLLMRouter
+
+router = AgentLLMRouter.from_env()
+print("default_provider =", llm_runtime_config().default_provider)
+for agent in ("route", "diagnosis", "planner", "expert_a", "expert_b", "judge", "feedback", "chat_answer"):
+    settings = agent_runtime_settings(agent)
+    provider = router.provider_for(agent)
+    model = router.model_for(agent) or provider_runtime_config(provider).model_name
+    print(
+        agent,
+        "provider =", provider,
+        "model =", model,
+        "temperature =", agent_temperature(agent, 0.5),
+        "top_k =", agent_top_k(agent, 5),
+        "raw =", settings.model_dump(exclude_none=True),
+    )
+PY
+```
+
+要看“最终发给模型的请求体”，入口在 `backend/app/core/llm.py`：
+
+- `AgentLLMRouter.from_env()` 读取 `config/agents.yaml` 的 provider/model。
+- Agent 节点调用 `agent_temperature(...)`，例如 `backend/app/agents/planner/node.py`。
+- `call_llm_json()` / `call_llm_tools()` 把 `model_name` 传给 `load_provider_config()`。
+- `_build_chat_body()` / `_build_chat_body_with_tools()` 最终组装 `model`、`messages`、`temperature`、`tools`。
+- `top_k` 不进模型请求体；它在 `backend/app/agents/rag_tools.py` 和 `backend/app/graph/workflow.py` 里控制检索片段数。
+
 ## RAG 工具函数
 
 chat 路径通过非 LLM 的 `retrieve_context` 节点确定性调用 `backend/app/retrieval_selector.py`。teach 路径由 `expert_a` / `expert_b` 通过 `generate_with_tools()` 自行决定是否调用 RAG。运行时根据 `RAG_RETRIEVAL_MODE` 选择真实向量检索或 mock 检索；`backend/app/rag/` 只保留真实 RAG 实现。

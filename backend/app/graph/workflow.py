@@ -18,7 +18,6 @@ from backend.app.agent_runtime_config import agent_top_k
 from backend.app.agents import Node, build_agent_nodes
 from backend.app.artifacts import attach_markdown_artifact, write_field_artifact, write_manifest
 from backend.app.core.llm import AgentLLMRouter, DefaultLLMClient, LLMClient
-from backend.app.memory import save_learner_memories
 from backend.app.retrieval_selector import retrieve_context
 from backend.app.schemas.context import WorkflowContext
 from backend.app.schemas.state import AgentEvent, StateDict, completed_event
@@ -156,20 +155,6 @@ def _judge_accepts_teach(
     return decision == "revise" and debate_round >= max_debate_rounds
 
 
-def _memory_summary_from_final_judge(state: StateDict) -> dict[str, Any]:
-    judge_report = state.get("judge_report", {})
-    expert_a_draft = state.get("expert_a_draft", {})
-    rationale = judge_report.get("rationale") if isinstance(judge_report, dict) else None
-    points = expert_a_draft.get("knowledge_points") if isinstance(expert_a_draft, dict) else None
-    next_action = "复习本次专家 A 整合稿并完成一个对应案例题"
-    if isinstance(points, list) and points:
-        next_action = f"围绕{points[0]}完成一个对应案例题"
-    return {
-        "profile_update_hint": str(rationale or "记录本次 teach 路由最终整合稿表现"),
-        "next_action": next_action,
-    }
-
-
 def _with_runtime_side_effects(
     node: Node,
     artifact_root: Path | None,
@@ -238,17 +223,6 @@ def _with_runtime_side_effects(
                     combined["artifacts"] = list(state.get("artifacts", [])) + artifacts
                     write_manifest(artifact_root=artifact_root, state=combined, status="completed")
 
-            if completed_teach:
-                combined = dict(state)
-                combined.update(updates)
-                if artifacts:
-                    combined["artifacts"] = list(state.get("artifacts", [])) + artifacts
-                save_learner_memories(
-                    runtime,
-                    cast(StateDict, combined),
-                    _memory_summary_from_final_judge(cast(StateDict, combined)),
-                )
-
             write_workflow_log(
                 log_root=workflow_log_root,
                 state=state,
@@ -286,12 +260,7 @@ def _route_after_debate_expert(
     debate_round = int(state.get("debate_round", 1))
     max_debate_rounds = int(state.get("max_debate_rounds", 3))
     if debate_round < max_debate_rounds:
-        print(
-            f"▸ [路由] A/B 辩论第 {debate_round} 轮完成 → 进入第 {debate_round + 1} 轮",
-            file=sys.stderr,
-        )
         return "revise_experts"
-    print("▸ [路由] A/B 辩论轮次已完成 → expert_a 整合", file=sys.stderr)
     return "_prepare_integration"
 
 
@@ -315,6 +284,10 @@ def revise_experts_node(
     state: StateDict, runtime: Runtime[WorkflowContext] | None = None
 ) -> dict[str, Any]:
     next_round = int(state.get("debate_round", 1)) + 1
+    print(
+        f"▸ [路由] A/B 辩论第 {next_round - 1} 轮完成 → 进入第 {next_round} 轮",
+        file=sys.stderr,
+    )
     revision_record = {
         "round": next_round,
         "source": "expert_debate",
@@ -337,6 +310,7 @@ def revise_experts_node(
 def prepare_integration_node(
     state: StateDict, runtime: Runtime[WorkflowContext] | None = None
 ) -> dict[str, Any]:
+    print("▸ [路由] A/B 辩论轮次已完成 → expert_a 整合", file=sys.stderr)
     return {"teach_phase": "integration"}
 
 
