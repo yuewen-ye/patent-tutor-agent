@@ -5,8 +5,6 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
 export PYTHONUTF8=1
-export STUDIO_THIRD_PARTY_LOG_LEVEL="${STUDIO_THIRD_PARTY_LOG_LEVEL:-WARNING}"
-export WORKFLOW_LOG_ROOT="${WORKFLOW_LOG_ROOT:-$repo_root/artifacts}"
 
 dotenv_path="$repo_root/.env"
 if [[ -f "$dotenv_path" ]]; then
@@ -33,6 +31,8 @@ if [[ -f "$dotenv_path" ]]; then
   done < "$dotenv_path"
 fi
 
+export STUDIO_THIRD_PARTY_LOG_LEVEL="${STUDIO_THIRD_PARTY_LOG_LEVEL:-ERROR}"
+export WORKFLOW_LOG_ROOT="${WORKFLOW_LOG_ROOT:-$repo_root/artifacts}"
 export UV_CACHE_DIR="${UV_CACHE_DIR:-$repo_root/.uv-cache}"
 export UV_PYTHON_INSTALL_DIR="${UV_PYTHON_INSTALL_DIR:-$repo_root/.uv-python}"
 

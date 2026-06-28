@@ -20,8 +20,14 @@ _THIRD_PARTY_LOGGERS: Final = (
     "watchfiles.main",
     "httpx",
     "httpcore",
+    "langgraph",
+    "langgraph_api",
+    "langgraph_runtime_inmem",
+    "milvus_lite",
+    "faiss",
 )
-_DEFAULT_THIRD_PARTY_LOG_LEVEL: Final = "WARNING"
+_WARNING_LOGGERS: Final = ("py.warnings",)
+_DEFAULT_THIRD_PARTY_LOG_LEVEL: Final = "ERROR"
 _LOG_LOCK: Final = Lock()
 
 
@@ -57,6 +63,8 @@ def configure_studio_terminal_logging() -> None:
         level = logging.WARNING
     for logger_name in _THIRD_PARTY_LOGGERS:
         logging.getLogger(logger_name).setLevel(level)
+    for logger_name in _WARNING_LOGGERS:
+        logging.getLogger(logger_name).setLevel(logging.ERROR)
 
 
 def write_workflow_log(

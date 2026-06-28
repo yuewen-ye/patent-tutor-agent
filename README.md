@@ -103,11 +103,22 @@ macOS / Linux / Git Bash:
 bash scripts/langgraph-dev.sh
 ```
 
-Studio 启动脚本会把 `watchfiles`、`httpx`、`httpcore` 的终端输出默认降到
-`WARNING`，业务流程日志会写到：
+Studio 启动脚本会把 `watchfiles`、`langgraph_api`、`langgraph_runtime_inmem`、
+`milvus_lite`、`faiss`、`httpx`、`httpcore` 的第三方终端输出默认降到
+`ERROR`，业务流程日志会写到：
 
 ```text
 artifacts/sessions/{session_id}/workflow.log.jsonl
+```
+
+查看最近一次 Studio run 的日志：
+
+```bash
+find artifacts/sessions -name workflow.log.jsonl -printf '%T@ %p\n' \
+  | sort -nr \
+  | head -1 \
+  | cut -d' ' -f2- \
+  | xargs tail -n 40
 ```
 
 需要临时查看第三方详细输出时，可在 `.env` 或当前 shell 中设置：

@@ -4,12 +4,6 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 
 $env:PYTHONUTF8 = "1"
-if (-not $env:STUDIO_THIRD_PARTY_LOG_LEVEL) {
-    $env:STUDIO_THIRD_PARTY_LOG_LEVEL = "WARNING"
-}
-if (-not $env:WORKFLOW_LOG_ROOT) {
-    $env:WORKFLOW_LOG_ROOT = Join-Path $repoRoot "artifacts"
-}
 
 $dotenvPath = Join-Path $repoRoot ".env"
 if (Test-Path $dotenvPath) {
@@ -35,6 +29,13 @@ if (Test-Path $dotenvPath) {
             [Environment]::SetEnvironmentVariable($key, $value, "Process")
         }
     }
+}
+
+if (-not $env:STUDIO_THIRD_PARTY_LOG_LEVEL) {
+    $env:STUDIO_THIRD_PARTY_LOG_LEVEL = "ERROR"
+}
+if (-not $env:WORKFLOW_LOG_ROOT) {
+    $env:WORKFLOW_LOG_ROOT = Join-Path $repoRoot "artifacts"
 }
 
 if (-not $env:UV_CACHE_DIR) {

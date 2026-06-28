@@ -69,6 +69,11 @@ def test_studio_terminal_logging_quiets_noisy_third_party_loggers(
 
     configure_studio_terminal_logging()
 
-    assert logging.getLogger("watchfiles.main").level == logging.WARNING
-    assert logging.getLogger("httpx").level == logging.WARNING
-    assert logging.getLogger("httpcore").level == logging.WARNING
+    assert logging.getLogger("watchfiles.main").level == logging.ERROR
+    assert logging.getLogger("httpx").level == logging.ERROR
+    assert logging.getLogger("httpcore").level == logging.ERROR
+    assert logging.getLogger("langgraph_runtime_inmem").level == logging.ERROR
+    assert logging.getLogger("langgraph_api").level == logging.ERROR
+    assert logging.getLogger("milvus_lite").level == logging.ERROR
+    assert logging.getLogger("faiss").level == logging.ERROR
+    assert logging.getLogger("py.warnings").level == logging.ERROR
