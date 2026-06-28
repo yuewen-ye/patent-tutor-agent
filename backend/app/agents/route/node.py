@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Literal
 
 
+from backend.app.agent_runtime_config import agent_temperature
 from backend.app.agents.common import Node, load_prompt
 from backend.app.core.llm import LLMClient, LLMProviderError
 from backend.app.schemas.state import IntentResult, completed_event
@@ -54,7 +55,11 @@ def build_route_node(llm_client: LLMClient) -> Node:
             ),
         ]
         try:
-            raw = llm_client.generate_json(messages=messages, temperature=0.0, agent="route")
+            raw = llm_client.generate_json(
+                messages=messages,
+                temperature=agent_temperature("route", 0.0),
+                agent="route",
+            )
         except LLMProviderError:
             if local_hint is None:
                 raise

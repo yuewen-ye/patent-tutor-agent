@@ -248,9 +248,9 @@ def test_learner_api_returns_memory_and_session_history(
     assert learner_body["history"][0]["session_id"] == session_id
     assert learner_body["history"][0]["knowledge_points"] == ["新颖性基础"]
     assert learner_profiles.json()["profiles"][0]["learning_goal"] == "学习专利新颖性"
-    history_actions = {item["next_action"] for item in learner_history.json()["history"]}
-    assert "完成一个新颖性案例题。" in history_actions
-    assert "围绕新颖性完成一个对应案例题" in history_actions
+    history = learner_history.json()["history"]
+    assert len(history) == 1
+    assert history[0]["next_action"] == "完成一个新颖性案例题。"
     assert learner_sessions.status_code == 200
     assert learner_sessions.json()["sessions"][0]["session_id"] == session_id
 

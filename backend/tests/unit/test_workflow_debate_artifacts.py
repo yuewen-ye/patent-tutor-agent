@@ -29,6 +29,8 @@ class DebateQueueLLMClient:
                     "weak_points": ["新颖性判断步骤不清"],
                     "learning_goal": "学习专利新颖性",
                 },
+            ],
+            "feedback": [
                 {
                     "questionnaire": ["本轮整合稿中哪个判断步骤最容易混淆？"],
                     "next_action": "完成一个新颖性案例判断题。",
@@ -151,12 +153,12 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     assert agents.count("expert_a") == 3
     assert agents.count("expert_b") == 2
     assert agents.count("judge") == 1
-    assert agents.count("diagnosis") == 2
-    assert "feedback" not in agents
+    assert agents.count("diagnosis") == 1
+    assert agents.count("feedback") == 1
     assert llm_client.tool_call_agents.count("expert_a") == 3
     assert llm_client.tool_call_agents.count("expert_b") == 2
     assert "tool_agent" not in agents
-    assert agents[-1] == "diagnosis"
+    assert agents[-1] == "feedback"
     assert {
         "cross_review_a",
         "cross_review_b",
@@ -166,7 +168,6 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
         "lightweight_review",
         "finalize",
         "tool_agent",
-        "feedback",
     }.isdisjoint(set(agents))
     assert completed["debate_round"] == 2
     assert completed["judge_report"]["decision"] == "accept"
@@ -199,6 +200,27 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     assert manifest["session_id"] == "demo-session"
     assert manifest["status"] == "completed"
 
+    workflow_log_path = tmp_path / "artifacts" / "sessions" / "demo-session" / "workflow.log.jsonl"
+    workflow_log = [
+        json.loads(line)
+        for line in workflow_log_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    completed_log_nodes = [
+        record["node"] for record in workflow_log if record["status"] == "completed"
+    ]
+    assert completed_log_nodes[:3] == ["route", "diagnosis", "planner"]
+    assert completed_log_nodes.count("expert_a") == 3
+    assert completed_log_nodes.count("expert_b") == 2
+    assert completed_log_nodes.count("revise_experts") == 1
+    assert completed_log_nodes[-3:] == ["expert_a", "judge", "feedback"]
+    assert all(record["session_id"] == "demo-session" for record in workflow_log)
+    assert all(
+        isinstance(record["duration_ms"], int)
+        for record in workflow_log
+        if record["status"] == "completed"
+    )
+
     integration_path = (
         tmp_path
         / "artifacts"
@@ -230,8 +252,8 @@ def test_workflow_runs_both_experts_for_each_debate_round_before_integration(
     assert agents.count("expert_a") == 3
     assert agents.count("expert_b") == 2
     assert agents.count("judge") == 1
-    assert agents.count("diagnosis") == 2
-    assert "feedback" not in agents
+    assert agents.count("diagnosis") == 1
+    assert agents.count("feedback") == 1
     assert llm_client.tool_call_agents.count("expert_a") == 3
     assert llm_client.tool_call_agents.count("expert_b") == 2
     assert "tool_agent" not in agents

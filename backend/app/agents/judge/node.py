@@ -6,6 +6,7 @@ from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
 
+from backend.app.agent_runtime_config import agent_temperature
 from backend.app.agents.common import Node, load_prompt, messages_from_prompt, schema_note
 from backend.app.core.llm import LLMClient
 from backend.app.schemas.state import JudgeReport, StateDict, completed_event
@@ -112,7 +113,7 @@ def build_judge_node(llm_client: LLMClient) -> Node:
                 learning_path=state.get("learning_path", []),
                 debate_round=state.get("debate_round", 1),
             ),
-            temperature=0.0,
+            temperature=agent_temperature("judge", 0.0),
             agent="judge",
         )
         report = JudgeReport.model_validate(_normalize_judge_report(raw))

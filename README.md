@@ -65,22 +65,40 @@ Copy-Item .env.example .env
 # LangSmith — LangGraph Studio 连接需要（在 https://smith.langchain.com 获取）
 LANGSMITH_API_KEY=lsv2_pt_...
 
-# LLM Provider — 至少填一个
+# LLM Provider — 至少填一个 API Key
 DEEPSEEK_API_KEY=sk-your-key-here
-DEFAULT_LLM_PROVIDER=deepseek
+
+# 非密钥模型参数从 YAML 读取
+AGENT_CONFIG_PATH=config/agents.yaml
 LEARNER_MEMORY_STORE_PATH=data/learner_memory.json
 ```
 
-支持 `deepseek`、`qwen`、`glm` 三个 provider。每个 Agent 可单独指定 provider：
+支持 `deepseek`、`qwen`、`glm` 三个 provider。每个 Agent 的 provider、model、temperature、top_k 等非密钥参数在 `config/agents.yaml` 里调整。
 
-```env
-ROUTE_PROVIDER=deepseek
-CHAT_ANSWER_PROVIDER=deepseek
-DIAGNOSIS_PROVIDER=deepseek
-PLANNER_PROVIDER=deepseek
-EXPERT_A_PROVIDER=deepseek
-EXPERT_B_PROVIDER=deepseek
-JUDGE_PROVIDER=deepseek
+配置分两层：`providers.<name>.model_name` 是该供应商的默认模型；`agents.<agent>.model_name` 只是单个 Agent 的覆盖项，通常不用重复写：
+
+```yaml
+providers:
+  deepseek:
+    model_name: deepseek-v4-flash
+    base_url: https://api.deepseek.com
+  qwen:
+    model_name: qwen3.7-max
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+
+agents:
+  planner:
+    provider: deepseek
+    temperature: 0.5
+  expert_b:
+    provider: qwen
+    temperature: 0.7
+    tool_temperature: 0.3
+    top_k: 5
+  judge:
+    provider: deepseek
+    model_name: deepseek-reasoner  # 只有需要覆盖 provider 默认模型时才写
+    temperature: 0.0
 ```
 
 ### 4. 启动 LangGraph Studio
@@ -95,6 +113,30 @@ macOS / Linux / Git Bash:
 
 ```bash
 bash scripts/langgraph-dev.sh
+```
+
+Studio 启动脚本会把 `watchfiles`、`langgraph_api`、`langgraph_runtime_inmem`、
+`milvus_lite`、`faiss`、`httpx`、`httpcore` 的第三方终端输出默认降到
+`ERROR`，业务流程日志会写到：
+
+```text
+artifacts/sessions/{session_id}/workflow.log.jsonl
+```
+
+查看最近一次 Studio run 的日志：
+
+```bash
+find artifacts/sessions -name workflow.log.jsonl -printf '%T@ %p\n' \
+  | sort -nr \
+  | head -1 \
+  | cut -d' ' -f2- \
+  | xargs tail -n 40
+```
+
+需要临时查看第三方详细输出时，可在 `.env` 或当前 shell 中设置：
+
+```env
+STUDIO_THIRD_PARTY_LOG_LEVEL=INFO
 ```
 
 启动后会输出：
@@ -230,18 +272,18 @@ START → _init → route ──┬── diagnose: diagnosis → END
 
 ### Agent 节点职责
 
-| 节点 | 类型 | 职责 | Provider 环境变量 |
+| 节点 | 类型 | 职责 | YAML 配置项 |
 |------|------|------|-----------------|
-| `route` | LLM 调用 + 本地兜底 | 分类用户意图 teach/chat/diagnose；明显学习/诊断请求会覆盖误路由 | `ROUTE_PROVIDER` |
-| `diagnosis` | LLM 调用 + Store | 学情诊断；可复用 `feedback` 阶段生成问卷、下一步动作、画像更新建议 | `DIAGNOSIS_PROVIDER` |
-| `planner` | LLM 调用 | 生成个性化学习路径 | `PLANNER_PROVIDER` |
+| `route` | LLM 调用 + 本地兜底 | 分类用户意图 teach/chat/diagnose；明显学习/诊断请求会覆盖误路由 | `agents.route` |
+| `diagnosis` | LLM 调用 + Store | 学情诊断；可复用 `feedback` 阶段生成问卷、下一步动作、画像更新建议 | `agents.diagnosis` |
+| `planner` | LLM 调用 | 生成个性化学习路径 | `agents.planner` |
 | `retrieve_context` | 无 LLM | chat 路径固定检索法条上下文 | — |
-| `expert_a` | LLM + Tool 调用 | 保守严谨、法条优先；自行决定是否调用 RAG；负责辩论草稿和最终整合 A/B 结果 | `EXPERT_A_PROVIDER` |
-| `expert_b` | LLM + Tool 调用 | 生动灵活、面向案例；自行决定是否调用 RAG；负责辩论草稿和参考专家 A 上轮草稿补强 | `EXPERT_B_PROVIDER` |
-| `judge` | LLM 调用 | 只审核专家 A 整合稿是否通过，不写正文、不做过程输出 | `JUDGE_PROVIDER` |
+| `expert_a` | LLM + Tool 调用 | 保守严谨、法条优先；自行决定是否调用 RAG；负责辩论草稿和最终整合 A/B 结果 | `agents.expert_a` |
+| `expert_b` | LLM + Tool 调用 | 生动灵活、面向案例；自行决定是否调用 RAG；负责辩论草稿和参考专家 A 上轮草稿补强 | `agents.expert_b` |
+| `judge` | LLM 调用 | 只审核专家 A 整合稿是否通过，不写正文、不做过程输出 | `agents.judge` |
 | `revise_experts` | 无 LLM | 增加辩论轮次，并分派下一轮 A/B 辩论 | — |
-| `feedback` | diagnosis Agent 后置阶段 + Store | teach 后置反馈阶段，生成问卷、下一步动作和画像更新建议 | `DIAGNOSIS_PROVIDER` |
-| `chat_answer` | LLM 调用 | chat 路径基于检索上下文生成短答 | `CHAT_ANSWER_PROVIDER` |
+| `feedback` | diagnosis Agent 后置阶段 + Store | teach 后置反馈阶段，生成问卷、下一步动作和画像更新建议 | `agents.feedback` |
+| `chat_answer` | LLM 调用 | chat 路径基于检索上下文生成短答 | `agents.chat_answer` |
 
 接口合同以 `docs/agent-interface-spec.md` 和 `backend/app/schemas/state.py` 为准。
 
@@ -274,14 +316,97 @@ bash scripts/langgraph-stop.sh 8124
 
 复制 `.env.example` 为 `.env`，填入真实 key。**不要提交 `.env` 或任何密钥。**
 
-当前支持 provider：`deepseek`、`qwen`、`glm`。每个 provider 的模型和 Base URL 可单独配置：
+`.env` 只放密钥和本机路径；模型、provider、temperature、top_k 等非密钥参数放在 `config/agents.yaml`。当前支持 provider：`deepseek`、`qwen`、`glm`。
 
 ```env
-DEEPSEEK_MODEL=deepseek-v4-flash
-DEEPSEEK_BASE_URL=https://api.deepseek.com
-QWEN_MODEL=qwen3.7-max
-QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+DEEPSEEK_API_KEY=sk-...
+QWEN_API_KEY=
+GLM_API_KEY=
+AGENT_CONFIG_PATH=config/agents.yaml
 ```
+
+```yaml
+llm:
+  default_provider: deepseek
+  timeout_seconds: 90
+  retry_times: 3
+
+providers:
+  deepseek:
+    model_name: deepseek-v4-flash
+    base_url: https://api.deepseek.com
+  glm:
+    model_name: glm-5.1
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+
+agents:
+  judge:
+    provider: deepseek
+    temperature: 0.0
+  expert_a:
+    provider: deepseek
+    temperature: 0.4
+    tool_temperature: 0.2
+    integration_temperature: 0.3
+    top_k: 5
+  expert_b:
+    provider: glm
+    model_name: glm-5.1-air  # 可选：只在单个 agent 需要不同模型时覆盖
+    temperature: 0.7
+```
+
+可用 Agent 参数：`provider`、`model_name`、`temperature`、`tool_temperature`、`integration_temperature`、`top_k`。其中 `model_name` 的优先级是：
+
+```text
+agents.<agent>.model_name
+> providers.<provider>.model_name
+> 旧环境变量 *_MODEL
+> 代码内 provider 默认模型
+```
+
+因此日常配置建议把模型名写在 `providers` 里，`agents` 里只写 `provider`、温度、`top_k` 等差异项；只有某个 Agent 要换成特殊模型时，才在该 Agent 下写 `model_name`。旧的 `DEFAULT_LLM_PROVIDER`、`*_PROVIDER`、`*_MODEL`、`*_BASE_URL` 环境变量仍作为兼容回退，但新配置优先使用 YAML。
+
+当前只有这些 YAML 字段会被运行时代码读取。Prompt、系统消息、辩论轮数、RAG 模式、日志目录、learner memory 路径仍分别由 prompt 文件、CLI/API 参数或 `.env` 控制。
+
+### 验证 YAML 配置是否生效
+
+不调用真实模型，只看运行时解析结果：
+
+```bash
+uv run python - <<'PY'
+from backend.app.agent_runtime_config import (
+    agent_runtime_settings,
+    agent_temperature,
+    agent_top_k,
+    llm_runtime_config,
+    provider_runtime_config,
+)
+from backend.app.core.llm import AgentLLMRouter
+
+router = AgentLLMRouter.from_env()
+print("default_provider =", llm_runtime_config().default_provider)
+for agent in ("route", "diagnosis", "planner", "expert_a", "expert_b", "judge", "feedback", "chat_answer"):
+    settings = agent_runtime_settings(agent)
+    provider = router.provider_for(agent)
+    model = router.model_for(agent) or provider_runtime_config(provider).model_name
+    print(
+        agent,
+        "provider =", provider,
+        "model =", model,
+        "temperature =", agent_temperature(agent, 0.5),
+        "top_k =", agent_top_k(agent, 5),
+        "raw =", settings.model_dump(exclude_none=True),
+    )
+PY
+```
+
+要看“最终发给模型的请求体”，入口在 `backend/app/core/llm.py`：
+
+- `AgentLLMRouter.from_env()` 读取 `config/agents.yaml` 的 provider/model。
+- Agent 节点调用 `agent_temperature(...)`，例如 `backend/app/agents/planner/node.py`。
+- `call_llm_json()` / `call_llm_tools()` 把 `model_name` 传给 `load_provider_config()`。
+- `_build_chat_body()` / `_build_chat_body_with_tools()` 最终组装 `model`、`messages`、`temperature`、`tools`。
+- `top_k` 不进模型请求体；它在 `backend/app/agents/rag_tools.py` 和 `backend/app/graph/workflow.py` 里控制检索片段数。
 
 ## RAG 工具函数
 

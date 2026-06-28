@@ -87,7 +87,19 @@ def main() -> None:
     default_provider: LLMProvider = (
         cast(LLMProvider, args.provider) if args.provider else router.default_provider
     )
-    router = AgentLLMRouter(default_provider=default_provider, agent_providers=overrides)
+    overridden_agents = {
+        agent for agent in AGENT_PROVIDER_ENV if getattr(args, f"{agent}_provider")
+    }
+    agent_model_names = {
+        agent: model_name
+        for agent, model_name in router.agent_model_names.items()
+        if agent not in overridden_agents
+    }
+    router = AgentLLMRouter(
+        default_provider=default_provider,
+        agent_providers=overrides,
+        agent_model_names=agent_model_names,
+    )
 
     provider_plan = {agent: router.provider_for(agent) for agent in AGENT_PROVIDER_ENV}
     print(f"Provider plan: {provider_plan}", file=sys.stderr)

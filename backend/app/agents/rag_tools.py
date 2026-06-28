@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Final
 
+from backend.app.agent_runtime_config import agent_top_k
 from backend.app.core.llm import AgentName, LLMClient, LLMMessage, ToolCall, ToolDefinition
 from backend.app.retrieval_selector import retrieve_context
 
@@ -28,11 +29,11 @@ _RAG_TOOL: Final = ToolDefinition(
 )
 
 
-def _tool_top_k(call: ToolCall) -> int:
+def _tool_top_k(call: ToolCall, default_top_k: int) -> int:
     raw_top_k = call.arguments.get("top_k")
     if isinstance(raw_top_k, int):
         return max(1, min(raw_top_k, 10))
-    return 5
+    return default_top_k
 
 
 def _tool_query(call: ToolCall) -> str:
@@ -56,11 +57,15 @@ def collect_expert_retrieval_context(
         agent=agent,
     )
     chunks: list[dict[str, object]] = []
+    default_top_k = agent_top_k(agent, 5)
     for tool_call in response.tool_calls:
         if tool_call.name != "rag_retrieve":
             raise RuntimeError(f"Unsupported expert tool call: {tool_call.name}")
         chunks.extend(
             chunk.model_dump()
-            for chunk in retrieve_context(query=_tool_query(tool_call), top_k=_tool_top_k(tool_call))
+            for chunk in retrieve_context(
+                query=_tool_query(tool_call),
+                top_k=_tool_top_k(tool_call, default_top_k),
+            )
         )
     return chunks

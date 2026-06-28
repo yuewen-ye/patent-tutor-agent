@@ -31,6 +31,13 @@ if (Test-Path $dotenvPath) {
     }
 }
 
+if (-not $env:STUDIO_THIRD_PARTY_LOG_LEVEL) {
+    $env:STUDIO_THIRD_PARTY_LOG_LEVEL = "ERROR"
+}
+if (-not $env:WORKFLOW_LOG_ROOT) {
+    $env:WORKFLOW_LOG_ROOT = Join-Path $repoRoot "artifacts"
+}
+
 if (-not $env:UV_CACHE_DIR) {
     $env:UV_CACHE_DIR = Join-Path $repoRoot ".uv-cache"
 }

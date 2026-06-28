@@ -6,6 +6,7 @@ from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
 
+from backend.app.agent_runtime_config import agent_temperature
 from backend.app.agents.common import Node, load_prompt, messages_from_prompt, normalize_key_aliases, schema_note
 from backend.app.agents.rag_tools import collect_expert_retrieval_context
 from backend.app.core.llm import LLMClient
@@ -51,7 +52,7 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
         retrieved_context = collect_expert_retrieval_context(
             llm_client,
             messages=prompt_messages,
-            temperature=0.3,
+            temperature=agent_temperature("expert_b", 0.3, "tool_temperature"),
             agent="expert_b",
         )
         retrieval_context = list(state.get("retrieval_context", []) or []) + retrieved_context
@@ -64,7 +65,7 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
                 debate_round=state.get("debate_round", 1),
                 revision_context=state.get("expert_a_draft", {}),
             ),
-            temperature=0.7,
+            temperature=agent_temperature("expert_b", 0.7),
             agent="expert_b",
         )
         draft = ExpertDraft.model_validate(

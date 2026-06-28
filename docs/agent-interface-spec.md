@@ -37,20 +37,20 @@ START → _init → route ──┬── diagnose: diagnosis → END
 
 ## 2. Agent 与服务边界
 
-| 角色 | 节点 | 责任 | 产出字段 | Provider 环境变量 | 状态 |
+| 角色 | 节点 | 责任 | 产出字段 | YAML 配置项 | 状态 |
 | --- | --- | --- | --- | --- | --- |
-| 意图路由 Agent | `route` | 分类用户意图：teach/chat/diagnose；明显学习/诊断请求有本地兜底 | `intent` | `ROUTE_PROVIDER` | ✅ |
-| 学情诊断 Agent | `diagnosis` | 识别五维学习者画像 | `learner_profile` | `DIAGNOSIS_PROVIDER` | ✅（画像为简化版，五维版 [P0.3]） |
-| 路径规划 Agent | `planner` | LLM 生成学习路径（当前）/ A* 知识图谱搜索（P0.2） | `learning_path` | `PLANNER_PROVIDER` | ✅（当前 LLM 版） |
+| 意图路由 Agent | `route` | 分类用户意图：teach/chat/diagnose；明显学习/诊断请求有本地兜底 | `intent` | `agents.route` | ✅ |
+| 学情诊断 Agent | `diagnosis` | 识别五维学习者画像 | `learner_profile` | `agents.diagnosis` | ✅（画像为简化版，五维版 [P0.3]） |
+| 路径规划 Agent | `planner` | LLM 生成学习路径（当前）/ A* 知识图谱搜索（P0.2） | `learning_path` | `agents.planner` | ✅（当前 LLM 版） |
 | 检索流程节点 | `retrieve_context` | chat 路径固定调用 RAG 检索，写入检索上下文 | `retrieval_context` | — | ✅ |
-| 领域专家 A | `expert_a` | 保守严谨、法条优先：自行决定是否调用 RAG，生成辩论草稿，并在 A/B 辩论完成后整合两方结果 | `expert_a_draft`、可选 `retrieval_context` | `EXPERT_A_PROVIDER` | ✅ |
-| 领域专家 B | `expert_b` | 生动灵活、面向案例：自行决定是否调用 RAG，生成辩论草稿并参考专家 A 上轮草稿继续辩论 | `expert_b_draft`、可选 `retrieval_context` | `EXPERT_B_PROVIDER` | ✅ |
-| 审核裁判 Agent | `judge` | 只审核专家 A 整合稿是否通过，不生成教学正文或过程输出 | `judge_report` | `JUDGE_PROVIDER` | ✅ |
-| 学情诊断 Agent feedback 阶段 | `feedback` | 生成问卷、下一步动作、画像变化向量 Δ | `feedback_result`、`profile_delta` | `DIAGNOSIS_PROVIDER` | ✅（当前无 Δ 输出 [P0.3]） |
-| 快速回答 Agent | `chat_answer` | chat 路径基于检索上下文生成直接回答 | `chat_answer` | `CHAT_ANSWER_PROVIDER` | ✅ |
+| 领域专家 A | `expert_a` | 保守严谨、法条优先：自行决定是否调用 RAG，生成辩论草稿，并在 A/B 辩论完成后整合两方结果 | `expert_a_draft`、可选 `retrieval_context` | `agents.expert_a` | ✅ |
+| 领域专家 B | `expert_b` | 生动灵活、面向案例：自行决定是否调用 RAG，生成辩论草稿并参考专家 A 上轮草稿继续辩论 | `expert_b_draft`、可选 `retrieval_context` | `agents.expert_b` | ✅ |
+| 审核裁判 Agent | `judge` | 只审核专家 A 整合稿是否通过，不生成教学正文或过程输出 | `judge_report` | `agents.judge` | ✅ |
+| 学情诊断 Agent feedback 阶段 | `feedback` | 生成问卷、下一步动作、画像变化向量 Δ | `feedback_result`、`profile_delta` | `agents.feedback` | ✅（当前无 Δ 输出 [P0.3]） |
+| 快速回答 Agent | `chat_answer` | chat 路径基于检索上下文生成直接回答 | `chat_answer` | `agents.chat_answer` | ✅ |
 | 路径搜索器 | `pathfinder` | A* 在知识图谱上搜索 3 条候选路径 [P0.2] | `learning_path_candidates` | — | [P0.2] |
 
-模型只通过 `AgentLLMRouter` 注入，Agent 节点不得硬编码 provider 或 API key。
+模型只通过 `AgentLLMRouter` 注入，Agent 节点不得硬编码 provider、model 或 API key。运行时优先读取 `config/agents.yaml`，`.env` 只保存 API key 和本机路径。
 
 ## 3. 全局状态 StateDict
 
@@ -776,7 +776,7 @@ BKT 持久化通过 LangGraph Store namespace `("learners", learner_id, "bkt")` 
 
 读取：`expert_a_draft`、`expert_b_draft`、`retrieval_context`。
 写入：`expert_a_draft`、`teach_phase="integration"`、`events`、可选 `artifacts`。
-LLM 调用：是，使用 `expert_a` agent（temperature=0.3）。
+LLM 调用：是，使用 `expert_a` agent，温度默认读取 `agents.expert_a.integration_temperature`。
 
 ```json
 {

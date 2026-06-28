@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import importlib
 import os
 from pathlib import Path
+from threading import Lock
 from typing import Any, Final
 
 from backend.app.schemas.state import RetrievalChunk, RetrievalMetadata
@@ -16,12 +16,15 @@ MODEL_NAME: Final = "BAAI/bge-m3"
 _milvus_client = None
 _embedding_model = None
 _sentence_transformers = None
+_MILVUS_CLIENT_LOCK: Final = Lock()
+_EMBEDDING_MODEL_LOCK: Final = Lock()
 
 
-@dataclass(frozen=True, slots=True)
 class RAGRetrievalError(RuntimeError):
-    stage: str
-    detail: str
+    def __init__(self, stage: str, detail: str) -> None:
+        self.stage = stage
+        self.detail = detail
+        super().__init__(self.__str__())
 
     def __str__(self) -> str:
         return f"RAG retrieval failed at {self.stage}: {self.detail}"
@@ -65,34 +68,41 @@ def _lazy_import() -> None:
 def get_embedding_model() -> Any:
     global _embedding_model
     if _embedding_model is None:
-        _lazy_import()
-        SentenceTransformer = _sentence_transformers
-        if SentenceTransformer is None:
-            raise RAGRetrievalError(stage="embedding_import", detail="SentenceTransformer missing")
-        try:
-            _embedding_model = SentenceTransformer(MODEL_NAME)
-        except (OSError, RuntimeError) as exc:
-            raise RAGRetrievalError(stage="embedding_model", detail=str(exc)) from exc
+        with _EMBEDDING_MODEL_LOCK:
+            if _embedding_model is None:
+                _lazy_import()
+                SentenceTransformer = _sentence_transformers
+                if SentenceTransformer is None:
+                    raise RAGRetrievalError(
+                        stage="embedding_import",
+                        detail="SentenceTransformer missing",
+                    )
+                try:
+                    _embedding_model = SentenceTransformer(MODEL_NAME)
+                except (OSError, RuntimeError) as exc:
+                    raise RAGRetrievalError(stage="embedding_model", detail=str(exc)) from exc
     return _embedding_model
 
 
 def get_milvus_client() -> Any:
     global _milvus_client
     if _milvus_client is None:
-        milvus_error = _load_exception_class(
-            "pymilvus.exceptions", "MilvusException", "milvus_import"
-        )
-        try:
-            MilvusClient = _load_class("pymilvus", "MilvusClient", "milvus_import")
-            db_path = _get_db_path()
-            _milvus_client = MilvusClient(db_path)
-            _milvus_client.load_collection(COLLECTION_NAME)
-        except RAGRetrievalError:
-            raise
-        except milvus_error as exc:
-            raise RAGRetrievalError(stage="milvus_client", detail=str(exc)) from exc
-        except (OSError, RuntimeError) as exc:
-            raise RAGRetrievalError(stage="milvus_client", detail=str(exc)) from exc
+        with _MILVUS_CLIENT_LOCK:
+            if _milvus_client is None:
+                milvus_error = _load_exception_class(
+                    "pymilvus.exceptions", "MilvusException", "milvus_import"
+                )
+                try:
+                    MilvusClient = _load_class("pymilvus", "MilvusClient", "milvus_import")
+                    db_path = _get_db_path()
+                    _milvus_client = MilvusClient(db_path)
+                    _milvus_client.load_collection(COLLECTION_NAME)
+                except RAGRetrievalError:
+                    raise
+                except milvus_error as exc:
+                    raise RAGRetrievalError(stage="milvus_client", detail=str(exc)) from exc
+                except (OSError, RuntimeError) as exc:
+                    raise RAGRetrievalError(stage="milvus_client", detail=str(exc)) from exc
     return _milvus_client
 
 
