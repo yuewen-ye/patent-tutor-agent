@@ -73,20 +73,32 @@ AGENT_CONFIG_PATH=config/agents.yaml
 LEARNER_MEMORY_STORE_PATH=data/learner_memory.json
 ```
 
-支持 `deepseek`、`qwen`、`glm` 三个 provider。每个 Agent 的 provider、model、temperature、top_k 等非密钥参数在 `config/agents.yaml` 里调整：
+支持 `deepseek`、`qwen`、`glm` 三个 provider。每个 Agent 的 provider、model、temperature、top_k 等非密钥参数在 `config/agents.yaml` 里调整。
+
+配置分两层：`providers.<name>.model_name` 是该供应商的默认模型；`agents.<agent>.model_name` 只是单个 Agent 的覆盖项，通常不用重复写：
 
 ```yaml
+providers:
+  deepseek:
+    model_name: deepseek-v4-flash
+    base_url: https://api.deepseek.com
+  qwen:
+    model_name: qwen3.7-max
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+
 agents:
   planner:
     provider: deepseek
-    model_name: deepseek-v4-flash
     temperature: 0.5
   expert_b:
     provider: qwen
-    model_name: qwen3.7-max
     temperature: 0.7
     tool_temperature: 0.3
     top_k: 5
+  judge:
+    provider: deepseek
+    model_name: deepseek-reasoner  # 只有需要覆盖 provider 默认模型时才写
+    temperature: 0.0
 ```
 
 ### 4. 启动 LangGraph Studio
@@ -323,22 +335,36 @@ providers:
   deepseek:
     model_name: deepseek-v4-flash
     base_url: https://api.deepseek.com
+  glm:
+    model_name: glm-5.1
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
 
 agents:
   judge:
     provider: deepseek
-    model_name: deepseek-v4-flash
     temperature: 0.0
   expert_a:
     provider: deepseek
-    model_name: deepseek-v4-flash
     temperature: 0.4
     tool_temperature: 0.2
     integration_temperature: 0.3
     top_k: 5
+  expert_b:
+    provider: glm
+    model_name: glm-5.1-air  # 可选：只在单个 agent 需要不同模型时覆盖
+    temperature: 0.7
 ```
 
-可用 Agent 参数：`provider`、`model_name`、`temperature`、`tool_temperature`、`integration_temperature`、`top_k`。旧的 `DEFAULT_LLM_PROVIDER`、`*_PROVIDER`、`*_MODEL`、`*_BASE_URL` 环境变量仍作为兼容回退，但新配置优先使用 YAML。
+可用 Agent 参数：`provider`、`model_name`、`temperature`、`tool_temperature`、`integration_temperature`、`top_k`。其中 `model_name` 的优先级是：
+
+```text
+agents.<agent>.model_name
+> providers.<provider>.model_name
+> 旧环境变量 *_MODEL
+> 代码内 provider 默认模型
+```
+
+因此日常配置建议把模型名写在 `providers` 里，`agents` 里只写 `provider`、温度、`top_k` 等差异项；只有某个 Agent 要换成特殊模型时，才在该 Agent 下写 `model_name`。旧的 `DEFAULT_LLM_PROVIDER`、`*_PROVIDER`、`*_MODEL`、`*_BASE_URL` 环境变量仍作为兼容回退，但新配置优先使用 YAML。
 
 当前只有这些 YAML 字段会被运行时代码读取。Prompt、系统消息、辩论轮数、RAG 模式、日志目录、learner memory 路径仍分别由 prompt 文件、CLI/API 参数或 `.env` 控制。
 
