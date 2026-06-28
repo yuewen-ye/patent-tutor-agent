@@ -97,6 +97,19 @@ macOS / Linux / Git Bash:
 bash scripts/langgraph-dev.sh
 ```
 
+Studio 启动脚本会把 `watchfiles`、`httpx`、`httpcore` 的终端输出默认降到
+`WARNING`，业务流程日志会写到：
+
+```text
+artifacts/sessions/{session_id}/workflow.log.jsonl
+```
+
+需要临时查看第三方详细输出时，可在 `.env` 或当前 shell 中设置：
+
+```env
+STUDIO_THIRD_PARTY_LOG_LEVEL=INFO
+```
+
 启动后会输出：
 
 ```

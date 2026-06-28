@@ -6,14 +6,23 @@ Usage:
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 from dotenv import load_dotenv
 
 load_dotenv(encoding="utf-8")
 
 from backend.app.graph.workflow import build_workflow  # noqa: E402
+from backend.app.workflow_logging import configure_studio_terminal_logging  # noqa: E402
+
+configure_studio_terminal_logging()
 
 # Build without default checkpointer/store — LangGraph API handles persistence.
-graph = build_workflow(use_default_checkpointing=False)
+graph = build_workflow(
+    use_default_checkpointing=False,
+    workflow_log_root=Path(os.getenv("WORKFLOW_LOG_ROOT", "artifacts")),
+)
 
 # Expose metadata
 __all__ = ["graph"]

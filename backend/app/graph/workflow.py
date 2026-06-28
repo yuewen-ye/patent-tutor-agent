@@ -21,6 +21,7 @@ from backend.app.memory import save_learner_memories
 from backend.app.retrieval_selector import retrieve_context
 from backend.app.schemas.context import WorkflowContext
 from backend.app.schemas.state import AgentEvent, StateDict, completed_event
+from backend.app.workflow_logging import write_workflow_log
 
 WorkflowUpdateSink = Callable[[dict[str, Any]], None]
 WorkflowEventSink = Callable[[list[dict[str, Any]]], None]
@@ -171,6 +172,7 @@ def _memory_summary_from_final_judge(state: StateDict) -> dict[str, Any]:
 def _with_runtime_side_effects(
     node: Node,
     artifact_root: Path | None,
+    workflow_log_root: Path | None = None,
     update_sink: WorkflowUpdateSink | None = None,
     event_sink: WorkflowEventSink | None = None,
     node_label: str | None = None,
@@ -184,61 +186,87 @@ def _with_runtime_side_effects(
 
         print(f"▸ [{label}]{round_tag} 开始...", file=sys.stderr)
         start = time.monotonic()
-        updates = _call_node(node, state, runtime)
-        duration_ms = round((time.monotonic() - start) * 1000)
+        write_workflow_log(
+            log_root=workflow_log_root,
+            state=state,
+            node=label,
+            status="started",
+        )
+        try:
+            updates = _call_node(node, state, runtime)
+            duration_ms = round((time.monotonic() - start) * 1000)
 
-        # Enrich events with metadata that only the workflow wrapper knows.
-        raw_events = updates.get("events")
-        if isinstance(raw_events, list):
-            for evt in raw_events:
-                if isinstance(evt, dict):
-                    if evt.get("round") is None:
-                        evt["round"] = round_num
-                    if evt.get("timestamp") is None:
-                        evt["timestamp"] = datetime.now(UTC).isoformat()
-                    if evt.get("duration_ms") is None:
-                        evt["duration_ms"] = duration_ms
+            raw_events = updates.get("events")
+            if isinstance(raw_events, list):
+                for evt in raw_events:
+                    if isinstance(evt, dict):
+                        if evt.get("round") is None:
+                            evt["round"] = round_num
+                        if evt.get("timestamp") is None:
+                            evt["timestamp"] = datetime.now(UTC).isoformat()
+                        if evt.get("duration_ms") is None:
+                            evt["duration_ms"] = duration_ms
 
-        _print_summary(updates, round_num)
-        print(f"  [{label}]{round_tag} 完成 ✓  ({duration_ms}ms)", file=sys.stderr)
+            _print_summary(updates, round_num)
+            print(f"  [{label}]{round_tag} 完成 ✓  ({duration_ms}ms)", file=sys.stderr)
 
-        artifacts: list[dict[str, Any]] = []
-        completed_teach = _feedback_completes_teach(state, updates, label)
-        if artifact_root is not None:
-            round_number = int(state.get("debate_round", 1))
-            session_id = state["session_id"]
-            for field in _ARTIFACT_FIELDS:
-                if field not in updates:
-                    continue
-                artifact = write_field_artifact(
-                    artifact_root=artifact_root,
-                    session_id=session_id,
-                    field=field,
-                    value=updates[field],
-                    round_number=round_number,
-                )
-                artifacts.append(artifact)
-                updates[field] = attach_markdown_artifact(updates[field], artifact)
+            artifacts: list[dict[str, Any]] = []
+            completed_teach = _feedback_completes_teach(state, updates, label)
+            if artifact_root is not None:
+                round_number = int(state.get("debate_round", 1))
+                session_id = state["session_id"]
+                for field in _ARTIFACT_FIELDS:
+                    if field not in updates:
+                        continue
+                    artifact = write_field_artifact(
+                        artifact_root=artifact_root,
+                        session_id=session_id,
+                        field=field,
+                        value=updates[field],
+                        round_number=round_number,
+                    )
+                    artifacts.append(artifact)
+                    updates[field] = attach_markdown_artifact(updates[field], artifact)
 
-            if artifacts:
-                updates["artifacts"] = artifacts
+                if artifacts:
+                    updates["artifacts"] = artifacts
+
+                if completed_teach:
+                    combined = dict(state)
+                    combined.update(updates)
+                    combined["artifacts"] = list(state.get("artifacts", [])) + artifacts
+                    write_manifest(artifact_root=artifact_root, state=combined, status="completed")
 
             if completed_teach:
                 combined = dict(state)
                 combined.update(updates)
-                combined["artifacts"] = list(state.get("artifacts", [])) + artifacts
-                write_manifest(artifact_root=artifact_root, state=combined, status="completed")
+                if artifacts:
+                    combined["artifacts"] = list(state.get("artifacts", [])) + artifacts
+                save_learner_memories(
+                    runtime,
+                    cast(StateDict, combined),
+                    _memory_summary_from_final_judge(cast(StateDict, combined)),
+                )
 
-        if completed_teach:
-            combined = dict(state)
-            combined.update(updates)
-            if artifacts:
-                combined["artifacts"] = list(state.get("artifacts", [])) + artifacts
-            save_learner_memories(
-                runtime,
-                cast(StateDict, combined),
-                _memory_summary_from_final_judge(cast(StateDict, combined)),
+            write_workflow_log(
+                log_root=workflow_log_root,
+                state=state,
+                node=label,
+                status="completed",
+                duration_ms=duration_ms,
+                updates=updates,
             )
+        except Exception as exc:
+            duration_ms = round((time.monotonic() - start) * 1000)
+            write_workflow_log(
+                log_root=workflow_log_root,
+                state=state,
+                node=label,
+                status="error",
+                duration_ms=duration_ms,
+                error=exc,
+            )
+            raise
 
         events = updates.get("events")
         if event_sink is not None and isinstance(events, list):
@@ -375,10 +403,12 @@ def build_workflow(
     update_sink: WorkflowUpdateSink | None = None,
     event_sink: WorkflowEventSink | None = None,
     use_default_checkpointing: bool = True,
+    workflow_log_root: str | Path | None = None,
 ) -> Any:
     builder = StateGraph(StateDict, context_schema=WorkflowContext)
     nodes: dict[str, Node] = build_agent_nodes(llm_client or AgentLLMRouter.from_env())
     root_path = Path(artifact_root) if artifact_root is not None else None
+    log_root_path = Path(workflow_log_root) if workflow_log_root is not None else root_path
 
     def _ensure_session_id(state: StateDict) -> dict[str, Any]:
         """Auto-generate session_id if not provided (e.g. from LangGraph Studio)."""
@@ -389,7 +419,7 @@ def build_workflow(
 
     def _wrap(name: str, artifact: bool = True) -> Any:
         return cast(Any, _with_runtime_side_effects(
-            nodes[name], root_path if artifact else None,
+            nodes[name], root_path if artifact else None, log_root_path,
             update_sink, event_sink, node_label=name,
         ))
 
@@ -399,7 +429,8 @@ def build_workflow(
     builder.add_node("diagnosis", _wrap("diagnosis"))
     builder.add_node("planner", _wrap("planner"))
     builder.add_node("retrieve_context", cast(Any, _with_runtime_side_effects(
-        retrieve_context_node, root_path, update_sink, event_sink, node_label="retrieve_context",
+        retrieve_context_node, root_path, log_root_path,
+        update_sink, event_sink, node_label="retrieve_context",
     )))
     builder.add_node("chat_answer", _wrap("chat_answer"))
     builder.add_node("expert_a", _wrap("expert_a"))
@@ -407,7 +438,8 @@ def build_workflow(
     builder.add_node("judge", _wrap("judge"))
     builder.add_node("feedback", _wrap("feedback"))
     builder.add_node("revise_experts", cast(Any, _with_runtime_side_effects(
-        revise_experts_node, None, update_sink, event_sink, node_label="revise_experts",
+        revise_experts_node, None, log_root_path,
+        update_sink, event_sink, node_label="revise_experts",
     )))
     builder.add_node("_prepare_integration", prepare_integration_node)
 

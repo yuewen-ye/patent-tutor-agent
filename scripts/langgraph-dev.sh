@@ -5,6 +5,8 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
 export PYTHONUTF8=1
+export STUDIO_THIRD_PARTY_LOG_LEVEL="${STUDIO_THIRD_PARTY_LOG_LEVEL:-WARNING}"
+export WORKFLOW_LOG_ROOT="${WORKFLOW_LOG_ROOT:-$repo_root/artifacts}"
 
 dotenv_path="$repo_root/.env"
 if [[ -f "$dotenv_path" ]]; then
