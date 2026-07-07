@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 import sys
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 if __package__ in {None, ""}:
@@ -11,26 +13,56 @@ if __package__ in {None, ""}:
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api import create_api_router
+from backend.app.config import ServiceSettings, load_service_settings
 from backend.app.memory import FileLearnerMemoryStore
+from backend.app.middleware import RequestIDMiddleware
 from backend.app.services.session_service import SessionService
 
 DEFAULT_LEARNER_MEMORY_STORE_PATH = "data/learner_memory.json"
 
 
-def create_app(session_service: SessionService | None = None) -> FastAPI:
+def create_app(
+    session_service: SessionService | None = None,
+    settings: ServiceSettings | None = None,
+) -> FastAPI:
     load_dotenv(encoding="utf-8")
-    service = session_service or _create_default_session_service()
-    app = FastAPI(title="Patent Tutor Agent", version="0.1.0")
+    service_settings = settings or load_service_settings()
+    service = session_service or _create_default_session_service(service_settings)
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        try:
+            yield
+        finally:
+            service.shutdown()
+
+    app = FastAPI(title="Patent Tutor Agent", version="0.1.0", lifespan=lifespan)
     app.state.session_service = service
+    app.state.settings = service_settings
+    app.add_middleware(RequestIDMiddleware)
+    if service_settings.cors_origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=service_settings.cors_origins,
+            allow_credentials=service_settings.cors_allow_credentials,
+            allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+            allow_headers=["*"],
+        )
     app.include_router(create_api_router(service))
     return app
 
 
-def _create_default_session_service() -> SessionService:
-    store_path = Path(os.getenv("LEARNER_MEMORY_STORE_PATH", DEFAULT_LEARNER_MEMORY_STORE_PATH))
-    return SessionService(store=FileLearnerMemoryStore(store_path))
+def _create_default_session_service(settings: ServiceSettings) -> SessionService:
+    store_path = settings.learner_memory_store_path
+    if str(store_path) == "":
+        store_path = Path(os.getenv("LEARNER_MEMORY_STORE_PATH", DEFAULT_LEARNER_MEMORY_STORE_PATH))
+    return SessionService(
+        store=FileLearnerMemoryStore(store_path),
+        session_ttl_seconds=settings.session_ttl_seconds,
+    )
 
 
 app = create_app()

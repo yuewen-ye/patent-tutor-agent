@@ -8,13 +8,18 @@ from typing import Any, AsyncIterator
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from starlette.responses import StreamingResponse
 
+from backend.app.api.models import ErrorResponse
 from backend.app.services.session_service import SessionService
 
 
 def create_events_router(session_service: SessionService) -> APIRouter:
     router = APIRouter(tags=["events"])
 
-    @router.get("/sessions/{session_id}/events/stream")
+    @router.get(
+        "/sessions/{session_id}/events/stream",
+        responses={404: {"model": ErrorResponse}},
+        description="Stream workflow AgentEvents as server-sent events.",
+    )
     async def stream_session_events(session_id: str) -> StreamingResponse:
         if session_service.get_session(session_id) is None:
             raise HTTPException(status_code=404, detail="Session not found.")
@@ -30,6 +35,15 @@ def create_events_router(session_service: SessionService) -> APIRouter:
             await websocket.close(code=1008)
             return
         await websocket.accept()
+        snapshot = session_service.snapshot(session_id)
+        await websocket.send_json(
+            {
+                "type": "connection",
+                "session_id": session_id,
+                "status": snapshot["status"],
+                "reconnect_token": session_id,
+            }
+        )
         try:
             async for event in session_service.event_bridge.subscribe(session_id):
                 await websocket.send_json({"type": "agent_event", "event": event})

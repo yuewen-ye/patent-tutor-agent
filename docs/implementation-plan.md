@@ -10,7 +10,7 @@
 | Artifact 产物落盘 | ✅ 完成 | `_with_artifacts` 包装 + manifest.json + cross_review/joint_synthesis 产物 |
 | CLI Demo | ✅ 完成 | `run_workflow.py` + `show_workflow.py`（max_debate_rounds 默认 3） |
 | 测试 | ✅ 完成 | 覆盖 workflow/LLM/contracts/记忆系统/三路由/五阶段协作链 |
-| FastAPI 服务层 | 🟡 基础完成 | 6 个核心端点已实现并测试通过；缺少 cancel、health、中间件栈、会话 TTL、优雅停机 |
+| FastAPI 服务层 | ✅ 生产化基础完成 | 核心会话/事件/产物/learner 端点 + health/readiness + cancel + CORS + request-id + TTL + response models 已实现；认证/限流后置 |
 | RAG 知识库 | ❌ 待实现 | `rag_retrieve()` 为 mock 数据（硬编码 3 条法条） |
 | 前端 | ❌ 待实现 | `frontend/` 为空占位 |
 | 记忆系统 | 🟡 基础完成 | 已接入 LangGraph Checkpointer + Store；BKT 暂不实现 |
@@ -329,13 +329,15 @@ SessionEventBridge            AgentEvent dicts
 
 因为这三层通过 `update_sink`、`event_sink`、`arun_workflow` 三个接口解耦，**工作流内部拓扑变化（19 节点、5 阶段协作链、辩论循环）对 FastAPI 层完全透明**。`StateDict` 新增的 P0.1 字段（`cross_review_a/b`、`joint_synthesis_output` 等）FastAPI 层只是透传 `dict`，无需改一行代码。
 
-### 当前实现现状（6 个端点 + services 层）
+### 当前实现现状（生产化基础端点 + services 层）
 
 ```
 main.py (32行)
   └─ app/api/__init__.py → create_api_router() 组装3个子路由
-       ├─ sessions.py  → POST /sessions, GET /sessions, GET /sessions/{id}
+       ├─ sessions.py  → POST /sessions, GET /sessions, GET /sessions/{id}, DELETE /sessions/{id}
        ├─ events.py    → GET .../events/stream (SSE), WS .../events (WebSocket)
+       ├─ health.py    → GET /health, GET /health/ready
+       ├─ learners.py  → GET /learners/{id}/profiles/history/sessions
        └─ artifacts.py → GET .../artifacts/{path}
             ↓ 全部依赖
        services/session_service.py (249行) — 会话生命周期管理
@@ -347,9 +349,13 @@ main.py (32行)
 | `POST /sessions` | 创建会话，启动后台工作流（daemon thread），立即返回 `session_id` | ✅ |
 | `GET /sessions` | 列出所有会话 | ✅ |
 | `GET /sessions/{session_id}` | 返回完整 `StateDict` 快照 | ✅ |
+| `DELETE /sessions/{session_id}` | 取消运行中的会话，下一次 LLM 调用前停止后续执行 | ✅ |
 | `GET /sessions/{session_id}/events/stream` | SSE 实时事件流（每个节点完成后推一条 `agent_event`，结束时推 `session_status`） | ✅ |
-| `WS /sessions/{session_id}/events` | WebSocket 实时事件流（同 SSE，json 消息） | ✅ |
+| `WS /sessions/{session_id}/events` | WebSocket 实时事件流，连接后先发送 `connection` 元数据 | ✅ |
 | `GET /sessions/{session_id}/artifacts/{path}` | 读取产物 Markdown 文件（含路径穿越防护） | ✅ |
+| `GET /health` | 存活检查和会话计数 | ✅ |
+| `GET /health/ready` | 就绪检查 | ✅ |
+| `GET /learners/{learner_id}` 系列 | learner profile/history/session 查询 | ✅ |
 
 **质量评估**：
 
@@ -357,15 +363,15 @@ main.py (32行)
 |------|------|------|
 | 架构设计 | ✅ 优秀 | 工厂函数注入、关注点分离、三层解耦干净 |
 | 测试覆盖 | ✅ 5 个用例 | SSE/WS/artifact/快照 全覆盖，含路径穿越防护测试 |
-| 会话生命周期 | 🟡 基本可用 | daemon thread 无取消机制；关闭时线程被丢弃 |
-| 优雅停机 | ❌ 缺失 | 无 signal handler，uvicorn 终止时线程直接被杀 |
-| 安全防护 | ❌ 缺失 | 无认证、无限流、无 CORS |
-| 可观测性 | ❌ 缺失 | 无 request ID、无结构化日志、无 health check |
-| 内存管理 | 🟡 有风险 | session dict 无界增长，永不淘汰 |
-| OpenAPI 文档 | 🟡 基础 | 无 response_model、无 description、无 example |
-| WebSocket 鲁棒性 | 🟡 基础 | 无 heartbeat、无 reconnect token、close 不传 reason |
+| 会话生命周期 | ✅ 生产化基础 | 支持 `DELETE` cancel、下一次 LLM 调用前中断、shutdown cancel |
+| 优雅停机 | 🟡 基础 | FastAPI lifespan 会 cancel running sessions；仍未引入外部任务队列 |
+| 安全防护 | 🟡 基础 | CORS 可配置；认证和限流后置 |
+| 可观测性 | 🟡 基础 | 有 request ID、health/readiness；结构化访问日志后置 |
+| 内存管理 | ✅ 基础完成 | terminal session 支持 TTL 清理 |
+| OpenAPI 文档 | ✅ 基础完成 | 核心端点已有 response_model/description/responses |
+| WebSocket 鲁棒性 | 🟡 基础 | 有 connection/reconnect token；heartbeat 后置 |
 
-**结论**：当前 FastAPI 代码结构干净，解耦正确，**完全适用优化后的工作流，无需重写**。6 个端点的功能逻辑正确，测试通过。需要做的是**补齐缺失的横切能力**，而非改动核心逻辑。
+**结论**：当前 FastAPI 代码结构干净，解耦正确，**完全适用优化后的工作流，无需重写**。生产化基础能力已覆盖会话生命周期、健康检查、CORS、request-id、TTL 和 OpenAPI schema；剩余主要是认证、限流、结构化访问日志和外部任务队列/持久化会话索引。
 
 ### 路由设计：完整端点列表
 
@@ -380,12 +386,12 @@ WS     /sessions/{session_id}/events         WebSocket 实时事件流
 GET    /sessions/{session_id}/artifacts/{p}  读取产物 Markdown 文件
 ```
 
-#### 建议新增端点
+#### 已新增生产化端点
 
 ```
 DELETE /sessions/{session_id}                取消运行中的会话
 GET    /health                               健康检查（k8s/docker 探活，返回活跃会话数）
-GET    /health/ready                         就绪检查（验证 LLM provider 可达）
+GET    /health/ready                         就绪检查（验证服务可接收会话）
 ```
 
 #### 为什么不需要更多路由？
@@ -408,26 +414,26 @@ GET    /health/ready                         就绪检查（验证 LLM provider 
 
 #### Phase 1：补齐基础设施（不改现有端点行为）
 
-| # | 任务 | 涉及文件 | 说明 |
-|---|---|---|---|
-| 1.9 | Lifespan + 优雅停机 | `backend/main.py` | `@asynccontextmanager async def lifespan(app)` — startup 加载配置，shutdown 取消所有运行中 session、drain event bridge（超时 30s） |
-| 1.10 | 中间件栈 | `backend/app/middleware.py`（新建） | `RequestIDMiddleware`（注入 X-Request-ID）、`StructuredLoggingMiddleware`（method/path/status/duration）、`ErrorFormatMiddleware`（统一 `{detail, request_id}` 格式） |
-| 1.11 | CORS | `backend/main.py` | `app.add_middleware(CORSMiddleware, ...)`，开发环境 `allow_origins=["*"]`，生产从 config 读取 |
-| 1.12 | Health check | `backend/app/api/health.py`（新建） | `GET /health` → `{status, active_sessions}`；`GET /health/ready` → 验证 LLM provider 可达 |
+| # | 任务 | 涉及文件 | 说明 | 状态 |
+|---|---|---|---|---|
+| 1.9 | Lifespan + 优雅停机 | `backend/main.py` | `@asynccontextmanager async def lifespan(app)` shutdown cancel running sessions | ✅ |
+| 1.10 | 中间件栈 | `backend/app/middleware.py`（新建） | `RequestIDMiddleware` 注入/透传 `X-Request-ID`；结构化访问日志和统一错误包裹后置 | 🟡 |
+| 1.11 | CORS | `backend/main.py` | `app.add_middleware(CORSMiddleware, ...)`，生产从 `ServiceSettings` 读取 | ✅ |
+| 1.12 | Health check | `backend/app/api/health.py`（新建） | `GET /health` → session counts；`GET /health/ready` → readiness | ✅ |
 
 #### Phase 2：增强会话管理
 
-| # | 任务 | 涉及文件 | 说明 |
-|---|---|---|---|
-| 1.13 | 会话取消 | `backend/app/api/sessions.py` + `session_service.py` | `DELETE /sessions/{session_id}` → 设置 cancel event；`_with_runtime_side_effects` 在每个节点前检查取消标志，提前退出 |
-| 1.14 | Session TTL + 自动清理 | `backend/app/services/session_service.py` | completed/failed 会话超过 TTL（默认 1h）自动从 `_sessions` dict 移除，防止内存泄漏 |
+| # | 任务 | 涉及文件 | 说明 | 状态 |
+|---|---|---|---|---|
+| 1.13 | 会话取消 | `backend/app/api/sessions.py` + `session_service.py` + `services/cancellation.py` | `DELETE /sessions/{session_id}` → 设置 cancel event；cancel-aware LLM client 在下一次模型调用前停止后续节点 | ✅ |
+| 1.14 | Session TTL + 自动清理 | `backend/app/services/session_service.py` | terminal 会话超过 TTL（默认 1h）自动从 `_sessions` dict 移除，防止内存泄漏 | ✅ |
 
 #### Phase 3：API 质量提升
 
-| # | 任务 | 涉及文件 | 说明 |
-|---|---|---|---|
-| 1.15 | Response Models + OpenAPI | `backend/app/api/sessions.py` + `events.py` + `artifacts.py` | 为所有端点添加 `response_model`（Pydantic 模型）、`description`、`responses` 文档 |
-| 1.16 | WebSocket 增强 | `backend/app/api/events.py` | heartbeat ping/pong（30s）、连接时发送 reconnect_token、close 时发送结构化 reason |
+| # | 任务 | 涉及文件 | 说明 | 状态 |
+|---|---|---|---|---|
+| 1.15 | Response Models + OpenAPI | `backend/app/api/sessions.py` + `events.py` + `artifacts.py` + `learners.py` + `health.py` | 为核心端点添加 `response_model`（Pydantic 模型）、`description`、`responses` 文档 | ✅ |
+| 1.16 | WebSocket 增强 | `backend/app/api/events.py` | 连接时发送 `connection` 元数据和 `reconnect_token`；heartbeat/结构化 close reason 后置 | 🟡 |
 
 #### Phase 4：安全加固（按需，非 MVP 阻塞项）
 

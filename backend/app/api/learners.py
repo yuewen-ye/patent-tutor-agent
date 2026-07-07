@@ -4,6 +4,13 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, status
 
+from backend.app.api.models import (
+    ErrorResponse,
+    LearnerHistoryResponse,
+    LearnerMemoryResponse,
+    LearnerProfilesResponse,
+    LearnerSessionsResponse,
+)
 from backend.app.memory import LearnerMemoryStoreError
 from backend.app.services.session_service import SessionService
 
@@ -17,39 +24,55 @@ def create_learners_router(session_service: SessionService) -> APIRouter:
         except LearnerMemoryStoreError as exc:
             raise _memory_store_exception(exc) from exc
 
-    @router.get("/learners/{learner_id}")
+    @router.get(
+        "/learners/{learner_id}",
+        response_model=LearnerMemoryResponse,
+        responses={500: {"model": ErrorResponse}},
+    )
     def get_learner_memory(
         learner_id: str,
         limit: int = Query(default=10, ge=1, le=50),
-    ) -> dict[str, Any]:
-        return read_learner_memory(learner_id, limit)
+    ) -> LearnerMemoryResponse:
+        return LearnerMemoryResponse.model_validate(read_learner_memory(learner_id, limit))
 
-    @router.get("/learners/{learner_id}/profiles")
+    @router.get(
+        "/learners/{learner_id}/profiles",
+        response_model=LearnerProfilesResponse,
+        responses={500: {"model": ErrorResponse}},
+    )
     def list_learner_profiles(
         learner_id: str,
         limit: int = Query(default=10, ge=1, le=50),
-    ) -> dict[str, Any]:
+    ) -> LearnerProfilesResponse:
         memory = read_learner_memory(learner_id, limit)
-        return {"learner_id": learner_id, "profiles": memory["profiles"]}
+        return LearnerProfilesResponse(learner_id=learner_id, profiles=memory["profiles"])
 
-    @router.get("/learners/{learner_id}/history")
+    @router.get(
+        "/learners/{learner_id}/history",
+        response_model=LearnerHistoryResponse,
+        responses={500: {"model": ErrorResponse}},
+    )
     def list_learner_history(
         learner_id: str,
         limit: int = Query(default=10, ge=1, le=50),
-    ) -> dict[str, Any]:
+    ) -> LearnerHistoryResponse:
         memory = read_learner_memory(learner_id, limit)
-        return {"learner_id": learner_id, "history": memory["history"]}
+        return LearnerHistoryResponse(learner_id=learner_id, history=memory["history"])
 
-    @router.get("/learners/{learner_id}/sessions")
+    @router.get(
+        "/learners/{learner_id}/sessions",
+        response_model=LearnerSessionsResponse,
+        responses={500: {"model": ErrorResponse}},
+    )
     def list_learner_sessions(
         learner_id: str,
         limit: int = Query(default=10, ge=1, le=50),
-    ) -> dict[str, Any]:
+    ) -> LearnerSessionsResponse:
         try:
             sessions = session_service.learner_sessions(learner_id, limit=limit)
         except LearnerMemoryStoreError as exc:
             raise _memory_store_exception(exc) from exc
-        return {"learner_id": learner_id, "sessions": sessions}
+        return LearnerSessionsResponse(learner_id=learner_id, sessions=sessions)
 
     return router
 

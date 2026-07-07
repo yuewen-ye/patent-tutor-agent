@@ -2,7 +2,7 @@
 
 知识产权管理与专利代理实务多 Agent 系统。仓库采用 **Monorepo 单仓库 + 前后端分离**：后端负责 FastAPI 服务、LangGraph 多 Agent 编排、统一模型调用和 RAG 知识库模块；前端负责后续 React 交互与 Agent 运行状态可视化。
 
-当前已完成：三路由工作流（teach/chat/diagnose）、确定性 RAG 检索节点、DeepSeek/Qwen/GLM 统一 `call_llm` 封装、Agent 级 provider 路由、JSON Schema 合同、LangGraph Checkpointer/Store 记忆底座、文件型 learner memory 持久化、LangGraph Studio 可视化调试、FastAPI 会话与 learner 查询服务。
+当前已完成：三路由工作流（teach/chat/diagnose）、确定性 RAG 检索节点、DeepSeek/Qwen/GLM 统一 `call_llm` 封装、Agent 级 provider 路由、JSON Schema 合同、LangGraph Checkpointer/Store 记忆底座、文件型 learner memory 持久化、LangGraph Studio 可视化调试、FastAPI 会话、实时事件、health/readiness、会话取消、TTL 清理与 learner 查询服务。
 
 ## 从零到 LangGraph Studio
 
@@ -465,18 +465,27 @@ PY
 
 `uv run python backend/main.py` 启动 FastAPI 应用，默认监听 `0.0.0.0:8000`：
 
+- `GET /health` — 进程存活检查，返回会话计数
+- `GET /health/ready` — 就绪检查，注入 LLM client 时直接 ready，默认环境下校验 provider 配置
 - `POST /sessions` — 创建会话并后台启动工作流
 - `GET /sessions` — 列出内存中的会话快照
 - `GET /sessions/{session_id}` — 返回当前 StateDict 快照和会话状态
+- `DELETE /sessions/{session_id}` — 取消运行中的会话，状态保持为 `canceled`
 - `GET /sessions/{session_id}/events/stream` — SSE 推送 AgentEvent
-- `WS /sessions/{session_id}/events` — WebSocket 推送事件流
+- `WS /sessions/{session_id}/events` — WebSocket 推送事件流，连接后先发送 `connection` 元数据
 - `GET /sessions/{session_id}/artifacts/{path}` — 读取已落盘 Markdown artifact
 - `GET /learners/{learner_id}` — 返回 learner 最新画像、最新学习历史、profile/history 列表
 - `GET /learners/{learner_id}/profiles` — 返回历史画像列表
 - `GET /learners/{learner_id}/history` — 返回学习历史列表
 - `GET /learners/{learner_id}/sessions` — 返回当前进程会话和持久化历史会话摘要
 
-默认 learner memory 写入 `data/learner_memory.json`，可通过 `LEARNER_MEMORY_STORE_PATH` 覆盖。
+服务层配置：
+
+- 默认 learner memory 写入 `data/learner_memory.json`，可通过 `LEARNER_MEMORY_STORE_PATH` 覆盖
+- `PATENT_TUTOR_CORS_ORIGINS` 支持逗号分隔的允许来源；为空时不启用 CORS
+- `PATENT_TUTOR_CORS_ALLOW_CREDENTIALS` 控制 CORS credential
+- `PATENT_TUTOR_SESSION_TTL_SECONDS` 控制 terminal session 在内存中的保留时间，默认 3600 秒
+- 每个 HTTP 响应都会返回 `X-Request-ID`；请求传入同名 header 时会原样透传
 
 ## 知识图谱
 
