@@ -4,7 +4,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-SessionStatusValue = Literal["running", "completed", "failed", "canceled", "historical"]
+SessionStatusValue = Literal[
+    "running", "completed", "failed", "canceled", "quality_gate_failed", "historical"
+]
 
 
 class FrozenApiModel(BaseModel):
@@ -33,8 +35,10 @@ class SessionsListResponse(FrozenApiModel):
 class LearnerMemoryResponse(FrozenApiModel):
     learner_id: str
     latest_profile: dict[str, Any] | None
+    latest_history: dict[str, Any] | None = None
     profiles: list[dict[str, Any]]
     history: list[dict[str, Any]]
+    mastery: dict[str, float] = Field(default_factory=dict)
 
 
 class LearnerProfilesResponse(FrozenApiModel):
@@ -57,6 +61,7 @@ class HealthSessionCounts(FrozenApiModel):
     completed: int = 0
     failed: int = 0
     canceled: int = 0
+    quality_gate_failed: int = 0
     total: int = 0
 
 

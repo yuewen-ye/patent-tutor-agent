@@ -51,6 +51,40 @@ class QueueLLMClient:
                 "risks": [],
             },
             {
+                "reviewer": "expert_a",
+                "target": "expert_b",
+                "review_opinions": [{
+                    "category": "🟡", "location": "正文", "target_wrote": "案例",
+                    "problem": "法条回扣不足", "suggestion": "补充法条",
+                }],
+                "overall_assessment": "需要补充法条。",
+            },
+            {
+                "reviewer": "expert_b",
+                "target": "expert_a",
+                "review_opinions": [{
+                    "category": "🌉", "location": "正文", "target_wrote": "定义",
+                    "problem": "案例不足", "suggestion": "增加案例",
+                }],
+                "overall_assessment": "需要增加案例。",
+            },
+            {
+                "expert": "expert_a",
+                "style": "conservative_precise",
+                "knowledge_points": ["新颖性"],
+                "legal_basis": ["专利法第二十二条"],
+                "teaching_content": "专家A修订内容。",
+                "risks": [],
+            },
+            {
+                "expert": "expert_b",
+                "style": "vivid_teaching",
+                "knowledge_points": ["新颖性"],
+                "legal_basis": ["专利法第二十二条"],
+                "teaching_content": "专家B修订内容。",
+                "risks": [],
+            },
+            {
                 "expert": "expert_a",
                 "style": "conservative_precise",
                 "knowledge_points": ["新颖性"],
@@ -65,11 +99,6 @@ class QueueLLMClient:
                 "completeness_score": 5,
                 "disputes": [],
                 "rationale": "整合稿可以作为最终教学内容。",
-            },
-            {
-                "questionnaire": ["你是否能独立判断一个方案是否具备新颖性？"],
-                "next_action": "完成一个新颖性案例题。",
-                "profile_update_hint": "继续强化新颖性判断步骤。",
             },
         ]
 
@@ -137,7 +166,8 @@ def test_session_api_creates_background_workflow_and_returns_snapshot(
     assert snapshot["state"]["expert_a_draft"]["draft_stage"] == "integration"
     assert snapshot["state"]["expert_a_draft"]["legal_basis"] == ["专利法第二十二条"]
     assert snapshot["state"]["expert_a_draft"] == completed["expert_a_draft"]
-    assert snapshot["state"]["feedback_result"]["next_action"] == "完成一个新颖性案例题。"
+    assert snapshot["state"]["workflow_status"] == "completed"
+    assert "final_learning_markdown" in snapshot["state"]
     assert "final_answer" not in snapshot["state"]
 
 
@@ -159,9 +189,9 @@ def test_session_events_stream_replays_agent_events_and_completion(
         payload = response.read().decode("utf-8")
 
     assert "event: agent_event" in payload
-    assert '"node": "diagnosis"' in payload
+    assert '"node": "learner_state"' in payload
     assert '"node": "expert_a"' in payload
-    assert '"node": "feedback"' in payload
+    assert '"node": "publish_final_learning"' in payload
     assert "event: session_status" in payload
     assert '"status": "completed"' in payload
 
@@ -187,8 +217,8 @@ def test_session_websocket_replays_agent_events_until_completion(
                 break
 
     event_nodes = [message["event"]["node"] for message in messages if message["type"] == "agent_event"]
-    assert "diagnosis" in event_nodes
-    assert event_nodes[-1] == "feedback"
+    assert "learner_state" in event_nodes
+    assert event_nodes[-1] == "publish_final_learning"
     assert messages[-1]["status"] == "completed"
 
 
@@ -205,12 +235,12 @@ def test_session_artifact_endpoint_serves_markdown_and_blocks_traversal(
     state = service.wait_for_completion(session_id, timeout=5)
     completed = completed_state(state)
 
-    artifact_path = Path(completed["expert_a_draft"]["markdown_artifact"]["path"])
+    artifact_path = Path(completed["course_package"]["markdown_artifact"]["path"])
     relative_path = artifact_path.relative_to(Path("artifacts") / "sessions" / session_id)
     artifact = client.get(f"/sessions/{session_id}/artifacts/{relative_path.as_posix()}")
     assert artifact.status_code == 200
     assert artifact.headers["content-type"].startswith("text/markdown")
-    assert artifact.text.startswith("# 专家 A 教学草稿")
+    assert artifact.text.startswith("# 整合后的课程完整内容与习题")
     assert "专家A整合两位专家观点后的最终教学内容" in artifact.text
 
     traversal = client.get(f"/sessions/{session_id}/artifacts/%2E%2E/manifest.json")
@@ -246,11 +276,11 @@ def test_learner_api_returns_memory_and_session_history(
     assert learner_body["learner_id"] == "learner-api"
     assert learner_body["latest_profile"]["learning_goal"] == "学习专利新颖性"
     assert learner_body["history"][0]["session_id"] == session_id
-    assert learner_body["history"][0]["knowledge_points"] == ["新颖性基础"]
+    assert "新颖性" in learner_body["history"][0]["knowledge_points"]
     assert learner_profiles.json()["profiles"][0]["learning_goal"] == "学习专利新颖性"
     history = learner_history.json()["history"]
     assert len(history) == 1
-    assert history[0]["next_action"] == "完成一个新颖性案例题。"
+    assert history[0]["event_type"] == "course_published"
     assert learner_sessions.status_code == 200
     assert learner_sessions.json()["sessions"][0]["session_id"] == session_id
 

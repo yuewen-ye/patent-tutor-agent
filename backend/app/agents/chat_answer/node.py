@@ -35,6 +35,7 @@ def build_chat_answer_node(llm_client: LLMClient) -> Node:
 
         return {
             "chat_answer": validated.model_dump(),
+            "workflow_status": "completed",
             "events": [completed_event("chat_answer", "generated chat answer")],
         }
 

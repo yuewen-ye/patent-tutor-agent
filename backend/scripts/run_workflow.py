@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any, cast
@@ -12,7 +13,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 def summary_lines(state: dict[str, Any]) -> list[str]:
-    teaching_result = state.get("expert_a_draft", {})
+    teaching_result = state.get("course_package", {})
     if not isinstance(teaching_result, dict):
         teaching_result = {}
     artifacts = state.get("artifacts", [])
@@ -32,14 +33,14 @@ def summary_lines(state: dict[str, Any]) -> list[str]:
         markdown_path = str(markdown_artifact.get("path") or "")
     if not markdown_path and isinstance(artifacts, list):
         for artifact in reversed(artifacts):
-            if isinstance(artifact, dict) and artifact.get("created_by") == "expert_a":
+            if isinstance(artifact, dict) and artifact.get("kind") == "final_learning":
                 markdown_path = str(artifact.get("path") or "")
                 break
 
     lines = [
         "Workflow summary",
         f"Session: {state.get('session_id', '')}",
-        f"Debate rounds: {state.get('debate_round', '?')}/{state.get('max_debate_rounds', '?')}",
+        f"Judge rounds: {state.get('judge_round', '?')}/{state.get('max_debate_rounds', '?')}",
         f"Teaching result: {str(teaching_result.get('teaching_content', ''))[:80]}",
         f"Legal basis: {source_text}",
         f"Artifacts: {artifacts_count} files",
@@ -57,6 +58,7 @@ def main() -> None:
 
     from backend.app.core.llm import AGENT_PROVIDER_ENV, AgentLLMRouter, AgentName, LLMProvider
     from backend.app.graph.workflow import run_workflow
+    from backend.app.learner_store import SQLiteLearnerStore
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -75,6 +77,9 @@ def main() -> None:
     parser.add_argument("--artifact-root", default="artifacts")
     parser.add_argument("--max-debate-rounds", type=int, default=3)
     parser.add_argument("--user-input", default="我想学习专利新颖性和创造性的区别")
+    parser.add_argument(
+        "--mode", choices=["auto", "teach", "chat", "diagnose", "feedback"], default="auto"
+    )
     parser.add_argument("--json", action="store_true", help="Print the full final StateDict JSON to stdout.")
     args = parser.parse_args()
 
@@ -111,6 +116,10 @@ def main() -> None:
         artifact_root=args.artifact_root,
         max_debate_rounds=args.max_debate_rounds,
         learner_id=args.learner_id,
+        workflow_mode=args.mode,
+        store=SQLiteLearnerStore(
+            Path(os.getenv("LEARNER_MEMORY_STORE_PATH", "data/learner_memory.sqlite3"))
+        ),
     )
     if args.json:
         print(json.dumps(state, ensure_ascii=False, indent=2))

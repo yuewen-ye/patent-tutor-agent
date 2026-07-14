@@ -21,25 +21,13 @@ class DebateQueueLLMClient:
             "route": [
                 {"intent": "teach", "confidence": 0.95, "reason": "系统学习请求"},
             ],
-            "diagnosis": [
+            "learner_state": [
                 {
                     "education_background": "patent_exam_candidate",
                     "knowledge_level": "beginner",
                     "learning_style": "case_based",
                     "weak_points": ["新颖性判断步骤不清"],
                     "learning_goal": "学习专利新颖性",
-                },
-            ],
-            "feedback": [
-                {
-                    "questionnaire": ["本轮整合稿中哪个判断步骤最容易混淆？"],
-                    "next_action": "完成一个新颖性案例判断题。",
-                    "profile_update_hint": "继续巩固新颖性判断步骤。",
-                },
-                {
-                    "questionnaire": ["请复述新颖性判断的三步法。"],
-                    "next_action": "复盘 A/B 辩论中的案例判断。",
-                    "profile_update_hint": "案例判断仍需加强。",
                 },
             ],
             "planner": [
@@ -61,6 +49,15 @@ class DebateQueueLLMClient:
                     "legal_basis": ["《专利法》第二十二条"],
                     "teaching_content": "严谨但缺少案例。",
                     "risks": [],
+                },
+                {
+                    "reviewer": "expert_a",
+                    "target": "expert_b",
+                    "review_opinions": [{
+                        "category": "🟡", "location": "正文", "target_wrote": "案例",
+                        "problem": "法条不足", "suggestion": "补充第二十二条",
+                    }],
+                    "overall_assessment": "案例清楚但法条不足。",
                 },
                 {
                     "expert": "expert_a",
@@ -87,6 +84,15 @@ class DebateQueueLLMClient:
                     "legal_basis": ["《专利法》第二十二条"],
                     "teaching_content": "生动但法条回扣不足。",
                     "risks": ["法条回扣不足"],
+                },
+                {
+                    "reviewer": "expert_b",
+                    "target": "expert_a",
+                    "review_opinions": [{
+                        "category": "🌉", "location": "正文", "target_wrote": "定义",
+                        "problem": "案例不足", "suggestion": "增加案例",
+                    }],
+                    "overall_assessment": "准确但案例不足。",
                 },
                 {
                     "expert": "expert_b",
@@ -150,15 +156,14 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     completed = completed_teach_state(state)
 
     agents = llm_client.agents
-    assert agents.count("expert_a") == 3
-    assert agents.count("expert_b") == 2
+    assert agents.count("expert_a") == 4
+    assert agents.count("expert_b") == 3
     assert agents.count("judge") == 1
-    assert agents.count("diagnosis") == 1
-    assert agents.count("feedback") == 1
-    assert llm_client.tool_call_agents.count("expert_a") == 3
-    assert llm_client.tool_call_agents.count("expert_b") == 2
+    assert agents.count("learner_state") == 1
+    assert llm_client.tool_call_agents.count("expert_a") == 2
+    assert llm_client.tool_call_agents.count("expert_b") == 1
     assert "tool_agent" not in agents
-    assert agents[-1] == "feedback"
+    assert agents[-1] == "judge"
     assert {
         "cross_review_a",
         "cross_review_b",
@@ -169,29 +174,24 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
         "finalize",
         "tool_agent",
     }.isdisjoint(set(agents))
-    assert completed["debate_round"] == 2
+    assert completed["debate_round"] == 1
     assert completed["judge_report"]["decision"] == "accept"
-    assert completed["feedback_result"]["next_action"] == "完成一个新颖性案例判断题。"
     assert completed["expert_a_draft"]["draft_stage"] == "integration"
     assert completed["expert_a_draft"]["teaching_content"] == "专家A整合A/B辩论结果后的教学内容"
-    assert "final_answer" not in completed
+    assert completed["workflow_status"] == "completed"
 
     debate_events = [event for event in state["events"] if event["status"] == "debate_round"]
-    assert len(debate_events) == 1
-    debate_event = debate_events[0]
-    assert debate_event["node"] == "revise_experts"
-    assert debate_event["round"] == 2
-    assert isinstance(debate_event["timestamp"], str) and debate_event["timestamp"]
-    assert isinstance(debate_event["duration_ms"], int)
-    assert debate_event["error_code"] is None
+    assert debate_events == []
 
     artifact_paths = [Path(artifact["path"]) for artifact in completed["artifacts"]]
     assert Path("artifacts/sessions/demo-session/round-01/expert_a_draft.md") in artifact_paths
     assert Path("artifacts/sessions/demo-session/round-01/expert_b_draft.md") in artifact_paths
-    assert Path("artifacts/sessions/demo-session/round-02/expert_a_draft.md") in artifact_paths
-    assert Path("artifacts/sessions/demo-session/round-02/expert_b_draft.md") in artifact_paths
-    assert Path("artifacts/sessions/demo-session/round-02/expert_a_draft-02.md") in artifact_paths
-    assert Path("artifacts/sessions/demo-session/round-02/feedback_report.md") in artifact_paths
+    assert Path("artifacts/sessions/demo-session/round-01/expert_a_cross_review.md") in artifact_paths
+    assert Path("artifacts/sessions/demo-session/round-01/expert_b_cross_review.md") in artifact_paths
+    assert Path("artifacts/sessions/demo-session/round-01/expert_a_revision.md") in artifact_paths
+    assert Path("artifacts/sessions/demo-session/round-01/expert_b_revision.md") in artifact_paths
+    assert Path("artifacts/sessions/demo-session/round-01/course_package.md") in artifact_paths
+    assert Path("artifacts/sessions/demo-session/final_learning.md") in artifact_paths
     assert len(artifact_paths) == len(set(artifact_paths))
 
     manifest_path = tmp_path / "artifacts" / "sessions" / "demo-session" / "manifest.json"
@@ -209,11 +209,10 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     completed_log_nodes = [
         record["node"] for record in workflow_log if record["status"] == "completed"
     ]
-    assert completed_log_nodes[:3] == ["route", "diagnosis", "planner"]
-    assert completed_log_nodes.count("expert_a") == 3
-    assert completed_log_nodes.count("expert_b") == 2
-    assert completed_log_nodes.count("revise_experts") == 1
-    assert completed_log_nodes[-3:] == ["expert_a", "judge", "feedback"]
+    assert completed_log_nodes[:3] == ["route", "learner_state", "planner"]
+    assert completed_log_nodes.count("expert_a") == 4
+    assert completed_log_nodes.count("expert_b") == 3
+    assert completed_log_nodes[-3:] == ["expert_a", "judge", "publish_final_learning"]
     assert all(record["session_id"] == "demo-session" for record in workflow_log)
     assert all(
         isinstance(record["duration_ms"], int)
@@ -226,8 +225,8 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
         / "artifacts"
         / "sessions"
         / "demo-session"
-        / "round-02"
-        / "expert_a_draft-02.md"
+        / "round-01"
+        / "course_package.md"
     )
     assert "专家A整合A/B辩论结果后的教学内容" in integration_path.read_text(encoding="utf-8")
 
@@ -249,14 +248,13 @@ def test_workflow_runs_both_experts_for_each_debate_round_before_integration(
 
     completed = completed_teach_state(state)
     agents = llm_client.agents
-    assert agents.count("expert_a") == 3
-    assert agents.count("expert_b") == 2
+    assert agents.count("expert_a") == 4
+    assert agents.count("expert_b") == 3
     assert agents.count("judge") == 1
-    assert agents.count("diagnosis") == 1
-    assert agents.count("feedback") == 1
-    assert llm_client.tool_call_agents.count("expert_a") == 3
-    assert llm_client.tool_call_agents.count("expert_b") == 2
+    assert agents.count("learner_state") == 1
+    assert llm_client.tool_call_agents.count("expert_a") == 2
+    assert llm_client.tool_call_agents.count("expert_b") == 1
     assert "tool_agent" not in agents
-    assert completed["debate_round"] == 2
+    assert completed["debate_round"] == 1
     assert completed["judge_report"]["decision"] == "accept"
     assert completed["expert_a_draft"]["draft_stage"] == "integration"

@@ -4,21 +4,21 @@
 
 | 模块 | 状态 | 说明 |
 |---|---|---|
-| LangGraph 编排层 | ✅ 完成 | 三路由 workflow + 五阶段专家协作链（交叉审查→修订→联合合成→轻量互审） |
-| StateDict 合同 | ✅ 完成 | Pydantic 模型 + JSON Schema 导出（含 P0.1 新增 7 个 ContractModel） |
-| LLM Provider 路由 | ✅ 完成 | 三层架构，15 Agent 各自独立路由 |
-| Artifact 产物落盘 | ✅ 完成 | `_with_artifacts` 包装 + manifest.json + cross_review/joint_synthesis 产物 |
+| LangGraph 编排层 | ✅ 完成 | 三路由 + 同一 learner_state 两阶段 + A/B 草稿/互评/修订/整合 + Judge 三轮质量门禁 |
+| StateDict 合同 | ✅ 完成 | Pydantic 合同 + 双知识轴、专家阶段、发布/反馈状态字段 |
+| LLM Provider 路由 | ✅ 完成 | route、learner_state、planner、expert_a/b、judge、chat_answer 独立路由 |
+| Artifact 产物落盘 | ✅ 完成 | 规范化 GFM + 增量 manifest + final/internal 严格分离 |
 | CLI Demo | ✅ 完成 | `run_workflow.py` + `show_workflow.py`（max_debate_rounds 默认 3） |
 | 测试 | ✅ 完成 | 覆盖 workflow/LLM/contracts/记忆系统/三路由/五阶段协作链 |
 | FastAPI 服务层 | ✅ 生产化基础完成 | 核心会话/事件/产物/learner 端点 + health/readiness + cancel + CORS + request-id + TTL + response models 已实现；认证/限流后置 |
 | RAG 知识库 | ❌ 待实现 | `rag_retrieve()` 为 mock 数据（硬编码 3 条法条） |
 | 前端 | ❌ 待实现 | `frontend/` 为空占位 |
-| 记忆系统 | 🟡 基础完成 | 已接入 LangGraph Checkpointer + Store；BKT 暂不实现 |
-| 数据存储 | ❌ 待实现 | 无 SQLite/文件持久层 |
+| 记忆系统 | ✅ MVP 完成 | SQLite profile/history + BKT；Checkpoint 仍为进程内 |
+| 数据存储 | ✅ MVP 完成 | `SQLiteLearnerStore` + 显式幂等 JSON 迁移 |
 | 错误韧性 | ❌ 待实现 | WorkflowError schema 已定义，未接线 |
-| 工作流完善 | 🟡 部分完成 | ✅ P0.1 专家协作链已完成；❌ P0.2-P0.6 待实现（知识图谱、五维画像、BKT、独立RAG、动态重规划） |
+| 工作流完善 | ✅ 当前架构完成 | 静态知识 DAG/混淆轴、A*、BKT、独立 RAG、课后反馈分请求已落地；动态改图后置 |
 
-> **设计对标文档**：`docs/agents_analysis/` 包含 5 个 Agent 的完整角色规格（PROTOCOL + ABILITIES + SOUL），描述了系统最终需要达到的效果。当前 MVP 实现了核心骨架，但以下关键设计尚未落地。
+> **当前实现说明**：`docs/workflow-technical-guide.md` 是 2026-07 架构基线。下方 P0 章节保留实施历史，其中与当前基线冲突的“待实现”描述不再代表当前代码状态。
 
 ---
 

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -17,12 +16,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api import create_api_router
 from backend.app.config import ServiceSettings, load_service_settings
-from backend.app.memory import FileLearnerMemoryStore
+from backend.app.learner_store import SQLiteLearnerStore
 from backend.app.middleware import RequestIDMiddleware
 from backend.app.services.session_service import SessionService
-
-DEFAULT_LEARNER_MEMORY_STORE_PATH = "data/learner_memory.json"
-
 
 def create_app(
     session_service: SessionService | None = None,
@@ -56,11 +52,8 @@ def create_app(
 
 
 def _create_default_session_service(settings: ServiceSettings) -> SessionService:
-    store_path = settings.learner_memory_store_path
-    if str(store_path) == "":
-        store_path = Path(os.getenv("LEARNER_MEMORY_STORE_PATH", DEFAULT_LEARNER_MEMORY_STORE_PATH))
     return SessionService(
-        store=FileLearnerMemoryStore(store_path),
+        store=SQLiteLearnerStore(settings.learner_memory_store_path),
         session_ttl_seconds=settings.session_ttl_seconds,
     )
 

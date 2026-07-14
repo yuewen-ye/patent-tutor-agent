@@ -11,10 +11,12 @@ from backend.app.agent_runtime_config import agent_temperature
 from backend.app.agents.common import Node, load_prompt, messages_from_prompt, normalize_key_aliases, schema_note
 from backend.app.agents.rag_tools import collect_expert_retrieval_context
 from backend.app.core.llm import LLMClient, LLMMessage
-from backend.app.schemas.state import ExpertDraft, StateDict, completed_event
+from backend.app.schemas.state import CrossReview, ExpertDraft, StateDict, completed_event
 
 _DEBATE_SYSTEM_PROMPT = load_prompt(__file__, "debate_system.md")
 _INTEGRATION_SYSTEM_PROMPT = load_prompt(__file__, "integration_system.md")
+_CROSS_REVIEW_SYSTEM_PROMPT = load_prompt(__file__, "cross_review_system.md")
+_REVISION_SYSTEM_PROMPT = load_prompt(__file__, "revision_system.md")
 
 
 def _should_integrate(state: StateDict) -> bool:
@@ -61,6 +63,66 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
     )
 
     def expert_a_node(state: StateDict) -> dict[str, Any]:
+        phase = state.get("expert_phase", "draft")
+        if phase == "cross_review":
+            raw = llm_client.generate_json(
+                messages=[
+                    LLMMessage(
+                        role="system",
+                        content=schema_note(
+                            "CrossReview",
+                            '{"reviewer":"expert_a","target":"expert_b",'
+                            '"review_opinions":[{"category":"🟡","location":"正文",'
+                            '"target_wrote":"原文","problem":"问题","suggestion":"建议"}],'
+                            '"overall_assessment":"总体评价"}',
+                        )
+                        + _CROSS_REVIEW_SYSTEM_PROMPT,
+                    ),
+                    LLMMessage(
+                        role="user",
+                        content=json.dumps(state.get("expert_b_draft", {}), ensure_ascii=False),
+                    ),
+                ],
+                temperature=agent_temperature("expert_a", 0.2),
+                agent="expert_a",
+            )
+            review = CrossReview.model_validate(raw)
+            return {
+                "expert_a_cross_review": review.model_dump(),
+                "events": [completed_event("expert_a", "reviewed expert B draft")],
+            }
+        if phase == "revision":
+            raw = llm_client.generate_json(
+                messages=[
+                    LLMMessage(
+                        role="system",
+                        content=schema_note(
+                            "ExpertDraft",
+                            '{"expert":"expert_a","style":"conservative_precise",'
+                            '"knowledge_points":["要点"],"legal_basis":["依据"],'
+                            '"teaching_content":"修订正文","risks":[]}',
+                        )
+                        + _REVISION_SYSTEM_PROMPT,
+                    ),
+                    LLMMessage(
+                        role="user",
+                        content=(
+                            f"原草稿：{json.dumps(state.get('expert_a_draft', {}), ensure_ascii=False)}\n"
+                            f"专家B互评：{json.dumps(state.get('expert_b_cross_review', {}), ensure_ascii=False)}"
+                        ),
+                    ),
+                ],
+                temperature=agent_temperature("expert_a", 0.3),
+                agent="expert_a",
+            )
+            draft = _normalize_expert_draft(raw)
+            revised = draft.model_dump()
+            revised["draft_stage"] = "debate"
+            return {
+                "expert_a_draft": revised,
+                "expert_a_revision": revised,
+                "events": [completed_event("expert_a", "revised expert A draft")],
+            }
         if _should_integrate(state):
             tool_messages = [
                 LLMMessage(
@@ -116,6 +178,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
             draft_dict["draft_stage"] = "integration"
             return {
                 "expert_a_draft": draft_dict,
+                "course_package": draft_dict,
                 "teach_phase": "integration",
                 **({"retrieval_context": retrieved_context} if retrieved_context else {}),
                 "events": [completed_event("expert_a", "integrated expert debate result with LLM")],

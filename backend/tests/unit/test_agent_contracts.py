@@ -9,22 +9,22 @@ def test_agent_output_json_schemas_follow_interface_spec() -> None:
     schemas = agent_output_json_schemas()
 
     assert set(schemas) == {
-        "diagnosis",
+        "learner_state_diagnosis",
         "planner",
         "expert_a",
         "expert_b",
         "judge",
-        "feedback",
+        "learner_state_feedback",
         "route",
         "chat_answer",
     }
-    assert schemas["diagnosis"]["additionalProperties"] is False
-    assert schemas["diagnosis"]["properties"]["knowledge_level"]["enum"] == [
+    assert schemas["learner_state_diagnosis"]["additionalProperties"] is False
+    assert schemas["learner_state_diagnosis"]["properties"]["knowledge_level"]["enum"] == [
         "beginner",
         "intermediate",
         "advanced",
     ]
-    assert "markdown_artifact" in schemas["diagnosis"]["properties"]
+    assert "markdown_artifact" in schemas["learner_state_diagnosis"]["properties"]
 
     planner_schema = schemas["planner"]
     assert planner_schema["type"] == "array"
@@ -49,6 +49,6 @@ def test_agent_output_json_schemas_follow_interface_spec() -> None:
     assert "revision_requests" in judge_schema["properties"]
     assert "debate" in judge_schema["properties"]
 
-    feedback_schema = schemas["feedback"]
+    feedback_schema = schemas["learner_state_feedback"]
     assert feedback_schema["additionalProperties"] is False
     assert "bkt_update" in feedback_schema["properties"]

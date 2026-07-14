@@ -1,0 +1,163 @@
+{
+  "$schema": "https://patent-tutor-agent/schemas/dual-knowledge-graph.schema.json",
+  "meta": {
+    "version": "1.0.0",
+    "created_at": "2026-07-08",
+    "description": "双知识图统一索引 — 聚合知识点DAG与易混淆对图，提供各Agent的标准访问接口。赛前由领域/知识库组预建，运行时由编排层注入。",
+    "data_source": "[模拟库] 所有知识点节点、边、混淆对均为模拟数据，法条号/案例号/图谱节点在实际运行时由编排层注入真实数据。",
+    "bkt_priors": {
+      "P_L0": 0.15,
+      "P_T": 0.25,
+      "P_G": 0.08,
+      "P_S": 0.05
+    }
+  },
+  "files": {
+    "knowledge_dag": {
+      "path": "knowledge-dag.json",
+      "description": "知识点有向无环图(DAG)，包含69个知识点节点（含叶子节点），覆盖专利法7大章节+相关法律+实务。",
+      "node_count": 69,
+      "edge_count": 73
+    },
+    "confusion_pairs": {
+      "path": "confusion-pairs.json",
+      "description": "易混淆对图，包含25对高频混淆知识点，每对含混淆原因、区分要点、典型错例。",
+      "pair_count": 25,
+      "edge_count": 50
+    }
+  },
+  "statistics": {
+    "total_knowledge_nodes": 69,
+    "level_distribution": {
+      "level_1_root": 10,
+      "level_2_intermediate": 33,
+      "level_3_leaf": 24,
+      "level_4_deep_leaf": 2
+    },
+    "category_distribution": {
+      "patent_law": 51,
+      "examination_guidelines": 8,
+      "agency_practice": 4,
+      "related_laws": 7
+    },
+    "difficulty_distribution": {
+      "easy_0_to_0.3": 7,
+      "medium_0.3_to_0.55": 30,
+      "hard_0.55_to_0.75": 32
+    },
+    "exam_weight_distribution": {
+      "high": 35,
+      "medium": 23,
+      "low": 11
+    },
+    "total_confusion_pairs": 25,
+    "confusion_type_distribution": {
+      "概念混淆": 9,
+      "程序混淆": 5,
+      "判断方法混淆": 2,
+      "判断标准混淆": 2,
+      "功能混淆": 1,
+      "实务混淆": 1,
+      "期限混淆": 1,
+      "撰写混淆": 1,
+      "归属混淆": 1,
+      "判断主体混淆": 1,
+      "国际制度混淆": 1
+    }
+  },
+  "agent_access_guide": {
+    "diagnosis": {
+      "reads": [
+        "dag.nodes[].node_id — 初始化学习者画像中的知识点列表",
+        "dag.nodes[].difficulty — 设置各知识点的初始难度权重",
+        "confusion_pairs[].typical_mistake — 辅助识别学习者的 error_pattern",
+        "confusion_pairs[].pair_id — 在 learner_profile.weak_points 中标注混淆对ID"
+      ],
+      "writes": [
+        "learner_weights (node_id → mastery_probability) — 基于 BKT 更新的学习者状态权重，不修改图结构"
+      ],
+      "does_not": "不生成知识图结构，不修改 dag 或 confusion_pairs 的任何字段"
+    },
+    "planner": {
+      "reads": [
+        "knowledge_dag.nodes — 知识点节点（id, name, difficulty, estimated_hours, predecessors, exam_weight）",
+        "knowledge_dag.edges — 前置依赖关系（from → to, type: prerequisite/contains）",
+        "learner_weights — 来自 diagnosis 的学习者状态权重（node_id → P(L)），即 five_dimensions.knowledge",
+        "confusion_pairs — 依据学情调整易混淆风险（learner_risk / is_active / adjustment_reason）"
+      ],
+      "writes": [
+        "current_node_id — 判断当前最该学的知识点节点",
+        "confusion_pairs.learner_risk/is_active/adjustment_reason — 按学情对易混淆轴的动态调整",
+        "dual_knowledge_graph（调整后完整双图）— 知识轴原样、混淆轴带调整",
+        "learning_path — 由代码 A* 基于调整后双图与学情 P(L) 计算（planner 不直接搜路径）"
+      ],
+      "algorithm": "planner(LLM)：判断 current_node_id + 按学情调混淆轴 → 输出完整 dual_knowledge_graph；代码 A*：g(n)=累计学习时间，h(n)=薄弱度×考试权重/(1+难度)，f(n)=g(n)+h(n)，起点取 current_node_id，已掌握(P(L)≥0.8)跳过。",
+      "does_not": "不增删知识轴节点/边，不伪造或改写知识轴客观字段（node_id/description/exam_weight 等）；不增删混淆对、不改写其静态字段；不自行搜索学习路径；不进行教学"
+    },
+    "expert_a": {
+      "reads": [
+        "dag.nodes — 获取当前教学知识点的 description, tags, difficulty",
+        "confusion_pairs — 查找当前知识点涉及的混淆对，在教学/审核中穿插辨析",
+        "learning_path — 了解当前节点在整体路径中的位置"
+      ],
+      "uses": "以 dag 中的知识点骨架为基础，注入法条推理（IRAC），生成保守严谨的教学内容。审核 B 时对照 confusion_pairs 检查是否存在混淆点误导。",
+      "does_not": "不修改图结构"
+    },
+    "expert_b": {
+      "reads": [
+        "dag.nodes — 获取知识点基本信息和 tags 用于场景化演绎",
+        "confusion_pairs — 获取混淆对中的典型错例用于反面教学和口诀设计",
+        "learning_path — 了解当前节点在整体路径中的位置"
+      ],
+      "uses": "以 dag 为基础进行场景化、类比化演绎，将 confusion_pairs 中的区分要点转化为口诀或生动对比。审核 A 时检查可读性和适配性。",
+      "does_not": "不修改图结构"
+    },
+    "judge": {
+      "reads": [
+        "dag.nodes — 验证教学内容覆盖的知识点是否完整",
+        "dag.edges — 验证教学内容的逻辑顺序是否合理",
+        "confusion_pairs — 验证涉及混淆点的教学内容是否准确区分"
+      ],
+      "uses": "对照 dag 和 confusion_pairs 做三维度审核（准确性/适配性/完整性），不参与内容生成。",
+      "does_not": "不生成内容，不修改图结构，不修改专家草稿"
+    },
+    "retrieval": {
+      "reads": [
+        "dag.nodes[].tags — 用于构建检索查询的语义关键词",
+        "dag.nodes[].node_name — 作为检索的核心主题词"
+      ],
+      "uses": "根据 planner 输出的当前节点，从 dag 中提取检索关键词，调用 RAG 检索相关法条和案例。"
+    }
+  },
+  "learner_weights_schema": {
+    "description": "学情诊断 Agent 输出的学习者状态权重，映射知识点节点到 BKT 掌握概率。此结构由 diagnosis 写入，planner 和 experts 读取。",
+    "example": {
+      "patent-law-foundation": 0.82,
+      "novelty": 0.45,
+      "inventive-step": 0.22,
+      "three-step-method": 0.10,
+      "doctrine-of-equivalents": 0.05,
+      "claims-drafting-basics": 0.60
+    },
+    "schema": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z0-9][a-z0-9-]*$": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "BKT P(L) — 学习者对该知识点的掌握概率"
+        }
+      }
+    },
+    "default_value": 0.15,
+    "default_value_reason": "BKT 先验 P(L₀)=0.15 — 新知识点的初始掌握概率"
+  },
+  "validation_rules": {
+    "node_id_format": "必须为 kebab-case（小写英文+数字+短横线），例如 three-step-method",
+    "dag_acyclic": "DAG 必须无环 — 可通过拓扑排序验证",
+    "confusion_pair_refs": "所有 node_a/node_b/related_nodes 中的 node_id 必须存在于 dag.nodes 中",
+    "edge_refs": "所有 dag.edges 中的 from/to 必须存在于 dag.nodes 中",
+    "level_consistency": "子节点的 level 必须大于父节点的 level（如果有 contains 类型的边）"
+  }
+}

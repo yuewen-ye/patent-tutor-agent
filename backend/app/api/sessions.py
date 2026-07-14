@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from backend.app.api.models import (
     ErrorResponse,
@@ -22,6 +24,13 @@ class CreateSessionRequest(BaseModel):
     learner_id: str | None = None
     max_debate_rounds: int = Field(default=2, ge=1, le=3)
     provider_overrides: dict[AgentName, LLMProvider] | None = None
+    mode: Literal["auto", "teach", "chat", "diagnose"] = "auto"
+
+    @model_validator(mode="after")
+    def validate_explicit_teach(self) -> CreateSessionRequest:
+        if self.mode == "teach" and not self.learner_id:
+            raise ValueError("learner_id is required when mode is teach")
+        return self
 
 
 def create_sessions_router(session_service: SessionService) -> APIRouter:
@@ -38,6 +47,7 @@ def create_sessions_router(session_service: SessionService) -> APIRouter:
             learner_id=request.learner_id,
             max_debate_rounds=request.max_debate_rounds,
             provider_overrides=request.provider_overrides,
+            workflow_mode=request.mode,
         )
         return SessionCreatedResponse(session_id=record.session_id, status=record.status)
 

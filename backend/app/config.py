@@ -11,7 +11,7 @@ class ServiceSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     learner_memory_store_path: Path = Field(
-        default=Path("data/learner_memory.json"),
+        default=Path("data/learner_memory.sqlite3"),
         validation_alias=AliasChoices("LEARNER_MEMORY_STORE_PATH", "learner_memory_store_path"),
     )
     session_ttl_seconds: int = Field(

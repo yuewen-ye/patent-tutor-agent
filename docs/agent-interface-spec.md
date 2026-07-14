@@ -3,7 +3,7 @@
 项目：知识产权管理与专利代理实务多 Agent 协同系统
 适用范围：FastAPI 后端、LangGraph 工作流、Agent 节点、RAG 服务、前端运行看板和调试脚本。
 
-> **状态标注**：标记 `✅` 的章节对应当前已实现的代码。标记 `[P0 待实现]` 的章节对应 `docs/implementation-plan.md` 中 P0 阶段的目标，设计源自 `docs/agents_analysis/`。
+> **当前基线（2026-07）**：以 `backend/app/schemas/state.py` 和 `docs/workflow-technical-guide.md` 为准。旧章节中的 P0 标记只保留设计历史；SQLite、BKT、双知识轴 A*、专家互评/修订和 Markdown 发布链已经实现。
 
 ## 1. 文档目标
 
@@ -12,41 +12,37 @@
 ### 1.1 当前工作流 ✅
 
 ```text
-START → _init → route ──┬── diagnose: diagnosis → END
+START → _init → route ──┬── diagnose: learner_state[diagnosis] → END
                          ├── chat: retrieve_context → chat_answer → END
-                         └── teach: diagnosis → planner
-                                      ↓
-                                  expert_a ∥ expert_b
-                                      ↓
-                              revise_experts
-                           (until max rounds)
-                                      ↓
-                             expert_a integration
-                                      ↓
-                                     judge
-                                      ↓
-                                   feedback
-                                      ↓
-                                     END
+                         └── teach: learner_state[diagnosis] → planner
+                                      → expert_a[draft] → expert_b[draft]
+                                      → expert_a[cross_review] → expert_b[cross_review]
+                                      → expert_a[revision] → expert_b[revision]
+                                      → expert_a[integration] → judge
+                                           ├─ accept → publish_final_learning → END
+                                           └─ revise (<3) → expert_a[integration] → judge
+
+独立反馈请求：learner_state[feedback] → END
 ```
 
 - `route` 节点分类用户意图为 teach/chat/diagnose；明显学习/诊断请求有本地兜底，避免真实 provider 误路由
 - `retrieve_context` 节点只用于 chat 路径固定检索；teach 路径由 `expert_a` / `expert_b` 自行决定是否调用 RAG
 - `chat_answer` 节点生成直接回答（chat 路径，无辩论）
-- teach 路径保留完整诊断→规划→专家按需检索→双专家辩论循环→专家 A 整合→Judge 终审→feedback 反馈流程；Judge 不参与辩论过程门控
+- teach 路径只有 Judge 的最终整合稿审核循环；`accept_with_minor_revision` 也必须修订并重审，只有 `accept` 发布最终学习稿
+- 第 3 轮仍未通过时状态为 `quality_gate_failed`，不得生成 `final_learning.md`
+- 课后作答通过独立 HTTP 请求进入同一 `learner_state` 节点的 feedback 阶段
 
 ## 2. Agent 与服务边界
 
 | 角色 | 节点 | 责任 | 产出字段 | YAML 配置项 | 状态 |
 | --- | --- | --- | --- | --- | --- |
 | 意图路由 Agent | `route` | 分类用户意图：teach/chat/diagnose；明显学习/诊断请求有本地兜底 | `intent` | `agents.route` | ✅ |
-| 学情诊断 Agent | `diagnosis` | 识别五维学习者画像 | `learner_profile` | `agents.diagnosis` | ✅（画像为简化版，五维版 [P0.3]） |
-| 路径规划 Agent | `planner` | LLM 生成学习路径（当前）/ A* 知识图谱搜索（P0.2） | `learning_path` | `agents.planner` | ✅（当前 LLM 版） |
+| 学情 Agent | `learner_state` | diagnosis 阶段生成画像；feedback 阶段评分并更新画像 | `learner_profile` / `feedback_result`、`grading_report`、`learner_profile_update` | `agents.learner_state` | ✅ |
+| 路径规划 Agent | `planner` | 读取 SQLite 最新画像，调整混淆风险；代码执行确定性 A* | `dual_axis_snapshot`、`path_decision`、`learning_path` | `agents.planner` | ✅ |
 | 检索流程节点 | `retrieve_context` | chat 路径固定调用 RAG 检索，写入检索上下文 | `retrieval_context` | — | ✅ |
-| 领域专家 A | `expert_a` | 保守严谨、法条优先：自行决定是否调用 RAG，生成辩论草稿，并在 A/B 辩论完成后整合两方结果 | `expert_a_draft`、可选 `retrieval_context` | `agents.expert_a` | ✅ |
-| 领域专家 B | `expert_b` | 生动灵活、面向案例：自行决定是否调用 RAG，生成辩论草稿并参考专家 A 上轮草稿继续辩论 | `expert_b_draft`、可选 `retrieval_context` | `agents.expert_b` | ✅ |
+| 领域专家 A | `expert_a` | 草稿、审 B、修订、最终课程整合 | `expert_a_draft`、`expert_a_cross_review`、`expert_a_revision`、`course_package` | `agents.expert_a` | ✅ |
+| 领域专家 B | `expert_b` | 草稿、审 A、修订 | `expert_b_draft`、`expert_b_cross_review`、`expert_b_revision` | `agents.expert_b` | ✅ |
 | 审核裁判 Agent | `judge` | 只审核专家 A 整合稿是否通过，不生成教学正文或过程输出 | `judge_report` | `agents.judge` | ✅ |
-| 学情诊断 Agent feedback 阶段 | `feedback` | 生成问卷、下一步动作、画像变化向量 Δ | `feedback_result`、`profile_delta` | `agents.feedback` | ✅（当前无 Δ 输出 [P0.3]） |
 | 快速回答 Agent | `chat_answer` | chat 路径基于检索上下文生成直接回答 | `chat_answer` | `agents.chat_answer` | ✅ |
 | 路径搜索器 | `pathfinder` | A* 在知识图谱上搜索 3 条候选路径 [P0.2] | `learning_path_candidates` | — | [P0.2] |
 

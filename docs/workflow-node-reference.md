@@ -1,4 +1,6 @@
-# 工作流节点说明与三路径自洽检查
+# 工作流节点说明与三路径自洽检查（历史基线）
+
+> 本文主体记录 2026-06 旧工作流。当前节点、边、双知识轴、SQLite/BKT 和 Markdown 规范见 `docs/workflow-technical-guide.md`；当前图以 `docs/architecture/workflow.mmd` 为准。旧 `diagnosis`/`feedback` 已合并为同一个 `learner_state` 节点，旧 `revise_experts` 循环已替换为专家阶段重入和 Judge 整合稿重审。
 
 本文档描述当前 `backend/app/graph/workflow.py` 中实际编译进 LangGraph 的节点、边和三条运行路径。它以源码实现为准。
 

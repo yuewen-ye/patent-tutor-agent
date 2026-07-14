@@ -8,6 +8,7 @@ from typing import Annotated, Any, Literal, NotRequired, TypedDict
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 AgentNode = Literal[
+    "learner_state",
     "diagnosis",
     "planner",
     "expert_a",
@@ -18,6 +19,8 @@ AgentNode = Literal[
     "retrieve_context",
     "chat_answer",
     "revise_experts",
+    "publish_final_learning",
+    "quality_gate",
 ]
 ErrorPattern = Literal[
     "unknown",
@@ -54,6 +57,16 @@ class MarkdownArtifact(ContractModel):
         "feedback_report",
         "route_decision",
         "chat_answer",
+        "cross_review",
+        "expert_revision",
+        "course_package",
+        "exercise_answer_key",
+        "final_learning",
+        "dual_axis_snapshot",
+        "questionnaire",
+        "questionnaire_submission",
+        "exercise_submission",
+        "grading_report",
     ]
     path: str
     created_by: Literal[
@@ -67,6 +80,10 @@ class MarkdownArtifact(ContractModel):
         "route",
         "chat_answer",
         "revise_experts",
+        "learner_state",
+        "publish_final_learning",
+        "quality_gate",
+        "learner",
     ]
     title: str
     mime_type: Literal["text/markdown"] = "text/markdown"
@@ -131,6 +148,7 @@ class ExpertDraft(ContractModel):
     draft_stage: Literal["debate", "integration"] | None = None
     irac: IRAC | None = None
     interactive_questions: list[str] | None = None
+    exercises: list[dict[str, Any]] | None = None
     markdown_artifact: MarkdownArtifact | None = None
 
 
@@ -278,6 +296,8 @@ class StateDict(TypedDict):
     events: Annotated[list[dict[str, Any]], operator.add]
     artifacts: NotRequired[Annotated[list[dict[str, Any]], operator.add]]
     learner_profile: NotRequired[dict[str, Any]]
+    learner_profile_update: NotRequired[dict[str, Any]]
+    grading_report: NotRequired[list[dict[str, Any]]]
     learning_path: NotRequired[list[dict[str, Any]]]
     retrieval_context: NotRequired[Annotated[list[dict[str, Any]], operator.add]]
     expert_a_draft: NotRequired[dict[str, Any]]
@@ -290,6 +310,24 @@ class StateDict(TypedDict):
     intent: NotRequired[str]  # "teach" | "chat" | "diagnose"
     teach_phase: NotRequired[Literal["debate", "integration"]]
     chat_answer: NotRequired[dict[str, Any]]
+    workflow_mode: NotRequired[Literal["auto", "teach", "chat", "diagnose", "feedback"]]
+    input_payload: NotRequired[dict[str, Any]]
+    parent_session_id: NotRequired[str | None]
+    learner_state_phase: NotRequired[Literal["diagnosis", "feedback"]]
+    expert_phase: NotRequired[Literal["draft", "cross_review", "revision", "integration"]]
+    judge_round: NotRequired[int]
+    dual_axis_snapshot: NotRequired[dict[str, Any]]
+    path_decision: NotRequired[dict[str, Any]]
+    expert_a_cross_review: NotRequired[dict[str, Any]]
+    expert_b_cross_review: NotRequired[dict[str, Any]]
+    expert_a_revision: NotRequired[dict[str, Any]]
+    expert_b_revision: NotRequired[dict[str, Any]]
+    course_package: NotRequired[dict[str, Any]]
+    final_learning_markdown: NotRequired[str]
+    exercise_answer_key: NotRequired[list[dict[str, Any]]]
+    workflow_status: NotRequired[
+        Literal["running", "completed", "failed", "canceled", "quality_gate_failed"]
+    ]
 
 
 def _inline_array_item_schema(schema: dict[str, Any]) -> dict[str, Any]:
@@ -308,12 +346,12 @@ def agent_output_json_schemas() -> dict[str, dict[str, Any]]:
     )
     expert_schema = ExpertDraft.model_json_schema(mode="validation")
     return {
-        "diagnosis": LearnerProfile.model_json_schema(mode="validation"),
+        "learner_state_diagnosis": LearnerProfile.model_json_schema(mode="validation"),
         "planner": planner_schema,
         "expert_a": expert_schema,
         "expert_b": expert_schema,
         "judge": JudgeReport.model_json_schema(mode="validation"),
-        "feedback": FeedbackResult.model_json_schema(mode="validation"),
+        "learner_state_feedback": FeedbackResult.model_json_schema(mode="validation"),
         "route": IntentResult.model_json_schema(mode="validation"),
         "chat_answer": ChatAnswer.model_json_schema(mode="validation"),
     }

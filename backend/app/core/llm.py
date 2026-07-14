@@ -21,6 +21,7 @@ from backend.app.agent_runtime_config import (
 LLMProvider = Literal["deepseek", "qwen", "glm"]
 LLMRole = Literal["system", "user", "assistant", "tool"]
 AgentName = Literal[
+    "learner_state",
     "diagnosis",
     "feedback",
     "planner",
@@ -56,6 +57,7 @@ DEFAULT_CONFIG: dict[LLMProvider, dict[str, str]] = {
     },
 }
 AGENT_PROVIDER_ENV: dict[AgentName, str] = {
+    "learner_state": "LEARNER_STATE_PROVIDER",
     "diagnosis": "DIAGNOSIS_PROVIDER",
     "feedback": "FEEDBACK_PROVIDER",
     "planner": "PLANNER_PROVIDER",

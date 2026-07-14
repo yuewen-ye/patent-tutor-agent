@@ -9,9 +9,9 @@ def test_summary_lines_render_concise_workflow_result() -> None:
     lines = summary_lines(
         {
             "session_id": "demo-session",
-            "debate_round": 2,
+            "judge_round": 2,
             "max_debate_rounds": 2,
-            "expert_a_draft": {
+            "course_package": {
                 "expert": "expert_a",
                 "style": "conservative_precise",
                 "knowledge_points": ["新颖性"],
@@ -27,7 +27,7 @@ def test_summary_lines_render_concise_workflow_result() -> None:
     )
 
     assert "Session: demo-session" in lines
-    assert "Debate rounds: 2/2" in lines
+    assert "Judge rounds: 2/2" in lines
     assert "Teaching result: 专家 A 整合后的教学内容" in lines
     assert "Legal basis: 《专利法》第二十二条" in lines
     assert "Artifacts: 2 files" in lines

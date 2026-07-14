@@ -50,4 +50,8 @@ def test_planner_normalizes_model_generated_node_ids_to_slug() -> None:
 
     result = node(state)
 
-    assert result["learning_path"][0]["node_id"] == "case-intro-novelty-inventiveness"
+    assert result["path_decision"]["suggested_node_ids"] == [
+        "case-intro-novelty-inventiveness"
+    ]
+    assert result["path_decision"]["algorithm"] == "deterministic_astar"
+    assert result["learning_path"]

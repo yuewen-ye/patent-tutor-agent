@@ -156,6 +156,47 @@ def save_learner_memories(
     )
 
 
+def save_profile_snapshot(
+    runtime: Runtime[WorkflowContext] | None,
+    state: StateDict,
+    profile: dict[str, Any],
+) -> None:
+    learner_id = _learner_id(runtime)
+    store = getattr(runtime, "store", None) if runtime is not None else None
+    if not learner_id or store is None:
+        return
+    created_at = datetime.now(UTC).isoformat()
+    payload = dict(profile)
+    payload.update({"created_at": created_at, "session_id": state["session_id"]})
+    store.put(learner_namespace(learner_id, "profile"), state["session_id"], payload)
+
+
+def save_history_snapshot(
+    runtime: Runtime[WorkflowContext] | None,
+    state: StateDict,
+    *,
+    event_type: str,
+    payload: dict[str, Any],
+) -> None:
+    learner_id = _learner_id(runtime)
+    store = getattr(runtime, "store", None) if runtime is not None else None
+    if not learner_id or store is None:
+        return
+    value = dict(payload)
+    value.update(
+        {
+            "session_id": state["session_id"],
+            "event_type": event_type,
+            "created_at": datetime.now(UTC).isoformat(),
+        }
+    )
+    store.put(
+        learner_namespace(learner_id, "history"),
+        f"{state['session_id']}:{event_type}",
+        value,
+    )
+
+
 def learner_memory_snapshot(
     store: Any,
     *,
@@ -164,12 +205,15 @@ def learner_memory_snapshot(
 ) -> dict[str, Any]:
     profiles = list_learner_memories(store, learner_id=learner_id, kind="profile", limit=limit)
     history = list_learner_memories(store, learner_id=learner_id, kind="history", limit=limit)
+    mastery_reader = getattr(store, "mastery", None)
+    mastery = mastery_reader(learner_id) if callable(mastery_reader) else {}
     return {
         "learner_id": learner_id,
         "latest_profile": profiles[0] if profiles else None,
         "latest_history": history[0] if history else None,
         "profiles": profiles,
         "history": history,
+        "mastery": mastery,
     }
 
 

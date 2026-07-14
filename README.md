@@ -2,7 +2,7 @@
 
 知识产权管理与专利代理实务多 Agent 系统。仓库采用 **Monorepo 单仓库 + 前后端分离**：后端负责 FastAPI 服务、LangGraph 多 Agent 编排、统一模型调用和 RAG 知识库模块；前端负责后续 React 交互与 Agent 运行状态可视化。
 
-当前已完成：三路由工作流（teach/chat/diagnose）、确定性 RAG 检索节点、DeepSeek/Qwen/GLM 统一 `call_llm` 封装、Agent 级 provider 路由、JSON Schema 合同、LangGraph Checkpointer/Store 记忆底座、文件型 learner memory 持久化、LangGraph Studio 可视化调试、FastAPI 会话、实时事件、health/readiness、会话取消、TTL 清理与 learner 查询服务。
+当前已完成：三路由工作流（teach/chat/diagnose）、同一 `learner_state` Agent 的诊断/反馈两阶段、SQLite 学员画像与 BKT、双知识轴和确定性 A* 路径、专家 A/B 草稿→互评→修订→整合、三轮 Judge 质量门禁、规范化 Markdown 过程产物、独立练习反馈会话，以及 FastAPI/SSE/WebSocket/Studio/CLI 运行入口。详见 `docs/workflow-technical-guide.md`。
 
 ## 从零到 LangGraph Studio
 
@@ -70,7 +70,7 @@ DEEPSEEK_API_KEY=sk-your-key-here
 
 # 非密钥模型参数从 YAML 读取
 AGENT_CONFIG_PATH=config/agents.yaml
-LEARNER_MEMORY_STORE_PATH=data/learner_memory.json
+LEARNER_MEMORY_STORE_PATH=data/learner_memory.sqlite3
 ```
 
 支持 `deepseek`、`qwen`、`glm` 三个 provider。每个 Agent 的 provider、model、temperature、top_k 等非密钥参数在 `config/agents.yaml` 里调整。
@@ -468,6 +468,9 @@ PY
 - `GET /health` — 进程存活检查，返回会话计数
 - `GET /health/ready` — 就绪检查，注入 LLM client 时直接 ready，默认环境下校验 provider 配置
 - `POST /sessions` — 创建会话并后台启动工作流
+- `GET /questionnaires/onboarding` — 返回版本化新学员问卷 Markdown
+- `POST /learners/{learner_id}/questionnaire-responses` — 保存问卷并创建课程会话
+- `POST /sessions/{course_session_id}/exercise-responses` — 保存作答并创建独立反馈会话
 - `GET /sessions` — 列出内存中的会话快照
 - `GET /sessions/{session_id}` — 返回当前 StateDict 快照和会话状态
 - `DELETE /sessions/{session_id}` — 取消运行中的会话，状态保持为 `canceled`
@@ -481,7 +484,9 @@ PY
 
 服务层配置：
 
-- 默认 learner memory 写入 `data/learner_memory.json`，可通过 `LEARNER_MEMORY_STORE_PATH` 覆盖
+- 默认 learner memory 与 BKT 写入 `data/learner_memory.sqlite3`，可通过 `LEARNER_MEMORY_STORE_PATH` 覆盖
+- 历史 JSON 只通过 `backend/scripts/migrate_learner_memory.py` 显式幂等迁移，不会自动导入
+- artifact API 直接读取会话目录，服务重启、内存会话清理后仍可读取历史 Markdown
 - `PATENT_TUTOR_CORS_ORIGINS` 支持逗号分隔的允许来源；为空时不启用 CORS
 - `PATENT_TUTOR_CORS_ALLOW_CREDENTIALS` 控制 CORS credential
 - `PATENT_TUTOR_SESSION_TTL_SECONDS` 控制 terminal session 在内存中的保留时间，默认 3600 秒

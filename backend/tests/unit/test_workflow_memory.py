@@ -51,6 +51,40 @@ class MemoryQueueLLMClient:
                 "risks": [],
             },
             {
+                "reviewer": "expert_a",
+                "target": "expert_b",
+                "review_opinions": [{
+                    "category": "🟡", "location": "正文", "target_wrote": "案例",
+                    "problem": "法条不足", "suggestion": "补法条",
+                }],
+                "overall_assessment": "需补法条",
+            },
+            {
+                "reviewer": "expert_b",
+                "target": "expert_a",
+                "review_opinions": [{
+                    "category": "🌉", "location": "正文", "target_wrote": "定义",
+                    "problem": "案例不足", "suggestion": "补案例",
+                }],
+                "overall_assessment": "需补案例",
+            },
+            {
+                "expert": "expert_a",
+                "style": "conservative_precise",
+                "knowledge_points": ["新颖性"],
+                "legal_basis": ["专利法第二十二条"],
+                "teaching_content": "严谨解释修订稿",
+                "risks": [],
+            },
+            {
+                "expert": "expert_b",
+                "style": "vivid_teaching",
+                "knowledge_points": ["新颖性"],
+                "legal_basis": ["专利法第二十二条"],
+                "teaching_content": "案例解释修订稿",
+                "risks": [],
+            },
+            {
                 "expert": "expert_a",
                 "style": "conservative_precise",
                 "knowledge_points": ["新颖性"],
@@ -65,11 +99,6 @@ class MemoryQueueLLMClient:
                 "completeness_score": 5,
                 "disputes": [],
                 "rationale": "整合稿可以输出",
-            },
-            {
-                "questionnaire": ["本轮学习后还有哪个概念不清楚？"],
-                "next_action": "完成一个案例题。",
-                "profile_update_hint": "继续跟踪新颖性掌握情况。",
             },
         ]
 
@@ -133,6 +162,6 @@ def test_workflow_uses_checkpointer_and_store_for_learner_memory(
         max_debate_rounds=1,
     )
 
-    diagnosis_prompt = second_llm.messages_by_agent["diagnosis"][0]
+    diagnosis_prompt = second_llm.messages_by_agent["learner_state"][0]
     assert "历史学习者画像" in diagnosis_prompt
     assert "现有技术概念薄弱" in diagnosis_prompt

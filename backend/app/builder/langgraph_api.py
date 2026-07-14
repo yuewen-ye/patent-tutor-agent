@@ -21,6 +21,7 @@ configure_studio_terminal_logging()
 # Build without default checkpointer/store — LangGraph API handles persistence.
 graph = build_workflow(
     use_default_checkpointing=False,
+    artifact_root=Path(os.getenv("ARTIFACT_ROOT", "artifacts")),
     workflow_log_root=Path(os.getenv("WORKFLOW_LOG_ROOT", "artifacts")),
 )
 

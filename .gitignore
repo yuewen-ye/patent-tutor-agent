@@ -13,10 +13,12 @@ build/
 *.egg-info/
 logs/
 artifacts/
+data/*.sqlite3
+data/*.sqlite3-wal
+data/*.sqlite3-shm
 .vscode/
 
 .langgraph_api/
 
 graphify-out/
-
 

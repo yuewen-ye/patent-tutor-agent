@@ -7,9 +7,10 @@ from __future__ import annotations
 
 import threading
 import uuid
+import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Mapping, cast
+from typing import Any, Literal, Mapping, cast
 
 import anyio
 from langgraph.checkpoint.memory import InMemorySaver
@@ -23,8 +24,10 @@ from backend.app.core.llm import (
     LLMProvider,
     load_provider_config,
 )
+from backend.app.artifacts import write_manifest, write_process_markdown
 from backend.app.graph.workflow import arun_workflow
 from backend.app.memory import learner_memory_snapshot
+from backend.app.questionnaire import onboarding_questionnaire
 from backend.app.schemas.state import StateDict
 from backend.app.services.artifact_paths import InvalidArtifactPathError, normalize_artifact_path
 from backend.app.services.cancellation import CancelAwareLLMClient, SessionCancelled
@@ -40,7 +43,9 @@ from backend.app.services.session_types import (
 )
 
 _APPEND_FIELDS = {"events", "artifacts", "revision_history"}
-_TERMINAL_STATUSES: set[SessionStatus] = {"completed", "failed", "canceled"}
+_TERMINAL_STATUSES: set[SessionStatus] = {
+    "completed", "failed", "canceled", "quality_gate_failed"
+}
 
 
 class SessionService:
@@ -69,6 +74,9 @@ class SessionService:
         learner_id: str | None = None,
         max_debate_rounds: int = 3,
         provider_overrides: Mapping[AgentName, LLMProvider] | None = None,
+        workflow_mode: Literal["auto", "teach", "chat", "diagnose", "feedback"] = "auto",
+        input_payload: dict[str, Any] | None = None,
+        parent_session_id: str | None = None,
     ) -> SessionRecord:
         session_id = uuid.uuid4().hex
         now = utc_now()
@@ -80,6 +88,9 @@ class SessionService:
             "debate_round": 1,
             "max_debate_rounds": max_debate_rounds,
             "revision_history": [],
+            "workflow_mode": workflow_mode,
+            "input_payload": input_payload or {},
+            "parent_session_id": parent_session_id,
         }
         record = SessionRecord(
             session_id=session_id,
@@ -102,13 +113,146 @@ class SessionService:
                 "learner_id": learner_id,
                 "max_debate_rounds": max_debate_rounds,
                 "llm_client": llm_client,
+                "workflow_mode": workflow_mode,
+                "input_payload": input_payload or {},
+                "parent_session_id": parent_session_id,
             },
             name=f"workflow-{session_id}",
             daemon=True,
         )
         record.thread = thread
+        write_manifest(artifact_root=self.artifact_root, state=initial_state, status="running")
         thread.start()
         return record
+
+    def create_course_from_questionnaire(
+        self,
+        *,
+        learner_id: str,
+        learning_goal: str,
+        responses: list[dict[str, Any]],
+    ) -> SessionRecord:
+        submission_id = uuid.uuid4().hex
+        self._save_history(
+            learner_id=learner_id,
+            session_id=submission_id,
+            event_type="questionnaire_submitted",
+            payload={"learning_goal": learning_goal, "responses": responses},
+        )
+        record = self.create_session(
+            user_input=learning_goal,
+            learner_id=learner_id,
+            workflow_mode="teach",
+            input_payload={"questionnaire_responses": responses},
+        )
+        questionnaire = onboarding_questionnaire()["markdown"]
+        questionnaire_artifact = write_process_markdown(
+            artifact_root=self.artifact_root,
+            session_id=record.session_id,
+            relative_path="onboarding/questionnaire.md",
+            content=questionnaire,
+            kind="questionnaire",
+            title="新学员初始诊断问卷",
+        )
+        submission_artifact = write_process_markdown(
+            artifact_root=self.artifact_root,
+            session_id=record.session_id,
+            relative_path="onboarding/submission.md",
+            content=(
+                f"# 新学员问卷提交\n\n## 学习目标\n\n{learning_goal}\n\n"
+                f"## 回答\n\n```json\n{json.dumps(responses, ensure_ascii=False, indent=2)}\n```\n"
+            ),
+            kind="questionnaire_submission",
+            title="新学员问卷提交",
+            created_by="learner",
+        )
+        with self._lock:
+            existing = list(record.state.get("artifacts", []))
+            record.state["artifacts"] = existing + [questionnaire_artifact, submission_artifact]
+            write_manifest(artifact_root=self.artifact_root, state=record.state, status="running")
+        return record
+
+    def create_feedback_session(
+        self,
+        *,
+        learner_id: str,
+        course_session_id: str,
+        responses: list[dict[str, Any]],
+    ) -> SessionRecord:
+        submission_id = uuid.uuid4().hex
+        self._save_history(
+            learner_id=learner_id,
+            session_id=submission_id,
+            event_type="exercise_submitted",
+            payload={"course_session_id": course_session_id, "responses": responses},
+        )
+        update_mastery = getattr(self._store, "update_mastery", None)
+        if callable(update_mastery):
+            for response in responses:
+                observed = response.get("observed_correct")
+                if isinstance(observed, bool):
+                    update_mastery(
+                        learner_id,
+                        str(response.get("skill_id") or response["question_id"]),
+                        observed_correct=observed,
+                    )
+        record = self.create_session(
+            user_input=json.dumps(responses, ensure_ascii=False),
+            learner_id=learner_id,
+            workflow_mode="feedback",
+            input_payload={
+                "course_session_id": course_session_id,
+                "exercise_responses": responses,
+            },
+            parent_session_id=course_session_id,
+        )
+        submission_markdown = (
+            "# 练习提交\n\n"
+            f"- 原课程会话：{course_session_id}\n"
+            f"- 学员：{learner_id}\n\n"
+            f"## 回答\n\n```json\n{json.dumps(responses, ensure_ascii=False, indent=2)}\n```\n"
+        )
+        artifact = write_process_markdown(
+            artifact_root=self.artifact_root,
+            session_id=record.session_id,
+            relative_path="feedback/exercise_submission.md",
+            content=submission_markdown,
+            kind="exercise_submission",
+            title="练习提交",
+            created_by="learner",
+        )
+        with self._lock:
+            existing = list(record.state.get("artifacts", []))
+            record.state["artifacts"] = existing + [artifact]
+            write_manifest(artifact_root=self.artifact_root, state=record.state, status="running")
+        return record
+
+    def _save_history(
+        self,
+        *,
+        learner_id: str,
+        session_id: str,
+        event_type: str,
+        payload: dict[str, Any],
+    ) -> None:
+        save_history = getattr(self._store, "save_history", None)
+        if callable(save_history):
+            save_history(
+                learner_id=learner_id,
+                session_id=session_id,
+                event_type=event_type,
+                payload=payload,
+            )
+            return
+        value = dict(payload)
+        value.update(
+            {
+                "session_id": session_id,
+                "event_type": event_type,
+                "created_at": datetime.now(UTC).isoformat(),
+            }
+        )
+        self._store.put(("learners", learner_id, "history"), session_id, value)
 
     def get_session(self, session_id: str) -> SessionRecord | None:
         self.prune_expired_sessions()
@@ -153,6 +297,11 @@ class SessionService:
                 should_close = True
             snapshot = record_to_response(record)
         if should_close:
+            write_manifest(
+                artifact_root=self.artifact_root,
+                state=record.state,
+                status="canceled",
+            )
             self.event_bridge.publish(
                 session_id,
                 [
@@ -196,6 +345,7 @@ class SessionService:
             "completed": 0,
             "failed": 0,
             "canceled": 0,
+            "quality_gate_failed": 0,
         }
         with self._lock:
             for record in self._sessions.values():
@@ -206,6 +356,7 @@ class SessionService:
             "completed": counts["completed"],
             "failed": counts["failed"],
             "canceled": counts["canceled"],
+            "quality_gate_failed": counts["quality_gate_failed"],
             "total": total,
         }
 
@@ -230,8 +381,14 @@ class SessionService:
             self.cancel_session(session_id)
 
     def read_artifact(self, session_id: str, artifact_path: str) -> str:
-        self.require_session(session_id)
-        root = (self.artifact_root / "sessions" / session_id).resolve()
+        safe_session_id = normalize_artifact_path(
+            artifact_path=session_id,
+            artifact_root_name=self.artifact_root.name or "artifacts",
+            session_id=session_id,
+        )
+        if safe_session_id != Path(session_id):
+            raise InvalidArtifactPathError("Invalid session artifact directory.")
+        root = (self.artifact_root / "sessions" / safe_session_id).resolve()
         relative_path = normalize_artifact_path(
             artifact_path=artifact_path,
             artifact_root_name=self.artifact_root.name or "artifacts",
@@ -307,6 +464,9 @@ class SessionService:
         learner_id: str | None,
         max_debate_rounds: int,
         llm_client: LLMClient,
+        workflow_mode: Literal["auto", "teach", "chat", "diagnose", "feedback"],
+        input_payload: dict[str, Any],
+        parent_session_id: str | None,
     ) -> None:
         try:
             async def run() -> StateDict:
@@ -324,6 +484,9 @@ class SessionService:
                     store=self._store,
                     update_sink=lambda updates: self._merge_state_update(session_id, updates),
                     event_sink=lambda events: self.event_bridge.publish(session_id, events),
+                    workflow_mode=workflow_mode,
+                    input_payload=input_payload,
+                    parent_session_id=parent_session_id,
                 )
 
             state = anyio.run(run)
@@ -331,9 +494,32 @@ class SessionService:
                 record = self._sessions[session_id]
                 if record.status == "canceled":
                     return
-                record.state = state
-                record.status = "completed"
+                external_artifacts = list(record.state.get("artifacts", []))
+                workflow_artifacts = list(state.get("artifacts", []))
+                known_paths = {
+                    str(artifact.get("path"))
+                    for artifact in workflow_artifacts
+                    if isinstance(artifact, dict)
+                }
+                merged_artifacts = workflow_artifacts + [
+                    artifact
+                    for artifact in external_artifacts
+                    if isinstance(artifact, dict) and str(artifact.get("path")) not in known_paths
+                ]
+                merged_state = dict(state)
+                merged_state["artifacts"] = merged_artifacts
+                record.state = cast(StateDict, merged_state)
+                record.status = (
+                    "quality_gate_failed"
+                    if state.get("workflow_status") == "quality_gate_failed"
+                    else "completed"
+                )
                 record.updated_at = utc_now()
+                write_manifest(
+                    artifact_root=self.artifact_root,
+                    state=record.state,
+                    status=record.status,
+                )
         except SessionCancelled:
             with self._lock:
                 record = self._sessions[session_id]
@@ -348,6 +534,11 @@ class SessionService:
                 record.status = "failed"
                 record.error = str(exc)
                 record.updated_at = utc_now()
+                write_manifest(
+                    artifact_root=self.artifact_root,
+                    state=record.state,
+                    status="failed",
+                )
         finally:
             self.event_bridge.close(session_id)
             with self._lock:

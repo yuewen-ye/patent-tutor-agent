@@ -1,0 +1,489 @@
+{
+  "$schema": "https://patent-tutor-agent/schemas/confusion-pairs.schema.json",
+  "meta": {
+    "version": "1.0.0",
+    "created_at": "2026-07-08",
+    "domain": "专利代理师资格考试",
+    "description": "易混淆对图 — 赛前预建的客观知识结构。记录专利法领域中学习者常见混淆的知识点对，每条记录包含混淆原因、区分要点、典型错例。与知识点DAG(knowledge-dag.json)中的节点通过node_id相互引用。此图由领域/知识库组维护，非学情诊断Agent生成。",
+    "data_source": "[模拟库] 基于专利代理师考试常见错误统计与教学经验构建，具体案例号为模拟占位。",
+    "total_pairs": 25
+  },
+  "confusion_pairs": [
+    {
+      "pair_id": "cp-001",
+      "node_a": "novelty",
+      "node_b": "inventive-step",
+      "confusion_type": "概念混淆",
+      "difficulty": 0.75,
+      "title": "新颖性 vs 创造性",
+      "why_confused": "两者都是专利实质条件且涉及与现有技术的比较，学生容易将'新颖性判断中的单独对比'与'创造性判断中的组合对比'混淆，在案例分析中误用判断标准。",
+      "distinction": {
+        "novelty": "单独对比原则：将权利要求的技术方案与每一份现有技术单独比较。判断'有没有'。",
+        "inventive_step": "组合对比原则：可以将多份现有技术组合后比较。判断'容不容易想到'（非显而易见性）。"
+      },
+      "key_contrast": "新颖性是'下位概念判断'（全有或全无），创造性是'上位概念判断'（程度问题）。",
+      "typical_mistake": "学生错误地将两份现有技术组合后认为破坏了新颖性（应当用创造性评价），或仅与一份现有技术对比即认定无创造性（应当先用新颖性评价再考虑组合）。",
+      "exam_frequency": "极高",
+      "related_nodes": ["three-step-method", "prior-art-definition"]
+    },
+    {
+      "pair_id": "cp-002",
+      "node_a": "conflicting-application",
+      "node_b": "prior-art-definition",
+      "confusion_type": "概念混淆",
+      "difficulty": 0.70,
+      "title": "抵触申请 vs 现有技术",
+      "why_confused": "两者都涉及申请日前已存在的技术文献，但法律地位和评价用途不同。学生常误认为抵触申请属于现有技术。",
+      "distinction": {
+        "conflicting_application": "申请日在先、公布日在后的中国专利申请。只用于评价新颖性，不能用于评价创造性。",
+        "prior_art": "申请日以前在国内外为公众所知的技术。可用于评价新颖性和创造性。"
+      },
+      "key_contrast": "时间轴关键区别：抵触申请是'申请在先、公开在后'；现有技术是'公开在先'。",
+      "typical_mistake": "学生用抵触申请评价创造性（法律不允许），或将PCT国际申请进入中国后错误判断其抵触申请地位。",
+      "exam_frequency": "极高",
+      "related_nodes": ["filing-date"]
+    },
+    {
+      "pair_id": "cp-003",
+      "node_a": "foreign-priority",
+      "node_b": "domestic-priority",
+      "confusion_type": "概念混淆",
+      "difficulty": 0.65,
+      "title": "外国优先权 vs 本国优先权",
+      "why_confused": "两者都是优先权制度，但适用条件、期限计算、在先申请的处理方式不同。学生常混淆两种优先权的申请人和申请类型限制。",
+      "distinction": {
+        "foreign_priority": "首次在外国提出申请后，在中国就相同主题提出申请时可主张。发明/实用新型12个月，外观设计6个月。",
+        "domestic_priority": "首次在中国提出申请后，再次就相同主题提出申请时可主张。仅发明/实用新型（外观设计无本国优先权），期限12个月。在先申请视为撤回。"
+      },
+      "key_contrast": "外国优先权不导致在先申请撤回；本国优先权导致在先申请视为撤回。外观设计有外国优先权但无本国优先权。",
+      "typical_mistake": "学生错误认为外观设计可以主张本国优先权；或忘记本国优先权要求在后申请与在先申请有相同的主题且申请人一致。",
+      "exam_frequency": "高",
+      "related_nodes": ["priority-right"]
+    },
+    {
+      "pair_id": "cp-004",
+      "node_a": "preliminary-examination",
+      "node_b": "substantive-examination",
+      "confusion_type": "程序混淆",
+      "difficulty": 0.50,
+      "title": "初步审查 vs 实质审查",
+      "why_confused": "两种审查都是专利申请的必经或可选程序，但审查深度和范围差异大。学生常不清楚哪些专利类型需要实质审查。",
+      "distinction": {
+        "preliminary_examination": "审查形式缺陷+明显实质性缺陷。发明、实用新型、外观设计均需经初步审查。",
+        "substantive_examination": "全面审查三性及其他实质条件。仅发明专利申请需经实质审查（请求制，自申请日起3年内）。"
+      },
+      "key_contrast": "实用新型和外观设计不经实质审查即授权（初步审查合格后授权）；发明必须经过实质审查才能授权。",
+      "typical_mistake": "学生误以为实用新型也需要实质审查，或在答复实用新型审查意见时采用了实质审查的答辩策略。",
+      "exam_frequency": "高",
+      "related_nodes": ["patent-examination"]
+    },
+    {
+      "pair_id": "cp-005",
+      "node_a": "patent-reexamination",
+      "node_b": "patent-invalidation",
+      "confusion_type": "程序混淆",
+      "difficulty": 0.60,
+      "title": "复审程序 vs 无效宣告程序",
+      "why_confused": "两者都是对已做出决定的再审查，但启动主体、对象、审查范围完全不同。学生容易混淆二者的法律性质和后续救济途径。",
+      "distinction": {
+        "reexamination": "专利申请人对驳回决定不服时启动。由国家知识产权局专利复审部门审理。对复审决定不服可提起行政诉讼。",
+        "invalidation": "任何单位或个人对已授权专利启动。请求宣告专利权无效。双方对抗程序，可口头审理。对无效决定不服可提起行政诉讼。"
+      },
+      "key_contrast": "复审是单方程序（申请人 vs 专利局）；无效是双方程序（请求人 vs 专利权人）。复审针对未授权申请，无效针对已授权专利。",
+      "typical_mistake": "学生错误地认为任何人都可以对驳回决定提出复审（实际上仅被驳回的申请人有权）；或将无效宣告的举证责任分配与复审混淆。",
+      "exam_frequency": "高",
+      "related_nodes": ["reexamination-request", "invalidation-grounds"]
+    },
+    {
+      "pair_id": "cp-006",
+      "node_a": "doctrine-of-equivalents",
+      "node_b": "claim-interpretation",
+      "confusion_type": "判断方法混淆",
+      "difficulty": 0.75,
+      "title": "等同原则 vs 权利要求字面解释",
+      "why_confused": "两者都是确定专利权保护范围的方法，但适用顺序和法律基础不同。学生在侵权分析时经常不清楚何时应当适用等同原则。",
+      "distinction": {
+        "doctrine_of_equivalents": "在字面侵权不成立时的补充判断。判断被控侵权技术特征与权利要求技术特征是否等同（三基本一普通标准）。",
+        "claim_interpretation": "首先进行字面解释，确定权利要求的字面保护范围。以权利要求书为依据，说明书及附图用于解释权利要求。"
+      },
+      "key_contrast": "字面解释是第一步（确定保护范围的边界）；等同原则是第二步（将保护范围适度扩展到等同物）。等同原则受到捐献规则和禁止反悔原则的限制。",
+      "typical_mistake": "学生跳过字面侵权分析直接适用等同原则；或将等同原则扩张到权利要求未记载的技术方案。",
+      "exam_frequency": "极高",
+      "related_nodes": ["protection-scope", "infringement-types"]
+    },
+    {
+      "pair_id": "cp-007",
+      "node_a": "bolar-exemption",
+      "node_b": "scientific-research-exemption",
+      "confusion_type": "概念混淆",
+      "difficulty": 0.55,
+      "title": "Bolar例外 vs 科学实验使用例外",
+      "why_confused": "两者都是专利侵权的法定例外情形，但适用范围和法律目的不同。学生常将Bolar例外泛化理解。",
+      "distinction": {
+        "bolar_exemption": "专为药品和医疗器械行政审批目的设置。限于为提供行政审批所需信息而制造、使用、进口。",
+        "scientific_research_exemption": "专为科学研究和实验目的而使用专利。非商业目的的科研活动不视为侵权。"
+      },
+      "key_contrast": "Bolar例外服务于商业目的（最终为上市销售），但法律将其视为不侵权；科学实验例外必须是非商业目的的纯科研活动。",
+      "typical_mistake": "学生将Bolar例外扩大到非药品/医疗器械领域，或将商业研发活动归类为科学实验使用例外。",
+      "exam_frequency": "中",
+      "related_nodes": ["infringement-defenses"]
+    },
+    {
+      "pair_id": "cp-008",
+      "node_a": "prior-use-right",
+      "node_b": "patent-rights-nature",
+      "confusion_type": "概念混淆",
+      "difficulty": 0.55,
+      "title": "先用权 vs 专利权的独立性",
+      "why_confused": "先用权是对专利权独占性的限制，学生可能错误理解先用权的法律性质。",
+      "distinction": {
+        "prior_use_right": "非专利权人的一种抗辩权利。仅在原有范围和原有规模内继续实施，不可转让（除随企业一并转让外）。",
+        "patent_exclusivity": "专利权人享有的排他性权利。可以许可、转让。是积极权利而非仅抗辩权。"
+      },
+      "key_contrast": "先用权是消极抗辩（只能在被诉侵权时主张），不是独立的可转让财产权；专利权是积极财产权，可自由转让或许可。",
+      "typical_mistake": "学生误以为先用权人可以扩大生产规模或许可他人使用；或认为先用权必须登记才能对抗专利权人。",
+      "exam_frequency": "高",
+      "related_nodes": ["infringement-defenses"]
+    },
+    {
+      "pair_id": "cp-009",
+      "node_a": "scientific-discovery-vs-invention",
+      "node_b": "non-patentable-subject",
+      "confusion_type": "概念混淆",
+      "difficulty": 0.60,
+      "title": "科学发现 vs 不授权主题中的智力活动规则",
+      "why_confused": "两者都属于不授予专利权的主题，但排除理由不同。学生容易将'发现'与'抽象规则'混为一谈。",
+      "distinction": {
+        "scientific_discovery": "揭示自然界客观存在的现象/规律。例如：发现某种物质的天然属性、发现某种物理定律。",
+        "mental_activity_rules": "人为制定的规则或方法，不涉及技术手段。例如：游戏规则、商业方法（纯商业规则）、数学方法本身。"
+      },
+      "key_contrast": "科学发现的对象是自然现象（客观存在）；智力活动规则的对象是人造规则（主观制定）。两者都不构成技术方案。",
+      "typical_mistake": "学生将'利用自然规律的技术方案'错误归类为科学发现（实际上利用自然规律可以构成发明）；或将包含技术手段的商业方法错误归入智力活动规则。",
+      "exam_frequency": "中",
+      "related_nodes": ["non-patentable-subject"]
+    },
+    {
+      "pair_id": "cp-010",
+      "node_a": "medical-method-exclusion",
+      "node_b": "practical-applicability",
+      "confusion_type": "判断标准混淆",
+      "difficulty": 0.55,
+      "title": "疾病诊疗方法排除 vs 实用性中的产业应用",
+      "why_confused": "疾病诊疗方法被排除在专利保护之外的理由与实用性的产业应用标准容易混淆。",
+      "distinction": {
+        "medical_method_exclusion": "以政策原因为主（保障公共健康、医生诊疗自由），直接排除在可专利主题之外。即使有实用性也不授权。",
+        "industrial_applicability": "技术方案能否在产业上制造或使用。是积极条件。疾病诊疗方法可能满足产业应用标准，但被政策性排除。"
+      },
+      "key_contrast": "疾病诊疗方法不是因为缺乏实用性而不授权，而是因为政策考量被明文排除。不以治疗为目的的美容方法可以授权（因为不在排除范围内且满足实用性）。",
+      "typical_mistake": "学生以'没有实用性'为理由解释疾病诊疗方法不授权（正确理由是政策性排除）。",
+      "exam_frequency": "中",
+      "related_nodes": ["non-patentable-subject", "practical-applicability"]
+    },
+    {
+      "pair_id": "cp-011",
+      "node_a": "specification-requirements",
+      "node_b": "claims-drafting-basics",
+      "confusion_type": "功能混淆",
+      "difficulty": 0.60,
+      "title": "说明书的作用 vs 权利要求书的作用",
+      "why_confused": "两者都是专利申请的核心文件，但法律功能不同。学生容易混淆'充分公开'与'界定保护范围'的责任归属。",
+      "distinction": {
+        "specification": "用于充分公开发明，使所属技术领域技术人员能够实现。是向社会公开技术信息的载体。",
+        "claims": "用于界定专利权的保护范围。是确定侵权与否的法律依据。"
+      },
+      "key_contrast": "说明书解决'公开换保护'中的公开义务；权利要求书解决'公开换保护'中的保护边界。说明书可以包含超过权利要求的内容，但权利要求不得超出说明书范围。",
+      "typical_mistake": "学生将本应写入权利要求的技术特征只写入了说明书（导致该特征不受保护）；或将说明书中的实施方式当作保护范围。",
+      "exam_frequency": "高",
+      "related_nodes": ["application-documents", "claims-drafting-advanced"]
+    },
+    {
+      "pair_id": "cp-012",
+      "node_a": "amendment-limits",
+      "node_b": "claims-drafting-advanced",
+      "confusion_type": "实务混淆",
+      "difficulty": 0.70,
+      "title": "修改超范围 vs 权利要求的上位概括",
+      "why_confused": "两者都涉及权利要求措辞的调整范围。学生在撰写和答复时容易越界。",
+      "distinction": {
+        "amendment_limits": "修改不得超出原说明书和权利要求书记载的范围。是法律红线。'直接地、毫无疑义地确定'标准。",
+        "claim_generalization": "在原始公开范围内的合理上位概括是允许的。但概括不得引入原始申请中未记载的新内容。"
+      },
+      "key_contrast": "上位概括在原始公开范围内是合法的撰写策略；修改超范围是违法的程序行为。判断标准：修改后的内容能否从原始申请文件中'直接地、毫无疑义地确定'。",
+      "typical_mistake": "学生在答复审查意见时新增实施例数据来支持上位概括（构成修改超范围）；或在撰写时过度上位概括导致得不到说明书支持。",
+      "exam_frequency": "极高",
+      "related_nodes": ["office-action-response", "oa-response-practice"]
+    },
+    {
+      "pair_id": "cp-013",
+      "node_a": "grace-period",
+      "node_b": "priority-right",
+      "confusion_type": "期限混淆",
+      "difficulty": 0.55,
+      "title": "宽限期 vs 优先权期限",
+      "why_confused": "两者都涉及申请日前的公开行为不破坏新颖性的情形，但法律性质和期限不同。",
+      "distinction": {
+        "grace_period": "6个月。适用于特定情形的提前公开（展会、学术会议、他人未经同意泄露）。不影响申请日。",
+        "priority_period": "发明/实用新型12个月，外观设计6个月。在后申请可享有在先申请的优先权日作为判断新颖性/创造性的时间基准。"
+      },
+      "key_contrast": "宽限期是'原谅期'（原谅申请前的某些公开行为），不改变申请日；优先权是'追溯期'（将后申请的判断基准日追溯到先申请的申请日）。宽限期不产生优先权效力。",
+      "typical_mistake": "学生错误认为宽限期内他人的独立发明不会影响新颖性（宽限期仅豁免特定公开行为，不豁免他人的独立发明创造）。",
+      "exam_frequency": "高",
+      "related_nodes": ["novelty", "filing-date"]
+    },
+    {
+      "pair_id": "cp-014",
+      "node_a": "direct-infringement",
+      "node_b": "indirect-infringement",
+      "confusion_type": "概念混淆",
+      "difficulty": 0.60,
+      "title": "直接侵权 vs 间接侵权",
+      "why_confused": "间接侵权的认定依赖于直接侵权的存在，但两者的构成要件不同。学生容易在案例分析中混淆判断逻辑。",
+      "distinction": {
+        "direct_infringement": "未经许可实施专利的完整技术方案（制造、使用、销售、许诺销售、进口）。不需要主观故意。",
+        "indirect_infringement": "教唆或帮助他人实施直接侵权行为。需要主观故意（明知）。提供的产品必须是'专用于'侵权用途。"
+      },
+      "key_contrast": "直接侵权是严格责任（不问主观）；间接侵权需要主观故意+专用品要素。间接侵权以直接侵权行为的存在为前提（或至少存在直接侵权的威胁）。",
+      "typical_mistake": "学生将提供通用零部件的行为认定为间接侵权（必须是专用品）；或在没有直接侵权行为的情况下单独认定间接侵权。",
+      "exam_frequency": "中",
+      "related_nodes": ["infringement-types"]
+    },
+    {
+      "pair_id": "cp-015",
+      "node_a": "invalidation-grounds",
+      "node_b": "reexamination-request",
+      "confusion_type": "程序混淆",
+      "difficulty": 0.60,
+      "title": "无效理由 vs 复审理由",
+      "why_confused": "两者都可能涉及专利实质条件的争议，但适用场景和法律效果不同。",
+      "distinction": {
+        "invalidation_grounds": "任何人可在专利授权后提出，理由包括三性不足、公开不充分、修改超范围等法定无效事由。",
+        "reexamination_grounds": "仅被驳回的申请人可提出，针对驳回决定中的具体理由进行争辩。范围限于驳回决定涉及的问题。"
+      },
+      "key_contrast": "无效宣告理由更广泛（涵盖所有法定无效事由）；复审理由受驳回决定范围限制。无效程序可以引入新证据，复审程序一般以驳回决定涉及的内容为审查范围。",
+      "typical_mistake": "学生在复审中提出驳回决定未涉及的新争辩理由（可以提出，但合议组可以不予审理）；或将无效宣告的举证标准套用到复审。",
+      "exam_frequency": "中",
+      "related_nodes": ["patent-reexamination", "patent-invalidation"]
+    },
+    {
+      "pair_id": "cp-016",
+      "node_a": "three-step-method",
+      "node_b": "doctrine-of-equivalents",
+      "confusion_type": "判断方法混淆",
+      "difficulty": 0.70,
+      "title": "创造性三步法 vs 等同侵权三基本法",
+      "why_confused": "两者都是'三步判断'但适用领域完全不同。学生容易将等同侵权的判断标准与创造性判断混淆。",
+      "distinction": {
+        "three_step_method": "审查程序中的创造性判断：最接近现有技术→区别特征→非显而易见性。审查员视角。",
+        "doctrine_of_equivalents": "侵权程序中的等同判断：手段基本相同→功能基本相同→效果基本相同→本领域普通技术人员无需创造性劳动即能联想到。法院视角。"
+      },
+      "key_contrast": "三步法用于授权审查（专利 vs 现有技术）；三基本法用于侵权判断（被控侵权物 vs 专利权利要求）。二者参考的基准不同。",
+      "typical_mistake": "学生用三步法思维做侵权分析，或用三基本法思维评价创造性。",
+      "exam_frequency": "高",
+      "related_nodes": ["inventive-step", "protection-scope"]
+    },
+    {
+      "pair_id": "cp-017",
+      "node_a": "filing-date",
+      "node_b": "priority-right",
+      "confusion_type": "概念混淆",
+      "difficulty": 0.45,
+      "title": "申请日 vs 优先权日",
+      "why_confused": "两者都是专利程序中的关键日期，但在法律效力上有所不同。",
+      "distinction": {
+        "filing_date": "向专利局实际提交申请文件的日期（或邮寄日）。是计算专利保护期限的起点。",
+        "priority_date": "首次申请的申请日。仅用于判断新颖性和创造性时作为时间基准。不改变专利保护期限的起算。"
+      },
+      "key_contrast": "申请日决定保护期限起算；优先权日只影响现有技术的划定。一件专利只有一个申请日，但可以有一个优先权日（如果主张了优先权）。",
+      "typical_mistake": "学生错误地认为专利保护期从优先权日起算（正确：从实际申请日起算）。",
+      "exam_frequency": "中",
+      "related_nodes": ["patent-application-process"]
+    },
+    {
+      "pair_id": "cp-018",
+      "node_a": "design-patentability",
+      "node_b": "novelty",
+      "confusion_type": "判断标准混淆",
+      "difficulty": 0.55,
+      "title": "外观设计授权条件 vs 发明/实用新型新颖性",
+      "why_confused": "外观设计也有新颖性要求，但与发明/实用新型的新颖性判断标准不同。",
+      "distinction": {
+        "design_novelty": "不属于现有设计。判断标准：整体视觉效果是否相同或实质相同。以一般消费者的知识水平和认知能力判断。",
+        "invention_novelty": "不属于现有技术。判断标准：技术方案是否被单独公开。以所属技术领域技术人员的知识水平判断。"
+      },
+      "key_contrast": "外观设计新颖性判断主体是'一般消费者'（非技术人员）；发明/实用新型新颖性判断主体是'所属技术领域的技术人员'。外观设计还有'明显区别'要求（类似创造性的概念）。",
+      "typical_mistake": "学生用发明/实用新型的新颖性标准（技术特征逐一对比）来评价外观设计（应当整体视觉效果对比）。",
+      "exam_frequency": "中",
+      "related_nodes": ["patentability-substantive"]
+    },
+    {
+      "pair_id": "cp-019",
+      "node_a": "independent-claim",
+      "node_b": "dependent-claim",
+      "confusion_type": "撰写混淆",
+      "difficulty": 0.60,
+      "title": "独立权利要求 vs 从属权利要求",
+      "why_confused": "两种权利要求的功能和法律效力不同，学生在撰写时容易混淆二者的布局策略。",
+      "distinction": {
+        "independent_claim": "记载解决技术问题的必要技术特征。保护范围最大。不需要引用其他权利要求。",
+        "dependent_claim": "引用在前的权利要求并附加技术特征。保护范围小于所引用的权利要求。用于限定优选方案和构建多层防线。"
+      },
+      "key_contrast": "独立权利要求是'主干'（最宽保护），从属权利要求是'分支'（逐步缩窄）。无效程序中独立权利要求被无效后，从属权利要求可以'升级'。",
+      "typical_mistake": "学生将非必要技术特征写入独立权利要求（导致保护范围不必要缩小）；或从属权利要求不引用任何权利要求。",
+      "exam_frequency": "极高",
+      "related_nodes": ["claims-drafting-basics", "claims-drafting-advanced"]
+    },
+    {
+      "pair_id": "cp-020",
+      "node_a": "pct-filing",
+      "node_b": "priority-right",
+      "confusion_type": "程序混淆",
+      "difficulty": 0.50,
+      "title": "PCT国际申请 vs 巴黎公约优先权",
+      "why_confused": "两者都是向外国申请专利的途径，学生不清楚各自的优缺点和适用场景。",
+      "distinction": {
+        "pct_route": "提交一份国际申请，在30/32个月内决定进入哪些国家。延缓了进入国家阶段的时间和费用支出。",
+        "paris_route": "在首次申请后12个月内直接在各个目标国提交申请，分别主张优先权。时间更紧迫，但整体周期可能更短。"
+      },
+      "key_contrast": "PCT是'延迟选择'策略（多30个月决策时间），巴黎公约是'直接进入'策略（12个月内必须决定）。PCT有国际检索报告辅助决策，巴黎公约没有。",
+      "typical_mistake": "学生混淆PCT 30个月期限与巴黎公约12个月期限的起算点和适用范围；错误认为PCT申请本身就是一种'国际专利'（不存在国际专利）。",
+      "exam_frequency": "中",
+      "related_nodes": ["pct-system", "pct-national-phase"]
+    },
+    {
+      "pair_id": "cp-021",
+      "node_a": "administrative-procedure",
+      "node_b": "civil-procedure",
+      "confusion_type": "程序混淆",
+      "difficulty": 0.50,
+      "title": "专利行政诉讼 vs 专利侵权民事诉讼",
+      "why_confused": "两者都可能涉及专利权的争议，但诉讼性质、管辖法院、当事人地位完全不同。",
+      "distinction": {
+        "administrative_litigation": "对国家知识产权局的具体行政行为不服提起的诉讼。被告是国知局。由北京知识产权法院管辖。",
+        "civil_infringement_litigation": "专利权人诉侵权人。被告是侵权人。由侵权行为地或被告住所地中级法院/知识产权法院管辖。"
+      },
+      "key_contrast": "行政诉讼审查行政行为的合法性；民事诉讼判断是否构成侵权及损害赔偿。不服复审/无效决定走行政诉讼；专利侵权走民事诉讼。",
+      "typical_mistake": "学生将专利侵权案件错误地向北京知识产权法院起诉（应当向有管辖权的法院起诉）；或混淆行政诉讼与民事诉讼的举证责任分配。",
+      "exam_frequency": "中",
+      "related_nodes": ["patent-reexamination", "patent-invalidation", "remedies"]
+    },
+    {
+      "pair_id": "cp-022",
+      "node_a": "employee-invention",
+      "node_b": "contract-law-tech",
+      "confusion_type": "归属混淆",
+      "difficulty": 0.55,
+      "title": "职务发明 vs 委托开发成果归属",
+      "why_confused": "两者都涉及发明创造的权利归属问题，但法律基础不同。",
+      "distinction": {
+        "employee_invention": "执行本单位任务或主要利用本单位物质技术条件完成的发明创造。申请专利的权利归单位。发明人享有署名权和获得报酬权。",
+        "commissioned_invention": "委托开发合同可约定成果归属。无约定或约定不明的，申请专利的权利归受托方（研究开发方）。"
+      },
+      "key_contrast": "职务发明的归属是法定规则（归单位，可有限约定）；委托开发成果的归属是约定优先（无约定时归受托方）。职务发明中发明人报酬是法定权利。",
+      "typical_mistake": "学生将委托开发合同中的受托方员工发明错误归类为职务发明（应适用委托开发合同的归属规则）；或认为职务发明可以通过劳动合同约定归员工所有（仅可就报酬进行约定）。",
+      "exam_frequency": "中",
+      "related_nodes": ["contract-law-tech"]
+    },
+    {
+      "pair_id": "cp-023",
+      "node_a": "exhaustion-of-rights",
+      "node_b": "implied-license",
+      "confusion_type": "概念混淆",
+      "difficulty": 0.60,
+      "title": "权利用尽 vs 默示许可",
+      "why_confused": "两者都限制专利权人对售出产品的控制力，但法律性质和适用范围不同。",
+      "distinction": {
+        "exhaustion": "专利权人自己或经其许可售出专利产品后，对该售出产品的使用权和销售权即告用尽。是法定制度。适用国际用尽还是国内用尽存在争议。",
+        "implied_license": "基于专利权人的行为推断其给予了使用许可。是合同/衡平法概念。例如：销售专用部件可默示许可购买者组装使用。"
+      },
+      "key_contrast": "权利用尽是法定限制（各国规定不同）；默示许可是基于当事人行为的推断。权利用尽只适用于'售出后'的产品；默示许可可能适用于更广泛的场景。",
+      "typical_mistake": "学生将销售专利方法专用设备的行为等同于权利用尽（方法专利权不因设备售出而用尽，但可能存在默示许可）。",
+      "exam_frequency": "低",
+      "related_nodes": ["infringement-defenses"]
+    },
+    {
+      "pair_id": "cp-024",
+      "node_a": "person-skilled-in-art",
+      "node_b": "general-consumer",
+      "confusion_type": "判断主体混淆",
+      "difficulty": 0.45,
+      "title": "所属技术领域的技术人员 vs 一般消费者",
+      "why_confused": "两者都是专利法中的拟制判断主体，但分别用于不同专利类型的判断。",
+      "distinction": {
+        "person_skilled_in_art": "用于发明/实用新型的新颖性和创造性判断。假设其知晓申请日/优先权日之前所有普通技术知识，具有常规实验能力。",
+        "general_consumer": "用于外观设计的新颖性和明显区别判断。假设其对同类产品常用设计手法有常识性了解，但非设计专家。"
+      },
+      "key_contrast": "技术人员是领域专家（高知识水平），用于技术方案判断；一般消费者是普通使用者（常识水平），用于外观视觉效果判断。",
+      "typical_mistake": "学生用'一般消费者'的标准判断发明的新颖性，或用'所属技术领域技术人员'的标准判断外观设计的明显区别。",
+      "exam_frequency": "中",
+      "related_nodes": ["inventive-step", "design-patentability"]
+    },
+    {
+      "pair_id": "cp-025",
+      "node_a": "trips-agreement",
+      "node_b": "pct-system",
+      "confusion_type": "国际制度混淆",
+      "difficulty": 0.40,
+      "title": "TRIPS协定 vs PCT体系",
+      "why_confused": "两者都是专利领域的国际制度安排，但性质和作用完全不同。",
+      "distinction": {
+        "trips": "WTO框架下的知识产权保护最低标准协定。设定各成员必须遵守的实体和程序标准。不提供统一的申请程序。",
+        "pct": "WIPO管理的国际专利申请体系。提供统一的国际申请程序，但不涉及授权（授权仍由各国专利局独立决定）。"
+      },
+      "key_contrast": "TRIPS规定'保护什么、保护到什么程度'（实体标准）；PCT提供'怎么申请多国专利'（程序便利）。两者互不替代。",
+      "typical_mistake": "学生误以为PCT可以绕过TRIPS标准获得更宽松的授权条件；或认为加入TRIPS即自动获得国际专利保护。",
+      "exam_frequency": "低",
+      "related_nodes": ["pct-filing"]
+    }
+  ],
+  "graph_edges": [
+    {"from": "cp-001", "to": "novelty", "relation": "involves_node_a"},
+    {"from": "cp-001", "to": "inventive-step", "relation": "involves_node_b"},
+    {"from": "cp-002", "to": "conflicting-application", "relation": "involves_node_a"},
+    {"from": "cp-002", "to": "prior-art-definition", "relation": "involves_node_b"},
+    {"from": "cp-003", "to": "priority-right", "relation": "related_to"},
+    {"from": "cp-004", "to": "preliminary-examination", "relation": "involves_node_a"},
+    {"from": "cp-004", "to": "substantive-examination", "relation": "involves_node_b"},
+    {"from": "cp-005", "to": "patent-reexamination", "relation": "involves_node_a"},
+    {"from": "cp-005", "to": "patent-invalidation", "relation": "involves_node_b"},
+    {"from": "cp-006", "to": "doctrine-of-equivalents", "relation": "involves_node_a"},
+    {"from": "cp-006", "to": "claim-interpretation", "relation": "involves_node_b"},
+    {"from": "cp-007", "to": "bolar-exemption", "relation": "involves_node_a"},
+    {"from": "cp-008", "to": "prior-use-right", "relation": "involves_node_a"},
+    {"from": "cp-009", "to": "scientific-discovery-vs-invention", "relation": "involves_node_a"},
+    {"from": "cp-010", "to": "medical-method-exclusion", "relation": "involves_node_a"},
+    {"from": "cp-011", "to": "specification-requirements", "relation": "involves_node_a"},
+    {"from": "cp-011", "to": "claims-drafting-basics", "relation": "involves_node_b"},
+    {"from": "cp-012", "to": "amendment-limits", "relation": "involves_node_a"},
+    {"from": "cp-012", "to": "claims-drafting-advanced", "relation": "involves_node_b"},
+    {"from": "cp-013", "to": "grace-period", "relation": "involves_node_a"},
+    {"from": "cp-013", "to": "priority-right", "relation": "involves_node_b"},
+    {"from": "cp-014", "to": "infringement-types", "relation": "related_to"},
+    {"from": "cp-015", "to": "invalidation-grounds", "relation": "involves_node_a"},
+    {"from": "cp-015", "to": "reexamination-request", "relation": "involves_node_b"},
+    {"from": "cp-016", "to": "three-step-method", "relation": "involves_node_a"},
+    {"from": "cp-016", "to": "doctrine-of-equivalents", "relation": "involves_node_b"},
+    {"from": "cp-017", "to": "filing-date", "relation": "involves_node_a"},
+    {"from": "cp-017", "to": "priority-right", "relation": "involves_node_b"},
+    {"from": "cp-018", "to": "design-patentability", "relation": "involves_node_a"},
+    {"from": "cp-018", "to": "novelty", "relation": "involves_node_b"},
+    {"from": "cp-019", "to": "claims-drafting-basics", "relation": "related_to"},
+    {"from": "cp-019", "to": "claims-drafting-advanced", "relation": "related_to"},
+    {"from": "cp-020", "to": "pct-filing", "relation": "involves_node_a"},
+    {"from": "cp-020", "to": "priority-right", "relation": "involves_node_b"},
+    {"from": "cp-021", "to": "administrative-procedure", "relation": "involves_node_a"},
+    {"from": "cp-021", "to": "civil-procedure", "relation": "involves_node_b"},
+    {"from": "cp-022", "to": "contract-law-tech", "relation": "related_to"},
+    {"from": "cp-023", "to": "infringement-defenses", "relation": "related_to"},
+    {"from": "cp-024", "to": "person-skilled-in-art", "relation": "involves_node_a"},
+    {"from": "cp-024", "to": "design-patentability", "relation": "involves_node_b"},
+    {"from": "cp-025", "to": "trips-agreement", "relation": "involves_node_a"},
+    {"from": "cp-025", "to": "pct-system", "relation": "involves_node_b"}
+  ],
+  "usage_notes": {
+    "for_planner": "planner 读取 confusion_pairs 中与当前学习路径节点相关的混淆对，在路径中标注易混淆风险点，提醒后续教学环节重点关注。",
+    "for_experts": "专家 A/B 在生成教学内容时，主动查找当前知识点涉及的 confusion_pairs，在教学中穿插'辨析框'突出区别。专家 A 审 B 时重点检查 B 是否在混淆点上有误导性表述。",
+    "for_diagnosis": "diagnosis 可参考 confusion_pairs 中记录的典型错误(typical_mistake)来识别学习者的 error_pattern（如 concept_confusion），辅助 BKT 更新。",
+    "for_judge": "judge 审核时检查教学内容是否准确区分了涉及的混淆对，作为 accuracy_score 的扣分依据之一。",
+    "graph_integration": "confusion_pairs 中的 node_a/node_b/related_nodes 字段引用 knowledge-dag.json 中的 node_id，graph_edges 建立混淆对与知识点的图关系。两个图可通过 node_id 进行关联查询。"
+  }
+}

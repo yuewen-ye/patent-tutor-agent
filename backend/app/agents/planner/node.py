@@ -6,10 +6,14 @@ import re
 from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
+from langgraph.runtime import Runtime
 
 from backend.app.agent_runtime_config import agent_temperature
 from backend.app.agents.common import Node, load_prompt, messages_from_prompt, schema_note
 from backend.app.core.llm import LLMClient, LLMProviderError
+from backend.app.learning_path import build_dual_axis_snapshot, compute_learning_path
+from backend.app.memory import load_profile_memories
+from backend.app.schemas.context import WorkflowContext
 from backend.app.schemas.state import LearningPathItem, StateDict, completed_event
 
 _NODE_ID_INVALID_CHARS = re.compile(r"[^a-z0-9-]+")
@@ -52,24 +56,52 @@ def build_planner_node(llm_client: LLMClient) -> Node:
         ]
     )
 
-    def planner_node(state: StateDict) -> dict[str, Any]:
+    def planner_node(
+        state: StateDict, runtime: Runtime[WorkflowContext] | None = None
+    ) -> dict[str, Any]:
+        historical = load_profile_memories(runtime, limit=1)
+        profile = dict(historical[0] if historical else state.get("learner_profile", {}))
+        store = getattr(runtime, "store", None) if runtime is not None else None
+        learner_id = getattr(runtime.context, "learner_id", None) if runtime is not None else None
+        mastery_reader = getattr(store, "mastery", None)
+        if learner_id and callable(mastery_reader):
+            profile["mastery"] = mastery_reader(learner_id)
         raw = llm_client.generate_json(
             messages_from_prompt(
                 prompt,
                 user_input=state["user_input"],
-                learner_profile=state.get("learner_profile", {}),
+                learner_profile=profile,
             ),
             temperature=agent_temperature("planner", 0.5),
             agent="planner",
         )
         if not isinstance(raw, list):
             raise LLMProviderError("Planner Agent must return a JSON array.")
-        path = [
-            LearningPathItem.model_validate(_normalize_learning_path_item(item, index))
+        deterministic = compute_learning_path(
+            profile=profile,
+            learning_goal=str(profile.get("learning_goal") or state["user_input"]),
+        )
+        path = [LearningPathItem.model_validate(item) for item in deterministic]
+        suggested = [
+            _normalize_learning_path_item(item, index)
             for index, item in enumerate(raw, start=1)
         ]
+        suggested_ids = [
+            item.get("node_id") for item in suggested if isinstance(item, dict)
+        ]
+        selected = next(
+            (item.node_id for item in path if item.node_id in suggested_ids),
+            path[0].node_id if path else None,
+        )
+        dual_axis = build_dual_axis_snapshot(profile=profile, session_id=state["session_id"])
         return {
             "learning_path": [item.model_dump() for item in path],
+            "dual_axis_snapshot": dual_axis,
+            "path_decision": {
+                "current_node_id": selected,
+                "algorithm": "deterministic_astar",
+                "suggested_node_ids": suggested_ids,
+            },
             "events": [completed_event("planner", "planned learning path with LLM")],
         }
 

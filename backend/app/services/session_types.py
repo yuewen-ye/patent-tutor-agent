@@ -6,7 +6,7 @@ from typing import Any, Literal, TypedDict
 
 from backend.app.schemas.state import StateDict
 
-SessionStatus = Literal["running", "completed", "failed", "canceled"]
+SessionStatus = Literal["running", "completed", "failed", "canceled", "quality_gate_failed"]
 ReadinessValue = Literal["ready", "not_ready"]
 
 
@@ -15,6 +15,7 @@ class SessionCounts(TypedDict):
     completed: int
     failed: int
     canceled: int
+    quality_gate_failed: int
     total: int
 
 

@@ -42,6 +42,12 @@ def build_route_node(llm_client: LLMClient) -> Node:
 
     def route_node(state: dict[str, Any]) -> dict[str, Any]:
         user_input = state.get("user_input", "")
+        explicit_mode = state.get("workflow_mode")
+        if explicit_mode in {"teach", "chat", "diagnose"}:
+            return {
+                "intent": explicit_mode,
+                "events": [completed_event("route", f"used explicit mode {explicit_mode}")],
+            }
         local_hint = _local_intent_hint(user_input)
 
         from backend.app.core.llm import LLMMessage

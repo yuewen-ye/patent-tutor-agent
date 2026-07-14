@@ -7,37 +7,44 @@ graph TD;
 	__start__([<p>__start__</p>]):::first
 	_init(_init)
 	route(route)
-	diagnosis(diagnosis)
+	learner_state(learner_state)
 	planner(planner)
 	retrieve_context(retrieve_context)
 	chat_answer(chat_answer)
 	expert_a(expert_a)
 	expert_b(expert_b)
 	judge(judge)
-	feedback(feedback)
-	revise_experts(revise_experts)
-	_prepare_integration(_prepare_integration)
+	_prepare_cross_review(_prepare_cross_review)
+	_prepare_expert_revision(_prepare_expert_revision)
+	_prepare_course_integration(_prepare_course_integration)
+	revise_integration(revise_integration)
+	publish_final_learning(publish_final_learning)
+	quality_gate_failed(quality_gate_failed)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> _init;
-	_init --> route;
-	_prepare_integration --> expert_a;
-	diagnosis -.-> __end__;
-	diagnosis -.-> planner;
-	expert_a -.-> _prepare_integration;
+	_init -.-> learner_state;
+	_init -.-> route;
+	_prepare_course_integration --> expert_a;
+	_prepare_cross_review --> expert_a;
+	_prepare_expert_revision --> expert_a;
+	expert_a -.-> expert_b;
 	expert_a -.-> judge;
-	expert_a -.-> revise_experts;
-	expert_b -.-> _prepare_integration;
-	expert_b -.-> revise_experts;
-	judge -.-> feedback;
-	planner -.-> expert_a;
-	planner -.-> expert_b;
+	expert_b -.-> _prepare_course_integration;
+	expert_b -.-> _prepare_cross_review;
+	expert_b -.-> _prepare_expert_revision;
+	judge -.-> publish_final_learning;
+	judge -.-> quality_gate_failed;
+	judge -.-> revise_integration;
+	learner_state -.-> __end__;
+	learner_state -.-> planner;
+	planner --> expert_a;
 	retrieve_context -.-> chat_answer;
-	revise_experts -.-> expert_a;
-	revise_experts -.-> expert_b;
-	route -.-> diagnosis;
+	revise_integration --> expert_a;
+	route -.-> learner_state;
 	route -.-> retrieve_context;
 	chat_answer --> __end__;
-	feedback --> __end__;
+	publish_final_learning --> __end__;
+	quality_gate_failed --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
 	classDef last fill:#bfb6fc

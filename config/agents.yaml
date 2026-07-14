@@ -33,7 +33,7 @@ agents:
     provider: deepseek
     model_name: deepseek-v4-flash
     temperature: 0.0
-  diagnosis:
+  learner_state:
     provider: deepseek
     model_name: deepseek-v4-flash
     temperature: 0.5
@@ -58,10 +58,6 @@ agents:
     provider: deepseek
     model_name: deepseek-v4-flash
     temperature: 0.0
-  feedback:
-    provider: deepseek
-    model_name: deepseek-v4-flash
-    temperature: 0.5
   chat_answer:
     provider: deepseek
     model_name: deepseek-v4-flash

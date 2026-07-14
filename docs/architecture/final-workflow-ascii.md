@@ -1,4 +1,6 @@
-# 最终工作流架构
+# 最终工作流架构（2026-06 历史版本）
+
+> 当前 2026-07 架构见 `docs/workflow-technical-guide.md` 和同目录 `workflow.mmd`。本文保留用于说明旧版 `diagnosis/feedback/revise_experts` 迁移背景，不再是运行时真值。
 
 生成日期：2026-06-27
 基于：`backend/app/graph/workflow.py` 当前实现
