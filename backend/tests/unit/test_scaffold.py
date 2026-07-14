@@ -12,8 +12,9 @@ def test_required_delivery_files_exist() -> None:
     assert (root / "pyproject.toml").is_file()
     assert (root / "uv.lock").is_file()
     assert (root / "backend" / "main.py").is_file()
-    assert (root / "docs" / "orchestrator-selection.md").is_file()
+    assert (root / "docs" / "README.md").is_file()
     assert (root / "docs" / "agent-interface-spec.md").is_file()
+    assert (root / "docs" / "workflow-technical-guide.md").is_file()
 
 
 def test_monorepo_workspace_directories_exist() -> None:
