@@ -20,7 +20,7 @@ Session 状态只允许 `running/completed/failed/canceled`。服务内存中的
 ## 端点
 
 - `POST /sessions`：创建通用工作流会话。
-- `GET /sessions`：列出进程内会话。
+- `GET /sessions`：分页列出进程内会话摘要，可按状态和学员筛选。
 - `GET /sessions/{id}`：结构化状态快照。
 - `DELETE /sessions/{id}`：取消运行中的会话。
 - `GET /sessions/{id}/events/stream`：SSE。
@@ -34,6 +34,10 @@ Session 状态只允许 `running/completed/failed/canceled`。服务内存中的
 Judge 审核通过的课程会话以 `completed` 结束，前端读取 `course_package` 展示课程和习题；
 学员作答后调用 `exercise-responses`，由服务创建带 `parent_session_id` 的独立 feedback 会话。
 Judge 审核不通过时，原课程会话会直接执行 feedback，不等待这次接口调用。
+
+会话列表和会话详情使用不同响应合同：列表只返回标识、状态、学员和时间字段，
+详情才返回完整 `state`。列表参数为 `status`、`learner_id`、`offset`、`limit`，
+响应中的 `total` 表示筛选后的总数。
 
 ## Artifact 安全
 

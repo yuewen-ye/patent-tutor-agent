@@ -478,7 +478,7 @@ PY
 - `GET /questionnaires/onboarding` — 返回版本化新学员问卷 Markdown
 - `POST /learners/{learner_id}/questionnaire-responses` — 保存问卷并创建课程会话
 - `POST /sessions/{course_session_id}/exercise-responses` — 保存作答并创建独立反馈会话
-- `GET /sessions` — 列出内存中的会话快照
+- `GET /sessions` — 分页列出内存中的会话摘要，支持按 `status`、`learner_id` 筛选
 - `GET /sessions/{session_id}` — 返回当前 StateDict 快照和会话状态
 - `DELETE /sessions/{session_id}` — 取消运行中的会话，状态保持为 `canceled`
 - `GET /sessions/{session_id}/events/stream` — SSE 推送 AgentEvent

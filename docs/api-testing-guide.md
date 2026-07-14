@@ -244,7 +244,7 @@ POST /sessions
 | 问卷 | `GET /questionnaires/onboarding` | 获取问卷 Markdown |
 | 问卷 | `POST /learners/{learner_id}/questionnaire-responses` | 保存问卷并创建课程会话 |
 | 会话 | `POST /sessions` | 创建通用 teach/chat/diagnose 会话 |
-| 会话 | `GET /sessions` | 列出当前进程会话 |
+| 会话 | `GET /sessions` | 分页列出当前进程会话摘要 |
 | 会话 | `GET /sessions/{session_id}` | 查询状态和结果 |
 | 会话 | `DELETE /sessions/{session_id}` | 取消运行中的会话 |
 | 练习 | `POST /sessions/{course_session_id}/exercise-responses` | 保存练习并创建反馈会话 |
@@ -257,6 +257,25 @@ POST /sessions
 | 产物 | `GET /sessions/{session_id}/artifacts/{artifact_path}` | 读取 Markdown 产物 |
 
 `GET /sessions` 只返回当前 FastAPI 进程中的会话，不等于学员数据库中的全部历史。
+该接口不返回工作流 `state`，完整结果请使用 `GET /sessions/{session_id}`。
+
+列表接口支持以下可选查询参数：
+
+| 参数 | 默认值 | 含义 |
+|---|---:|---|
+| `status` | 无 | 按 `running/completed/failed/canceled` 筛选 |
+| `learner_id` | 无 | 按学员 ID 筛选 |
+| `offset` | `0` | 跳过的会话数量，不能小于 0 |
+| `limit` | `50` | 本页最大数量，范围为 1 到 100 |
+
+例如：
+
+```http
+GET /sessions?status=completed&learner_id=learner-001&offset=0&limit=20
+```
+
+响应中的 `total` 是筛选后的会话总数，`sessions` 只包含当前页的
+`session_id/status/learner_id/created_at/updated_at` 摘要字段。
 
 ## 5. 前端必须分别保存的 ID
 

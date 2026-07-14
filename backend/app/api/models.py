@@ -28,8 +28,19 @@ class SessionSnapshotResponse(FrozenApiModel):
     updated_at: str
 
 
+class SessionSummaryResponse(FrozenApiModel):
+    session_id: str
+    status: SessionStatusValue
+    learner_id: str | None
+    created_at: str
+    updated_at: str
+
+
 class SessionsListResponse(FrozenApiModel):
-    sessions: list[SessionSnapshotResponse]
+    sessions: list[SessionSummaryResponse]
+    total: int = Field(ge=0)
+    offset: int = Field(ge=0)
+    limit: int = Field(ge=1, le=100)
 
 
 class LearnerMemoryResponse(FrozenApiModel):

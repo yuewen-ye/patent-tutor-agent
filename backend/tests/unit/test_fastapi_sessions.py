@@ -166,6 +166,48 @@ def test_session_api_creates_background_workflow_and_returns_snapshot(
     assert "final_answer" not in snapshot["state"]
 
 
+def test_session_list_returns_filtered_paginated_summaries(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Given: a completed learner-specific workflow session.
+    client, service = _make_client(tmp_path, monkeypatch)
+    session_id = client.post(
+        "/sessions",
+        json={
+            "user_input": "我想学习专利新颖性",
+            "learner_id": "learner-api",
+        },
+    ).json()["session_id"]
+    service.wait_for_completion(session_id, timeout=5)
+
+    # When: the session list is filtered and paginated.
+    response = client.get(
+        "/sessions",
+        params={
+            "status": "completed",
+            "learner_id": "learner-api",
+            "offset": 0,
+            "limit": 1,
+        },
+    )
+
+    # Then: the endpoint returns metadata and a lightweight session summary.
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["offset"] == 0
+    assert body["limit"] == 1
+    assert body["sessions"] == [
+        {
+            "session_id": session_id,
+            "status": "completed",
+            "learner_id": "learner-api",
+            "created_at": body["sessions"][0]["created_at"],
+            "updated_at": body["sessions"][0]["updated_at"],
+        }
+    ]
+
+
 def test_session_events_stream_replays_agent_events_and_completion(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

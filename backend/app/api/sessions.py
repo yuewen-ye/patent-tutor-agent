@@ -2,19 +2,21 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from backend.app.api.models import (
     ErrorResponse,
     SessionCreatedResponse,
+    SessionSummaryResponse,
     SessionsListResponse,
     SessionSnapshotResponse,
 )
 from backend.app.core.llm import AgentName, LLMProvider
 from backend.app.services.session_service import SessionService
+from backend.app.services.session_types import SessionStatus
 
 
 class CreateSessionRequest(BaseModel):
@@ -73,14 +75,47 @@ def create_sessions_router(session_service: SessionService) -> APIRouter:
     @router.get(
         "/sessions",
         response_model=SessionsListResponse,
-        description="List in-memory workflow sessions.",
+        description="List filtered, paginated summaries of in-memory workflow sessions.",
     )
-    def list_sessions() -> SessionsListResponse:
+    def list_sessions(
+        session_status: Annotated[
+            SessionStatus | None,
+            Query(alias="status", description="只返回指定状态的会话。"),
+        ] = None,
+        learner_id: Annotated[
+            str | None,
+            Query(min_length=1, description="只返回指定学员的会话。"),
+        ] = None,
+        offset: Annotated[
+            int,
+            Query(ge=0, description="跳过的会话数量。"),
+        ] = 0,
+        limit: Annotated[
+            int,
+            Query(ge=1, le=100, description="本页最多返回的会话数量。"),
+        ] = 50,
+    ) -> SessionsListResponse:
+        records = session_service.list_sessions()
+        if session_status is not None:
+            records = [record for record in records if record.status == session_status]
+        if learner_id is not None:
+            records = [record for record in records if record.learner_id == learner_id]
+        total = len(records)
+        records = records[offset : offset + limit]
         return SessionsListResponse(
             sessions=[
-                SessionSnapshotResponse.model_validate(session_service.snapshot(record.session_id))
-                for record in session_service.list_sessions()
-            ]
+                SessionSummaryResponse(
+                    session_id=record.session_id,
+                    status=record.status,
+                    learner_id=record.learner_id,
+                    created_at=record.created_at,
+                    updated_at=record.updated_at,
+                )
+                for record in records
+            ],
+            total=total,
+            offset=offset,
+            limit=limit,
         )
 
     @router.get(
