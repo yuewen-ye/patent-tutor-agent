@@ -113,6 +113,7 @@ class LLMClient(Protocol):
         self, messages: list[LLMMessage], temperature: float, agent: AgentName | None = None
     ) -> object:
         """Generate and parse a JSON response from a chat model."""
+        ...
 
     def generate_with_tools(
         self,
@@ -122,6 +123,7 @@ class LLMClient(Protocol):
         agent: AgentName | None = None,
     ) -> LLMResponseWithTools:
         """Generate a response with tool-calling capability. Does NOT use json_mode."""
+        ...
 
 
 class LLMConfigurationError(RuntimeError):

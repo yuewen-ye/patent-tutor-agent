@@ -319,6 +319,7 @@ uv run pytest -m "not integration"                 # 全部本地测试，不调
 uv run pytest -m integration                       # 真实 Provider 集成测试，需要 API Key
 uv run ruff check .                                # Lint
 uv run mypy .                                      # Type check
+uv run pyright                                     # Pylance-compatible type check
 
 # CLI 运行工作流（teach 路径）
 uv run python backend/scripts/run_workflow.py \

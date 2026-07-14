@@ -32,6 +32,7 @@ uv run pytest -m integration
 uv run pytest
 uv run ruff check .
 uv run mypy .
+uv run pyright
 ```
 
 PowerShell equivalents for Studio live under `scripts/*.ps1`. Integration tests call real LLM

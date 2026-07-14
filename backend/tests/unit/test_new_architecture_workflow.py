@@ -267,6 +267,7 @@ def test_experts_run_concurrently_in_draft_review_and_revision(
         llm_client=llm,
     )
 
+    assert "judge_report" in state
     assert state["judge_report"]["decision"] == "accept"
     assert llm._phase_calls == {"expert_a": 4, "expert_b": 3}
 
@@ -287,6 +288,9 @@ def test_accepted_teach_flow_waits_for_learner_answers_and_keeps_process_markdow
     )
 
     session_root = artifact_root / "sessions" / "new-architecture"
+    assert "workflow_status" in state
+    assert "expert_a_cross_review" in state
+    assert "expert_b_cross_review" in state
     assert state["workflow_status"] == "completed"
     assert state["expert_a_cross_review"]["target"] == "expert_b"
     assert state["expert_b_cross_review"]["target"] == "expert_a"
@@ -349,6 +353,8 @@ def test_feedback_mode_reuses_diagnosis_feedback_and_skips_course_agents(
     )
 
     assert llm.agents == ["diagnosis_feedback"]
+    assert "workflow_status" in state
+    assert "grading_report" in state
     assert state["workflow_status"] == "completed"
     assert state["grading_report"][0]["question_id"] == "q1"
     root = artifact_root / "sessions" / "feedback-1" / "feedback"
@@ -388,6 +394,8 @@ def test_rejected_judge_still_returns_to_feedback_without_publishing(
     )
 
     session_root = artifact_root / "sessions" / "rejected-course"
+    assert "workflow_status" in state
+    assert "feedback_result" in state
     assert state["workflow_status"] == "completed"
     assert state["feedback_result"]["next_action"] == "完成本节练习"
     assert not (session_root / "final_learning.md").exists()

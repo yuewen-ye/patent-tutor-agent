@@ -91,10 +91,10 @@ def main() -> None:
     default_provider: LLMProvider = (
         cast(LLMProvider, args.provider) if args.provider else router.default_provider
     )
-    overridden_agents = {
+    overridden_agents: set[AgentName] = {
         agent for agent in AGENT_PROVIDER_ENV if getattr(args, f"{agent}_provider")
     }
-    agent_model_names = {
+    agent_model_names: dict[AgentName, str] = {
         agent: model_name
         for agent, model_name in router.agent_model_names.items()
         if agent not in overridden_agents

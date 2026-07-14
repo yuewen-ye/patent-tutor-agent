@@ -152,6 +152,7 @@ def test_workflow_event_ordering_is_correct_with_real_llm(tmp_path: Path) -> Non
     assert completed_events[:3] == ["route", "diagnosis_feedback", "planner"]
     assert "retrieve_context" not in completed_events
     assert "expert_a" in completed_events and "expert_b" in completed_events
+    assert "judge_report" in state
     decision = state["judge_report"]["decision"]
     if decision == "revise":
         assert completed_events[-2:] == ["judge", "diagnosis_feedback"]

@@ -44,6 +44,7 @@ class TestTeachRoute:
     def test_teach_path_produces_all_artifacts(self, tmp_path: Path) -> None:
         router = _try_router()
         state = _try_run(router, "integ-teach", "我想系统学习专利新颖性的判断标准", tmp_path)
+        assert "intent" in state
         assert state["intent"] == "teach"
         assert "learner_profile" in state
         assert "learning_path" in state
@@ -64,6 +65,7 @@ class TestTeachRoute:
     def test_teach_event_order(self, tmp_path: Path) -> None:
         router = _try_router()
         state = _try_run(router, "integ-teach-events", "我想系统学习如何判断发明专利的创造性", tmp_path)
+        assert "judge_report" in state
         completed = [e["node"] for e in state["events"] if e["status"] == "completed"]
         assert "route" == completed[0]
         assert "diagnosis_feedback" in completed
@@ -80,6 +82,7 @@ class TestChatRoute:
     def test_chat_path_produces_chat_answer(self, tmp_path: Path) -> None:
         router = _try_router()
         state = _try_run(router, "integ-chat", "什么是抵触申请", tmp_path)
+        assert "intent" in state
         assert state["intent"] == "chat"
         assert "chat_answer" in state
         assert state["chat_answer"]["content"]
@@ -101,6 +104,7 @@ class TestDiagnoseRoute:
     def test_diagnose_path_produces_profile_only(self, tmp_path: Path) -> None:
         router = _try_router()
         state = _try_run(router, "integ-diagnose", "帮我诊断一下我的专利法薄弱点", tmp_path)
+        assert "intent" in state
         assert state["intent"] == "diagnose"
         assert "learner_profile" in state
         assert state["learner_profile"]["knowledge_level"] in {

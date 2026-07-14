@@ -125,10 +125,10 @@ def rag_retrieve(query: str = "", top_k: int = 5) -> list[RetrievalChunk]:
     except (AttributeError, IndexError, RuntimeError, ValueError) as exc:
         raise RAGRetrievalError(stage="embedding_encode", detail=str(exc)) from exc
 
+    milvus_error = _load_exception_class(
+        "pymilvus.exceptions", "MilvusException", "milvus_import"
+    )
     try:
-        milvus_error = _load_exception_class(
-            "pymilvus.exceptions", "MilvusException", "milvus_import"
-        )
         results = client.search(
             collection_name=COLLECTION_NAME,
             data=[query_vector],

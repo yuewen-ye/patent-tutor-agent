@@ -25,6 +25,18 @@ class ReadinessStatus(TypedDict):
 
 
 class SessionRecord:
+    session_id: str
+    user_input: str
+    learner_id: str | None
+    status: SessionStatus
+    state: StateDict
+    created_at: str
+    updated_at: str
+    error: str | None
+    done: threading.Event
+    cancel_requested: threading.Event
+    thread: threading.Thread | None
+
     __slots__ = (
         "cancel_requested",
         "created_at",

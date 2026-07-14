@@ -143,6 +143,7 @@ def test_workflow_uses_checkpointer_and_store_for_learner_memory(
     assert profile_items
     assert history_items == []
     assert profile_items[-1].value["weak_points"] == ["现有技术概念薄弱"]
+    assert "workflow_status" in first_state
     assert first_state["workflow_status"] == "completed"
 
     second_llm = MemoryQueueLLMClient("复习专利新颖性", "案例判断薄弱")
