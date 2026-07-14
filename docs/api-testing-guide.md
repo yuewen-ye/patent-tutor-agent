@@ -1,420 +1,269 @@
-# FastAPI 接口测试方案（初学者版）
+# FastAPI 接口说明与调用顺序
 
-## 1. 先理解：示例数据不等于模拟请求
-
-Swagger 页面中的默认 JSON 是**示例数据**，例如 `learner-001` 和“我想系统学习专利新颖性”都不是真实学员资料。
-
-但是点击 `Try it out` 后的 `Execute`，Swagger 会把这份 JSON 作为一个**真实 HTTP 请求**发送到当前后端。Swagger 没有“只演示、不执行”的开关。
-
-对当前项目来说：
-
-| 操作 | 是否真实访问后端 | 可能产生的副作用 |
-|---|---:|---|
-| 展开接口、查看 Schema | 否 | 无 |
-| 点击 `Try it out` 但不点 `Execute` | 否 | 无 |
-| 执行 `GET /health` 等 GET 接口 | 是 | 一般只读，无模型费用 |
-| 执行 `POST /sessions` | 是 | 创建会话、启动 Agent、可能调用真实 LLM/RAG、生成 Markdown |
-| 提交问卷 | 是 | 写入学员历史、启动 teach 流程、生成 Markdown |
-| 提交练习 | 是 | 写入练习历史、可能更新掌握度、启动 feedback 流程 |
-| 执行 `DELETE /sessions/{id}` | 是 | 将运行中的会话标记为 canceled |
-
-`provider_overrides` 为空或省略时，后端使用 `.env` 和 `config/llm_agents.yaml` 的模型配置。因此，默认示例省略该字段并不代表使用 Fake LLM。
-
-## 2. 测试目标
-
-接口测试需要证明以下四件事：
-
-1. 请求合同正确：合法 JSON 返回 200，非法 JSON 返回 4xx。
-2. 工作流正确：POST 返回会话 ID，后台状态最终进入 completed、failed 或 canceled。
-3. 数据正确：问卷、画像、历史和掌握度写入指定测试数据库。
-4. 产物正确：`state.artifacts` 中的 Markdown 可以通过 artifact 接口读取。
-
-测试范围是 15 个 REST 接口和 1 个 WebSocket 接口。
-
-## 3. 推荐的四层测试
-
-### 第 1 层：单元与合同测试（每天运行，推荐）
-
-```bash
-uv run pytest -m unit -q
-```
-
-- 使用 Fake LLM，不访问 DeepSeek、Qwen 或 GLM。
-- 使用 pytest 临时数据库和临时 artifact 目录。
-- 不产生模型费用，不污染正式学员数据。
-- 覆盖请求校验、会话、问卷、练习、SSE、WebSocket、Markdown 和学员查询。
-
-只检查 FastAPI 接口层时运行：
-
-```bash
-uv run pytest -q \
-  backend/tests/unit/test_fastapi_sessions.py \
-  backend/tests/unit/test_fastapi_production_layer.py \
-  backend/tests/unit/test_learning_flow_api.py
-```
-
-### 第 2 层：非集成回归测试（每次提交前）
-
-```bash
-uv run pytest -m 'not integration' -q
-uv run ruff check .
-uv run mypy .
-```
-
-这一层仍然不调用真实模型，用来防止接口修改破坏工作流其他模块。
-
-### 第 3 层：本地真实 HTTP 测试（接口联调时）
-
-这一层通过 Swagger、curl、Postman 或 Apifox 访问真实 FastAPI 进程。即使使用示例数据，POST 仍会真实执行。
-
-建议使用独立端口、独立数据库和专用 learner ID：
-
-```bash
-LEARNER_MEMORY_STORE_PATH=data/api_test.sqlite3 \
-PATENT_TUTOR_ENV=test \
-RAG_RETRIEVAL_MODE=mock \
-uv run uvicorn backend.main:app --host 127.0.0.1 --port 8001
-```
-
-说明：
-
-- `data/api_test.sqlite3` 与日常的 `data/learner_memory.sqlite3` 分离。
-- `RAG_RETRIEVAL_MODE=mock` 只把 RAG 换成固定测试片段，LLM 仍按配置真实调用。
-- 手工 HTTP 测试仍会写入默认 `artifacts/`；使用唯一 session ID 可以避免与其他产物混淆。
-- Swagger 地址为 `http://127.0.0.1:8001/docs`。
-- OpenAPI 地址为 `http://127.0.0.1:8001/openapi.json`。
-
-### 第 4 层：真实模型与真实 RAG 验收（发布前）
-
-```bash
-LEARNER_MEMORY_STORE_PATH=data/api_release_test.sqlite3 \
-PATENT_TUTOR_ENV=test \
-RAG_RETRIEVAL_MODE=real \
-uv run uvicorn backend.main:app --host 127.0.0.1 --port 8001
-```
-
-这一层会产生模型调用、Embedding 初始化和向量检索开销。只在发布前跑一遍完整 teach 流程和一遍 feedback 流程。
-
-## 4. 测试前准备
-
-打开一个新终端，设置测试变量：
-
-```bash
-export BASE_URL=http://127.0.0.1:8001
-export LEARNER_ID=api-test-20260714-001
-```
-
-不要使用正式学员 ID。每轮测试换一个 learner ID，方便定位和清理测试数据。
-
-先确认服务状态：
-
-```bash
-curl -sS "$BASE_URL/health" | jq
-curl -sS "$BASE_URL/health/ready" | jq
-```
-
-预期：
-
-- `/health` 返回 HTTP 200，`status` 为 `ok`。
-- `/health/ready` 返回 HTTP 200，`ready` 为 `true`。
-- 如果返回 503，先修复模型配置，不要继续执行 POST。
-
-`ready=true` 只说明模型配置能够被加载，不保证外部模型平台此刻一定可连接。真实连通性仍需通过一次受控 POST 验证。
-
-## 5. 完整正常流程
-
-### 步骤 1：读取新学员问卷
-
-```bash
-curl -sS "$BASE_URL/questionnaires/onboarding" | jq '{id, version, content_type}'
-```
-
-预期：HTTP 200，`content_type` 为 `text/markdown`，响应中有非空 `markdown`。
-
-### 步骤 2：提交问卷并创建课程会话
-
-```bash
-COURSE_RESPONSE=$(curl -sS -X POST \
-  "$BASE_URL/learners/$LEARNER_ID/questionnaire-responses" \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "learning_goal": "系统掌握专利新颖性判断",
-    "responses": [
-      {"question_id": "Q1", "answer": "B"},
-      {"question_id": "Q23", "answer": "A"},
-      {"question_id": "Q47", "answer": "希望结合案例理解相关法律知识"}
-    ]
-  }')
-
-echo "$COURSE_RESPONSE" | jq
-export COURSE_SESSION_ID=$(echo "$COURSE_RESPONSE" | jq -r '.session_id')
-```
-
-预期：HTTP 200，返回非空 `session_id`，初始状态通常为 `running`。
-
-注意：接口返回 `running` 只表示后台任务已经启动，不表示课程已生成完成。
-
-### 步骤 3：查询课程会话状态
-
-```bash
-curl -sS "$BASE_URL/sessions/$COURSE_SESSION_ID" | jq '{session_id, status, error}'
-```
-
-每隔几秒查询一次，直到：
-
-- `completed`：成功，继续测试 Markdown。
-- `failed`：失败，记录 `error` 和响应头 `X-Request-ID`。
-- `canceled`：任务被取消。
-
-不要无限等待。真实模型测试建议设置 10 分钟上限。
-
-### 步骤 4：监听 SSE 进度
-
-在另一个终端执行：
-
-```bash
-curl -N "$BASE_URL/sessions/$COURSE_SESSION_ID/events/stream"
-```
-
-预期能看到：
+## 1. 新学员主流程
 
 ```text
-event: agent_event
-data: {...}
-
-event: session_status
-data: {"status":"completed"}
+GET  /questionnaires/onboarding
+  读取问卷
+        ↓
+POST /learners/{learner_id}/questionnaire-responses
+  提交问卷，并自动创建课程会话
+        ↓ 返回 course_session_id
+GET  /sessions/{course_session_id}
+  或连接 SSE / WebSocket，等待课程生成完成
+        ↓
+GET  /sessions/{course_session_id}/artifacts/{artifact_path}
+  读取课程 Markdown
+        ↓
+学员学习并回答练习
+        ↓
+POST /sessions/{course_session_id}/exercise-responses
+  提交练习，并自动创建反馈会话
+        ↓ 返回 feedback_session_id
+GET  /sessions/{feedback_session_id}
+  或连接 SSE / WebSocket，等待反馈完成
+        ↓
+GET  /learners/{learner_id}
+  刷新学员画像、历史和掌握度
 ```
 
-SSE 是长连接，流程结束前命令一直不退出属于正常现象。
+关键规则：
 
-### 步骤 5：查询并读取 Markdown
+1. 提交问卷接口本身就会创建课程会话，不需要随后再调用 `POST /sessions`。
+2. 提交练习接口会创建新的反馈会话，反馈会话 ID 不等于课程会话 ID。
+3. `POST /sessions` 是 chat、diagnose 或跳过问卷直接 teach 的通用入口。
 
-先从会话状态中找课程 artifact：
+## 2. 主流程逐步说明
 
-```bash
-ARTIFACT_PATH=$(curl -sS "$BASE_URL/sessions/$COURSE_SESSION_ID" \
-  | jq -r '.state.artifacts[] | select(.kind == "course_package") | .path' \
-  | head -1)
+### 步骤 0：检查服务
 
-RELATIVE_PATH=${ARTIFACT_PATH#artifacts/sessions/$COURSE_SESSION_ID/}
-echo "$RELATIVE_PATH"
-curl -sS "$BASE_URL/sessions/$COURSE_SESSION_ID/artifacts/$RELATIVE_PATH"
+```http
+GET /health
+GET /health/ready
 ```
 
-预期：HTTP 200，`Content-Type` 以 `text/markdown` 开头，正文非空。
+- `/health`：检查 FastAPI 进程和当前会话数量。
+- `/health/ready`：检查服务是否具备创建 Agent 会话的基本条件。
 
-### 步骤 6：提交练习并创建反馈会话
+### 步骤 1：读取问卷
 
-```bash
-FEEDBACK_RESPONSE=$(curl -sS -X POST \
-  "$BASE_URL/sessions/$COURSE_SESSION_ID/exercise-responses" \
-  -H 'Content-Type: application/json' \
-  -d "{
-    \"learner_id\": \"$LEARNER_ID\",
-    \"responses\": [
-      {
-        \"question_id\": \"novelty-q1\",
-        \"answer\": \"该方案已在申请日前被完整公开，因此不具备新颖性\",
-        \"observed_correct\": true,
-        \"skill_id\": \"patent-novelty\"
-      }
-    ]
-  }")
-
-echo "$FEEDBACK_RESPONSE" | jq
-export FEEDBACK_SESSION_ID=$(echo "$FEEDBACK_RESPONSE" | jq -r '.session_id')
+```http
+GET /questionnaires/onboarding
 ```
 
-预期：返回一个新的反馈会话 ID，它不等于课程会话 ID。
+返回问卷 ID、版本和 `markdown` 正文。前端负责渲染 Markdown 并收集学员回答。
 
-继续查询：
+### 步骤 2：提交问卷
 
-```bash
-curl -sS "$BASE_URL/sessions/$FEEDBACK_SESSION_ID" | jq '{session_id, status, error}'
+```http
+POST /learners/{learner_id}/questionnaire-responses
 ```
 
-### 步骤 7：检查学员数据
+请求示例：
 
-```bash
-curl -sS "$BASE_URL/learners/$LEARNER_ID" | jq
-curl -sS "$BASE_URL/learners/$LEARNER_ID/profiles?limit=10" | jq
-curl -sS "$BASE_URL/learners/$LEARNER_ID/history?limit=10" | jq
-curl -sS "$BASE_URL/learners/$LEARNER_ID/sessions?limit=10" | jq
+```json
+{
+  "learning_goal": "系统掌握专利新颖性判断",
+  "responses": [
+    {"question_id": "Q1", "answer": "B"},
+    {"question_id": "Q23", "answer": "A"}
+  ]
+}
 ```
 
-预期：
+后端会保存问卷、创建 teach 课程会话，并返回：
 
-- `history` 中存在 questionnaire 和 exercise 提交记录。
-- `profiles` 中存在学员画像。
-- 提供 `observed_correct` 后，`mastery` 中存在对应 `skill_id`。
-- sessions 中能看到课程会话和反馈会话或其历史摘要。
-
-## 6. 通用会话接口测试
-
-### 创建 teach 会话
-
-```bash
-curl -sS -X POST "$BASE_URL/sessions" \
-  -H 'Content-Type: application/json' \
-  -d "{
-    \"user_input\": \"我想系统学习专利新颖性\",
-    \"learner_id\": \"$LEARNER_ID\",
-    \"mode\": \"teach\"
-  }" | jq
+```json
+{
+  "session_id": "course-session-id",
+  "status": "running"
+}
 ```
 
-### 创建 chat 或 diagnose 会话
+前端把返回的 `session_id` 保存为 `course_session_id`。
 
-```bash
-curl -sS -X POST "$BASE_URL/sessions" \
-  -H 'Content-Type: application/json' \
-  -d '{"user_input":"什么是抵触申请？","mode":"chat"}' | jq
+### 步骤 3：等待课程生成
 
-curl -sS -X POST "$BASE_URL/sessions" \
-  -H 'Content-Type: application/json' \
-  -d '{"user_input":"分析我的知识薄弱点","mode":"diagnose"}' | jq
+可选择以下一种实时方式，并用会话查询接口作为刷新和重连后的补充：
+
+```http
+GET /sessions/{course_session_id}
+GET /sessions/{course_session_id}/events/stream
+WS  /sessions/{course_session_id}/events
 ```
 
-这些 POST 都可能调用真实模型。
+- `GET`：查询一次完整状态，适合轮询。
+- SSE：服务器单向持续推送 Agent 事件。
+- WebSocket：持续推送事件，不显示在 Swagger 中。
 
-### 列出会话
+会话状态：
 
-```bash
-curl -sS "$BASE_URL/sessions" | jq
+| 状态 | 含义 |
+|---|---|
+| `running` | Agent 正在执行 |
+| `completed` | 流程成功结束 |
+| `failed` | 执行失败，查看 `error` |
+| `canceled` | 会话已取消 |
+
+### 步骤 4：读取课程和 Markdown
+
+课程会话完成后，先查询：
+
+```http
+GET /sessions/{course_session_id}
 ```
 
-这里只列出当前 FastAPI 进程内尚未过期的会话，不等于数据库中的全部历史会话。
+重点读取 `state` 中的：
 
-### 取消会话
+- `learner_profile`：学员画像；
+- `learning_path`：学习路径；
+- `course_package`：最终课程和习题；
+- `artifacts`：Markdown 文件列表。
 
-```bash
-curl -sS -X DELETE "$BASE_URL/sessions/$COURSE_SESSION_ID" | jq
+然后使用 artifact 的相对路径读取 Markdown：
+
+```http
+GET /sessions/{course_session_id}/artifacts/{artifact_path}
 ```
 
-预期：HTTP 200，状态为 `canceled`。只能用专门创建的测试会话验证取消，不要取消需要保留的课程任务。
+例如 artifact 保存路径为：
 
-## 7. WebSocket 测试
-
-WebSocket 不会显示在 Swagger 中。自动化测试命令：
-
-```bash
-uv run pytest -q \
-  backend/tests/unit/test_fastapi_sessions.py::test_session_websocket_replays_agent_events_until_completion \
-  backend/tests/unit/test_fastapi_production_layer.py::test_session_websocket_sends_connection_metadata
+```text
+artifacts/sessions/abc123/round-01/course_package.md
 ```
 
-预期：连接后第一条消息包含 `type=connection`、session ID 和当前状态；随后收到 Agent 事件，最后收到 `session_status`。
+实际请求为：
 
-## 8. 异常请求测试
+```http
+GET /sessions/abc123/artifacts/round-01/course_package.md
+```
 
-异常测试不是为了让接口返回 200，而是确认接口能正确拒绝错误输入。
+### 步骤 5：提交练习
 
-| 用例 | 请求 | 预期 |
+学员学习课程并回答练习后，使用课程会话 ID：
+
+```http
+POST /sessions/{course_session_id}/exercise-responses
+```
+
+请求示例：
+
+```json
+{
+  "learner_id": "learner-001",
+  "responses": [
+    {
+      "question_id": "novelty-q1",
+      "answer": "该方案不具备新颖性",
+      "observed_correct": true,
+      "skill_id": "patent-novelty"
+    }
+  ]
+}
+```
+
+- `answer`：学员答案；
+- `observed_correct`：判分结果，可选；
+- `skill_id`：对应知识点，可选。
+
+后端保存练习、更新掌握度并创建 feedback 会话。前端把返回的 `session_id` 保存为 `feedback_session_id`。
+
+### 步骤 6：等待并读取反馈
+
+使用反馈会话 ID，而不是课程会话 ID：
+
+```http
+GET /sessions/{feedback_session_id}
+GET /sessions/{feedback_session_id}/events/stream
+WS  /sessions/{feedback_session_id}/events
+```
+
+完成后读取 `state.feedback_result` 和反馈类型的 Markdown artifact。
+
+### 步骤 7：刷新学员数据
+
+```http
+GET /learners/{learner_id}
+GET /learners/{learner_id}/profiles
+GET /learners/{learner_id}/history
+GET /learners/{learner_id}/sessions
+```
+
+- `/learners/{learner_id}`：画像、历史、掌握度的汇总，前端优先使用。
+- `/profiles`：历次学员画像。
+- `/history`：问卷、练习和反馈历史。
+- `/sessions`：当前会话和持久化历史会话摘要。
+
+## 3. 通用会话入口
+
+### Chat 快速问答
+
+```http
+POST /sessions
+```
+
+```json
+{
+  "user_input": "什么是抵触申请？",
+  "mode": "chat"
+}
+```
+
+保存返回的 `session_id`，查询或监听会话，完成后读取 `state.chat_answer`。
+
+### Diagnose 单独诊断
+
+```json
+{
+  "user_input": "分析我在专利法学习中的薄弱点",
+  "learner_id": "learner-001",
+  "mode": "diagnose"
+}
+```
+
+完成后读取 `state.learner_profile`。
+
+### 跳过问卷直接 Teach
+
+```json
+{
+  "user_input": "我想系统学习专利新颖性",
+  "learner_id": "learner-001",
+  "mode": "teach"
+}
+```
+
+显式 `mode=teach` 必须提供 `learner_id`。正常新学员仍建议先读取并提交问卷。
+
+## 4. 全部接口速查
+
+| 分组 | 接口 | 含义 |
 |---|---|---|
-| 缺少 user_input | `POST /sessions` 发送 `{}` | 422 |
-| teach 缺少 learner_id | `mode=teach` 但不传 learner_id | 422 |
-| provider 名称非法 | `provider_overrides={"other":"deepseek"}` | 422 |
-| 不存在的 session | `GET /sessions/not-found` | 404 |
-| limit 越界 | `GET /learners/test/history?limit=0` | 422 |
-| artifact 路径穿越 | artifact path 使用 `../manifest.json` | 400 |
-| artifact 不存在 | 请求不存在的 `.md` | 404 |
+| 健康 | `GET /health` | 检查进程和会话计数 |
+| 健康 | `GET /health/ready` | 检查是否具备创建工作流的基本条件 |
+| 问卷 | `GET /questionnaires/onboarding` | 获取问卷 Markdown |
+| 问卷 | `POST /learners/{learner_id}/questionnaire-responses` | 保存问卷并创建课程会话 |
+| 会话 | `POST /sessions` | 创建通用 teach/chat/diagnose 会话 |
+| 会话 | `GET /sessions` | 列出当前进程会话 |
+| 会话 | `GET /sessions/{session_id}` | 查询状态和结果 |
+| 会话 | `DELETE /sessions/{session_id}` | 取消运行中的会话 |
+| 练习 | `POST /sessions/{course_session_id}/exercise-responses` | 保存练习并创建反馈会话 |
+| 学员 | `GET /learners/{learner_id}` | 查询画像、历史和掌握度汇总 |
+| 学员 | `GET /learners/{learner_id}/profiles` | 查询历次画像 |
+| 学员 | `GET /learners/{learner_id}/history` | 查询学习历史 |
+| 学员 | `GET /learners/{learner_id}/sessions` | 查询当前和历史会话摘要 |
+| 事件 | `GET /sessions/{session_id}/events/stream` | 使用 SSE 监听事件 |
+| 事件 | `WS /sessions/{session_id}/events` | 使用 WebSocket 监听事件 |
+| 产物 | `GET /sessions/{session_id}/artifacts/{artifact_path}` | 读取 Markdown 产物 |
 
-示例：
+`GET /sessions` 只返回当前 FastAPI 进程中的会话，不等于学员数据库中的全部历史。
 
-```bash
-curl -i -X POST "$BASE_URL/sessions" \
-  -H 'Content-Type: application/json' \
-  -d '{}'
+## 5. 前端必须分别保存的 ID
 
-curl -i "$BASE_URL/sessions/not-found"
+| ID | 来源 | 用途 |
+|---|---|---|
+| `learner_id` | 登录或用户系统 | 提交问卷、练习和查询画像 |
+| `course_session_id` | 提交问卷或创建 teach 会话后返回 | 查询课程、读取 Markdown、提交练习 |
+| `feedback_session_id` | 提交练习后返回 | 查询反馈进度和反馈结果 |
 
-curl -i "$BASE_URL/learners/test/history?limit=0"
-```
-
-## 9. 接口验收矩阵
-
-| 编号 | 接口 | 核心验收点 |
-|---:|---|---|
-| 1 | `GET /health` | 200、status=ok、会话计数存在 |
-| 2 | `GET /health/ready` | 配置正确时 200/ready=true；否则 503 |
-| 3 | `GET /sessions` | 返回 sessions 数组 |
-| 4 | `POST /sessions` | 合法示例返回 session_id，不出现 422 |
-| 5 | `GET /sessions/{id}` | 状态和 StateDict 可查询 |
-| 6 | `DELETE /sessions/{id}` | 运行会话变为 canceled |
-| 7 | `GET /learners/{id}` | 返回画像、历史、mastery 汇总 |
-| 8 | `GET /learners/{id}/profiles` | 返回 profiles 数组 |
-| 9 | `GET /learners/{id}/history` | 返回 history 数组，limit 生效 |
-| 10 | `GET /learners/{id}/sessions` | 当前和历史会话可查询 |
-| 11 | `GET /questionnaires/onboarding` | 返回版本和 Markdown |
-| 12 | `POST /learners/{id}/questionnaire-responses` | 记录问卷并创建 teach 会话 |
-| 13 | `POST /sessions/{id}/exercise-responses` | 创建独立 feedback 会话并写历史 |
-| 14 | `GET /sessions/{id}/events/stream` | 收到 AgentEvent 和最终状态 |
-| 15 | `GET /sessions/{id}/artifacts/{path}` | 返回 text/markdown 并拦截越权路径 |
-| 16 | `WS /sessions/{id}/events` | connection、AgentEvent、最终状态完整 |
-
-## 10. Postman / Apifox 使用方式
-
-不需要额外编写一套 Postman 或 Apifox API。FastAPI 已经提供标准 OpenAPI：
-
-```text
-http://127.0.0.1:8001/openapi.json
-```
-
-在 Postman 或 Apifox 中选择“导入 OpenAPI/Swagger”，填入上述 URL，即可自动生成全部 REST 请求。
-WebSocket 不属于 OpenAPI REST 操作，需要手动新建 `ws://127.0.0.1:8001/sessions/{session_id}/events`。
-
-建议创建环境变量：
-
-| 变量 | 示例 |
-|---|---|
-| `base_url` | `http://127.0.0.1:8001` |
-| `learner_id` | `api-test-20260714-001` |
-| `course_session_id` | 问卷提交后返回的 ID |
-| `feedback_session_id` | 练习提交后返回的 ID |
-
-Postman/Apifox 只是不同的请求界面。点击“发送”与 Swagger 的 `Execute` 一样，都会访问真实后端。
-
-## 11. 通过标准
-
-一次完整接口验收必须同时满足：
-
-1. 第 1、2 层自动化检查全部通过。
-2. 15 个 REST 接口返回预期状态码和响应结构。
-3. WebSocket 能收到连接元数据和最终状态。
-4. teach 会话最终 completed，并能读取 course_package Markdown。
-5. exercise-responses 创建独立 feedback 会话，历史和 mastery 可查询。
-6. 异常请求返回预期 400、404 或 422，没有 500 和未处理堆栈。
-7. 每次失败都记录请求 URL、状态码、响应体、`X-Request-ID` 和服务端同时间日志。
-
-## 12. 建议执行频率
-
-| 时机 | 执行范围 |
-|---|---|
-| 每次修改接口模型 | 第 1 层接口单元测试 |
-| 每次本地提交前 | 第 1、2 层 |
-| 前后端联调 | 第 1、2、3 层 |
-| 发布前 | 四层全部执行 |
-| Provider、RAG 或数据库配置变化 | 第 3、4 层重新执行 |
-
-## 13. 测试后清理
-
-1. 使用 `Ctrl+C` 停止 8001 测试服务。
-2. 确认没有需要保留的测试记录后，只删除测试数据库：
-
-```bash
-rm -f data/api_test.sqlite3 data/api_test.sqlite3-shm data/api_test.sqlite3-wal
-rm -f data/api_release_test.sqlite3 \
-  data/api_release_test.sqlite3-shm \
-  data/api_release_test.sqlite3-wal
-```
-
-3. 如需删除 Markdown，只删除本轮记录的测试 session 目录：
-
-```text
-artifacts/sessions/{test-session-id}/
-```
-
-不要批量删除 `data/learner_memory.sqlite3`、整个 `artifacts/` 或 Milvus 数据目录。
-
-pytest 的临时数据库和 artifact 由 pytest 自动清理，不需要手动处理。
+一个学员可以有多个课程会话。不要用反馈会话 ID 覆盖课程会话 ID。
