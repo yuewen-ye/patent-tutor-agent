@@ -6,7 +6,7 @@ from typing import Any, cast
 import httpx
 import pytest
 
-from backend.app.agent_runtime_config import clear_agent_runtime_config_cache
+from backend.app.core.agent_runtime_config import clear_agent_runtime_config_cache
 from backend.app.core.llm import (
     AGENT_PROVIDER_ENV,
     AgentLLMRouter,

@@ -207,7 +207,7 @@ https://smith.langchain.com/studio/?baseUrl=http://localhost:8124
 - 模型调用层: httpx + tenacity，兼容 OpenAI 风格接口
 - 原生 tool-calling: `generate_with_tools()` + ReAct 循环
 - 数据合同: Pydantic / JSON Schema
-- RAG 模块: 默认使用手工法条片段兜底，显式开启后使用 Milvus Lite + BGE-M3 真实检索
+- RAG 模块: 默认使用 Milvus Lite + BGE-M3 真实检索，可显式切换固定 mock 片段
 - 前端: React 18 + TypeScript + Vite（待接入）
 
 ## 项目结构
@@ -218,22 +218,26 @@ https://smith.langchain.com/studio/?baseUrl=http://localhost:8124
 │   ├── app/
 │   │   ├── api/                # REST API / WebSocket 路由
 │   │   ├── agents/             # Agent 节点
-│   │   │   ├── route.py            # 意图路由（teach/chat/diagnose）
-│   │   │   ├── chat_answer.py      # chat 路径快速回答
+│   │   │   ├── route/               # 意图路由（teach/chat/diagnose）
+│   │   │   ├── chat_answer/         # chat 路径快速回答
 │   │   │   ├── diagnosis/          # 学情诊断 + feedback 后置阶段
 │   │   │   ├── planner/            # 路径规划
-│   │   │   ├── expert_a.py         # 保守严谨专家
-│   │   │   ├── expert_b.py         # 生动教学专家
+│   │   │   ├── expert_a/           # 保守严谨专家
+│   │   │   ├── expert_b/           # 生动教学专家
 │   │   │   ├── judge/              # 审核裁判
 │   │   ├── builder/            # LangGraph Studio 入口
-│   │   ├── core/               # LLM provider 配置、call_llm、AgentLLMRouter
+│   │   ├── core/               # Agent/LLM 运行配置、provider 和 AgentLLMRouter
+│   │   ├── curriculum/         # 双知识轴静态数据与确定性路径计算
 │   │   ├── graph/              # LangGraph StateGraph workflow
+│   │   ├── learner_memory/     # 学员画像、历史、BKT 与 SQLite Store
+│   │   ├── onboarding/         # 入学问卷读取与 Markdown 定义
+│   │   ├── rag/                # 真实 Milvus Lite + BGE-M3 检索
+│   │   ├── retrieval/          # real/mock 检索模式选择
+│   │   ├── runtime_outputs/    # Markdown、manifest 与 workflow 日志
+│   │   ├── schemas/            # StateDict、WorkflowContext 与 Agent 输出合同
 │   │   ├── services/           # SessionService 与事件桥接
-│   │   ├── memory.py           # learner profile/history Store helper
-│   │   ├── rag/                # 真实 RAG 工具函数（rag_retrieve）
-│   │   ├── mock_rag.py         # 环境变量切换用的 mock 检索，不放入 rag/
-│   │   ├── retrieval_selector.py # RAG_RETRIEVAL_MODE 选择真实 / mock 检索路径
-│   │   └── schemas/            # StateDict、WorkflowContext、Agent 输出模型与 JSON Schema
+│   │   ├── config.py           # FastAPI 服务配置
+│   │   └── middleware.py       # 应用级 HTTP 中间件
 │   ├── scripts/                # show_workflow.py / run_workflow.py
 │   ├── tests/                  # pytest 测试，含真实模型 API smoke
 │   └── main.py                 # FastAPI 应用入口
@@ -378,7 +382,7 @@ agents.<agent>.model_name
 
 ```bash
 uv run python - <<'PY'
-from backend.app.agent_runtime_config import (
+from backend.app.core.agent_runtime_config import (
     agent_runtime_settings,
     agent_temperature,
     agent_top_k,
@@ -414,7 +418,7 @@ PY
 
 ## RAG 工具函数
 
-chat 路径通过非 LLM 的 `retrieve_context` 节点确定性调用 `backend/app/retrieval_selector.py`。teach 路径由 `expert_a` / `expert_b` 通过 `generate_with_tools()` 自行决定是否调用 RAG，每个专家阶段最多执行一个 RAG tool call，避免模型一次返回多组并行调用导致检索片段和后续 Prompt 成倍膨胀。运行时根据 `RAG_RETRIEVAL_MODE` 选择真实向量检索或 mock 检索；`backend/app/rag/` 只保留真实 RAG 实现。
+chat 路径通过非 LLM 的 `retrieve_context` 节点确定性调用 `backend/app/retrieval/selector.py`。teach 路径由 `expert_a` / `expert_b` 通过 `generate_with_tools()` 自行决定是否调用 RAG，每个专家阶段最多执行一个 RAG tool call，避免模型一次返回多组并行调用导致检索片段和后续 Prompt 成倍膨胀。运行时根据 `RAG_RETRIEVAL_MODE` 选择真实向量检索或 mock 检索；`backend/app/rag/` 只保留真实 RAG 实现。
 
 当前实现使用 Milvus Lite + BGE-M3 嵌入模型做本地向量检索，不再保留旧版向量库兼容路径。
 
@@ -438,7 +442,7 @@ printenv RAG_RETRIEVAL_MODE
 
 ```bash
 env -u RAG_RETRIEVAL_MODE uv run python - <<'PY'
-from backend.app.retrieval_selector import retrieve_context
+from backend.app.retrieval.selector import retrieve_context
 
 chunks = retrieve_context("专利法 新颖性 第二十二条", top_k=2)
 for chunk in chunks:
@@ -450,7 +454,7 @@ PY
 判断标准：
 
 - 输出的 `method` 是 `vector`：真实 RAG，来自 Milvus Lite + BGE-M3。
-- 输出的 `method` 是 `manual`：mock RAG，来自 `backend/app/mock_rag.py`。
+- 输出的 `method` 是 `manual`：mock RAG，来自 `backend/app/retrieval/mock.py`。
 - 工作流运行日志里 `retrieve_context` 行也会显示类似 `片段数=2  方法=vector`；这里的 `vector` 就是真实 RAG。
 
 ### 当前真实 RAG 依赖

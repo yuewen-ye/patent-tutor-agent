@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
-from backend.app.learner_store import SQLiteLearnerStore
+from backend.app.learner_memory.sqlite_store import SQLiteLearnerStore
 from backend.app.services.session_service import SessionService
 from backend.main import create_app
 

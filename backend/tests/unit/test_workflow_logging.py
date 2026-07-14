@@ -8,7 +8,7 @@ import pytest
 
 from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinition
 from backend.app.graph.workflow import run_workflow
-from backend.app.workflow_logging import configure_studio_terminal_logging
+from backend.app.runtime_outputs.workflow_logging import configure_studio_terminal_logging
 
 pytestmark = pytest.mark.unit
 

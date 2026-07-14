@@ -6,7 +6,7 @@ from typing import Any, cast
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.runtime import Runtime
 
-from backend.app.agent_runtime_config import agent_temperature
+from backend.app.core.agent_runtime_config import agent_temperature
 from backend.app.agents.common import (
     Node,
     load_prompt,
@@ -15,7 +15,7 @@ from backend.app.agents.common import (
     schema_note,
 )
 from backend.app.core.llm import LLMClient
-from backend.app.memory import load_profile_memories, save_learner_memories, save_profile_snapshot
+from backend.app.learner_memory.memory import load_profile_memories, save_learner_memories, save_profile_snapshot
 from backend.app.schemas.context import WorkflowContext
 from backend.app.schemas.state import FeedbackResult, LearnerProfile, StateDict, completed_event
 

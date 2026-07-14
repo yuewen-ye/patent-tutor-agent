@@ -51,16 +51,18 @@ uv export --format requirements-txt --output-file requirements.txt
 │   │   ├── agents/              # five LLM Agents plus deterministic planner
 │   │   ├── api/                 # REST, SSE, WebSocket, learner flow
 │   │   ├── builder/             # LangGraph Studio entry point
-│   │   ├── core/                # provider clients and AgentLLMRouter
+│   │   ├── core/                # provider clients, runtime config and AgentLLMRouter
 │   │   ├── curriculum/          # dual-axis data and deterministic path planning
 │   │   ├── graph/               # StateGraph wiring and runtime side effects
+│   │   ├── learner_memory/      # Store helpers and SQLite profile/BKT persistence
+│   │   ├── onboarding/          # questionnaire loader and Markdown definition
 │   │   ├── rag/                 # real Milvus Lite + BGE-M3 retrieval
+│   │   ├── retrieval/           # real/mock retrieval selection boundary
+│   │   ├── runtime_outputs/     # Markdown artifacts, manifests and workflow logs
 │   │   ├── schemas/             # StateDict, context, Pydantic contracts
 │   │   ├── services/            # session lifecycle and event bridge
-│   │   ├── artifacts.py         # Markdown rendering and manifest persistence
-│   │   ├── learner_store.py     # SQLite profile/history/BKT store
-│   │   ├── mock_rag.py          # explicit mock retrieval implementation
-│   │   └── retrieval_selector.py # real/mock mode boundary
+│   │   ├── config.py            # FastAPI service settings
+│   │   └── middleware.py        # application-wide HTTP middleware
 │   ├── scripts/                 # workflow runner, graph export, memory migration
 │   ├── tests/                   # unit and real-provider integration tests
 │   └── main.py                  # FastAPI entry point
@@ -202,18 +204,17 @@ their schema and behavior.
 ## Module Placement
 
 Keep root-level `backend/app/*.py` files limited to application-wide boundaries. `config.py` and
-`middleware.py` belong there because `backend/main.py` consumes them directly. Existing cross-cutting
-modules such as `agent_runtime_config.py`, `artifacts.py`, `workflow_logging.py`, `memory.py`, and
-`learner_store.py` may stay at the root until their ownership is split as a dedicated change; do not
-add unrelated domain logic beside them. New cohesive domains must use a package such as
-`curriculum/`, `rag/`, `api/`, or `services/`, and keep their runtime data inside that package.
+`middleware.py` belong there because `backend/main.py` consumes them directly. Domain behavior,
+persistence, runtime outputs and adapters must live in their owning package. New cohesive domains
+must use a package such as `curriculum/`, `learner_memory/`, `retrieval/`, `runtime_outputs/`, `api/`,
+or `services/`, and keep their runtime data inside that package.
 
 ## RAG
 
-`backend/app/retrieval_selector.py` owns the mode boundary:
+`backend/app/retrieval/selector.py` owns the mode boundary:
 
 - unset, empty or `real`: Milvus Lite + BGE-M3, `retrieval_method="vector"`
-- `mock`: fixed local chunks from `backend/app/mock_rag.py`, `retrieval_method="manual"`
+- `mock`: fixed local chunks from `backend/app/retrieval/mock.py`, `retrieval_method="manual"`
 - any other value: configuration error
 
 Real retrieval failures raise `RAGRetrievalError`; never convert failure into an empty success.

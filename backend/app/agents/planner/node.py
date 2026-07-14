@@ -12,7 +12,7 @@ from backend.app.curriculum.learning_path import (
     build_dual_axis_snapshot,
     compute_learning_path,
 )
-from backend.app.memory import load_profile_memories
+from backend.app.learner_memory.memory import load_profile_memories
 from backend.app.schemas.context import WorkflowContext
 from backend.app.schemas.state import LearningPathItem, StateDict, completed_event
 

@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from backend.app.memory import JsonValue, StoredMemoryItem
+from backend.app.learner_memory.memory import JsonValue, StoredMemoryItem
 
 P_L0 = 0.15
 P_T = 0.25

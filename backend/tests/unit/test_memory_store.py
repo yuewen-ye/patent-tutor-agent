@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from backend.app.memory import FileLearnerMemoryStore, learner_namespace
+from backend.app.learner_memory.memory import FileLearnerMemoryStore, learner_namespace
 
 pytestmark = pytest.mark.unit
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-_QUESTIONNAIRE_PATH = Path(__file__).resolve().parent / "assets" / "onboarding-questionnaire.md"
+_QUESTIONNAIRE_PATH = Path(__file__).resolve().parent / "data" / "onboarding-questionnaire.md"
 
 
 def onboarding_questionnaire() -> dict[str, str]:

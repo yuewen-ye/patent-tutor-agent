@@ -58,7 +58,7 @@ def main() -> None:
 
     from backend.app.core.llm import AGENT_PROVIDER_ENV, AgentLLMRouter, AgentName, LLMProvider
     from backend.app.graph.workflow import run_workflow
-    from backend.app.learner_store import SQLiteLearnerStore
+    from backend.app.learner_memory.sqlite_store import SQLiteLearnerStore
 
     parser = argparse.ArgumentParser()
     parser.add_argument(

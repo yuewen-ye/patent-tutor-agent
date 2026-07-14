@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from backend.app.artifacts import sanitize_session_id
+from backend.app.runtime_outputs.artifacts import sanitize_session_id
 
 
 class InvalidArtifactPathError(ValueError):

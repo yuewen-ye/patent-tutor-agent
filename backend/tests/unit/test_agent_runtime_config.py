@@ -5,7 +5,7 @@ from collections.abc import Iterator
 import pytest
 
 import backend.app.agents.rag_tools as rag_tools
-from backend.app.agent_runtime_config import clear_agent_runtime_config_cache
+from backend.app.core.agent_runtime_config import clear_agent_runtime_config_cache
 from backend.app.agents.expert_b.node import build_expert_b_node
 from backend.app.agents.planner.node import build_planner_node
 from backend.app.core.llm import (

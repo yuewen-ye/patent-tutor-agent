@@ -24,7 +24,7 @@
                    ▼
 ┌─────────────────────────────────────────────┐
 │           rag_retrieve(query, top_k)         │
-│           backend/app/retrieval_selector.py  │
+│         backend/app/retrieval/selector.py     │
 │                                             │
 │  默认：调用真实向量数据库 + Embedding 检索    │
 │  可选：RAG_RETRIEVAL_MODE=mock 使用固定法条   │
@@ -93,7 +93,7 @@ class RetrievalMetadata(ContractModel):
 - `retrieval_method = "vector"`
 - 检索初始化、编码、搜索或结果解析失败时抛出 `RAGRetrievalError`，不再静默返回空列表
 
-`RAG_RETRIEVAL_MODE=mock` 时调用 `backend/app/mock_rag.py` 中的固定法条片段，`retrieval_method = "manual"`。mock 实现刻意放在 `backend/app/rag/` 之外，确保 `rag/` 目录只承载真实 RAG。
+`RAG_RETRIEVAL_MODE=mock` 时调用 `backend/app/retrieval/mock.py` 中的固定法条片段，`retrieval_method = "manual"`。mock 与选择器放在 `retrieval/`，真实向量实现保留在 `rag/`。
 
 支持的模式：
 

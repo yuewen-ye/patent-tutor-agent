@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.app.api.models import SessionCreatedResponse
-from backend.app.questionnaire import onboarding_questionnaire
+from backend.app.onboarding.questionnaire import onboarding_questionnaire
 from backend.app.services.session_service import SessionService
 
 

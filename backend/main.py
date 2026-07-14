@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api import create_api_router
 from backend.app.config import ServiceSettings, load_service_settings
-from backend.app.learner_store import SQLiteLearnerStore
+from backend.app.learner_memory.sqlite_store import SQLiteLearnerStore
 from backend.app.middleware import RequestIDMiddleware
 from backend.app.services.session_service import SessionService
 

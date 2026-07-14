@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from backend.app.learner_store import SQLiteLearnerStore, migrate_json_memory
+from backend.app.learner_memory.sqlite_store import SQLiteLearnerStore, migrate_json_memory
 
 
 def main() -> None:

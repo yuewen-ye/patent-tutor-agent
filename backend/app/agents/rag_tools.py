@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Final
 
-from backend.app.agent_runtime_config import agent_top_k
+from backend.app.core.agent_runtime_config import agent_top_k
 from backend.app.core.llm import AgentName, LLMClient, LLMMessage, ToolCall, ToolDefinition
-from backend.app.retrieval_selector import retrieve_context
+from backend.app.retrieval.selector import retrieve_context
 
 _RAG_TOOL: Final = ToolDefinition(
     name="rag_retrieve",

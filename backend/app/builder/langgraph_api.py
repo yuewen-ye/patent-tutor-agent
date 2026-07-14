@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 load_dotenv(encoding="utf-8")
 
 from backend.app.graph.workflow import build_workflow  # noqa: E402
-from backend.app.workflow_logging import configure_studio_terminal_logging  # noqa: E402
+from backend.app.runtime_outputs.workflow_logging import configure_studio_terminal_logging  # noqa: E402
 
 configure_studio_terminal_logging()
 

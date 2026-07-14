@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import os
 from typing import Final, Literal, assert_never
 
-from backend.app.mock_rag import mock_rag_retrieve
+from backend.app.retrieval.mock import mock_rag_retrieve
 from backend.app.rag import rag_retrieve
 from backend.app.schemas.state import RetrievalChunk
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from backend.app import retrieval_selector
+from backend.app.retrieval import selector as retrieval_selector
 from backend.app.schemas.state import RetrievalChunk
 
 

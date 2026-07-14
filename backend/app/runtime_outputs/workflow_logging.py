@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Final, Literal
 
-from backend.app.artifacts import sanitize_session_id
+from backend.app.runtime_outputs.artifacts import sanitize_session_id
 from backend.app.schemas.state import StateDict
 
 WorkflowLogStatus = Literal["started", "completed", "error"]

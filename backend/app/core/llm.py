@@ -12,7 +12,7 @@ import httpx
 from dotenv import load_dotenv
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
-from backend.app.agent_runtime_config import (
+from backend.app.core.agent_runtime_config import (
     agent_runtime_settings,
     llm_runtime_config,
     provider_runtime_config,

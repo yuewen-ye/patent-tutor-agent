@@ -24,10 +24,10 @@ from backend.app.core.llm import (
     LLMProvider,
     load_provider_config,
 )
-from backend.app.artifacts import write_manifest, write_process_markdown
+from backend.app.runtime_outputs.artifacts import write_manifest, write_process_markdown
 from backend.app.graph.workflow import arun_workflow
-from backend.app.memory import learner_memory_snapshot
-from backend.app.questionnaire import onboarding_questionnaire
+from backend.app.learner_memory.memory import learner_memory_snapshot
+from backend.app.onboarding.questionnaire import onboarding_questionnaire
 from backend.app.schemas.state import StateDict
 from backend.app.services.artifact_paths import InvalidArtifactPathError, normalize_artifact_path
 from backend.app.services.cancellation import CancelAwareLLMClient, SessionCancelled

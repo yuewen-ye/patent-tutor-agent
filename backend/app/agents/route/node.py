@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Literal
 
 
-from backend.app.agent_runtime_config import agent_temperature
+from backend.app.core.agent_runtime_config import agent_temperature
 from backend.app.agents.common import Node, load_prompt
 from backend.app.core.llm import LLMClient, LLMProviderError
 from backend.app.schemas.state import IntentResult, completed_event

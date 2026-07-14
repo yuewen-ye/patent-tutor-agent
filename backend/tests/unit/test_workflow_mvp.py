@@ -6,7 +6,7 @@ from langgraph.store.memory import InMemoryStore
 
 from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolCall, ToolDefinition
 from backend.app.graph.workflow import build_workflow, export_workflow_mermaid, run_workflow
-from backend.app.memory import learner_namespace
+from backend.app.learner_memory.memory import learner_namespace
 from backend.tests.helpers import completed_teach_state
 
 pytestmark = pytest.mark.unit

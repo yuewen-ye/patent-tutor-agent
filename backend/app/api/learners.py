@@ -11,7 +11,7 @@ from backend.app.api.models import (
     LearnerProfilesResponse,
     LearnerSessionsResponse,
 )
-from backend.app.memory import LearnerMemoryStoreError
+from backend.app.learner_memory.memory import LearnerMemoryStoreError
 from backend.app.services.session_service import SessionService
 
 

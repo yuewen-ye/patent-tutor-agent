@@ -25,6 +25,10 @@ def test_monorepo_workspace_directories_exist() -> None:
         "backend/app/core",
         "backend/app/curriculum",
         "backend/app/graph",
+        "backend/app/learner_memory",
+        "backend/app/onboarding",
+        "backend/app/retrieval",
+        "backend/app/runtime_outputs",
         "backend/app/schemas",
         "backend/app/agents/diagnosis",
         "backend/app/agents/planner",
@@ -37,6 +41,16 @@ def test_monorepo_workspace_directories_exist() -> None:
         "docs",
     ]:
         assert (root / relative_path).is_dir()
+
+
+def test_backend_app_root_contains_only_application_boundaries() -> None:
+    app_root = Path(__file__).resolve().parents[2] / "app"
+
+    assert {path.name for path in app_root.glob("*.py")} == {
+        "__init__.py",
+        "config.py",
+        "middleware.py",
+    }
 
 
 def test_curriculum_assets_are_packaged_with_backend_runtime() -> None:

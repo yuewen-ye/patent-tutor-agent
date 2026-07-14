@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinition
-from backend.app.memory import FileLearnerMemoryStore
+from backend.app.learner_memory.memory import FileLearnerMemoryStore
 from backend.app.services.session_service import SessionService
 from backend.main import create_app
 from backend.tests.helpers import completed_state

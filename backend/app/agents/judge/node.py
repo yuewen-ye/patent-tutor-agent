@@ -6,7 +6,7 @@ from typing import Any, assert_never
 
 from langchain_core.prompts import ChatPromptTemplate
 
-from backend.app.agent_runtime_config import agent_temperature
+from backend.app.core.agent_runtime_config import agent_temperature
 from backend.app.agents.common import Node, load_prompt, messages_from_prompt, schema_note
 from backend.app.core.llm import LLMClient
 from backend.app.schemas.state import JudgeReport, StateDict, completed_event
