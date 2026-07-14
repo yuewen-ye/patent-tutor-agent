@@ -469,6 +469,9 @@ PY
 
 `uv run python backend/main.py` 启动 FastAPI 应用，默认监听 `0.0.0.0:8000`：
 
+接口测试的分层策略、完整 curl 流程、异常用例和 Postman/Apifox 导入方式见
+[`docs/api-testing-guide.md`](docs/api-testing-guide.md)。
+
 - `GET /health` — 进程存活检查，返回会话计数
 - `GET /health/ready` — 就绪检查，注入 LLM client 时直接 ready，默认环境下校验 provider 配置
 - `POST /sessions` — 创建会话并后台启动工作流
