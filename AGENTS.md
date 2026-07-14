@@ -52,20 +52,20 @@ uv export --format requirements-txt --output-file requirements.txt
 │   │   ├── api/                 # REST, SSE, WebSocket, learner flow
 │   │   ├── builder/             # LangGraph Studio entry point
 │   │   ├── core/                # provider clients and AgentLLMRouter
+│   │   ├── curriculum/          # dual-axis data and deterministic path planning
 │   │   ├── graph/               # StateGraph wiring and runtime side effects
 │   │   ├── rag/                 # real Milvus Lite + BGE-M3 retrieval
 │   │   ├── schemas/             # StateDict, context, Pydantic contracts
 │   │   ├── services/            # session lifecycle and event bridge
 │   │   ├── artifacts.py         # Markdown rendering and manifest persistence
 │   │   ├── learner_store.py     # SQLite profile/history/BKT store
-│   │   ├── learning_path.py     # deterministic dual-axis path algorithm
 │   │   ├── mock_rag.py          # explicit mock retrieval implementation
 │   │   └── retrieval_selector.py # real/mock mode boundary
 │   ├── scripts/                 # workflow runner, graph export, memory migration
 │   ├── tests/                   # unit and real-provider integration tests
 │   └── main.py                  # FastAPI entry point
 ├── config/agents.yaml           # provider, model, temperature and top_k settings
-├── docs/                        # active contracts, guides, architecture and knowledge assets
+├── docs/                        # active contracts, guides, architecture and output examples
 ├── scripts/                     # Studio start/stop scripts
 ├── artifacts/                   # ignored runtime Markdown, manifests and logs
 ├── langgraph.json
@@ -189,13 +189,24 @@ The default graph checkpointer is in-memory. LangGraph Studio uses the Store/che
 LangGraph Dev and does not automatically read FastAPI's SQLite learner store. Product workflows that
 must use persisted learner data should run through FastAPI or explicitly inject the same Store.
 
-Planner reads these runtime assets directly:
+Planner reads these backend runtime assets directly:
 
-- `docs/各agent过程产物/03_双知识路径图/knowledge-dag.json`
-- `docs/各agent过程产物/03_双知识路径图/confusion-pairs.json`
+- `backend/app/curriculum/data/knowledge-dag.json`
+- `backend/app/curriculum/data/confusion-pairs.json`
 
 The knowledge axis is static. Runtime confusion risk is derived from the latest learner profile and
 BKT mastery. Do not let an LLM overwrite the final path or mutate the static confusion definitions.
+Production code must not read `docs/`; runtime assets belong to the backend domain package that owns
+their schema and behavior.
+
+## Module Placement
+
+Keep root-level `backend/app/*.py` files limited to application-wide boundaries. `config.py` and
+`middleware.py` belong there because `backend/main.py` consumes them directly. Existing cross-cutting
+modules such as `agent_runtime_config.py`, `artifacts.py`, `workflow_logging.py`, `memory.py`, and
+`learner_store.py` may stay at the root until their ownership is split as a dedicated change; do not
+add unrelated domain logic beside them. New cohesive domains must use a package such as
+`curriculum/`, `rag/`, `api/`, or `services/`, and keep their runtime data inside that package.
 
 ## RAG
 

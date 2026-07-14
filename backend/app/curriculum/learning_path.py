@@ -7,9 +7,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-_ASSET_ROOT = (
-    Path(__file__).resolve().parents[2] / "docs" / "各agent过程产物" / "03_双知识路径图"
-)
+_ASSET_ROOT = Path(__file__).resolve().parent / "data"
 _WEIGHTS = {"低": 0.35, "中": 0.6, "高": 0.8, "极高": 1.0}
 
 

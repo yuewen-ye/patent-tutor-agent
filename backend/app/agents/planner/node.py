@@ -8,7 +8,10 @@ from langgraph.runtime import Runtime
 
 from backend.app.agents.common import Node
 from backend.app.core.llm import LLMClient
-from backend.app.learning_path import build_dual_axis_snapshot, compute_learning_path
+from backend.app.curriculum.learning_path import (
+    build_dual_axis_snapshot,
+    compute_learning_path,
+)
 from backend.app.memory import load_profile_memories
 from backend.app.schemas.context import WorkflowContext
 from backend.app.schemas.state import LearningPathItem, StateDict, completed_event

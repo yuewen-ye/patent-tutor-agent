@@ -14,13 +14,13 @@
   },
   "files": {
     "knowledge_dag": {
-      "path": "knowledge-dag.json",
+      "path": "../../../backend/app/curriculum/data/knowledge-dag.json",
       "description": "知识点有向无环图(DAG)，包含69个知识点节点（含叶子节点），覆盖专利法7大章节+相关法律+实务。",
       "node_count": 69,
       "edge_count": 73
     },
     "confusion_pairs": {
-      "path": "confusion-pairs.json",
+      "path": "../../../backend/app/curriculum/data/confusion-pairs.json",
       "description": "易混淆对图，包含25对高频混淆知识点，每对含混淆原因、区分要点、典型错例。",
       "pair_count": 25,
       "edge_count": 50

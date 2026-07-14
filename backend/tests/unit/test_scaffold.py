@@ -23,6 +23,7 @@ def test_monorepo_workspace_directories_exist() -> None:
     for relative_path in [
         "backend/app/api",
         "backend/app/core",
+        "backend/app/curriculum",
         "backend/app/graph",
         "backend/app/schemas",
         "backend/app/agents/diagnosis",
@@ -36,3 +37,11 @@ def test_monorepo_workspace_directories_exist() -> None:
         "docs",
     ]:
         assert (root / relative_path).is_dir()
+
+
+def test_curriculum_assets_are_packaged_with_backend_runtime() -> None:
+    root = Path(__file__).resolve().parents[3]
+    runtime_asset_root = root / "backend" / "app" / "curriculum" / "data"
+
+    assert (runtime_asset_root / "knowledge-dag.json").is_file()
+    assert (runtime_asset_root / "confusion-pairs.json").is_file()

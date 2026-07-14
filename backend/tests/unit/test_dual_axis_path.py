@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from backend.app.learning_path import (
+from backend.app.curriculum.learning_path import (
     build_dual_axis_snapshot,
     compute_learning_path,
     load_confusion_pairs,
@@ -11,7 +11,7 @@ from backend.app.learning_path import (
 
 
 @pytest.mark.unit
-def test_versioned_graph_assets_load_from_architecture_examples() -> None:
+def test_versioned_graph_assets_load_from_runtime_package() -> None:
     graph = load_knowledge_dag()
     pairs = load_confusion_pairs()
 

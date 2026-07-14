@@ -30,9 +30,9 @@ POST /sessions/{course_session_id}/exercise-responses
 
 ## 2. 路径与混淆轴
 
-- 知识轴来自 `docs/各agent过程产物/03_双知识路径图/knowledge-dag.json`。
-- 混淆对定义来自 `confusion-pairs.json`，运行时不改写静态定义。
-- `planner` 不调用 LLM。它读取数据库中该学员的最新画像和 BKT 掌握度，再由 `backend/app/learning_path.py` 确定性计算路径。
+- 知识轴来自 `backend/app/curriculum/data/knowledge-dag.json`。
+- 混淆对定义来自 `backend/app/curriculum/data/confusion-pairs.json`，运行时不改写静态定义。
+- `planner` 不调用 LLM。它读取数据库中该学员的最新画像和 BKT 掌握度，再由 `backend/app/curriculum/learning_path.py` 确定性计算路径。
 - 混淆风险同时考虑画像中的 `weak_points` 和相关概念的 BKT 掌握度；低掌握度会提高 `learner_risk` 并记录 `adjustment_reason`。
 - FastAPI 默认使用 `data/learner_memory.sqlite3` 保存画像、历史和 BKT。Studio 由 LangGraph Dev 管理自己的 Store，不会自动读取这份 SQLite；要让 Studio 复用产品数据，必须显式接入同一个持久化 Store，或通过 FastAPI 启动产品流程。
 
