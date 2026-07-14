@@ -18,11 +18,10 @@ from backend.app.services.session_service import SessionService
 
 
 class CreateSessionRequest(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     user_input: str = Field(min_length=1)
     learner_id: str | None = None
-    max_debate_rounds: int = Field(default=2, ge=1, le=3)
     provider_overrides: dict[AgentName, LLMProvider] | None = None
     mode: Literal["auto", "teach", "chat", "diagnose"] = "auto"
 
@@ -45,7 +44,6 @@ def create_sessions_router(session_service: SessionService) -> APIRouter:
         record = session_service.create_session(
             user_input=request.user_input,
             learner_id=request.learner_id,
-            max_debate_rounds=request.max_debate_rounds,
             provider_overrides=request.provider_overrides,
             workflow_mode=request.mode,
         )

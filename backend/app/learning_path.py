@@ -52,6 +52,7 @@ def build_dual_axis_snapshot(
     *, profile: dict[str, Any], session_id: str
 ) -> dict[str, Any]:
     weak_text = " ".join(str(item) for item in profile.get("weak_points", []))
+    mastery = profile.get("mastery", {}) if isinstance(profile.get("mastery"), dict) else {}
     knowledge = load_knowledge_dag()
     confusion = load_confusion_pairs()
     runtime_pairs: list[dict[str, Any]] = []
@@ -63,15 +64,34 @@ def build_dual_axis_snapshot(
         ]
         matched = [term for term in terms if term and term in weak_text]
         base_risk = float(pair.get("difficulty", 0.5))
-        risk = min(1.0, base_risk + (0.2 if matched else 0.0)) if matched else 0.0
+        mastery_values = [
+            float(mastery[concept])
+            for concept in (str(pair["concept_a"]), str(pair["concept_b"]))
+            if concept in mastery
+        ]
+        average_mastery = (
+            sum(mastery_values) / len(mastery_values) if mastery_values else None
+        )
+        mastery_risk = (
+            max(0.0, 1.0 - average_mastery) if average_mastery is not None else 0.0
+        )
+        is_active = bool(matched) or (average_mastery is not None and average_mastery < 0.8)
+        risk = (
+            min(1.0, base_risk + (0.2 if matched else 0.0) + 0.25 * mastery_risk)
+            if is_active
+            else 0.0
+        )
+        reasons: list[str] = []
+        if matched:
+            reasons.append(f"学员薄弱点命中：{', '.join(matched)}")
+        if average_mastery is not None:
+            reasons.append(f"BKT平均掌握度：{average_mastery:.2f}")
         runtime = deepcopy(pair)
         runtime.update(
             {
                 "learner_risk": risk,
-                "is_active": bool(matched),
-                "adjustment_reason": (
-                    f"学员薄弱点命中：{', '.join(matched)}" if matched else "当前画像未命中"
-                ),
+                "is_active": is_active,
+                "adjustment_reason": "；".join(reasons) if reasons else "当前画像未命中",
             }
         )
         runtime_pairs.append(runtime)

@@ -19,7 +19,7 @@
 
 | 路由 | 经过的 Agent 节点 |
 |------|-------------------|
-| teach | route → diagnosis → planner → expert_a ∥ expert_b → revise_experts(轮次门控) → expert_a integration → judge → feedback |
+| teach | route → diagnosis_feedback(diagnosis) → planner → expert_a/expert_b 多阶段协作 → judge → diagnosis_feedback(feedback) |
 | chat | route → retrieve_context → chat_answer |
 | diagnose | route → diagnosis |
 

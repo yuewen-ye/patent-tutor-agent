@@ -32,7 +32,6 @@ def test_workflow_runs_single_round_with_real_llm(tmp_path: Path) -> None:
             user_input=user_input,
             llm_client=router,
             artifact_root=tmp_path / "artifacts",
-            max_debate_rounds=1,
         )
     except LLMProviderError as exc:
         message = str(exc).lower()
@@ -50,8 +49,7 @@ def test_workflow_runs_single_round_with_real_llm(tmp_path: Path) -> None:
     # -- state assertions --
     completed = completed_teach_state(state)
     assert completed["session_id"] == "pytest-integration"
-    assert completed["debate_round"] >= 1
-    assert completed["max_debate_rounds"] == 1
+    assert completed["workflow_status"] == "completed"
 
     # learner profile was produced
     profile = completed["learner_profile"]
@@ -83,13 +81,14 @@ def test_workflow_runs_single_round_with_real_llm(tmp_path: Path) -> None:
 
     artifact_paths = {a["path"] for a in completed["artifacts"]}
     expected_artifacts = [
-        "artifacts/sessions/pytest-integration/round-01/learner_profile.md",
-        "artifacts/sessions/pytest-integration/round-01/learning_path.md",
+        "artifacts/sessions/pytest-integration/profile/learner_profile.md",
+        "artifacts/sessions/pytest-integration/path/learning_path.md",
+        "artifacts/sessions/pytest-integration/path/dual_axis_snapshot.md",
         "artifacts/sessions/pytest-integration/round-01/expert_a_draft.md",
         "artifacts/sessions/pytest-integration/round-01/expert_b_draft.md",
+        "artifacts/sessions/pytest-integration/round-01/course_package.md",
         "artifacts/sessions/pytest-integration/round-01/judge_report.md",
-        "artifacts/sessions/pytest-integration/round-01/expert_a_draft-02.md",
-        "artifacts/sessions/pytest-integration/round-01/feedback_report.md",
+        "artifacts/sessions/pytest-integration/feedback/feedback_report.md",
     ]
     for expected in expected_artifacts:
         assert expected in artifact_paths, f"Missing artifact: {expected}"
@@ -111,9 +110,11 @@ def test_workflow_runs_single_round_with_real_llm(tmp_path: Path) -> None:
         / "sessions"
         / "pytest-integration"
         / "round-01"
-        / "expert_a_draft-02.md"
+        / "course_package.md"
     )
-    assert integration_md.read_text(encoding="utf-8").startswith("# 专家 A 教学草稿")
+    assert integration_md.read_text(encoding="utf-8").startswith(
+        "# 整合后的课程完整内容与习题"
+    )
 
 
 def test_workflow_event_ordering_is_correct_with_real_llm(tmp_path: Path) -> None:
@@ -129,7 +130,6 @@ def test_workflow_event_ordering_is_correct_with_real_llm(tmp_path: Path) -> Non
             user_input="请系统性地教我专利审查指南中关于抵触申请的完整规定，包括定义、判断方法、与现有技术的区别",
             llm_client=router,
             artifact_root=tmp_path / "artifacts",
-            max_debate_rounds=1,
         )
     except LLMProviderError as exc:
         message = str(exc).lower()
@@ -144,7 +144,7 @@ def test_workflow_event_ordering_is_correct_with_real_llm(tmp_path: Path) -> Non
     completed_events = [
         e["node"] for e in state["events"] if e["status"] == "completed"
     ]
-    assert completed_events[:3] == ["route", "diagnosis", "planner"]
+    assert completed_events[:3] == ["route", "diagnosis_feedback", "planner"]
     assert "retrieve_context" not in completed_events
     assert "expert_a" in completed_events and "expert_b" in completed_events
-    assert completed_events[-3:] == ["expert_a", "judge", "feedback"]
+    assert completed_events[-3:] == ["expert_a", "judge", "diagnosis_feedback"]

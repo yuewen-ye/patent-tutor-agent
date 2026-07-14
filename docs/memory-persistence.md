@@ -1,6 +1,6 @@
 # 记忆系统现状与持久化方案
 
-> 2026-07 当前实现：FastAPI 和 CLI 默认使用 `SQLiteLearnerStore`，数据库为 `data/learner_memory.sqlite3`。画像在 `learner_state[diagnosis]` 写入，练习提交更新 BKT，`learner_state[feedback]` 写入画像更新与反馈历史。旧 JSON 文件只通过 `backend/scripts/migrate_learner_memory.py` 显式、幂等迁移。下面关于 `FileLearnerMemoryStore` 和“SQLite 待实现”的内容仅保留为历史设计记录。
+> 2026-07 当前实现：FastAPI 和 CLI 默认使用 `SQLiteLearnerStore`，数据库为 `data/learner_memory.sqlite3`。画像在 `diagnosis_feedback[diagnosis]` 写入，练习提交更新 BKT，`diagnosis_feedback[feedback]` 写入画像更新与反馈历史。旧 JSON 文件只通过 `backend/scripts/migrate_learner_memory.py` 显式、幂等迁移。下面关于 `FileLearnerMemoryStore` 和“SQLite 待实现”的内容仅保留为历史设计记录。
 
 ## 当前架构
 

@@ -23,8 +23,6 @@ ArtifactKind = Literal[
     "cross_review",
     "expert_revision",
     "course_package",
-    "exercise_answer_key",
-    "final_learning",
     "dual_axis_snapshot",
     "questionnaire",
     "questionnaire_submission",
@@ -32,24 +30,22 @@ ArtifactKind = Literal[
 ]
 
 _CREATED_BY = {
-    "learner_profile": "learner_state",
+    "learner_profile": "diagnosis_feedback",
     "learning_path": "planner",
     "retrieval_context": "retrieve_context",
     "expert_a_draft": "expert_a",
     "expert_b_draft": "expert_b",
     "judge_report": "judge",
-    "feedback_result": "learner_state",
+    "feedback_result": "diagnosis_feedback",
     "chat_answer": "chat_answer",
     "dual_axis_snapshot": "planner",
     "expert_a_cross_review": "expert_a",
     "expert_b_cross_review": "expert_b",
     "expert_a_revision": "expert_a",
     "expert_b_revision": "expert_b",
-    "final_learning_markdown": "publish_final_learning",
-    "exercise_answer_key": "publish_final_learning",
-    "learner_profile_update": "learner_state",
+    "learner_profile_update": "diagnosis_feedback",
     "course_package": "expert_a",
-    "grading_report": "learner_state",
+    "grading_report": "diagnosis_feedback",
 }
 _KIND_BY_FIELD: dict[str, ArtifactKind] = {
     "learner_profile": "learner_profile_report",
@@ -65,8 +61,6 @@ _KIND_BY_FIELD: dict[str, ArtifactKind] = {
     "expert_b_cross_review": "cross_review",
     "expert_a_revision": "expert_revision",
     "expert_b_revision": "expert_revision",
-    "final_learning_markdown": "final_learning",
-    "exercise_answer_key": "exercise_answer_key",
     "learner_profile_update": "feedback_report",
     "course_package": "course_package",
     "grading_report": "feedback_report",
@@ -85,8 +79,6 @@ _TITLE_BY_FIELD = {
     "expert_b_cross_review": "专家 B 对专家 A 的互评",
     "expert_a_revision": "专家 A 修订稿",
     "expert_b_revision": "专家 B 修订稿",
-    "final_learning_markdown": "个性化学习课程",
-    "exercise_answer_key": "练习题内部答案",
     "learner_profile_update": "学情画像更新",
     "course_package": "整合后的课程完整内容与习题",
     "grading_report": "练习评分报告",
@@ -105,8 +97,6 @@ _FILE_BY_FIELD = {
     "expert_b_cross_review": "expert_b_cross_review.md",
     "expert_a_revision": "expert_a_revision.md",
     "expert_b_revision": "expert_b_revision.md",
-    "final_learning_markdown": "final_learning.md",
-    "exercise_answer_key": "exercise_answer_key.md",
     "learner_profile_update": "learner_profile_update.md",
     "course_package": "course_package.md",
     "grading_report": "grading_report.md",
@@ -128,7 +118,6 @@ _DIRECTORIES = {
     "learning_path": "path",
     "dual_axis_snapshot": "path",
     "feedback_result": "feedback",
-    "exercise_answer_key": "internal",
     "learner_profile_update": "feedback",
     "grading_report": "feedback",
 }
@@ -176,8 +165,6 @@ def _deduplicated_path(path: Path) -> Path:
 
 
 def _markdown_for(field: str, value: object) -> str:
-    if field == "final_learning_markdown":
-        return str(value)
     title = _TITLE_BY_FIELD[field]
     if field == "learning_path" and isinstance(value, list):
         return _learning_path_markdown(title, value)
@@ -189,8 +176,6 @@ def _markdown_for(field: str, value: object) -> str:
         return _cross_review_markdown(title, value)
     if field == "judge_report" and isinstance(value, dict):
         return _judge_markdown(title, value)
-    if field == "exercise_answer_key" and isinstance(value, list):
-        return _answer_key_markdown(title, value)
     if field == "grading_report" and isinstance(value, list):
         return _grading_markdown(title, value)
     if isinstance(value, dict):
@@ -306,22 +291,6 @@ def _judge_markdown(title: str, value: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _answer_key_markdown(title: str, value: list[Any]) -> str:
-    lines = [f"# {title}", "", "> 仅供评分与学情更新使用，不向学员课程页面发布。", ""]
-    for index, item in enumerate(value, start=1):
-        if isinstance(item, dict):
-            lines.extend(
-                [
-                    f"## {index}. {item.get('question_id', '')}",
-                    "",
-                    f"- 答案：{item.get('answer', '')}",
-                    f"- 解析：{item.get('explanation', '')}",
-                    "",
-                ]
-            )
-    return "\n".join(lines).rstrip() + "\n"
-
-
 def _grading_markdown(title: str, value: list[Any]) -> str:
     lines = [f"# {title}", "", "| 题目 | 观测结果 | 评分状态 |", "|---|---|---|"]
     for item in value:
@@ -409,7 +378,7 @@ def write_process_markdown(
     content: str,
     kind: str = "questionnaire",
     title: str = "过程产物",
-    created_by: str = "learner_state",
+    created_by: str = "diagnosis_feedback",
 ) -> dict[str, Any]:
     relative = Path(relative_path)
     if relative.is_absolute() or ".." in relative.parts or relative.suffix != ".md":
@@ -437,8 +406,6 @@ def write_manifest(*, artifact_root: Path, state: Mapping[str, Any], status: str
     manifest = {
         "session_id": state["session_id"],
         "status": status,
-        "debate_round": state.get("debate_round"),
-        "max_debate_rounds": state.get("max_debate_rounds"),
         "artifacts": state.get("artifacts", []),
         "updated_at": datetime.now(UTC).isoformat(),
     }

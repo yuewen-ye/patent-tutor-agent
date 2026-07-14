@@ -25,15 +25,6 @@ class MemoryQueueLLMClient:
                 "weak_points": [weak_point],
                 "learning_goal": learning_goal,
             },
-            [
-                {
-                    "node_id": "novelty-basics",
-                    "node_name": "新颖性基础",
-                    "duration_min": 20,
-                    "strategy": "案例优先",
-                    "prerequisites": [],
-                }
-            ],
             {
                 "expert": "expert_a",
                 "style": "conservative_precise",
@@ -100,6 +91,11 @@ class MemoryQueueLLMClient:
                 "disputes": [],
                 "rationale": "整合稿可以输出",
             },
+            {
+                "questionnaire": ["本节最容易混淆什么？"],
+                "next_action": "完成练习后复盘",
+                "profile_update_hint": weak_point,
+            },
         ]
 
     def generate_json(
@@ -137,7 +133,6 @@ def test_workflow_uses_checkpointer_and_store_for_learner_memory(
         checkpointer=checkpointer,
         store=store,
         learner_id="learner-alice",
-        max_debate_rounds=1,
     )
 
     checkpoint_config: Any = {"configurable": {"thread_id": "memory-session-1"}}
@@ -159,9 +154,8 @@ def test_workflow_uses_checkpointer_and_store_for_learner_memory(
         checkpointer=checkpointer,
         store=store,
         learner_id="learner-alice",
-        max_debate_rounds=1,
     )
 
-    diagnosis_prompt = second_llm.messages_by_agent["learner_state"][0]
+    diagnosis_prompt = second_llm.messages_by_agent["diagnosis_feedback"][0]
     assert "历史学习者画像" in diagnosis_prompt
     assert "现有技术概念薄弱" in diagnosis_prompt

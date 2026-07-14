@@ -58,7 +58,7 @@ def test_health_endpoints_report_service_status_and_readiness(
     client, service = make_client(tmp_path, monkeypatch)
     created = client.post(
         "/sessions",
-        json={"user_input": "我想学习专利新颖性", "max_debate_rounds": 1},
+        json={"user_input": "我想学习专利新颖性"},
     )
     session_id = created.json()["session_id"]
 
@@ -109,7 +109,6 @@ def test_session_snapshot_includes_learner_id(tmp_path: Path, monkeypatch: pytes
         json={
             "user_input": "我想学习专利新颖性",
             "learner_id": "learner-api",
-            "max_debate_rounds": 1,
         },
     ).json()["session_id"]
     service.wait_for_completion(session_id, timeout=5)
@@ -130,7 +129,7 @@ def test_session_websocket_sends_connection_metadata(
     client, service = make_client(tmp_path, monkeypatch)
     session_id = client.post(
         "/sessions",
-        json={"user_input": "我想学习专利新颖性", "max_debate_rounds": 1},
+        json={"user_input": "我想学习专利新颖性"},
     ).json()["session_id"]
     service.wait_for_completion(session_id, timeout=5)
 
@@ -155,7 +154,7 @@ def test_session_api_cancels_running_workflow_without_later_completion(
     client = TestClient(create_app(session_service=service))
     session_id = client.post(
         "/sessions",
-        json={"user_input": "我想学习专利新颖性", "max_debate_rounds": 1},
+        json={"user_input": "我想学习专利新颖性"},
     ).json()["session_id"]
     assert llm_client.started.wait(timeout=5)
 
@@ -183,7 +182,7 @@ def test_session_ttl_prunes_terminal_sessions(
     client, service = make_client(tmp_path, monkeypatch)
     session_id = client.post(
         "/sessions",
-        json={"user_input": "我想学习专利新颖性", "max_debate_rounds": 1},
+        json={"user_input": "我想学习专利新颖性"},
     ).json()["session_id"]
     service.wait_for_completion(session_id, timeout=5)
     expired_now = datetime.now(UTC) + timedelta(hours=2)

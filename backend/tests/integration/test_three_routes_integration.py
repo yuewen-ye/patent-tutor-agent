@@ -23,15 +23,15 @@ def _try_router() -> AgentLLMRouter:
         pytest.skip(f"No provider configured: {exc}")
 
 
-def _try_run(router: AgentLLMRouter, session_id: str, user_input: str,
-             tmp_path: Path, max_debate_rounds: int = 1):
+def _try_run(
+    router: AgentLLMRouter, session_id: str, user_input: str, tmp_path: Path
+):
     try:
         return run_workflow(
             session_id=session_id,
             user_input=user_input,
             llm_client=router,
             artifact_root=tmp_path / "artifacts",
-            max_debate_rounds=max_debate_rounds,
         )
     except LLMProviderError as exc:
         message = str(exc).lower()
@@ -63,11 +63,11 @@ class TestTeachRoute:
         state = _try_run(router, "integ-teach-events", "我想系统学习如何判断发明专利的创造性", tmp_path)
         completed = [e["node"] for e in state["events"] if e["status"] == "completed"]
         assert "route" == completed[0]
-        assert "diagnosis" in completed
+        assert "diagnosis_feedback" in completed
         assert "planner" in completed
         assert "retrieve_context" not in completed
         assert "tool_agent" not in completed
-        assert completed[-1] == "feedback"
+        assert completed[-1] == "diagnosis_feedback"
 
 
 class TestChatRoute:
@@ -109,4 +109,4 @@ class TestDiagnoseRoute:
         router = _try_router()
         state = _try_run(router, "integ-diagnose-events", "评估一下我的专利代理考试准备情况", tmp_path)
         completed = [e["node"] for e in state["events"] if e["status"] == "completed"]
-        assert completed == ["route", "diagnosis"]
+        assert completed == ["route", "diagnosis_feedback"]

@@ -94,7 +94,6 @@ def build_judge_node(llm_client: LLMClient) -> Node:
                 "检索上下文：{retrieval_context}\n"
                 "学习者画像：{learner_profile}\n"
                 "学习路径：{learning_path}\n"
-                "当前辩论轮次：{debate_round}\n"
                 "请只审核专家 A 的整合教学稿。通过后它就是 teach 路由的最终教学内容。"
                 "judge 只判断是否通过并说明理由，不生成教学正文，不承担整合过程输出。",
             ),
@@ -111,7 +110,6 @@ def build_judge_node(llm_client: LLMClient) -> Node:
                 retrieval_context=state.get("retrieval_context", []),
                 learner_profile=state.get("learner_profile", {}),
                 learning_path=state.get("learning_path", []),
-                debate_round=state.get("debate_round", 1),
             ),
             temperature=agent_temperature("judge", 0.0),
             agent="judge",
@@ -119,6 +117,7 @@ def build_judge_node(llm_client: LLMClient) -> Node:
         report = JudgeReport.model_validate(_normalize_judge_report(raw))
         return {
             "judge_report": report.model_dump(),
+            "diagnosis_feedback_phase": "feedback",
             "events": [completed_event("judge", "reviewed expert A integration draft with LLM")],
         }
 

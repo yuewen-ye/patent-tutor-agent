@@ -1,108 +1,50 @@
-# 工作流节点说明与三路径自洽检查（历史基线）
+# 当前工作流节点说明
 
-> 本文主体记录 2026-06 旧工作流。当前节点、边、双知识轴、SQLite/BKT 和 Markdown 规范见 `docs/workflow-technical-guide.md`；当前图以 `docs/architecture/workflow.mmd` 为准。旧 `diagnosis`/`feedback` 已合并为同一个 `learner_state` 节点，旧 `revise_experts` 循环已替换为专家阶段重入和 Judge 整合稿重审。
+当前图以 `backend/app/graph/workflow.py` 和 `docs/architecture/workflow.mmd` 为准。
 
-本文档描述当前 `backend/app/graph/workflow.py` 中实际编译进 LangGraph 的节点、边和三条运行路径。它以源码实现为准。
+| 节点 | 类型 | 读取 | 写入 |
+|---|---|---|---|
+| `_init` | 确定性 | 会话输入、`workflow_mode` | 会话 ID、阶段初值、运行状态 |
+| `route` | LLM | `user_input` | `intent` |
+| `diagnosis_feedback` | LLM + Store | 问卷、历史画像；反馈阶段读取 Judge/练习 | `learner_profile` 或 `feedback_result`、画像更新、评分 |
+| `planner` | 确定性 + Store | 最新画像、BKT、静态双轴 | `learning_path`、`dual_axis_snapshot`、`path_decision` |
+| `retrieve_context` | 检索服务 | chat 问题 | `retrieval_context` |
+| `expert_a` | LLM + Tool | 画像、路径、检索、专家阶段数据 | 草稿、互评、修订、`course_package` |
+| `expert_b` | LLM + Tool | 画像、检索、专家阶段数据 | 草稿、互评、修订、阶段推进 |
+| `judge` | LLM | 专家 A 整合稿、画像、路径、检索 | `judge_report`、反馈阶段标志 |
+| `chat_answer` | LLM | chat 检索结果 | `chat_answer` |
 
-## 当前节点总览
+## 与上一版逐节点对照
 
-| 节点 | 类型 | 主要职责 | 读取状态 | 写入状态 / 产物 |
-| --- | --- | --- | --- | --- |
-| `__start__` | LangGraph 内置 | 图入口，不执行业务逻辑。 | 初始输入 | 无 |
-| `_init` | 非 LLM | 兼容 LangGraph Studio；当输入未提供 `session_id` 时自动生成短 UUID。 | `session_id` | `session_id` |
-| `route` | LLM JSON + 本地兜底 | 判断用户意图：`teach`、`chat`、`diagnose`。 | `user_input` | `intent`、事件、路由产物 |
-| `diagnosis` | LLM JSON + Store 读 | diagnosis Agent 的初始诊断阶段；生成学习者画像，并读取长期记忆中的历史画像作为提示上下文。 | `user_input`、历史 profile memory | `learner_profile`、事件、画像产物 |
-| `planner` | LLM JSON | 根据学习目标和画像生成学习路径；会规范化模型生成的 `node_id`。 | `user_input`、`learner_profile` | `learning_path`、事件、路径产物 |
-| `retrieve_context` | 非 LLM | chat 路径固定调用 RAG 检索。 | `user_input`、已有 `retrieval_context` | 追加 `retrieval_context`、事件、检索产物 |
-| `expert_a` | LLM JSON + Tool | 保守严谨的法条优先专家；自行决定是否调用 RAG；生成辩论草稿，并在 A/B 辩论完成后整合两位专家结果。 | `user_input`、`retrieval_context`、`debate_round`、`expert_a_draft`、`expert_b_draft` | `expert_a_draft`、可选 `retrieval_context`、事件、专家草稿/整合稿产物 |
-| `expert_b` | LLM JSON + Tool | 生动灵活的教学专家；自行决定是否调用 RAG；生成辩论草稿，并参考专家 A 上轮草稿补强案例和学习适配。 | `user_input`、`learner_profile`、`retrieval_context`、`debate_round`、`expert_a_draft` | `expert_b_draft`、可选 `retrieval_context`、事件、专家草稿产物 |
-| `judge` | LLM JSON | 只审核专家 A 整合稿是否通过，不生成教学正文或过程输出。 | `expert_a_draft`、`user_input`、`retrieval_context`、`learner_profile`、`learning_path`、`debate_round` | `judge_report`、事件、裁判报告产物 |
-| `revise_experts` | 非 LLM | 递增 `debate_round`，记录上一轮 A/B 辩论摘要，并固定分派回两位专家。 | `expert_a_draft`、`expert_b_draft`、`debate_round` | `debate_round`、`revision_history`、事件 |
-| `feedback` | LLM JSON + Store 写 | teach 后置反馈阶段；根据画像和裁判报告生成问卷、下一步动作、画像更新建议。 | `user_input`、`learner_profile`、`judge_report` | `feedback_result`、事件、反馈产物、profile/history memory |
-| `chat_answer` | LLM JSON | chat 路径的轻量回答；基于用户问题和检索上下文生成 500 字以内回答。 | `user_input`、`retrieval_context` | `chat_answer`、事件、快速回答产物 |
-| `__end__` | LangGraph 内置 | 图终点，不执行业务逻辑。 | 最终状态 | 无 |
+上一版在图上暴露 15 个节点，其中 6 个只是阶段跳转或发布门控，业务 Agent、
+流程控制和文件发布混在同一层。当前图只保留 9 个有独立职责的运行节点。
 
-## 实际边关系
+| 上一版节点 | 当前对应 | 变化 |
+|---|---|---|
+| `_init` | `_init` | 保留；只初始化会话、工作流模式和节点阶段，不再初始化辩论轮次或发布状态。 |
+| `route` | `route` | 保留；仍只负责 `teach/chat/diagnose` 意图分类。 |
+| `learner_state` | `diagnosis_feedback` | 改名；仍是诊断/反馈双阶段 Agent，但名称明确表达两个阶段，并统一承担 Store 画像读写。 |
+| `planner` | `planner` | 从 LLM Agent 改为确定性节点；直接读取数据库最新画像与 BKT 掌握度，计算混淆轴和学习路径。 |
+| `retrieve_context` | `retrieve_context` | 保留；仍是 chat 路径的确定性检索节点。 |
+| `chat_answer` | `chat_answer` | 保留；仍基于检索结果生成快速回答。 |
+| `expert_a` | `expert_a` | 保留多阶段 Agent；依次完成草稿、互评、修订和课程包整合，不再把整合稿交给独立发布节点。 |
+| `expert_b` | `expert_b` | 保留多阶段 Agent；依次完成草稿、互评和修订，并驱动阶段推进。 |
+| `judge` | `judge` | 保留审核职责；不再决定发布、重整合或质量失败分支，审核后统一进入反馈。 |
+| `_prepare_cross_review` | 无独立节点 | 删除；阶段切换由 `expert_b` 的状态更新完成。 |
+| `_prepare_expert_revision` | 无独立节点 | 删除；阶段切换由 `expert_b` 的状态更新完成。 |
+| `_prepare_course_integration` | 无独立节点 | 删除；阶段切换由 `expert_b` 的状态更新完成。 |
+| `revise_integration` | 无独立节点 | 删除；Judge 不再触发整合稿循环，修改建议保存在审核产物中。 |
+| `publish_final_learning` | 无独立节点 | 删除；不生成最终 Markdown，`course_package.md` 只是可审计的过程产物。 |
+| `quality_gate_failed` | 无独立节点 | 删除；完成状态由反馈阶段写入，Judge 结论保留在 `judge_report.md`。 |
 
-```text
-__start__ -> _init -> route
+因此当前主链不是旧版的“专家阶段控制节点 + 发布门控”，而是：
+`diagnosis_feedback → planner → expert_a/expert_b → judge → diagnosis_feedback`。
 
-route -- intent=chat ------------------> retrieve_context
-route -- intent=teach/diagnose --------> diagnosis
+## 路由
 
-diagnosis -- intent=diagnose ----------> __end__
-diagnosis -- intent=teach -------------> planner
+- teach：`route → diagnosis_feedback → planner → A/B 多阶段协作 → judge → diagnosis_feedback → END`
+- chat：`route → retrieve_context → chat_answer → END`
+- diagnose：`route → diagnosis_feedback → END`
+- feedback：`_init → diagnosis_feedback → END`
 
-planner -------------------------------> expert_a + expert_b
-
-retrieve_context -- intent=chat -------> chat_answer -> __end__
-
-expert_a/expert_b -- round < max ------> revise_experts
-expert_a/expert_b -- round >= max -----> _prepare_integration
-
-revise_experts ------------------------> expert_a + expert_b
-
-_prepare_integration ------------------> expert_a integration -> judge -> feedback -> __end__
-```
-
-## 三条路径
-
-### Teach 系统学习路径
-
-```text
-__start__
-  -> _init
-  -> route
-  -> diagnosis
-  -> planner
-  -> expert_a + expert_b
-  -> revise_experts (until max_debate_rounds)
-  -> expert_a integration
-  -> judge
-  -> feedback
-  -> __end__
-```
-
-如果 `debate_round < max_debate_rounds`，中间会插入下一轮 A/B 辩论：
-
-```text
-expert_a + expert_b -> revise_experts -> expert_a + expert_b
-```
-
-这条路径承担完整教学闭环：诊断画像、规划路径、专家按需检索、双专家辩论、专家 A 整合、Judge 最终裁决、feedback 后置反馈。通过后的 `expert_a_draft`（`draft_stage="integration"`）就是 teach 路由最终教学内容。
-
-### Chat 快速问答路径
-
-```text
-__start__
-  -> _init
-  -> route
-  -> retrieve_context
-  -> chat_answer
-  -> __end__
-```
-
-这条路径跳过画像、规划、专家链、裁判和反馈。`retrieve_context` 直接检索法条上下文，`chat_answer` 基于检索上下文生成短答案。
-
-### Diagnose 仅诊断路径
-
-```text
-__start__
-  -> _init
-  -> route
-  -> diagnosis
-  -> __end__
-```
-
-这条路径只生成 `learner_profile`，不进入学习路径规划、检索、专家协作或整合稿生成。
-
-## 自洽性检查
-
-- 三条入口路由互斥：`route` 的 Pydantic 合同只允许 `teach`、`chat`、`diagnose`，条件边只按这三个意图分流。
-- `diagnose` 路径可独立结束：`diagnosis` 只依赖 `user_input` 和可选历史记忆，不依赖 planner 或专家链输出。
-- `chat` 路径可独立结束：`retrieve_context` 与 `chat_answer` 都只依赖 `user_input` 和可选 `retrieval_context`。
-- `teach` 正常接受路径闭环完整：`diagnosis -> planner -> experts debate -> expert_a integration -> judge -> feedback` 的每一步都有上游状态输入和下游消费方。
-- 最大轮次能防止无限循环：A/B 辩论只在 `debate_round < max_debate_rounds` 时继续，否则进入专家 A 整合。
-- Judge 不参与辩论过程门控，只审核专家 A 整合稿是否通过。
-- feedback 在 Judge 后执行，负责反馈闭环和记忆写入建议，不改写最终教学内容。
-- teach 最终教学内容不再由独立汇总节点或独立最终答案字段生成；A/B 辩论完成后由专家 A 写入整合阶段 `expert_a_draft`，再由 Judge 最终裁决。
+Judge 不改写教学正文，也不控制发布。无论 `decision` 是 `accept`、`accept_with_minor_revision` 还是 `revise`，后继节点都是 `diagnosis_feedback` 的反馈阶段，裁决内容留在审计产物中。

@@ -178,11 +178,11 @@ def test_agent_llm_router_reads_agent_specific_provider_config(monkeypatch, tmp_
     for env_name in AGENT_PROVIDER_ENV.values():
         monkeypatch.setenv(env_name, "")
     monkeypatch.setenv("DEFAULT_LLM_PROVIDER", "deepseek")
-    monkeypatch.setenv("DIAGNOSIS_PROVIDER", "qwen")
+    monkeypatch.setenv("DIAGNOSIS_FEEDBACK_PROVIDER", "qwen")
     monkeypatch.setenv("EXPERT_B_PROVIDER", "glm")
 
     router = AgentLLMRouter.from_env()
 
-    assert router.provider_for("diagnosis") == "qwen"
-    assert router.provider_for("planner") == "deepseek"
+    assert router.provider_for("diagnosis_feedback") == "qwen"
+    assert "planner" not in router.agent_providers
     assert router.provider_for("expert_b") == "glm"

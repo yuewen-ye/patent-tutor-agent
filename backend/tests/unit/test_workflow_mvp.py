@@ -21,7 +21,7 @@ class QueueLLMClient:
             "route": [
                 {"intent": "teach", "confidence": 0.95, "reason": "系统学习请求"},
             ],
-            "learner_state": [
+            "diagnosis_feedback": [
                 {
                     "education_background": "patent_exam_candidate",
                     "knowledge_level": "beginner",
@@ -29,17 +29,11 @@ class QueueLLMClient:
                     "weak_points": ["法条概念辨析"],
                     "learning_goal": "学习专利新颖性",
                 },
-            ],
-            "planner": [
-                [
-                    {
-                        "node_id": "patentability-basic",
-                        "node_name": "专利授权条件基础",
-                        "duration_min": 20,
-                        "strategy": "先学授权条件",
-                        "prerequisites": [],
-                    }
-                ]
+                {
+                    "questionnaire": ["本节最容易混淆什么？"],
+                    "next_action": "完成练习后复盘",
+                    "profile_update_hint": "继续观察新颖性判断步骤",
+                },
             ],
             "expert_a": [
                 {
@@ -158,7 +152,6 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm(
         session_id="demo-session",
         user_input="我想学习专利新颖性和创造性的区别",
         llm_client=llm_client,
-        max_debate_rounds=1,
     )
 
     completed = completed_teach_state(state)
@@ -172,13 +165,13 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm(
     assert completed["expert_b_draft"]["style"] == "vivid_teaching"
     assert completed["judge_report"]["decision"] == "accept"
     assert completed["workflow_status"] == "completed"
-    assert "整合专家A和专家B后的教学内容" in completed["final_learning_markdown"]
+    assert completed["course_package"]["teaching_content"] == "整合专家A和专家B后的教学内容"
 
     completed_events = [event for event in state["events"] if event["status"] == "completed"]
     event_names = [event["node"] for event in completed_events]
     assert event_names == [
         "route",
-        "learner_state",
+        "diagnosis_feedback",
         "planner",
         "expert_a",
         "expert_b",
@@ -188,22 +181,22 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm(
         "expert_b",
         "expert_a",
         "judge",
-        "publish_final_learning",
+        "diagnosis_feedback",
     ]
-    assert all(event["round"] == 1 for event in completed_events)
     assert all(isinstance(event["timestamp"], str) and event["timestamp"] for event in completed_events)
     assert all(isinstance(event["duration_ms"], int) for event in completed_events)
     assert llm_client.tool_call_agents.count("expert_a") == 2
     assert llm_client.tool_call_agents.count("expert_b") == 1
     assert len(completed["retrieval_context"]) >= 1
     # Verify agent call order
-    assert llm_client.agents[:3] == ["route", "learner_state", "planner"]
+    assert llm_client.agents[:2] == ["route", "diagnosis_feedback"]
+    assert "planner" not in llm_client.agents
     assert "tool_agent" not in llm_client.agents
     assert "expert_a" in llm_client.agents
     assert "expert_b" in llm_client.agents
     assert llm_client.agents.count("judge") == 1
-    assert llm_client.agents.count("learner_state") == 1
-    assert llm_client.agents[-1] == "judge"
+    assert llm_client.agents.count("diagnosis_feedback") == 2
+    assert llm_client.agents[-1] == "diagnosis_feedback"
     forbidden_agents = {
         "cross_review_a",
         "cross_review_b",
@@ -215,7 +208,7 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm(
         "tool_agent",
     }
     assert forbidden_agents.isdisjoint(set(llm_client.agents))
-    assert llm_client.agents[-2:] == ["expert_a", "judge"]
+    assert llm_client.agents[-2:] == ["judge", "diagnosis_feedback"]
     assert "工作流完成" in capsys.readouterr().err
 
 
@@ -228,7 +221,6 @@ def test_teach_workflow_persists_learner_memory_once(monkeypatch: pytest.MonkeyP
         session_id="memory-once-session",
         user_input="我想学习专利新颖性和创造性的区别",
         llm_client=llm_client,
-        max_debate_rounds=1,
         learner_id="learner-unit",
         checkpointer=InMemorySaver(),
         store=store,
@@ -236,7 +228,7 @@ def test_teach_workflow_persists_learner_memory_once(monkeypatch: pytest.MonkeyP
 
     profiles = store.search(learner_namespace("learner-unit", "profile"), limit=5)
     histories = store.search(learner_namespace("learner-unit", "history"), limit=5)
-    assert len(profiles) == 1
+    assert len(profiles) == 2
     assert len(histories) == 1
 
 
@@ -244,12 +236,12 @@ def test_workflow_compiles_and_exports_mermaid(tmp_path: Path) -> None:
     workflow = build_workflow(llm_client=QueueLLMClient())
     mermaid = export_workflow_mermaid(workflow)
 
-    assert "learner_state" in mermaid
+    assert "diagnosis_feedback" in mermaid
     assert "planner" in mermaid
     assert "expert_a" in mermaid
     assert "expert_b" in mermaid
     assert "judge" in mermaid
-    assert "publish_final_learning" in mermaid
+    assert "publish_final_learning" not in mermaid
     assert "retrieve_context" in mermaid
     assert "planner -.-> expert_a" in mermaid or "planner --> expert_a" in mermaid
     assert "tool_agent" not in mermaid

@@ -33,14 +33,14 @@ def summary_lines(state: dict[str, Any]) -> list[str]:
         markdown_path = str(markdown_artifact.get("path") or "")
     if not markdown_path and isinstance(artifacts, list):
         for artifact in reversed(artifacts):
-            if isinstance(artifact, dict) and artifact.get("kind") == "final_learning":
+            if isinstance(artifact, dict) and artifact.get("kind") == "course_package":
                 markdown_path = str(artifact.get("path") or "")
                 break
 
     lines = [
         "Workflow summary",
         f"Session: {state.get('session_id', '')}",
-        f"Judge rounds: {state.get('judge_round', '?')}/{state.get('max_debate_rounds', '?')}",
+        f"Workflow status: {state.get('workflow_status', 'unknown')}",
         f"Teaching result: {str(teaching_result.get('teaching_content', ''))[:80]}",
         f"Legal basis: {source_text}",
         f"Artifacts: {artifacts_count} files",
@@ -75,7 +75,6 @@ def main() -> None:
     parser.add_argument("--session-id", default="local-llm-smoke")
     parser.add_argument("--learner-id", help="Optional learner id for LangGraph Store memory.")
     parser.add_argument("--artifact-root", default="artifacts")
-    parser.add_argument("--max-debate-rounds", type=int, default=3)
     parser.add_argument("--user-input", default="我想学习专利新颖性和创造性的区别")
     parser.add_argument(
         "--mode", choices=["auto", "teach", "chat", "diagnose", "feedback"], default="auto"
@@ -114,7 +113,6 @@ def main() -> None:
         user_input=args.user_input,
         llm_client=router,
         artifact_root=args.artifact_root,
-        max_debate_rounds=args.max_debate_rounds,
         learner_id=args.learner_id,
         workflow_mode=args.mode,
         store=SQLiteLearnerStore(

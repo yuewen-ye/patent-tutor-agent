@@ -21,7 +21,7 @@ class DebateQueueLLMClient:
             "route": [
                 {"intent": "teach", "confidence": 0.95, "reason": "系统学习请求"},
             ],
-            "learner_state": [
+            "diagnosis_feedback": [
                 {
                     "education_background": "patent_exam_candidate",
                     "knowledge_level": "beginner",
@@ -29,17 +29,11 @@ class DebateQueueLLMClient:
                     "weak_points": ["新颖性判断步骤不清"],
                     "learning_goal": "学习专利新颖性",
                 },
-            ],
-            "planner": [
-                [
-                    {
-                        "node_id": "novelty-basics",
-                        "node_name": "新颖性基础",
-                        "duration_min": 20,
-                        "strategy": "先看法条，再做案例",
-                        "prerequisites": [],
-                    },
-                ],
+                {
+                    "questionnaire": ["本节最容易混淆什么？"],
+                    "next_action": "完成练习后复盘",
+                    "profile_update_hint": "继续观察新颖性判断步骤",
+                },
             ],
             "expert_a": [
                 {
@@ -151,7 +145,6 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
         user_input="我想学习专利新颖性",
         llm_client=llm_client,
         artifact_root=tmp_path / "artifacts",
-        max_debate_rounds=2,
     )
     completed = completed_teach_state(state)
 
@@ -159,11 +152,11 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     assert agents.count("expert_a") == 4
     assert agents.count("expert_b") == 3
     assert agents.count("judge") == 1
-    assert agents.count("learner_state") == 1
+    assert agents.count("diagnosis_feedback") == 2
     assert llm_client.tool_call_agents.count("expert_a") == 2
     assert llm_client.tool_call_agents.count("expert_b") == 1
     assert "tool_agent" not in agents
-    assert agents[-1] == "judge"
+    assert agents[-1] == "diagnosis_feedback"
     assert {
         "cross_review_a",
         "cross_review_b",
@@ -174,14 +167,10 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
         "finalize",
         "tool_agent",
     }.isdisjoint(set(agents))
-    assert completed["debate_round"] == 1
     assert completed["judge_report"]["decision"] == "accept"
     assert completed["expert_a_draft"]["draft_stage"] == "integration"
     assert completed["expert_a_draft"]["teaching_content"] == "专家A整合A/B辩论结果后的教学内容"
     assert completed["workflow_status"] == "completed"
-
-    debate_events = [event for event in state["events"] if event["status"] == "debate_round"]
-    assert debate_events == []
 
     artifact_paths = [Path(artifact["path"]) for artifact in completed["artifacts"]]
     assert Path("artifacts/sessions/demo-session/round-01/expert_a_draft.md") in artifact_paths
@@ -191,7 +180,7 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     assert Path("artifacts/sessions/demo-session/round-01/expert_a_revision.md") in artifact_paths
     assert Path("artifacts/sessions/demo-session/round-01/expert_b_revision.md") in artifact_paths
     assert Path("artifacts/sessions/demo-session/round-01/course_package.md") in artifact_paths
-    assert Path("artifacts/sessions/demo-session/final_learning.md") in artifact_paths
+    assert all(path.name != "final_learning.md" for path in artifact_paths)
     assert len(artifact_paths) == len(set(artifact_paths))
 
     manifest_path = tmp_path / "artifacts" / "sessions" / "demo-session" / "manifest.json"
@@ -209,10 +198,10 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     completed_log_nodes = [
         record["node"] for record in workflow_log if record["status"] == "completed"
     ]
-    assert completed_log_nodes[:3] == ["route", "learner_state", "planner"]
+    assert completed_log_nodes[:3] == ["route", "diagnosis_feedback", "planner"]
     assert completed_log_nodes.count("expert_a") == 4
     assert completed_log_nodes.count("expert_b") == 3
-    assert completed_log_nodes[-3:] == ["expert_a", "judge", "publish_final_learning"]
+    assert completed_log_nodes[-3:] == ["expert_a", "judge", "diagnosis_feedback"]
     assert all(record["session_id"] == "demo-session" for record in workflow_log)
     assert all(
         isinstance(record["duration_ms"], int)
@@ -231,7 +220,7 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     assert "专家A整合A/B辩论结果后的教学内容" in integration_path.read_text(encoding="utf-8")
 
 
-def test_workflow_runs_both_experts_for_each_debate_round_before_integration(
+def test_workflow_runs_both_experts_through_each_internal_phase_before_integration(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -243,7 +232,6 @@ def test_workflow_runs_both_experts_for_each_debate_round_before_integration(
         user_input="我想学习专利新颖性",
         llm_client=llm_client,
         artifact_root=tmp_path / "artifacts",
-        max_debate_rounds=2,
     )
 
     completed = completed_teach_state(state)
@@ -251,10 +239,9 @@ def test_workflow_runs_both_experts_for_each_debate_round_before_integration(
     assert agents.count("expert_a") == 4
     assert agents.count("expert_b") == 3
     assert agents.count("judge") == 1
-    assert agents.count("learner_state") == 1
+    assert agents.count("diagnosis_feedback") == 2
     assert llm_client.tool_call_agents.count("expert_a") == 2
     assert llm_client.tool_call_agents.count("expert_b") == 1
     assert "tool_agent" not in agents
-    assert completed["debate_round"] == 1
     assert completed["judge_report"]["decision"] == "accept"
     assert completed["expert_a_draft"]["draft_stage"] == "integration"

@@ -42,10 +42,8 @@ from backend.app.services.session_types import (
     utc_now,
 )
 
-_APPEND_FIELDS = {"events", "artifacts", "revision_history"}
-_TERMINAL_STATUSES: set[SessionStatus] = {
-    "completed", "failed", "canceled", "quality_gate_failed"
-}
+_APPEND_FIELDS = {"events", "artifacts"}
+_TERMINAL_STATUSES: set[SessionStatus] = {"completed", "failed", "canceled"}
 
 
 class SessionService:
@@ -72,7 +70,6 @@ class SessionService:
         *,
         user_input: str,
         learner_id: str | None = None,
-        max_debate_rounds: int = 3,
         provider_overrides: Mapping[AgentName, LLMProvider] | None = None,
         workflow_mode: Literal["auto", "teach", "chat", "diagnose", "feedback"] = "auto",
         input_payload: dict[str, Any] | None = None,
@@ -85,9 +82,6 @@ class SessionService:
             "user_input": user_input,
             "events": [],
             "artifacts": [],
-            "debate_round": 1,
-            "max_debate_rounds": max_debate_rounds,
-            "revision_history": [],
             "workflow_mode": workflow_mode,
             "input_payload": input_payload or {},
             "parent_session_id": parent_session_id,
@@ -111,7 +105,6 @@ class SessionService:
                 "session_id": session_id,
                 "user_input": user_input,
                 "learner_id": learner_id,
-                "max_debate_rounds": max_debate_rounds,
                 "llm_client": llm_client,
                 "workflow_mode": workflow_mode,
                 "input_payload": input_payload or {},
@@ -345,7 +338,6 @@ class SessionService:
             "completed": 0,
             "failed": 0,
             "canceled": 0,
-            "quality_gate_failed": 0,
         }
         with self._lock:
             for record in self._sessions.values():
@@ -356,7 +348,6 @@ class SessionService:
             "completed": counts["completed"],
             "failed": counts["failed"],
             "canceled": counts["canceled"],
-            "quality_gate_failed": counts["quality_gate_failed"],
             "total": total,
         }
 
@@ -462,7 +453,6 @@ class SessionService:
         session_id: str,
         user_input: str,
         learner_id: str | None,
-        max_debate_rounds: int,
         llm_client: LLMClient,
         workflow_mode: Literal["auto", "teach", "chat", "diagnose", "feedback"],
         input_payload: dict[str, Any],
@@ -478,7 +468,6 @@ class SessionService:
                         is_cancelled=lambda: self._cancel_requested(session_id),
                     ),
                     artifact_root=self.artifact_root,
-                    max_debate_rounds=max_debate_rounds,
                     learner_id=learner_id,
                     checkpointer=self._checkpointer,
                     store=self._store,
@@ -509,11 +498,7 @@ class SessionService:
                 merged_state = dict(state)
                 merged_state["artifacts"] = merged_artifacts
                 record.state = cast(StateDict, merged_state)
-                record.status = (
-                    "quality_gate_failed"
-                    if state.get("workflow_status") == "quality_gate_failed"
-                    else "completed"
-                )
+                record.status = "completed"
                 record.updated_at = utc_now()
                 write_manifest(
                     artifact_root=self.artifact_root,

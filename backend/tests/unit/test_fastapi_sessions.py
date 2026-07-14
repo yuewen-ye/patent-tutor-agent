@@ -25,15 +25,6 @@ class QueueLLMClient:
                 "weak_points": ["新颖性判断步骤"],
                 "learning_goal": "学习专利新颖性",
             },
-            [
-                {
-                    "node_id": "novelty-basics",
-                    "node_name": "新颖性基础",
-                    "duration_min": 20,
-                    "strategy": "先学法条再做案例",
-                    "prerequisites": [],
-                }
-            ],
             {
                 "expert": "expert_a",
                 "style": "conservative_precise",
@@ -100,6 +91,11 @@ class QueueLLMClient:
                 "disputes": [],
                 "rationale": "整合稿可以作为最终教学内容。",
             },
+            {
+                "questionnaire": ["本节最容易混淆什么？"],
+                "next_action": "完成练习后复盘",
+                "profile_update_hint": "继续观察新颖性判断步骤",
+            },
         ]
 
     def generate_json(
@@ -146,7 +142,6 @@ def test_session_api_creates_background_workflow_and_returns_snapshot(
         json={
             "user_input": "我想学习专利新颖性",
             "learner_id": "learner-api",
-            "max_debate_rounds": 1,
         },
     )
 
@@ -167,7 +162,7 @@ def test_session_api_creates_background_workflow_and_returns_snapshot(
     assert snapshot["state"]["expert_a_draft"]["legal_basis"] == ["专利法第二十二条"]
     assert snapshot["state"]["expert_a_draft"] == completed["expert_a_draft"]
     assert snapshot["state"]["workflow_status"] == "completed"
-    assert "final_learning_markdown" in snapshot["state"]
+    assert "final_learning_markdown" not in snapshot["state"]
     assert "final_answer" not in snapshot["state"]
 
 
@@ -177,7 +172,7 @@ def test_session_events_stream_replays_agent_events_and_completion(
     client, service = _make_client(tmp_path, monkeypatch)
     session_id = client.post(
         "/sessions",
-        json={"user_input": "我想学习专利新颖性", "max_debate_rounds": 1},
+        json={"user_input": "我想学习专利新颖性"},
     ).json()[
         "session_id"
     ]
@@ -189,9 +184,9 @@ def test_session_events_stream_replays_agent_events_and_completion(
         payload = response.read().decode("utf-8")
 
     assert "event: agent_event" in payload
-    assert '"node": "learner_state"' in payload
+    assert '"node": "diagnosis_feedback"' in payload
     assert '"node": "expert_a"' in payload
-    assert '"node": "publish_final_learning"' in payload
+    assert '"node": "diagnosis_feedback"' in payload
     assert "event: session_status" in payload
     assert '"status": "completed"' in payload
 
@@ -202,7 +197,7 @@ def test_session_websocket_replays_agent_events_until_completion(
     client, service = _make_client(tmp_path, monkeypatch)
     session_id = client.post(
         "/sessions",
-        json={"user_input": "我想学习专利新颖性", "max_debate_rounds": 1},
+        json={"user_input": "我想学习专利新颖性"},
     ).json()[
         "session_id"
     ]
@@ -217,8 +212,8 @@ def test_session_websocket_replays_agent_events_until_completion(
                 break
 
     event_nodes = [message["event"]["node"] for message in messages if message["type"] == "agent_event"]
-    assert "learner_state" in event_nodes
-    assert event_nodes[-1] == "publish_final_learning"
+    assert "diagnosis_feedback" in event_nodes
+    assert event_nodes[-1] == "diagnosis_feedback"
     assert messages[-1]["status"] == "completed"
 
 
@@ -228,7 +223,7 @@ def test_session_artifact_endpoint_serves_markdown_and_blocks_traversal(
     client, service = _make_client(tmp_path, monkeypatch)
     session_id = client.post(
         "/sessions",
-        json={"user_input": "我想学习专利新颖性", "max_debate_rounds": 1},
+        json={"user_input": "我想学习专利新颖性"},
     ).json()[
         "session_id"
     ]
@@ -258,7 +253,6 @@ def test_learner_api_returns_memory_and_session_history(
         json={
             "user_input": "我想学习专利新颖性",
             "learner_id": "learner-api",
-            "max_debate_rounds": 1,
         },
     )
     session_id = created.json()["session_id"]
@@ -280,7 +274,7 @@ def test_learner_api_returns_memory_and_session_history(
     assert learner_profiles.json()["profiles"][0]["learning_goal"] == "学习专利新颖性"
     history = learner_history.json()["history"]
     assert len(history) == 1
-    assert history[0]["event_type"] == "course_published"
+    assert history[0]["topic"] == "学习专利新颖性"
     assert learner_sessions.status_code == 200
     assert learner_sessions.json()["sessions"][0]["session_id"] == session_id
 

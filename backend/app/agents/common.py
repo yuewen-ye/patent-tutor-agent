@@ -54,6 +54,33 @@ def normalize_key_aliases(raw: object, aliases: dict[str, str]) -> object:
     return normalized
 
 
+def normalize_expert_draft_payload(raw: object) -> object:
+    normalized = normalize_key_aliases(
+        raw,
+        {
+            "knowledgePoints": "knowledge_points",
+            "legalBasis": "legal_basis",
+            "teachingContent": "teaching_content",
+            "interactiveQuestions": "interactive_questions",
+            "draftStage": "draft_stage",
+        },
+    )
+    if not isinstance(normalized, dict):
+        return normalized
+    for field in ("knowledge_points", "legal_basis", "risks", "interactive_questions"):
+        value = normalized.get(field)
+        if isinstance(value, str):
+            normalized[field] = [value]
+    exercises = normalized.get("exercises")
+    if isinstance(exercises, str):
+        normalized["exercises"] = [{"question": exercises}]
+    elif isinstance(exercises, list):
+        normalized["exercises"] = [
+            {"question": item} if isinstance(item, str) else item for item in exercises
+        ]
+    return normalized
+
+
 def load_prompt(module_file: str, name: str = "system.md") -> str:
     """Load a system prompt file co-located with the agent module.
 

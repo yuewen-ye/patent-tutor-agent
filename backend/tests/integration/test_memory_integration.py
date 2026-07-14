@@ -35,7 +35,6 @@ def _run_workflow(session_id: str, user_input: str, router, store, checkpointer)
             learner_id=LEARNER_ID,
             store=store,
             checkpointer=checkpointer,
-            max_debate_rounds=1,
         )
     except LLMProviderError as exc:
         message = str(exc).lower()
@@ -64,7 +63,7 @@ def test_first_session_writes_profile_and_history_to_store() -> None:
 
     profiles = store.search(("learners", LEARNER_ID, "profile"), limit=5)
     histories = store.search(("learners", LEARNER_ID, "history"), limit=5)
-    assert len(profiles) == 1
+    assert len(profiles) == 2
     assert len(histories) == 1
     assert profiles[0].value["weak_points"] == profile["weak_points"]
     assert histories[0].value["session_id"] == completed["session_id"]

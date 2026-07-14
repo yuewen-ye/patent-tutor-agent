@@ -8,7 +8,13 @@ import backend.app.agents.rag_tools as rag_tools
 from backend.app.agent_runtime_config import clear_agent_runtime_config_cache
 from backend.app.agents.expert_b.node import build_expert_b_node
 from backend.app.agents.planner.node import build_planner_node
-from backend.app.core.llm import AgentLLMRouter, LLMMessage, LLMResponseWithTools, ToolCall, ToolDefinition
+from backend.app.core.llm import (
+    AgentLLMRouter,
+    LLMMessage,
+    LLMResponseWithTools,
+    ToolCall,
+    ToolDefinition,
+)
 from backend.app.schemas.state import RetrievalChunk
 
 pytestmark = pytest.mark.unit
@@ -81,17 +87,7 @@ def clear_config_cache() -> Iterator[None]:
     clear_agent_runtime_config_cache()
 
 
-def test_yaml_config_controls_agent_temperature(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    config_path = tmp_path / "agents.yaml"
-    config_path.write_text(
-        "agents:\n"
-        "  planner:\n"
-        "    temperature: 0.12\n",
-        encoding="utf-8",
-    )
-    monkeypatch.setenv("AGENT_CONFIG_PATH", str(config_path))
+def test_planner_does_not_call_llm() -> None:
     client = PlannerTemperatureLLMClient()
 
     build_planner_node(client)(
@@ -102,7 +98,7 @@ def test_yaml_config_controls_agent_temperature(
         }
     )
 
-    assert client.temperatures == [0.12]
+    assert client.temperatures == []
 
 
 def test_yaml_config_controls_expert_tool_temperature_and_default_top_k(
@@ -110,10 +106,7 @@ def test_yaml_config_controls_expert_tool_temperature_and_default_top_k(
 ) -> None:
     config_path = tmp_path / "agents.yaml"
     config_path.write_text(
-        "agents:\n"
-        "  expert_b:\n"
-        "    tool_temperature: 0.19\n"
-        "    top_k: 7\n",
+        "agents:\n  expert_b:\n    tool_temperature: 0.19\n    top_k: 7\n",
         encoding="utf-8",
     )
     monkeypatch.setenv("AGENT_CONFIG_PATH", str(config_path))
@@ -154,7 +147,7 @@ def test_yaml_config_controls_router_provider_and_model(
         "llm:\n"
         "  default_provider: deepseek\n"
         "agents:\n"
-        "  diagnosis:\n"
+        "  diagnosis_feedback:\n"
         "    provider: qwen\n"
         "    model_name: qwen-plus\n"
         "  expert_b:\n"
@@ -164,12 +157,37 @@ def test_yaml_config_controls_router_provider_and_model(
     )
     monkeypatch.setenv("AGENT_CONFIG_PATH", str(config_path))
     monkeypatch.setenv("DEFAULT_LLM_PROVIDER", "deepseek")
-    monkeypatch.setenv("DIAGNOSIS_PROVIDER", "")
+    monkeypatch.setenv("DIAGNOSIS_FEEDBACK_PROVIDER", "")
+    monkeypatch.setenv("EXPERT_B_PROVIDER", "")
 
     router = AgentLLMRouter.from_env()
 
-    assert router.provider_for("diagnosis") == "qwen"
-    assert router.model_for("diagnosis") == "qwen-plus"
+    assert router.provider_for("diagnosis_feedback") == "qwen"
+    assert router.model_for("diagnosis_feedback") == "qwen-plus"
     assert router.provider_for("expert_b") == "glm"
     assert router.model_for("expert_b") == "glm-5.1-air"
-    assert router.provider_for("planner") == "deepseek"
+    assert "planner" not in router.agent_providers
+
+
+def test_provider_environment_override_takes_precedence_over_yaml(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config_path = tmp_path / "agents.yaml"
+    config_path.write_text(
+        "llm:\n"
+        "  default_provider: deepseek\n"
+        "agents:\n"
+        "  expert_a:\n"
+        "    provider: deepseek\n"
+        "    model_name: deepseek-v4-flash\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("AGENT_CONFIG_PATH", str(config_path))
+    monkeypatch.setenv("DEFAULT_LLM_PROVIDER", "qwen")
+    monkeypatch.setenv("EXPERT_A_PROVIDER", "qwen")
+
+    router = AgentLLMRouter.from_env()
+
+    assert router.default_provider == "qwen"
+    assert router.provider_for("expert_a") == "qwen"
+    assert router.model_for("expert_a") is None

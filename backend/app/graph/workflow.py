@@ -18,78 +18,16 @@ from backend.app.agent_runtime_config import agent_top_k
 from backend.app.agents import Node, build_agent_nodes
 from backend.app.artifacts import attach_markdown_artifact, write_field_artifact, write_manifest
 from backend.app.core.llm import AgentLLMRouter, DefaultLLMClient, LLMClient
-from backend.app.memory import save_history_snapshot
 from backend.app.retrieval_selector import retrieve_context
 from backend.app.schemas.context import WorkflowContext
-from backend.app.schemas.state import AgentEvent, StateDict, completed_event
+from backend.app.schemas.state import StateDict, completed_event
 from backend.app.workflow_logging import write_workflow_log
 
 WorkflowUpdateSink = Callable[[dict[str, Any]], None]
 WorkflowEventSink = Callable[[list[dict[str, Any]]], None]
-_ACCEPTED_JUDGE_DECISIONS = {"accept"}
 
 
-def judge_route(state: StateDict) -> str:
-    decision = _judge_decision(state.get("judge_report"))
-    if decision == "accept":
-        return "publish_final_learning"
-    judge_round = int(state.get("judge_round", 1))
-    max_rounds = int(state.get("max_debate_rounds", 3))
-    if judge_round < max_rounds:
-        return "revise_integration"
-    return "quality_gate_failed"
-
-
-def publish_final_learning_node(
-    state: StateDict, runtime: Runtime[WorkflowContext] | None = None
-) -> dict[str, Any]:
-    draft = state.get("expert_a_draft", {})
-    path = state.get("learning_path", [])
-    exercises = (draft.get("exercises") or []) if isinstance(draft, dict) else []
-    answer_key = [
-        {
-            "question_id": item.get("question_id"),
-            "answer": item.get("answer"),
-            "explanation": item.get("explanation"),
-        }
-        for item in exercises
-        if isinstance(item, dict)
-    ]
-    lines = ["# 个性化学习课程", "", "## 学习路径摘要", ""]
-    for index, item in enumerate(path, start=1):
-        lines.append(f"{index}. {item.get('node_name', '')}：{item.get('strategy', '')}")
-    lines.extend(["", "## 课程正文", "", str(draft.get("teaching_content", ""))])
-    legal_basis = draft.get("legal_basis") or []
-    if legal_basis:
-        lines.extend(["", "## 法律依据", ""])
-        lines.extend(f"- {basis}" for basis in legal_basis)
-    if exercises:
-        lines.extend(["", "## 练习题", ""])
-        for index, item in enumerate(exercises, start=1):
-            if isinstance(item, dict):
-                lines.append(f"{index}. {item.get('prompt', '')}")
-    questions = draft.get("interactive_questions") or []
-    if questions:
-        lines.extend(["", "## 互动问题", ""])
-        lines.extend(f"- {question}" for question in questions)
-    save_history_snapshot(
-        runtime,
-        state,
-        event_type="course_published",
-        payload={
-            "topic": state.get("learner_profile", {}).get("learning_goal") or state["user_input"],
-            "knowledge_points": [item.get("node_name") for item in path],
-        },
-    )
-    return {
-        "final_learning_markdown": "\n".join(lines).strip() + "\n",
-        "exercise_answer_key": answer_key,
-        "workflow_status": "completed",
-        "events": [completed_event("publish_final_learning", "published accepted course")],
-    }
-
-
-def _print_summary(updates: dict[str, Any], round_num: int | None = None) -> None:
+def _print_summary(updates: dict[str, Any]) -> None:
     """Print a one-line summary of an agent node's output."""
     if "learner_profile" in updates:
         p = updates["learner_profile"]
@@ -143,10 +81,6 @@ def _print_summary(updates: dict[str, Any], round_num: int | None = None) -> Non
             f"适配性={j.get('adaptation_score','?')}",
             file=sys.stderr,
         )
-    elif "revision_history" in updates:
-        rh = updates["revision_history"]
-        if rh:
-            print("  └─ 本轮评审已记录", file=sys.stderr)
     elif "feedback_result" in updates:
         f = updates["feedback_result"]
         print(
@@ -186,54 +120,10 @@ _ARTIFACT_FIELDS = (
     "expert_b_cross_review",
     "expert_a_revision",
     "expert_b_revision",
-    "final_learning_markdown",
-    "exercise_answer_key",
     "learner_profile_update",
     "course_package",
     "grading_report",
 )
-
-
-def _judge_decision(report: object) -> str:
-    if isinstance(report, dict):
-        return str(report.get("decision", ""))
-    return ""
-
-
-def _process_round(state: StateDict, node_label: str) -> int:
-    if state.get("expert_phase") == "integration" or node_label in {
-        "judge",
-        "publish_final_learning",
-        "quality_gate",
-    }:
-        return int(state.get("judge_round", 1))
-    return int(state.get("debate_round", 1))
-
-
-def _feedback_completes_teach(
-    state: StateDict,
-    updates: dict[str, Any],
-    node_label: str,
-) -> bool:
-    return (
-        node_label == "feedback"
-        and state.get("teach_phase") == "integration"
-        and "judge_report" in state
-        and "feedback_result" in updates
-    )
-
-
-def _judge_accepts_teach(
-    state: StateDict,
-) -> bool:
-    if state.get("teach_phase") != "integration":
-        return False
-    decision = _judge_decision(state.get("judge_report"))
-    if decision in _ACCEPTED_JUDGE_DECISIONS:
-        return True
-    debate_round = int(state.get("debate_round", 1))
-    max_debate_rounds = int(state.get("max_debate_rounds", 3))
-    return decision == "revise" and debate_round >= max_debate_rounds
 
 
 def _with_runtime_side_effects(
@@ -248,10 +138,7 @@ def _with_runtime_side_effects(
         state: StateDict, runtime: Runtime[WorkflowContext] | None = None
     ) -> dict[str, Any]:
         label = node_label or "?"
-        round_num = _process_round(state, label)
-        round_tag = f" R{round_num}" if round_num > 1 else ""
-
-        print(f"▸ [{label}]{round_tag} 开始...", file=sys.stderr)
+        print(f"▸ [{label}] 开始...", file=sys.stderr)
         start = time.monotonic()
         write_workflow_log(
             log_root=workflow_log_root,
@@ -267,19 +154,17 @@ def _with_runtime_side_effects(
             if isinstance(raw_events, list):
                 for evt in raw_events:
                     if isinstance(evt, dict):
-                        if evt.get("round") is None:
-                            evt["round"] = round_num
                         if evt.get("timestamp") is None:
                             evt["timestamp"] = datetime.now(UTC).isoformat()
                         if evt.get("duration_ms") is None:
                             evt["duration_ms"] = duration_ms
 
-            _print_summary(updates, round_num)
-            print(f"  [{label}]{round_tag} 完成 ✓  ({duration_ms}ms)", file=sys.stderr)
+            _print_summary(updates)
+            print(f"  [{label}] 完成 ✓  ({duration_ms}ms)", file=sys.stderr)
 
             artifacts: list[dict[str, Any]] = []
             if artifact_root is not None:
-                round_number = round_num
+                round_number = 1
                 session_id = state["session_id"]
                 for field in _ARTIFACT_FIELDS:
                     if field not in updates:
@@ -342,103 +227,6 @@ def _with_runtime_side_effects(
     return wrapped
 
 
-def _route_after_debate_expert(
-    state: StateDict,
-) -> Literal["revise_experts", "_prepare_integration"]:
-    debate_round = int(state.get("debate_round", 1))
-    max_debate_rounds = int(state.get("max_debate_rounds", 3))
-    if debate_round < max_debate_rounds:
-        return "revise_experts"
-    return "_prepare_integration"
-
-
-def _route_after_revise_experts(
-    state: StateDict,
-) -> list[Literal["expert_a", "expert_b"]]:
-    return ["expert_a", "expert_b"]
-
-
-def _route_after_expert_a(
-    state: StateDict,
-) -> Literal["judge", "revise_experts", "_prepare_integration"]:
-    phase = state.get("teach_phase", "debate")
-    if phase == "integration":
-        print("▸ [路由] expert_a 整合稿 → judge", file=sys.stderr)
-        return "judge"
-    return _route_after_debate_expert(state)
-
-
-def revise_experts_node(
-    state: StateDict, runtime: Runtime[WorkflowContext] | None = None
-) -> dict[str, Any]:
-    next_round = int(state.get("debate_round", 1)) + 1
-    print(
-        f"▸ [路由] A/B 辩论第 {next_round - 1} 轮完成 → 进入第 {next_round} 轮",
-        file=sys.stderr,
-    )
-    revision_record = {
-        "round": next_round,
-        "source": "expert_debate",
-        "expert_a_points": state.get("expert_a_draft", {}).get("knowledge_points", []),
-        "expert_b_points": state.get("expert_b_draft", {}).get("knowledge_points", []),
-    }
-    event = AgentEvent(
-        node="revise_experts",
-        status="debate_round",
-        message=f"starting expert debate round {next_round}",
-        round=next_round,
-    ).model_dump()
-    return {
-        "debate_round": next_round,
-        "revision_history": [revision_record],
-        "events": [event],
-    }
-
-
-def prepare_integration_node(
-    state: StateDict, runtime: Runtime[WorkflowContext] | None = None
-) -> dict[str, Any]:
-    print("▸ [路由] A/B 辩论轮次已完成 → expert_a 整合", file=sys.stderr)
-    return {"teach_phase": "integration"}
-
-
-def prepare_cross_review_node(
-    state: StateDict, runtime: Runtime[WorkflowContext] | None = None
-) -> dict[str, Any]:
-    return {"expert_phase": "cross_review"}
-
-
-def prepare_expert_revision_node(
-    state: StateDict, runtime: Runtime[WorkflowContext] | None = None
-) -> dict[str, Any]:
-    return {"expert_phase": "revision"}
-
-
-def prepare_course_integration_node(
-    state: StateDict, runtime: Runtime[WorkflowContext] | None = None
-) -> dict[str, Any]:
-    return {"expert_phase": "integration", "teach_phase": "integration"}
-
-
-def revise_integration_node(
-    state: StateDict, runtime: Runtime[WorkflowContext] | None = None
-) -> dict[str, Any]:
-    return {
-        "expert_phase": "integration",
-        "teach_phase": "integration",
-        "judge_round": int(state.get("judge_round", 1)) + 1,
-    }
-
-
-def quality_gate_failed_node(
-    state: StateDict, runtime: Runtime[WorkflowContext] | None = None
-) -> dict[str, Any]:
-    return {
-        "workflow_status": "quality_gate_failed",
-        "events": [completed_event("quality_gate", "course failed the judge quality gate")],
-    }
-
-
 def retrieve_context_node(
     state: StateDict, runtime: Runtime[WorkflowContext] | None = None
 ) -> dict[str, Any]:
@@ -454,18 +242,22 @@ def retrieve_context_node(
     }
 
 
-def _route_after_route(state: StateDict) -> Literal["learner_state", "retrieve_context"]:
+def _route_after_route(
+    state: StateDict,
+) -> Literal["diagnosis_feedback", "retrieve_context"]:
     intent = state.get("intent", "teach")
     if intent == "chat":
         print("▸ [路由] intent=chat → 快速问答路径", file=sys.stderr)
         return "retrieve_context"
     # teach and diagnose both go through diagnosis first
-    print(f"▸ [路由] intent={intent} → learner_state", file=sys.stderr)
-    return "learner_state"
+    print(f"▸ [路由] intent={intent} → diagnosis_feedback", file=sys.stderr)
+    return "diagnosis_feedback"
 
 
-def _route_after_learner_state(state: StateDict) -> Literal["planner", "__end__"]:
-    if state.get("learner_state_phase") == "feedback":
+def _route_after_diagnosis_feedback(
+    state: StateDict,
+) -> Literal["planner", "__end__"]:
+    if state.get("diagnosis_feedback_phase") == "feedback":
         return "__end__"
     intent = state.get("intent", "teach")
     if intent == "diagnose":
@@ -475,17 +267,10 @@ def _route_after_learner_state(state: StateDict) -> Literal["planner", "__end__"
     return "planner"
 
 
-def _route_after_init(state: StateDict) -> Literal["route", "learner_state"]:
+def _route_after_init(state: StateDict) -> Literal["route", "diagnosis_feedback"]:
     if state.get("workflow_mode") == "feedback":
-        return "learner_state"
+        return "diagnosis_feedback"
     return "route"
-
-
-def _route_after_planner(
-    state: StateDict,
-) -> list[Literal["expert_a", "expert_b"]]:
-    print("▸ [路由] intent=teach → experts", file=sys.stderr)
-    return ["expert_a", "expert_b"]
 
 
 def _route_after_retrieve_context(
@@ -499,27 +284,6 @@ def _route_after_expert_a_phase(state: StateDict) -> Literal["expert_b", "judge"
     if state.get("expert_phase") == "integration":
         return "judge"
     return "expert_b"
-
-
-def _route_after_expert_b_phase(
-    state: StateDict,
-) -> Literal[
-    "_prepare_cross_review", "_prepare_expert_revision", "_prepare_course_integration"
-]:
-    phase = state.get("expert_phase", "draft")
-    if phase == "draft":
-        return "_prepare_cross_review"
-    if phase == "cross_review":
-        return "_prepare_expert_revision"
-    return "_prepare_course_integration"
-
-
-def _route_after_judge(state: StateDict) -> Literal["feedback"]:
-    if _judge_accepts_teach(state):
-        print("▸ [路由] judge 已完成整合稿审核 → feedback", file=sys.stderr)
-    else:
-        print("▸ [路由] judge 未通过整合稿 → feedback", file=sys.stderr)
-    return "feedback"
 
 
 def build_workflow(
@@ -544,9 +308,10 @@ def build_workflow(
             import uuid
             updates["session_id"] = str(uuid.uuid4())[:8]
         mode = state.get("workflow_mode", "auto")
-        updates["learner_state_phase"] = "feedback" if mode == "feedback" else "diagnosis"
+        updates["diagnosis_feedback_phase"] = (
+            "feedback" if mode == "feedback" else "diagnosis"
+        )
         updates["expert_phase"] = "draft"
-        updates["judge_round"] = int(state.get("judge_round", 1))
         updates["workflow_status"] = "running"
         return updates
 
@@ -559,7 +324,7 @@ def build_workflow(
     # ── All nodes ──
     builder.add_node("_init", _ensure_session_id)
     builder.add_node("route", _wrap("route"))
-    builder.add_node("learner_state", _wrap("learner_state"))
+    builder.add_node("diagnosis_feedback", _wrap("diagnosis_feedback"))
     builder.add_node("planner", _wrap("planner"))
     builder.add_node("retrieve_context", cast(Any, _with_runtime_side_effects(
         retrieve_context_node, root_path, log_root_path,
@@ -569,18 +334,6 @@ def build_workflow(
     builder.add_node("expert_a", _wrap("expert_a"))
     builder.add_node("expert_b", _wrap("expert_b"))
     builder.add_node("judge", _wrap("judge"))
-    builder.add_node("_prepare_cross_review", prepare_cross_review_node)
-    builder.add_node("_prepare_expert_revision", prepare_expert_revision_node)
-    builder.add_node("_prepare_course_integration", prepare_course_integration_node)
-    builder.add_node("revise_integration", revise_integration_node)
-    builder.add_node("publish_final_learning", cast(Any, _with_runtime_side_effects(
-        publish_final_learning_node, root_path, log_root_path,
-        update_sink, event_sink, node_label="publish_final_learning",
-    )))
-    builder.add_node("quality_gate_failed", cast(Any, _with_runtime_side_effects(
-        quality_gate_failed_node, root_path, log_root_path,
-        update_sink, event_sink, node_label="quality_gate",
-    )))
 
     # ── Edges ──
 
@@ -589,19 +342,22 @@ def build_workflow(
     builder.add_conditional_edges(
         "_init",
         _route_after_init,
-        {"route": "route", "learner_state": "learner_state"},
+        {"route": "route", "diagnosis_feedback": "diagnosis_feedback"},
     )
 
     builder.add_conditional_edges(
         "route",
         _route_after_route,
-        {"learner_state": "learner_state", "retrieve_context": "retrieve_context"},
+        {
+            "diagnosis_feedback": "diagnosis_feedback",
+            "retrieve_context": "retrieve_context",
+        },
     )
 
     # After diagnosis: teach → planner, diagnose → END
     builder.add_conditional_edges(
-        "learner_state",
-        _route_after_learner_state,
+        "diagnosis_feedback",
+        _route_after_diagnosis_feedback,
         {"planner": "planner", "__end__": END},
     )
 
@@ -617,30 +373,8 @@ def build_workflow(
         _route_after_expert_a_phase,
         {"expert_b": "expert_b", "judge": "judge"},
     )
-    builder.add_conditional_edges(
-        "expert_b",
-        _route_after_expert_b_phase,
-        {
-            "_prepare_cross_review": "_prepare_cross_review",
-            "_prepare_expert_revision": "_prepare_expert_revision",
-            "_prepare_course_integration": "_prepare_course_integration",
-        },
-    )
-    builder.add_edge("_prepare_cross_review", "expert_a")
-    builder.add_edge("_prepare_expert_revision", "expert_a")
-    builder.add_edge("_prepare_course_integration", "expert_a")
-    builder.add_conditional_edges(
-        "judge",
-        judge_route,
-        {
-            "publish_final_learning": "publish_final_learning",
-            "revise_integration": "revise_integration",
-            "quality_gate_failed": "quality_gate_failed",
-        },
-    )
-    builder.add_edge("revise_integration", "expert_a")
-    builder.add_edge("publish_final_learning", END)
-    builder.add_edge("quality_gate_failed", END)
+    builder.add_edge("expert_b", "expert_a")
+    builder.add_edge("judge", "diagnosis_feedback")
 
     builder.add_edge("chat_answer", END)
 
@@ -659,7 +393,6 @@ def run_workflow(
     user_input: str,
     llm_client: LLMClient | None = None,
     artifact_root: str | Path | None = None,
-    max_debate_rounds: int = 3,
     learner_id: str | None = None,
     checkpointer: Any | None = None,
     store: Any | None = None,
@@ -670,7 +403,6 @@ def run_workflow(
     print(f"\n{'='*60}", file=sys.stderr)
     print(f"工作流启动  session={session_id}  learner={learner_id or 'N/A'}", file=sys.stderr)
     print(f"用户输入: {user_input}", file=sys.stderr)
-    print(f"最大辩论轮数: {max_debate_rounds}", file=sys.stderr)
     print(f"{'='*60}\n", file=sys.stderr)
 
     workflow = build_workflow(
@@ -685,9 +417,6 @@ def run_workflow(
             "user_input": user_input,
             "events": [],
             "artifacts": [],
-            "debate_round": 1,
-            "max_debate_rounds": max_debate_rounds,
-            "revision_history": [],
             "teach_phase": "debate",
             "workflow_mode": workflow_mode,
             "input_payload": input_payload or {},
@@ -709,7 +438,6 @@ async def arun_workflow(
     user_input: str,
     llm_client: LLMClient | None = None,
     artifact_root: str | Path | None = None,
-    max_debate_rounds: int = 3,
     learner_id: str | None = None,
     checkpointer: Any | None = None,
     store: Any | None = None,
@@ -733,9 +461,6 @@ async def arun_workflow(
             "user_input": user_input,
             "events": [],
             "artifacts": [],
-            "debate_round": 1,
-            "max_debate_rounds": max_debate_rounds,
-            "revision_history": [],
             "teach_phase": "debate",
             "workflow_mode": workflow_mode,
             "input_payload": input_payload or {},

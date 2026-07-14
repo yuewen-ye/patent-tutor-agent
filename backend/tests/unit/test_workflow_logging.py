@@ -46,7 +46,6 @@ def test_workflow_writes_node_error_log_when_agent_fails(tmp_path: Path) -> None
             user_input="我想学习专利新颖性",
             llm_client=FailingRouteLLMClient(),
             artifact_root=log_root,
-            max_debate_rounds=1,
         )
 
     log_path = log_root / "sessions" / "error-session" / "workflow.log.jsonl"
@@ -55,7 +54,7 @@ def test_workflow_writes_node_error_log_when_agent_fails(tmp_path: Path) -> None
     assert [record["status"] for record in records] == ["started", "error"]
     assert records[0]["node"] == "route"
     assert records[0]["session_id"] == "error-session"
-    assert records[0]["debate_round"] == 1
+    assert "debate_round" not in records[0]
     assert records[1]["node"] == "route"
     assert records[1]["error_type"] == "RuntimeError"
     assert records[1]["error_message"] == "boom from route"

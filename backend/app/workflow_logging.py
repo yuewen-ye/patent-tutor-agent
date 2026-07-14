@@ -37,10 +37,8 @@ class WorkflowLogRecord:
     session_id: str
     node: str
     status: WorkflowLogStatus
-    debate_round: int
     teach_phase: str | None
     intent: str | None
-    max_debate_rounds: int | None
     duration_ms: int | None = None
     event_count: int | None = None
     artifact_count: int | None = None
@@ -86,10 +84,8 @@ def write_workflow_log(
         session_id=session_id,
         node=node,
         status=status,
-        debate_round=int(state.get("debate_round", 1)),
         teach_phase=state.get("teach_phase"),
         intent=state.get("intent"),
-        max_debate_rounds=state.get("max_debate_rounds"),
         duration_ms=duration_ms,
         event_count=_count_list(updates, "events"),
         artifact_count=_count_list(updates, "artifacts"),

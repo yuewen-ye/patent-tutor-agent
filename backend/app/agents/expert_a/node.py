@@ -8,7 +8,13 @@ from typing import Any
 from langchain_core.prompts import ChatPromptTemplate
 
 from backend.app.agent_runtime_config import agent_temperature
-from backend.app.agents.common import Node, load_prompt, messages_from_prompt, normalize_key_aliases, schema_note
+from backend.app.agents.common import (
+    Node,
+    load_prompt,
+    messages_from_prompt,
+    normalize_expert_draft_payload,
+    schema_note,
+)
 from backend.app.agents.rag_tools import collect_expert_retrieval_context
 from backend.app.core.llm import LLMClient, LLMMessage
 from backend.app.schemas.state import CrossReview, ExpertDraft, StateDict, completed_event
@@ -24,18 +30,7 @@ def _should_integrate(state: StateDict) -> bool:
 
 
 def _normalize_expert_draft(raw: object) -> ExpertDraft:
-    return ExpertDraft.model_validate(
-        normalize_key_aliases(
-            raw,
-            {
-                "knowledgePoints": "knowledge_points",
-                "legalBasis": "legal_basis",
-                "teachingContent": "teaching_content",
-                "interactiveQuestions": "interactive_questions",
-                "draftStage": "draft_stage",
-            },
-        )
-    )
+    return ExpertDraft.model_validate(normalize_expert_draft_payload(raw))
 
 
 def build_expert_a_node(llm_client: LLMClient) -> Node:
@@ -55,7 +50,6 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                 "user",
                 "问题：{user_input}\n"
                 "检索上下文：{retrieval_context}\n"
-                "当前辩论轮次：{debate_round}\n"
                 "辩论上下文：{revision_context}\n"
                 "请生成专家 A 草稿。",
             ),
@@ -188,7 +182,6 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
             prompt,
             user_input=state["user_input"],
             retrieval_context=state.get("retrieval_context", []),
-            debate_round=state.get("debate_round", 1),
             revision_context=state.get("expert_b_draft", {}),
         )
         retrieved_context = collect_expert_retrieval_context(
@@ -203,7 +196,6 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                 prompt,
                 user_input=state["user_input"],
                 retrieval_context=retrieval_context,
-                debate_round=state.get("debate_round", 1),
                 revision_context=state.get("expert_b_draft", {}),
             ),
             temperature=agent_temperature("expert_a", 0.4),

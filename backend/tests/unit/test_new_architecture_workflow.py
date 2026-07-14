@@ -7,8 +7,9 @@ from typing import cast
 import pytest
 
 from backend.app.agents import build_agent_nodes
+from backend.app.agents.diagnosis import build_diagnosis_feedback_node
 from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinition
-from backend.app.graph.workflow import judge_route, publish_final_learning_node, run_workflow
+from backend.app.graph.workflow import build_workflow, export_workflow_mermaid, run_workflow
 from backend.app.schemas.state import StateDict
 
 pytestmark = pytest.mark.unit
@@ -93,17 +94,20 @@ class WorkflowLLMClient:
         )
         self.queues: dict[str, list[object]] = {
             "route": [{"intent": "teach", "confidence": 1, "reason": "学习"}],
-            "learner_state": [
+            "diagnosis_feedback": [
                 {
                     "education_background": "patent_exam_candidate",
                     "knowledge_level": "beginner",
                     "learning_style": "case_first_then_rule",
                     "weak_points": ["新颖性", "现有技术"],
                     "learning_goal": "掌握专利新颖性",
-                }
+                },
+                {
+                    "questionnaire": ["本节内容是否清楚？"],
+                    "next_action": "完成本节练习",
+                    "profile_update_hint": "记录本轮审核结果",
+                },
             ],
-            "planner": [[{"node_id": "novelty", "node_name": "新颖性", "duration_min": 30,
-                           "strategy": "先法条后案例", "prerequisites": []}]],
             "expert_a": [draft_a, review_a, draft_a, integrated],
             "expert_b": [draft_b, review_b, draft_b],
             "judge": [
@@ -133,70 +137,94 @@ class WorkflowLLMClient:
     ) -> LLMResponseWithTools:
         return LLMResponseWithTools(content=None, tool_calls=[])
 
-def test_graph_registers_one_learner_state_agent_instead_of_two_nodes() -> None:
+
+def test_graph_registers_diagnosis_feedback_agent_name() -> None:
     nodes = build_agent_nodes(PhaseLLMClient())
 
-    assert "learner_state" in nodes
+    assert "diagnosis_feedback" in nodes
     assert "diagnosis" not in nodes
     assert "feedback" not in nodes
 
 
-@pytest.mark.parametrize(
-    ("decision", "round_number", "expected"),
-    [
-        ("accept", 1, "publish_final_learning"),
-        ("accept_with_minor_revision", 1, "revise_integration"),
-        ("revise", 2, "revise_integration"),
-        ("revise", 3, "quality_gate_failed"),
-    ],
-)
-def test_judge_quality_gate_only_publishes_accept(
-    decision: str, round_number: int, expected: str
-) -> None:
-    state = cast(StateDict, {
-        "session_id": "judge-test",
-        "user_input": "test",
-        "events": [],
-        "judge_report": {"decision": decision},
-        "judge_round": round_number,
-        "max_debate_rounds": 3,
-    })
+def test_judge_returns_to_diagnosis_feedback_without_publisher_nodes() -> None:
+    mermaid = export_workflow_mermaid(build_workflow(llm_client=PhaseLLMClient()))
 
-    assert judge_route(state) == expected
+    assert "judge --> diagnosis_feedback" in mermaid
+    assert "publish_final_learning" not in mermaid
+    assert "quality_gate_failed" not in mermaid
+    assert "revise_integration" not in mermaid
 
 
-def test_deterministic_publisher_excludes_internal_answer_key() -> None:
-    updates = publish_final_learning_node(
-        cast(StateDict, {
-            "session_id": "session-1",
-            "user_input": "学习新颖性",
-            "events": [],
-            "learning_path": [{"node_name": "新颖性", "strategy": "法条后案例"}],
-            "expert_a_draft": {
-                "teaching_content": "课程正文",
-                "legal_basis": ["专利法第二十二条"],
-                "interactive_questions": ["如何判断新颖性？"],
-                "exercises": [
-                    {
-                        "question_id": "q1",
-                        "prompt": "判断题",
-                        "answer": "正确",
-                        "explanation": "内部解析",
-                    }
-                ],
+def test_diagnosis_receives_questionnaire_responses() -> None:
+    class CapturingLLM(PhaseLLMClient):
+        def __init__(self) -> None:
+            self.messages: list[LLMMessage] = []
+
+        def generate_json(
+            self, messages: list[LLMMessage], temperature: float, agent: str | None = None
+        ) -> object:
+            self.messages = messages
+            assert agent == "diagnosis_feedback"
+            return {
+                "education_background": "patent_exam_candidate",
+                "knowledge_level": "beginner",
+                "learning_style": "case_first_then_rule",
+                "weak_points": ["新颖性"],
+                "learning_goal": "学习新颖性",
+            }
+
+    llm = CapturingLLM()
+    node = build_diagnosis_feedback_node(llm)
+    node(
+        cast(
+            StateDict,
+            {
+                "session_id": "questionnaire-diagnosis",
+                "user_input": "学习新颖性",
+                "events": [],
+                "diagnosis_feedback_phase": "diagnosis",
+                "input_payload": {
+                    "questionnaire_responses": [{"question_id": "Q01", "answer": "零基础"}]
+                },
             },
-        })
+        )
     )
 
-    final_markdown = updates["final_learning_markdown"]
-    assert "课程正文" in final_markdown
-    assert "判断题" in final_markdown
-    assert "正确" not in final_markdown
-    assert "内部解析" not in final_markdown
-    assert updates["exercise_answer_key"][0]["answer"] == "正确"
+    prompt_text = "\n".join(message.content or "" for message in llm.messages)
+    assert "Q01" in prompt_text
+    assert "零基础" in prompt_text
 
 
-def test_full_teach_flow_writes_process_and_final_markdown(
+def test_diagnosis_normalizes_unknown_level_to_beginner() -> None:
+    class UnknownLevelLLM(PhaseLLMClient):
+        def generate_json(
+            self, messages: list[LLMMessage], temperature: float, agent: str | None = None
+        ) -> object:
+            return {
+                "education_background": "unknown",
+                "knowledge_level": "unknown",
+                "learning_style": "case_first_then_rule",
+                "weak_points": "新颖性",
+                "learning_goal": "学习新颖性",
+            }
+
+    result = build_diagnosis_feedback_node(UnknownLevelLLM())(
+        cast(
+            StateDict,
+            {
+                "session_id": "unknown-level",
+                "user_input": "学习新颖性",
+                "events": [],
+                "diagnosis_feedback_phase": "diagnosis",
+            },
+        )
+    )
+
+    assert result["learner_profile"]["knowledge_level"] == "beginner"
+    assert result["learner_profile"]["weak_points"] == ["新颖性"]
+
+
+def test_full_teach_flow_ends_with_feedback_and_only_process_markdown(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
@@ -208,7 +236,6 @@ def test_full_teach_flow_writes_process_and_final_markdown(
         llm_client=WorkflowLLMClient(),
         artifact_root=artifact_root,
         learner_id="learner-1",
-        max_debate_rounds=3,
     )
 
     session_root = artifact_root / "sessions" / "new-architecture"
@@ -219,16 +246,15 @@ def test_full_teach_flow_writes_process_and_final_markdown(
     assert (session_root / "path/dual_axis_snapshot.md").is_file()
     assert (session_root / "round-01/expert_a_cross_review.md").is_file()
     assert (session_root / "round-01/course_package.md").is_file()
-    final = (session_root / "final_learning.md").read_text(encoding="utf-8")
-    answer_key = (session_root / "internal/exercise_answer_key.md").read_text(encoding="utf-8")
-    assert "该方案是否具备新颖性" in final
-    assert "未被单一现有技术完整公开" not in final
-    assert "未被单一现有技术完整公开" in answer_key
+    assert (session_root / "round-01/judge_report.md").is_file()
+    assert (session_root / "feedback/feedback_report.md").is_file()
+    assert not (session_root / "final_learning.md").exists()
+    assert not (session_root / "internal/exercise_answer_key.md").exists()
     manifest = json.loads((session_root / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["status"] == "completed"
 
 
-def test_feedback_mode_reuses_learner_state_and_skips_course_agents(
+def test_feedback_mode_reuses_diagnosis_feedback_and_skips_course_agents(
     tmp_path: Path,
 ) -> None:
     class FeedbackLLM:
@@ -267,13 +293,11 @@ def test_feedback_mode_reuses_learner_state_and_skips_course_agents(
         workflow_mode="feedback",
         input_payload={
             "course_session_id": "course-1",
-            "exercise_responses": [
-                {"question_id": "q1", "answer": "A", "observed_correct": True}
-            ],
+            "exercise_responses": [{"question_id": "q1", "answer": "A", "observed_correct": True}],
         },
     )
 
-    assert llm.agents == ["learner_state"]
+    assert llm.agents == ["diagnosis_feedback"]
     assert state["workflow_status"] == "completed"
     assert state["grading_report"][0]["question_id"] == "q1"
     root = artifact_root / "sessions" / "feedback-1" / "feedback"
@@ -282,13 +306,11 @@ def test_feedback_mode_reuses_learner_state_and_skips_course_agents(
     assert (root / "learner_profile_update.md").is_file()
 
 
-def test_three_rejected_judge_rounds_do_not_publish_final_learning(
+def test_rejected_judge_still_returns_to_feedback_without_publishing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
     llm = WorkflowLLMClient()
-    integration = dict(cast(dict[str, object], llm.queues["expert_a"][-1]))
-    llm.queues["expert_a"].extend([integration, integration])
     rejected = {
         "decision": "revise",
         "accuracy_score": 3,
@@ -304,7 +326,7 @@ def test_three_rejected_judge_rounds_do_not_publish_final_learning(
             }
         ],
     }
-    llm.queues["judge"] = [rejected, rejected, rejected]
+    llm.queues["judge"] = [rejected]
     artifact_root = tmp_path / "artifacts"
 
     state = run_workflow(
@@ -312,14 +334,13 @@ def test_three_rejected_judge_rounds_do_not_publish_final_learning(
         user_input="掌握专利新颖性",
         llm_client=llm,
         artifact_root=artifact_root,
-        max_debate_rounds=3,
     )
 
     session_root = artifact_root / "sessions" / "rejected-course"
-    assert state["workflow_status"] == "quality_gate_failed"
-    assert state["judge_round"] == 3
+    assert state["workflow_status"] == "completed"
+    assert state["feedback_result"]["next_action"] == "完成本节练习"
     assert not (session_root / "final_learning.md").exists()
-    assert (session_root / "round-02/course_package.md").is_file()
-    assert (session_root / "round-03/judge_report.md").is_file()
+    assert (session_root / "round-01/course_package.md").is_file()
+    assert (session_root / "round-01/judge_report.md").is_file()
     manifest = json.loads((session_root / "manifest.json").read_text(encoding="utf-8"))
-    assert manifest["status"] == "quality_gate_failed"
+    assert manifest["status"] == "completed"

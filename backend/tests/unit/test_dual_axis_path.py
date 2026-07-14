@@ -38,6 +38,22 @@ def test_confusion_axis_adds_session_risk_without_mutating_static_pair() -> None
 
 
 @pytest.mark.unit
+def test_confusion_axis_uses_bkt_mastery_from_learner_profile() -> None:
+    snapshot = build_dual_axis_snapshot(
+        profile={
+            "weak_points": [],
+            "mastery": {"novelty": 0.2, "inventive-step": 0.3},
+        },
+        session_id="session-bkt",
+    )
+
+    first_runtime = snapshot["confusion_axis"][0]
+    assert first_runtime["is_active"] is True
+    assert first_runtime["learner_risk"] > first_runtime["difficulty"]
+    assert "BKT" in first_runtime["adjustment_reason"]
+
+
+@pytest.mark.unit
 def test_astar_path_is_deterministic_and_respects_prerequisites() -> None:
     profile = {
         "knowledge_level": "beginner",

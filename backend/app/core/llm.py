@@ -21,10 +21,7 @@ from backend.app.agent_runtime_config import (
 LLMProvider = Literal["deepseek", "qwen", "glm"]
 LLMRole = Literal["system", "user", "assistant", "tool"]
 AgentName = Literal[
-    "learner_state",
-    "diagnosis",
-    "feedback",
-    "planner",
+    "diagnosis_feedback",
     "expert_a",
     "expert_b",
     "judge",
@@ -57,10 +54,7 @@ DEFAULT_CONFIG: dict[LLMProvider, dict[str, str]] = {
     },
 }
 AGENT_PROVIDER_ENV: dict[AgentName, str] = {
-    "learner_state": "LEARNER_STATE_PROVIDER",
-    "diagnosis": "DIAGNOSIS_PROVIDER",
-    "feedback": "FEEDBACK_PROVIDER",
-    "planner": "PLANNER_PROVIDER",
+    "diagnosis_feedback": "DIAGNOSIS_FEEDBACK_PROVIDER",
     "expert_a": "EXPERT_A_PROVIDER",
     "expert_b": "EXPERT_B_PROVIDER",
     "judge": "JUDGE_PROVIDER",
@@ -181,17 +175,14 @@ def load_provider_config(provider: LLMProvider, model_name: str | None = None) -
         or defaults["model"]
     )
     configured_base_url = (
-        provider_config.base_url
-        or os.getenv(defaults["base_url_env"])
-        or defaults["base_url"]
+        provider_config.base_url or os.getenv(defaults["base_url_env"]) or defaults["base_url"]
     )
     return LLMProviderConfig(
         provider=provider,
         api_key=api_key,
         model=configured_model,
         base_url=configured_base_url.rstrip("/"),
-        timeout_seconds=llm_config.timeout_seconds
-        or float(os.getenv("LLM_TIMEOUT_SECONDS", "30")),
+        timeout_seconds=llm_config.timeout_seconds or float(os.getenv("LLM_TIMEOUT_SECONDS", "30")),
         retry_times=llm_config.retry_times or int(os.getenv("LLM_RETRY_TIMES", "3")),
     )
 
@@ -247,7 +238,11 @@ def _build_chat_body_with_tools(
         "tools": [
             {
                 "type": "function",
-                "function": {"name": t.name, "description": t.description, "parameters": t.parameters},
+                "function": {
+                    "name": t.name,
+                    "description": t.description,
+                    "parameters": t.parameters,
+                },
             }
             for t in tools
         ],
@@ -367,8 +362,11 @@ def _post_chat_completion_with_tools(
     close_client = http_client is None
 
     body = _build_chat_body_with_tools(
-        config=config, messages=messages, tools=tools,
-        temperature=temperature, stream=False,
+        config=config,
+        messages=messages,
+        tools=tools,
+        temperature=temperature,
+        stream=False,
     )
 
     try:
@@ -442,7 +440,9 @@ class DefaultLLMClient:
     provider: LLMProvider
     model_name: str | None
 
-    def __init__(self, provider: LLMProvider = DEFAULT_PROVIDER, model_name: str | None = None) -> None:
+    def __init__(
+        self, provider: LLMProvider = DEFAULT_PROVIDER, model_name: str | None = None
+    ) -> None:
         self.provider = provider
         self.model_name = model_name
 
@@ -451,7 +451,7 @@ class DefaultLLMClient:
         load_dotenv(encoding="utf-8")
         llm_config = llm_runtime_config()
         default_provider_name = (
-            llm_config.default_provider or os.getenv("DEFAULT_LLM_PROVIDER") or DEFAULT_PROVIDER
+            os.getenv("DEFAULT_LLM_PROVIDER") or llm_config.default_provider or DEFAULT_PROVIDER
         )
         provider = _validate_provider(
             default_provider_name,
@@ -507,7 +507,7 @@ class AgentLLMRouter:
         load_dotenv(encoding="utf-8")
         llm_config = llm_runtime_config()
         default_provider_name = (
-            llm_config.default_provider or os.getenv("DEFAULT_LLM_PROVIDER") or DEFAULT_PROVIDER
+            os.getenv("DEFAULT_LLM_PROVIDER") or llm_config.default_provider or DEFAULT_PROVIDER
         )
         default_provider = _validate_provider(
             default_provider_name,
@@ -517,10 +517,11 @@ class AgentLLMRouter:
         agent_model_names: dict[AgentName, str] = {}
         for agent, env_name in AGENT_PROVIDER_ENV.items():
             settings = agent_runtime_settings(agent)
-            value = settings.provider or os.getenv(env_name)
+            environment_provider = os.getenv(env_name)
+            value = environment_provider or settings.provider
             if value:
                 agent_providers[agent] = _validate_provider(value, env_name)
-            if settings.model_name:
+            if settings.model_name and not environment_provider:
                 agent_model_names[agent] = settings.model_name
         return cls(
             default_provider=default_provider,

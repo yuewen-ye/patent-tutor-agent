@@ -2,7 +2,7 @@
 
 知识产权管理与专利代理实务多 Agent 系统。仓库采用 **Monorepo 单仓库 + 前后端分离**：后端负责 FastAPI 服务、LangGraph 多 Agent 编排、统一模型调用和 RAG 知识库模块；前端负责后续 React 交互与 Agent 运行状态可视化。
 
-当前已完成：三路由工作流（teach/chat/diagnose）、同一 `learner_state` Agent 的诊断/反馈两阶段、SQLite 学员画像与 BKT、双知识轴和确定性 A* 路径、专家 A/B 草稿→互评→修订→整合、三轮 Judge 质量门禁、规范化 Markdown 过程产物、独立练习反馈会话，以及 FastAPI/SSE/WebSocket/Studio/CLI 运行入口。详见 `docs/workflow-technical-guide.md`。
+当前已完成：三路由工作流（teach/chat/diagnose）、同一 `diagnosis_feedback` Agent 的诊断/反馈两阶段、SQLite 学员画像与 BKT、双知识轴和确定性路径、专家 A/B 草稿→互评→修订→整合、Judge 审核后直接反馈、规范化 Markdown 过程产物、独立练习反馈会话，以及 FastAPI/SSE/WebSocket/Studio/CLI 运行入口。详见 `docs/workflow-technical-guide.md`。
 
 ## 从零到 LangGraph Studio
 
@@ -191,6 +191,8 @@ https://smith.langchain.com/studio/?baseUrl=http://localhost:8124
 | 查看状态快照 | 右侧面板展示当前 StateDict |
 | 切换工作流 | 修改 `langgraph.json` 中的 graph 名称 |
 
+`Interact` 右侧节点记录来自本地 LangGraph API；顶部 `Trace` 标签读取 LangSmith 数据，必须先登录与 `LANGSMITH_API_KEY` 对应的 LangSmith 账号。未登录时会跳到登录页。若运行因 Provider 5xx 中断，Trace 仍会记录失败节点，但不会显示完整成功链。
+
 ---
 
 ## 技术栈
@@ -246,27 +248,23 @@ https://smith.langchain.com/studio/?baseUrl=http://localhost:8124
 当前实现**三路由工作流**——根据用户意图自动分流：
 
 ```text
-START → _init → route ──┬── diagnose: diagnosis → END
+START → _init → route ──┬── diagnose: diagnosis_feedback[diagnosis] → END
                          ├── chat: retrieve_context → chat_answer → END
-                         └── teach: diagnosis → planner
+                         └── teach: diagnosis_feedback[diagnosis] → planner
                                       ↓
-                                  expert_a ∥ expert_b
-                                      ↓
-                              revise_experts
-                           (until max rounds)
-                                      ↓
-                             expert_a integration
+                             expert_a / expert_b
+                         (草稿→互评→修订→A整合)
                                       ↓
                                      judge
                                       ↓
-                                   feedback
+                         diagnosis_feedback[feedback]
                                       ↓
                                      END
 ```
 
 | 路由 | 触发条件 | 路径 | LLM 调用次数 | 典型耗时 |
 |------|---------|------|-------------|---------|
-| **teach** | "系统学习"、"学习路径"、"规划" | 诊断→规划→专家按需RAG→双专家辩论→专家A整合→裁判终审→反馈 | ~8-11 次 | 1-3 分钟 |
+| **teach** | "系统学习"、"学习路径"、"规划" | 诊断→确定性规划→专家按需RAG→A/B多阶段协作→Judge→反馈 | ~10-11 次 | 1-3 分钟 |
 | **chat** | 单点问答、定义、对比 | RAG→直接回答 | ~1 次 | 5-30 秒 |
 | **diagnose** | "诊断"、"薄弱点"、"评估" | 诊断→结束 | ~1 次 | 2-5 秒 |
 
@@ -275,14 +273,12 @@ START → _init → route ──┬── diagnose: diagnosis → END
 | 节点 | 类型 | 职责 | YAML 配置项 |
 |------|------|------|-----------------|
 | `route` | LLM 调用 + 本地兜底 | 分类用户意图 teach/chat/diagnose；明显学习/诊断请求会覆盖误路由 | `agents.route` |
-| `diagnosis` | LLM 调用 + Store | 学情诊断；可复用 `feedback` 阶段生成问卷、下一步动作、画像更新建议 | `agents.diagnosis` |
-| `planner` | LLM 调用 | 生成个性化学习路径 | `agents.planner` |
+| `diagnosis_feedback` | LLM 调用 + Store | diagnosis 阶段读取问卷/历史画像；feedback 阶段生成问卷、下一步动作和画像更新 | `agents.diagnosis_feedback` |
+| `planner` | 确定性算法 + Store | 从 SQLite 画像/BKT 和静态双轴计算个性化路径，不调用 LLM | — |
 | `retrieve_context` | 无 LLM | chat 路径固定检索法条上下文 | — |
-| `expert_a` | LLM + Tool 调用 | 保守严谨、法条优先；自行决定是否调用 RAG；负责辩论草稿和最终整合 A/B 结果 | `agents.expert_a` |
-| `expert_b` | LLM + Tool 调用 | 生动灵活、面向案例；自行决定是否调用 RAG；负责辩论草稿和参考专家 A 上轮草稿补强 | `agents.expert_b` |
-| `judge` | LLM 调用 | 只审核专家 A 整合稿是否通过，不写正文、不做过程输出 | `agents.judge` |
-| `revise_experts` | 无 LLM | 增加辩论轮次，并分派下一轮 A/B 辩论 | — |
-| `feedback` | diagnosis Agent 后置阶段 + Store | teach 后置反馈阶段，生成问卷、下一步动作和画像更新建议 | `agents.feedback` |
+| `expert_a` | LLM + Tool 调用 | 保守严谨、法条优先；承担草稿、互评、修订和整合阶段 | `agents.expert_a` |
+| `expert_b` | LLM + Tool 调用 | 生动灵活、面向案例；承担草稿、互评和修订阶段 | `agents.expert_b` |
+| `judge` | LLM 调用 | 只审核专家 A 整合稿，写入报告后直接进入反馈 | `agents.judge` |
 | `chat_answer` | LLM 调用 | chat 路径基于检索上下文生成短答 | `agents.chat_answer` |
 
 接口合同以 `docs/agent-interface-spec.md` 和 `backend/app/schemas/state.py` 为准。
@@ -300,7 +296,6 @@ uv run mypy .                                      # Type check
 uv run python backend/scripts/run_workflow.py \
   --user-input "我想学习专利新颖性" \
   --artifact-root artifacts \
-  --max-debate-rounds 2 \
   --learner-id learner-demo
 
 # 导出 Mermaid 图

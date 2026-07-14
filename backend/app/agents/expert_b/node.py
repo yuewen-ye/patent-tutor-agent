@@ -7,7 +7,13 @@ from typing import Any
 from langchain_core.prompts import ChatPromptTemplate
 
 from backend.app.agent_runtime_config import agent_temperature
-from backend.app.agents.common import Node, load_prompt, messages_from_prompt, normalize_key_aliases, schema_note
+from backend.app.agents.common import (
+    Node,
+    load_prompt,
+    messages_from_prompt,
+    normalize_expert_draft_payload,
+    schema_note,
+)
 from backend.app.agents.rag_tools import collect_expert_retrieval_context
 from backend.app.core.llm import LLMClient, LLMMessage
 from backend.app.schemas.state import CrossReview, ExpertDraft, StateDict, completed_event
@@ -35,7 +41,6 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
                 "问题：{user_input}\n"
                 "学习者画像：{learner_profile}\n"
                 "检索上下文：{retrieval_context}\n"
-                "当前辩论轮次：{debate_round}\n"
                 "辩论上下文：{revision_context}\n"
                 "请生成专家 B 草稿。",
             ),
@@ -69,6 +74,7 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
             review = CrossReview.model_validate(raw)
             return {
                 "expert_b_cross_review": review.model_dump(),
+                "expert_phase": "revision",
                 "events": [completed_event("expert_b", "reviewed expert A draft")],
             }
         if phase == "revision":
@@ -95,17 +101,14 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
                 temperature=agent_temperature("expert_b", 0.4),
                 agent="expert_b",
             )
-            draft = ExpertDraft.model_validate(normalize_key_aliases(raw, {
-                "knowledgePoints": "knowledge_points",
-                "legalBasis": "legal_basis",
-                "teachingContent": "teaching_content",
-                "interactiveQuestions": "interactive_questions",
-            }))
+            draft = ExpertDraft.model_validate(normalize_expert_draft_payload(raw))
             revised = draft.model_dump()
             revised["draft_stage"] = "debate"
             return {
                 "expert_b_draft": revised,
                 "expert_b_revision": revised,
+                "expert_phase": "integration",
+                "teach_phase": "integration",
                 "events": [completed_event("expert_b", "revised expert B draft")],
             }
         prompt_messages = messages_from_prompt(
@@ -113,7 +116,6 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
             user_input=state["user_input"],
             learner_profile=state.get("learner_profile", {}),
             retrieval_context=state.get("retrieval_context", []),
-            debate_round=state.get("debate_round", 1),
             revision_context=state.get("expert_a_draft", {}),
         )
         retrieved_context = collect_expert_retrieval_context(
@@ -129,27 +131,17 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
                 user_input=state["user_input"],
                 learner_profile=state.get("learner_profile", {}),
                 retrieval_context=retrieval_context,
-                debate_round=state.get("debate_round", 1),
                 revision_context=state.get("expert_a_draft", {}),
             ),
             temperature=agent_temperature("expert_b", 0.7),
             agent="expert_b",
         )
-        draft = ExpertDraft.model_validate(
-            normalize_key_aliases(
-                raw,
-                {
-                    "knowledgePoints": "knowledge_points",
-                    "legalBasis": "legal_basis",
-                    "teachingContent": "teaching_content",
-                    "interactiveQuestions": "interactive_questions",
-                },
-            )
-        )
+        draft = ExpertDraft.model_validate(normalize_expert_draft_payload(raw))
         draft_dict = draft.model_dump()
         draft_dict["draft_stage"] = "debate"
         return {
             "expert_b_draft": draft_dict,
+            "expert_phase": "cross_review",
             **({"retrieval_context": retrieved_context} if retrieved_context else {}),
             "events": [completed_event("expert_b", "generated expert B draft with LLM")],
         }

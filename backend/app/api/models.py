@@ -5,7 +5,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 SessionStatusValue = Literal[
-    "running", "completed", "failed", "canceled", "quality_gate_failed", "historical"
+    "running", "completed", "failed", "canceled", "historical"
 ]
 
 
@@ -61,7 +61,6 @@ class HealthSessionCounts(FrozenApiModel):
     completed: int = 0
     failed: int = 0
     canceled: int = 0
-    quality_gate_failed: int = 0
     total: int = 0
 
 

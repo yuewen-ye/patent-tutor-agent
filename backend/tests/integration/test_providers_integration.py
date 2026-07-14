@@ -8,12 +8,20 @@ from __future__ import annotations
 import pytest
 from typing import cast
 
-from backend.app.core.llm import LLMConfigurationError, LLMMessage, LLMProvider, LLMProviderError, call_llm_json
+from backend.app.core.llm import (
+    LLMConfigurationError,
+    LLMMessage,
+    LLMProvider,
+    LLMProviderError,
+    call_llm_json,
+)
 
 pytestmark = pytest.mark.integration
 
 MESSAGES = [
-    LLMMessage(role="system", content="You are a JSON API. Reply ONLY with valid JSON, no explanation."),
+    LLMMessage(
+        role="system", content="You are a JSON API. Reply ONLY with valid JSON, no explanation."
+    ),
     LLMMessage(role="user", content='Return exactly: {"model":"<your model name>","ok":true}'),
 ]
 
@@ -21,12 +29,17 @@ MESSAGES = [
 @pytest.mark.parametrize("provider", ["deepseek", "qwen", "glm"])
 def test_provider_returns_valid_json(provider: str) -> None:
     try:
-        result = call_llm_json(provider=cast(LLMProvider, provider), messages=MESSAGES, temperature=0.1)
+        result = call_llm_json(
+            provider=cast(LLMProvider, provider), messages=MESSAGES, temperature=0.1
+        )
     except LLMConfigurationError as exc:
         pytest.skip(f"{provider} not configured: {exc}")
     except LLMProviderError as exc:
         message = str(exc).lower()
-        if any(kw in message for kw in ("429", "rate limit", "401", "unauthorized")):
+        if any(
+            kw in message
+            for kw in ("429", "rate limit", "401", "unauthorized", "403", "free quota")
+        ):
             pytest.skip(f"{provider} unavailable: {exc}")
         raise
 

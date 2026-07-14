@@ -8,15 +8,10 @@ pytestmark = pytest.mark.unit
 
 
 class PlannerLLMClient:
-    def __init__(self, response: object) -> None:
-        self.response = response
-        self.calls: list[tuple[list[LLMMessage], str | None]] = []
-
     def generate_json(
         self, messages: list[LLMMessage], temperature: float, agent: str | None = None
     ) -> object:
-        self.calls.append((messages, agent))
-        return self.response
+        raise AssertionError("deterministic planner must not call the LLM")
 
     def generate_with_tools(
         self,
@@ -28,20 +23,8 @@ class PlannerLLMClient:
         raise AssertionError("planner node must not call tools")
 
 
-def test_planner_normalizes_model_generated_node_ids_to_slug() -> None:
-    node = build_planner_node(
-        PlannerLLMClient(
-            [
-                {
-                    "node_id": "case_intro_novelty_inventiveness",
-                    "node_name": "案例导入",
-                    "duration_min": 15,
-                    "strategy": "先用案例导入",
-                    "prerequisites": [],
-                }
-            ]
-        )
-    )
+def test_planner_has_one_deterministic_decision_source() -> None:
+    node = build_planner_node(PlannerLLMClient())
     state: StateDict = {
         "session_id": "debug",
         "user_input": "学习新颖性和创造性",
@@ -50,8 +33,7 @@ def test_planner_normalizes_model_generated_node_ids_to_slug() -> None:
 
     result = node(state)
 
-    assert result["path_decision"]["suggested_node_ids"] == [
-        "case-intro-novelty-inventiveness"
-    ]
+    assert "suggested_node_ids" not in result["path_decision"]
     assert result["path_decision"]["algorithm"] == "deterministic_astar"
+    assert result["path_decision"]["current_node_id"] == result["learning_path"][0]["node_id"]
     assert result["learning_path"]

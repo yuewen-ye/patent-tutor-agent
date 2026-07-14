@@ -13,11 +13,9 @@ _COMPLETED_STATE_KEYS = (
     "expert_b_draft",
     "course_package",
     "judge_report",
-    "final_learning_markdown",
+    "feedback_result",
     "workflow_status",
     "artifacts",
-    "debate_round",
-    "max_debate_rounds",
 )
 
 def completed_state(state: StateDict) -> dict[str, Any]:
