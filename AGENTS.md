@@ -17,7 +17,7 @@ uv run pytest -m unit                              # Unit tests only
 uv run pytest -m integration                       # Integration tests (needs .env API keys)
 uv run ruff check .                                # Lint (line-length=100, target=py311)
 uv run mypy .                                      # Type check
-uv run langgraph dev --no-browser --host 127.0.0.1 --port 8124  # LangGraph Studio
+uv run langgraph dev --no-reload --no-browser --host 127.0.0.1 --port 8124  # LangGraph Studio
 ```
 
 Generate `requirements.txt` only when external platforms require it:

@@ -36,4 +36,4 @@ export WORKFLOW_LOG_ROOT="${WORKFLOW_LOG_ROOT:-$repo_root/artifacts}"
 export UV_CACHE_DIR="${UV_CACHE_DIR:-$repo_root/.uv-cache}"
 export UV_PYTHON_INSTALL_DIR="${UV_PYTHON_INSTALL_DIR:-$repo_root/.uv-python}"
 
-exec uv run langgraph dev --no-browser --host 127.0.0.1 --port 8124
+exec uv run langgraph dev --no-reload --no-browser --host 127.0.0.1 --port 8124

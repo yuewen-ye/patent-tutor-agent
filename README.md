@@ -123,6 +123,9 @@ Studio 启动脚本会把 `watchfiles`、`langgraph_api`、`langgraph_runtime_in
 artifacts/sessions/{session_id}/workflow.log.jsonl
 ```
 
+启动脚本默认带 `--no-reload`。这是为了避免热重载期间新旧 Dev 进程同时写入
+`.langgraph_api/*.pckl`，触发 `store.pckl.tmp` 竞争；修改代码后需要手动重启 Studio。
+
 查看最近一次 Studio run 的日志：
 
 ```bash
@@ -411,7 +414,7 @@ PY
 
 ## RAG 工具函数
 
-chat 路径通过非 LLM 的 `retrieve_context` 节点确定性调用 `backend/app/retrieval_selector.py`。teach 路径由 `expert_a` / `expert_b` 通过 `generate_with_tools()` 自行决定是否调用 RAG。运行时根据 `RAG_RETRIEVAL_MODE` 选择真实向量检索或 mock 检索；`backend/app/rag/` 只保留真实 RAG 实现。
+chat 路径通过非 LLM 的 `retrieve_context` 节点确定性调用 `backend/app/retrieval_selector.py`。teach 路径由 `expert_a` / `expert_b` 通过 `generate_with_tools()` 自行决定是否调用 RAG，每个专家阶段最多执行一个 RAG tool call，避免模型一次返回多组并行调用导致检索片段和后续 Prompt 成倍膨胀。运行时根据 `RAG_RETRIEVAL_MODE` 选择真实向量检索或 mock 检索；`backend/app/rag/` 只保留真实 RAG 实现。
 
 当前实现使用 Milvus Lite + BGE-M3 嵌入模型做本地向量检索，不再保留旧版向量库兼容路径。
 

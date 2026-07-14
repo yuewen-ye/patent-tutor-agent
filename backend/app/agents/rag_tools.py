@@ -27,6 +27,7 @@ _RAG_TOOL: Final = ToolDefinition(
         "additionalProperties": False,
     },
 )
+_MAX_TOOL_CALLS_PER_PHASE: Final = 1
 
 
 def _tool_top_k(call: ToolCall, default_top_k: int) -> int:
@@ -58,7 +59,7 @@ def collect_expert_retrieval_context(
     )
     chunks: list[dict[str, object]] = []
     default_top_k = agent_top_k(agent, 5)
-    for tool_call in response.tool_calls:
+    for tool_call in response.tool_calls[:_MAX_TOOL_CALLS_PER_PHASE]:
         if tool_call.name != "rag_retrieve":
             raise RuntimeError(f"Unsupported expert tool call: {tool_call.name}")
         chunks.extend(

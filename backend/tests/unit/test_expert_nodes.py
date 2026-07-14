@@ -124,3 +124,53 @@ def test_expert_b_runs_requested_rag_tool_and_returns_retrieval_context(
     assert client.calls == ["generate_with_tools", "generate_json"]
     assert result["retrieval_context"][0]["citation"] == "专利法第二十二条"
     assert result["expert_b_draft"]["teaching_content"] == "结合检索结果解释新颖性。"
+
+
+def test_expert_retrieval_limits_parallel_tool_calls_to_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    queries: list[str] = []
+
+    class MultipleToolCallsLLMClient(CamelCaseExpertLLMClient):
+        def generate_with_tools(
+            self,
+            messages: list[LLMMessage],
+            tools: list[ToolDefinition],
+            temperature: float,
+            agent: str | None = None,
+        ) -> LLMResponseWithTools:
+            return LLMResponseWithTools(
+                content=None,
+                tool_calls=[
+                    ToolCall(
+                        id=f"call-{index}",
+                        name="rag_retrieve",
+                        arguments={"query": query, "top_k": 1},
+                    )
+                    for index, query in enumerate(("新颖性", "创造性", "实用性"), start=1)
+                ],
+            )
+
+    def fake_retrieve_context(query: str = "", top_k: int = 5) -> list[RetrievalChunk]:
+        queries.append(query)
+        return [
+            RetrievalChunk(
+                chunk_id=query,
+                source="patent_law",
+                citation=query,
+                text=query,
+                score=0.9,
+            )
+        ]
+
+    monkeypatch.setattr(rag_tools, "retrieve_context", fake_retrieve_context)
+
+    chunks = rag_tools.collect_expert_retrieval_context(
+        MultipleToolCallsLLMClient(),
+        messages=[LLMMessage(role="user", content="检索专利法")],
+        temperature=0.0,
+        agent="expert_a",
+    )
+
+    assert queries == ["新颖性"]
+    assert [chunk["citation"] for chunk in chunks] == ["新颖性"]

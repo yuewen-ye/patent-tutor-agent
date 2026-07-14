@@ -79,7 +79,7 @@ artifacts/sessions/{session_id}/
 
 - FastAPI：`uv run python backend/main.py`
 - CLI：`uv run python backend/scripts/run_workflow.py --user-input "我想学习专利新颖性" --artifact-root artifacts --learner-id learner-demo`
-- Studio：`uv run langgraph dev --no-browser --host 127.0.0.1 --port 8124`
+- Studio：`uv run langgraph dev --no-reload --no-browser --host 127.0.0.1 --port 8124`
 - 导出图：`uv run python backend/scripts/show_workflow.py`
 
-Studio 的 `Interact` 节点记录由本地 API 提供；顶部 `Trace` 由 LangSmith 提供，浏览器必须登录对应账号。`AgentLLMRouter` 允许显式环境变量覆盖 YAML Provider，便于 Provider 5xx 时临时切换，例如 `EXPERT_A_PROVIDER=qwen`；覆盖 Provider 时不会沿用原 Provider 的 YAML 模型名。
+Studio 的 `Interact` 节点记录由本地 API 提供；顶部 `Trace` 由 LangSmith 提供，浏览器必须登录对应账号。仓库启动脚本默认关闭热重载，防止新旧 Dev 进程争用 `.langgraph_api/store.pckl.tmp`；代码变化后手动重启。`AgentLLMRouter` 允许显式环境变量覆盖 YAML Provider，便于 Provider 5xx 时临时切换，例如 `EXPERT_A_PROVIDER=qwen`；覆盖 Provider 时不会沿用原 Provider 的 YAML 模型名。
