@@ -18,10 +18,30 @@ class QuestionnaireResponseItem(BaseModel):
 
 
 class QuestionnaireSubmission(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(
+        frozen=True,
+        json_schema_extra={
+            "examples": [
+                {
+                    "learning_goal": "系统掌握专利新颖性判断",
+                    "responses": [
+                        {"question_id": "Q1", "answer": "B"},
+                        {"question_id": "Q23", "answer": "A"},
+                        {
+                            "question_id": "Q47",
+                            "answer": "我对相关法律知识掌握较弱，希望结合案例学习。",
+                        },
+                    ],
+                }
+            ]
+        },
+    )
 
-    learning_goal: str = Field(min_length=1)
-    responses: list[QuestionnaireResponseItem] = Field(min_length=1)
+    learning_goal: str = Field(min_length=1, description="学员本阶段的学习目标。")
+    responses: list[QuestionnaireResponseItem] = Field(
+        min_length=1,
+        description="问卷回答列表；正式流程应提交学员已填写的全部题目。",
+    )
 
 
 class ExerciseResponseItem(BaseModel):
@@ -34,10 +54,30 @@ class ExerciseResponseItem(BaseModel):
 
 
 class ExerciseSubmission(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(
+        frozen=True,
+        json_schema_extra={
+            "examples": [
+                {
+                    "learner_id": "learner-001",
+                    "responses": [
+                        {
+                            "question_id": "novelty-q1",
+                            "answer": "该技术方案在申请日前已经公开，因此不具备新颖性。",
+                            "observed_correct": True,
+                            "skill_id": "patent-novelty",
+                        }
+                    ],
+                }
+            ]
+        },
+    )
 
-    learner_id: str = Field(min_length=1)
-    responses: list[ExerciseResponseItem] = Field(min_length=1)
+    learner_id: str = Field(min_length=1, description="提交练习的学员唯一标识。")
+    responses: list[ExerciseResponseItem] = Field(
+        min_length=1,
+        description="本次练习回答列表。",
+    )
 
 
 def create_learning_flow_router(session_service: SessionService) -> APIRouter:

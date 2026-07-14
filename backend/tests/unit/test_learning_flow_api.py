@@ -85,3 +85,35 @@ def test_exercise_submission_creates_separate_feedback_session(
     history = service.learner_memory("learner-1")["history"]
     assert history[0]["event_type"] == "exercise_submitted"
     assert history[0]["course_session_id"] == "course-session"
+
+
+@pytest.mark.parametrize(
+    ("path", "schema_name"),
+    [
+        ("/sessions", "CreateSessionRequest"),
+        (
+            "/learners/learner-swagger/questionnaire-responses",
+            "QuestionnaireSubmission",
+        ),
+        (
+            "/sessions/course-session/exercise-responses",
+            "ExerciseSubmission",
+        ),
+    ],
+)
+def test_swagger_post_examples_are_executable(
+    path: str,
+    schema_name: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, _ = _client(tmp_path, monkeypatch)
+    spec = client.get("/openapi.json").json()
+    schema = spec["components"]["schemas"][schema_name]
+
+    examples = schema.get("examples")
+    assert examples, f"{schema_name} must provide a Swagger request example"
+
+    response = client.post(path, json=examples[0])
+
+    assert response.status_code == 200, response.text

@@ -18,12 +18,33 @@ from backend.app.services.session_service import SessionService
 
 
 class CreateSessionRequest(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "user_input": "我想系统学习专利新颖性",
+                    "learner_id": "learner-001",
+                    "mode": "teach",
+                }
+            ]
+        },
+    )
 
-    user_input: str = Field(min_length=1)
-    learner_id: str | None = None
-    provider_overrides: dict[AgentName, LLMProvider] | None = None
-    mode: Literal["auto", "teach", "chat", "diagnose"] = "auto"
+    user_input: str = Field(min_length=1, description="学员的问题或本次学习目标。")
+    learner_id: str | None = Field(
+        default=None,
+        description="学员唯一标识；mode=teach 时必填。",
+    )
+    provider_overrides: dict[AgentName, LLMProvider] | None = Field(
+        default=None,
+        description="可选的 Agent 模型供应商覆盖；通常保持为空并使用服务端配置。",
+    )
+    mode: Literal["auto", "teach", "chat", "diagnose"] = Field(
+        default="auto",
+        description="auto 自动识别意图；也可强制进入教学、问答或诊断流程。",
+    )
 
     @model_validator(mode="after")
     def validate_explicit_teach(self) -> CreateSessionRequest:
