@@ -31,6 +31,10 @@ Session 状态只允许 `running/completed/failed/canceled`。服务内存中的
 - `POST /sessions/{id}/exercise-responses`：作答转 feedback 会话。
 - `GET /learners/{id}`：画像、历史和 BKT。
 
+Judge 审核通过的课程会话以 `completed` 结束，前端读取 `course_package` 展示课程和习题；
+学员作答后调用 `exercise-responses`，由服务创建带 `parent_session_id` 的独立 feedback 会话。
+Judge 审核不通过时，原课程会话会直接执行 feedback，不等待这次接口调用。
+
 ## Artifact 安全
 
 Artifact 路径必须位于 `artifacts/sessions/{session_id}`，拒绝绝对路径、父目录穿越和非 Markdown 目标。前端通过 Session 中的 artifact `kind/path` 选择内容，不拼接固定“最终文件”路径。

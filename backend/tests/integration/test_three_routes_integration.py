@@ -53,7 +53,10 @@ class TestTeachRoute:
         assert state["judge_report"]["decision"] in {
             "accept", "accept_with_minor_revision", "revise",
         }
-        assert "feedback_result" in state
+        if state["judge_report"]["decision"] == "revise":
+            assert "feedback_result" in state
+        else:
+            assert "feedback_result" not in state
         assert "final_answer" not in state
         assert state["expert_a_draft"]["draft_stage"] == "integration"
         assert state["expert_a_draft"]["teaching_content"]
@@ -67,7 +70,10 @@ class TestTeachRoute:
         assert "planner" in completed
         assert "retrieve_context" not in completed
         assert "tool_agent" not in completed
-        assert completed[-1] == "diagnosis_feedback"
+        if state["judge_report"]["decision"] == "revise":
+            assert completed[-1] == "diagnosis_feedback"
+        else:
+            assert completed[-1] == "judge"
 
 
 class TestChatRoute:

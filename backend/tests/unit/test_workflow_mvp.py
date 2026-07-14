@@ -155,7 +155,7 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm(
     )
 
     completed = completed_teach_state(state)
-    assert len(llm_client.calls) == 11
+    assert len(llm_client.calls) == 10
     assert completed["session_id"] == "demo-session"
     assert completed["learner_profile"]["knowledge_level"] == "beginner"
     assert completed["learning_path"]
@@ -169,20 +169,11 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm(
 
     completed_events = [event for event in state["events"] if event["status"] == "completed"]
     event_names = [event["node"] for event in completed_events]
-    assert event_names == [
-        "route",
-        "diagnosis_feedback",
-        "planner",
-        "expert_a",
-        "expert_b",
-        "expert_a",
-        "expert_b",
-        "expert_a",
-        "expert_b",
-        "expert_a",
-        "judge",
-        "diagnosis_feedback",
-    ]
+    assert event_names[:3] == ["route", "diagnosis_feedback", "planner"]
+    assert set(event_names[3:5]) == {"expert_a", "expert_b"}
+    assert set(event_names[5:7]) == {"expert_a", "expert_b"}
+    assert set(event_names[7:9]) == {"expert_a", "expert_b"}
+    assert event_names[-2:] == ["expert_a", "judge"]
     assert all(isinstance(event["timestamp"], str) and event["timestamp"] for event in completed_events)
     assert all(isinstance(event["duration_ms"], int) for event in completed_events)
     assert llm_client.tool_call_agents.count("expert_a") == 2
@@ -195,8 +186,8 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm(
     assert "expert_a" in llm_client.agents
     assert "expert_b" in llm_client.agents
     assert llm_client.agents.count("judge") == 1
-    assert llm_client.agents.count("diagnosis_feedback") == 2
-    assert llm_client.agents[-1] == "diagnosis_feedback"
+    assert llm_client.agents.count("diagnosis_feedback") == 1
+    assert llm_client.agents[-1] == "judge"
     forbidden_agents = {
         "cross_review_a",
         "cross_review_b",
@@ -208,7 +199,6 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm(
         "tool_agent",
     }
     assert forbidden_agents.isdisjoint(set(llm_client.agents))
-    assert llm_client.agents[-2:] == ["judge", "diagnosis_feedback"]
     assert "工作流完成" in capsys.readouterr().err
 
 
@@ -228,8 +218,8 @@ def test_teach_workflow_persists_learner_memory_once(monkeypatch: pytest.MonkeyP
 
     profiles = store.search(learner_namespace("learner-unit", "profile"), limit=5)
     histories = store.search(learner_namespace("learner-unit", "history"), limit=5)
-    assert len(profiles) == 2
-    assert len(histories) == 1
+    assert len(profiles) == 1
+    assert histories == []
 
 
 def test_workflow_compiles_and_exports_mermaid(tmp_path: Path) -> None:

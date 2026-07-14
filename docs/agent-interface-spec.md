@@ -10,8 +10,9 @@
 | `diagnosis_feedback` | `generate_json` + Store | diagnosis: `LearnerProfile`；feedback: `FeedbackResult` |
 | `planner` | 确定性算法 + Store | `LearningPathItem[]`、双轴快照、路径决策 |
 | `expert_a` | `generate_json` / `generate_with_tools` | 草稿、互评、修订、整合课程包 |
-| `expert_b` | `generate_json` / `generate_with_tools` | 草稿、互评、修订、阶段推进 |
+| `expert_b` | `generate_json` / `generate_with_tools` | 草稿、互评、修订 |
 | `judge` | `generate_json` | `JudgeReport` |
+| `_experts_barrier` | 确定性汇合节点 | 等待 A/B 同阶段完成并推进专家阶段 |
 | `retrieve_context` | 检索服务 | `RetrievalChunk[]` |
 | `chat_answer` | `generate_json` | `ChatAnswer` |
 
@@ -48,14 +49,24 @@ _init → route | diagnosis_feedback(feedback)
 route(chat) → retrieve_context → chat_answer → END
 route(diagnose) → diagnosis_feedback(diagnosis) → END
 route(teach) → diagnosis_feedback(diagnosis) → planner
-planner → expert_a
-expert_a(draft/review/revision) → expert_b
-expert_b(draft/review/revision) → expert_a
-expert_a(integration) → judge
-judge → diagnosis_feedback(feedback) → END
+planner → expert_a(draft) || expert_b(draft)
+expert_a + expert_b → _experts_barrier
+_experts_barrier → expert_a(cross_review) || expert_b(cross_review)
+expert_a + expert_b → _experts_barrier
+_experts_barrier → expert_a(revision) || expert_b(revision)
+expert_a + expert_b → _experts_barrier
+_experts_barrier → expert_a(integration) → judge
+judge(accept | accept_with_minor_revision) → END
+judge(revise) → diagnosis_feedback(feedback) → END
+exercise-responses → 独立 feedback 会话 → diagnosis_feedback(feedback) → END
 ```
 
-Judge 的 `decision` 是审核结果，不再是图分支条件。`revise` 仍进入反馈阶段，由反馈结果告诉学员下一步动作并保留修订要求。
+`_experts_barrier` 是技术汇合点，不是 Agent。它是唯一允许推进 `expert_phase` 的节点，
+保证 A/B 在草稿、互评和修订三个阶段真实并行且全部完成后才进入下一阶段。
+
+Judge 的 `decision` 是图分支条件。`accept` 和 `accept_with_minor_revision` 结束课程生成会话，
+前端展示课程与习题；学员作答后通过练习提交接口创建独立 feedback 会话。`revise` 表示课程
+未通过审核，当前会话直接进入反馈阶段，不等待学员作答。
 
 ## 4. 画像与路径合同
 

@@ -74,7 +74,6 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
             review = CrossReview.model_validate(raw)
             return {
                 "expert_b_cross_review": review.model_dump(),
-                "expert_phase": "revision",
                 "events": [completed_event("expert_b", "reviewed expert A draft")],
             }
         if phase == "revision":
@@ -107,8 +106,6 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
             return {
                 "expert_b_draft": revised,
                 "expert_b_revision": revised,
-                "expert_phase": "integration",
-                "teach_phase": "integration",
                 "events": [completed_event("expert_b", "revised expert B draft")],
             }
         prompt_messages = messages_from_prompt(
@@ -141,7 +138,6 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
         draft_dict["draft_stage"] = "debate"
         return {
             "expert_b_draft": draft_dict,
-            "expert_phase": "cross_review",
             **({"retrieval_context": retrieved_context} if retrieved_context else {}),
             "events": [completed_event("expert_b", "generated expert B draft with LLM")],
         }

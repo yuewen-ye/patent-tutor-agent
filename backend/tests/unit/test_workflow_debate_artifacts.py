@@ -152,11 +152,11 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     assert agents.count("expert_a") == 4
     assert agents.count("expert_b") == 3
     assert agents.count("judge") == 1
-    assert agents.count("diagnosis_feedback") == 2
+    assert agents.count("diagnosis_feedback") == 1
     assert llm_client.tool_call_agents.count("expert_a") == 2
     assert llm_client.tool_call_agents.count("expert_b") == 1
     assert "tool_agent" not in agents
-    assert agents[-1] == "diagnosis_feedback"
+    assert agents[-1] == "judge"
     assert {
         "cross_review_a",
         "cross_review_b",
@@ -201,7 +201,7 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     assert completed_log_nodes[:3] == ["route", "diagnosis_feedback", "planner"]
     assert completed_log_nodes.count("expert_a") == 4
     assert completed_log_nodes.count("expert_b") == 3
-    assert completed_log_nodes[-3:] == ["expert_a", "judge", "diagnosis_feedback"]
+    assert completed_log_nodes[-2:] == ["expert_a", "judge"]
     assert all(record["session_id"] == "demo-session" for record in workflow_log)
     assert all(
         isinstance(record["duration_ms"], int)
@@ -239,7 +239,7 @@ def test_workflow_runs_both_experts_through_each_internal_phase_before_integrati
     assert agents.count("expert_a") == 4
     assert agents.count("expert_b") == 3
     assert agents.count("judge") == 1
-    assert agents.count("diagnosis_feedback") == 2
+    assert agents.count("diagnosis_feedback") == 1
     assert llm_client.tool_call_agents.count("expert_a") == 2
     assert llm_client.tool_call_agents.count("expert_b") == 1
     assert "tool_agent" not in agents

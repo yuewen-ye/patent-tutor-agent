@@ -9,22 +9,24 @@ START → _init → route ──┬── diagnose → diagnosis_feedback[diagno
                          ├── chat → retrieve_context → chat_answer → END
                          └── teach → diagnosis_feedback[diagnosis]
                                       → planner
-                                      → expert_a[draft]
-                                      → expert_b[draft]
-                                      → expert_a[cross_review]
-                                      → expert_b[cross_review]
-                                      → expert_a[revision]
-                                      → expert_b[revision]
+                                      → expert_a[draft] ║ expert_b[draft]
+                                      → _experts_barrier
+                                      → expert_a[cross_review] ║ expert_b[cross_review]
+                                      → _experts_barrier
+                                      → expert_a[revision] ║ expert_b[revision]
+                                      → _experts_barrier
                                       → expert_a[integration]
                                       → judge
-                                      → diagnosis_feedback[feedback]
-                                      → END
+                                         ├── accept/minor → END
+                                         └── revise → diagnosis_feedback[feedback] → END
 
-独立练习反馈请求：
-_init → diagnosis_feedback[feedback] → END
+审核通过后的独立练习反馈请求：
+POST /sessions/{course_session_id}/exercise-responses
+  → 新 feedback 会话
+  → _init → diagnosis_feedback[feedback] → END
 ```
 
-`diagnosis_feedback` 是一个多阶段 Agent 节点，通过 `diagnosis_feedback_phase` 在诊断和反馈阶段重入。专家 A、B 也各自只有一个 Agent 节点，通过 `expert_phase` 在草稿、互评、修订和整合阶段重入。Judge 只审核整合稿，随后无条件回到反馈阶段；不存在发布节点、质量门禁或辩论轮数。
+`diagnosis_feedback` 是一个多阶段 Agent 节点，通过 `diagnosis_feedback_phase` 在诊断和反馈阶段重入。专家 A、B 也各自只有一个 Agent，通过 `expert_phase` 在草稿、互评和修订阶段重入；三个阶段都并行执行，由 `_experts_barrier` 等待双方完成并推进阶段。整合阶段只运行专家 A。Judge 通过时课程会话结束，等待学员提交练习；Judge 不通过时当前会话直接进入反馈阶段。不存在长时间挂起等待学员输入的图节点。
 
 ## 2. 路径与混淆轴
 
@@ -32,7 +34,7 @@ _init → diagnosis_feedback[feedback] → END
 - 混淆对定义来自 `confusion-pairs.json`，运行时不改写静态定义。
 - `planner` 不调用 LLM。它读取数据库中该学员的最新画像和 BKT 掌握度，再由 `backend/app/learning_path.py` 确定性计算路径。
 - 混淆风险同时考虑画像中的 `weak_points` 和相关概念的 BKT 掌握度；低掌握度会提高 `learner_risk` 并记录 `adjustment_reason`。
-- 默认数据库为 `data/learner_memory.sqlite3`。FastAPI、CLI 与 Studio 都通过 Store 读取同一类画像数据。
+- FastAPI 默认使用 `data/learner_memory.sqlite3` 保存画像、历史和 BKT。Studio 由 LangGraph Dev 管理自己的 Store，不会自动读取这份 SQLite；要让 Studio 复用产品数据，必须显式接入同一个持久化 Store，或通过 FastAPI 启动产品流程。
 
 ## 3. Markdown 过程产物
 
@@ -58,7 +60,7 @@ artifacts/sessions/{session_id}/
   feedback/grading_report.md
 ```
 
-`course_package.md` 是专家整合阶段的过程稿；`judge_report.md` 和反馈报告继续保留完整审计链。系统不会生成 `final_learning.md` 或独立答案文件。
+`course_package.md` 是专家整合阶段的过程稿；`judge_report.md` 始终保留。审核通过时，反馈文件在学员提交练习后的独立会话中生成；审核不通过时，反馈文件在当前课程会话中生成。系统不会生成 `final_learning.md` 或独立答案文件。
 
 每个 Markdown 都先由通过 Pydantic 校验的结构化数据渲染，使用固定标题、表格和 JSON 代码块。`manifest.json` 保存路径、类型、生成节点、SHA-256 与时间戳，状态只允许 `running/completed/failed/canceled`。
 

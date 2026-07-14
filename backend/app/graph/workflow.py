@@ -7,7 +7,7 @@ import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable, Literal, cast
+from typing import Any, Callable, Literal, assert_never, cast
 
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
@@ -20,7 +20,7 @@ from backend.app.artifacts import attach_markdown_artifact, write_field_artifact
 from backend.app.core.llm import AgentLLMRouter, DefaultLLMClient, LLMClient
 from backend.app.retrieval_selector import retrieve_context
 from backend.app.schemas.context import WorkflowContext
-from backend.app.schemas.state import StateDict, completed_event
+from backend.app.schemas.state import JudgeReport, StateDict, completed_event
 from backend.app.workflow_logging import write_workflow_log
 
 WorkflowUpdateSink = Callable[[dict[str, Any]], None]
@@ -280,10 +280,49 @@ def _route_after_retrieve_context(
     return "chat_answer"
 
 
-def _route_after_expert_a_phase(state: StateDict) -> Literal["expert_b", "judge"]:
-    if state.get("expert_phase") == "integration":
-        return "judge"
-    return "expert_b"
+def _advance_expert_phase(state: StateDict) -> dict[str, Any]:
+    phase = state.get("expert_phase", "draft")
+    match phase:
+        case "draft":
+            return {"expert_phase": "cross_review"}
+        case "cross_review":
+            return {"expert_phase": "revision"}
+        case "revision":
+            return {"expert_phase": "integration", "teach_phase": "integration"}
+        case "integration":
+            raise RuntimeError("Expert integration must not enter the parallel phase barrier.")
+        case unreachable:
+            assert_never(unreachable)
+
+
+def _route_after_experts_barrier(
+    state: StateDict,
+) -> list[Literal["expert_a", "expert_b"]] | Literal["expert_a_integration"]:
+    phase = state.get("expert_phase", "draft")
+    match phase:
+        case "cross_review" | "revision":
+            return ["expert_a", "expert_b"]
+        case "integration":
+            return "expert_a_integration"
+        case "draft":
+            raise RuntimeError("Parallel expert phase did not advance at the barrier.")
+        case unreachable:
+            assert_never(unreachable)
+
+
+def _route_after_judge(
+    state: StateDict,
+) -> Literal["diagnosis_feedback", "__end__"]:
+    decision = JudgeReport.model_validate(state.get("judge_report", {})).decision
+    match decision:
+        case "accept" | "accept_with_minor_revision":
+            print("▸ [路由] judge 通过 → 等待学员学习并提交练习", file=sys.stderr)
+            return "__end__"
+        case "revise":
+            print("▸ [路由] judge 未通过 → 直接反馈", file=sys.stderr)
+            return "diagnosis_feedback"
+        case unreachable:
+            assert_never(unreachable)
 
 
 def build_workflow(
@@ -315,10 +354,10 @@ def build_workflow(
         updates["workflow_status"] = "running"
         return updates
 
-    def _wrap(name: str, artifact: bool = True) -> Any:
+    def _wrap(name: str, artifact: bool = True, node_label: str | None = None) -> Any:
         return cast(Any, _with_runtime_side_effects(
             nodes[name], root_path if artifact else None, log_root_path,
-            update_sink, event_sink, node_label=name,
+            update_sink, event_sink, node_label=node_label or name,
         ))
 
     # ── All nodes ──
@@ -333,6 +372,8 @@ def build_workflow(
     builder.add_node("chat_answer", _wrap("chat_answer"))
     builder.add_node("expert_a", _wrap("expert_a"))
     builder.add_node("expert_b", _wrap("expert_b"))
+    builder.add_node("_experts_barrier", _advance_expert_phase)
+    builder.add_node("expert_a_integration", _wrap("expert_a", node_label="expert_a"))
     builder.add_node("judge", _wrap("judge"))
 
     # ── Edges ──
@@ -362,19 +403,29 @@ def build_workflow(
     )
 
     builder.add_edge("planner", "expert_a")
+    builder.add_edge("planner", "expert_b")
     builder.add_conditional_edges(
         "retrieve_context",
         _route_after_retrieve_context,
         {"chat_answer": "chat_answer"},
     )
 
+    builder.add_edge(["expert_a", "expert_b"], "_experts_barrier")
     builder.add_conditional_edges(
-        "expert_a",
-        _route_after_expert_a_phase,
-        {"expert_b": "expert_b", "judge": "judge"},
+        "_experts_barrier",
+        _route_after_experts_barrier,
+        {
+            "expert_a": "expert_a",
+            "expert_b": "expert_b",
+            "expert_a_integration": "expert_a_integration",
+        },
     )
-    builder.add_edge("expert_b", "expert_a")
-    builder.add_edge("judge", "diagnosis_feedback")
+    builder.add_edge("expert_a_integration", "judge")
+    builder.add_conditional_edges(
+        "judge",
+        _route_after_judge,
+        {"diagnosis_feedback": "diagnosis_feedback", "__end__": END},
+    )
 
     builder.add_edge("chat_answer", END)
 

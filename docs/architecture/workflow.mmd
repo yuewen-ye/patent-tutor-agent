@@ -13,18 +13,25 @@ graph TD;
 	chat_answer(chat_answer)
 	expert_a(expert_a)
 	expert_b(expert_b)
+	_experts_barrier(_experts_barrier)
+	expert_a_integration(expert_a_integration)
 	judge(judge)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> _init;
+	_experts_barrier -.-> expert_a;
+	_experts_barrier -.-> expert_a_integration;
+	_experts_barrier -.-> expert_b;
 	_init -.-> diagnosis_feedback;
 	_init -.-> route;
 	diagnosis_feedback -.-> __end__;
 	diagnosis_feedback -.-> planner;
-	expert_a -.-> expert_b;
-	expert_a -.-> judge;
-	expert_b --> expert_a;
-	judge --> diagnosis_feedback;
+	expert_a --> _experts_barrier;
+	expert_a_integration --> judge;
+	expert_b --> _experts_barrier;
+	judge -.-> __end__;
+	judge -.-> diagnosis_feedback;
 	planner --> expert_a;
+	planner --> expert_b;
 	retrieve_context -.-> chat_answer;
 	route -.-> diagnosis_feedback;
 	route -.-> retrieve_context;

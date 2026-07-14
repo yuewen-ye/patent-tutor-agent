@@ -7,8 +7,8 @@
 | 目录/文件 | 工作流节点 | 类型 | 角色 | 主要产出 |
 | --- | --- | --- | --- | --- |
 | `route.py` | `route` | LLM | 意图路由，分类 teach/chat/diagnose | `intent` |
-| `diagnosis/` | `diagnosis` / `feedback` | LLM + Store | 学情诊断 Agent；feedback 是后置阶段 | `learner_profile` / `feedback_result` |
-| `planner/` | `planner` | LLM | 路径规划 Agent | `learning_path` |
+| `diagnosis/` | `diagnosis_feedback` | LLM + Store | 学情诊断/反馈两阶段 Agent | `learner_profile` / `feedback_result` |
+| `planner/` | `planner` | 确定性 + Store | 从画像、BKT 和双轴计算路径 | `learning_path` |
 | `retrieve_context` | `retrieve_context` | 无 LLM | chat 路径固定 RAG 检索 | `retrieval_context` |
 | `expert_a/` | `expert_a` | LLM + Tool | 领域专家 A，保守严谨；自行决定是否检索；辩论草稿与最终整合 | `expert_a_draft` / `retrieval_context` |
 | `expert_b/` | `expert_b` | LLM + Tool | 领域专家 B，生动灵活；自行决定是否检索 | `expert_b_draft` / `retrieval_context` |
@@ -19,7 +19,7 @@
 
 | 路由 | 经过的 Agent 节点 |
 |------|-------------------|
-| teach | route → diagnosis_feedback(diagnosis) → planner → expert_a/expert_b 多阶段协作 → judge → diagnosis_feedback(feedback) |
+| teach | route → diagnosis_feedback(diagnosis) → planner → expert_a/expert_b 三阶段并行 → A 整合 → judge → END 或 feedback |
 | chat | route → retrieve_context → chat_answer |
 | diagnose | route → diagnosis |
 
@@ -33,5 +33,5 @@
 - 模型 provider/model/temperature/top_k 不在 Agent 节点中写死，运行时优先由 `config/agents.yaml` 和 `AgentLLMRouter` 决定；`.env` 只放 API key 和本机路径，旧 `*_PROVIDER` 等环境变量仅作兼容回退。
 - 详细 JSON Schema、错误对象和降级策略以 `docs/agent-interface-spec.md` 为准。
 - teach 主工作流由 `expert_a` / `expert_b` 使用 `generate_with_tools()` 按需检索；其他 LLM 节点仍使用 `generate_json()`。
-- `diagnosis` Agent 的初始诊断阶段读取 Store，`feedback` 阶段在 teach 主路径的 judge 后执行并写入反馈结果。
+- `diagnosis_feedback` 的诊断阶段读取 Store。Judge 不通过时当前会话直接执行 feedback；审核通过后，学员提交练习才创建独立 feedback 会话并写入反馈结果。
 - 多阶段 Agent 必须为每个阶段提供独立提示词文件，命名为 `<阶段名>_system.md`。当前 `diagnosis/` 使用 `diagnosis_system.md` / `feedback_system.md`，`expert_a/` 使用 `debate_system.md` / `integration_system.md`。

@@ -2,7 +2,7 @@
 
 知识产权管理与专利代理实务多 Agent 系统。仓库采用 **Monorepo 单仓库 + 前后端分离**：后端负责 FastAPI 服务、LangGraph 多 Agent 编排、统一模型调用和 RAG 知识库模块；前端负责后续 React 交互与 Agent 运行状态可视化。
 
-当前已完成：三路由工作流（teach/chat/diagnose）、同一 `diagnosis_feedback` Agent 的诊断/反馈两阶段、SQLite 学员画像与 BKT、双知识轴和确定性路径、专家 A/B 草稿→互评→修订→整合、Judge 审核后直接反馈、规范化 Markdown 过程产物、独立练习反馈会话，以及 FastAPI/SSE/WebSocket/Studio/CLI 运行入口。详见 `docs/workflow-technical-guide.md`。
+当前已完成：三路由工作流（teach/chat/diagnose）、同一 `diagnosis_feedback` Agent 的诊断/反馈两阶段、SQLite 学员画像与 BKT、双知识轴和确定性路径、专家 A/B 三阶段并行协作与 A 整合、Judge 条件审核、规范化 Markdown 过程产物、独立练习反馈会话，以及 FastAPI/SSE/WebSocket/Studio/CLI 运行入口。详见 `docs/workflow-technical-guide.md`。
 
 ## 从零到 LangGraph Studio
 
@@ -252,19 +252,25 @@ START → _init → route ──┬── diagnose: diagnosis_feedback[diagnosis
                          ├── chat: retrieve_context → chat_answer → END
                          └── teach: diagnosis_feedback[diagnosis] → planner
                                       ↓
-                             expert_a / expert_b
-                         (草稿→互评→修订→A整合)
+                    expert_a ║ expert_b（草稿）
+                              ↓ 汇合
+                    expert_a ║ expert_b（互评）
+                              ↓ 汇合
+                    expert_a ║ expert_b（修订）
+                              ↓ 汇合
+                         expert_a（整合）
                                       ↓
                                      judge
-                                      ↓
-                         diagnosis_feedback[feedback]
-                                      ↓
-                                     END
+                         ┌────────────┴────────────┐
+                    通过 → END             不通过 → feedback → END
 ```
+
+审核通过后，前端展示课程和习题；学员调用练习提交接口后，系统创建独立 feedback 会话。
+工作流不会在课程会话中挂起等待人工输入。
 
 | 路由 | 触发条件 | 路径 | LLM 调用次数 | 典型耗时 |
 |------|---------|------|-------------|---------|
-| **teach** | "系统学习"、"学习路径"、"规划" | 诊断→确定性规划→专家按需RAG→A/B多阶段协作→Judge→反馈 | ~10-11 次 | 1-3 分钟 |
+| **teach** | "系统学习"、"学习路径"、"规划" | 诊断→确定性规划→专家按需RAG→A/B并行协作→A整合→Judge条件分支 | ~10 次 | 1-3 分钟 |
 | **chat** | 单点问答、定义、对比 | RAG→直接回答 | ~1 次 | 5-30 秒 |
 | **diagnose** | "诊断"、"薄弱点"、"评估" | 诊断→结束 | ~1 次 | 2-5 秒 |
 
@@ -278,7 +284,7 @@ START → _init → route ──┬── diagnose: diagnosis_feedback[diagnosis
 | `retrieve_context` | 无 LLM | chat 路径固定检索法条上下文 | — |
 | `expert_a` | LLM + Tool 调用 | 保守严谨、法条优先；承担草稿、互评、修订和整合阶段 | `agents.expert_a` |
 | `expert_b` | LLM + Tool 调用 | 生动灵活、面向案例；承担草稿、互评和修订阶段 | `agents.expert_b` |
-| `judge` | LLM 调用 | 只审核专家 A 整合稿，写入报告后直接进入反馈 | `agents.judge` |
+| `judge` | LLM 调用 | 审核 A 整合稿；通过则结束课程会话，不通过则直接进入反馈 | `agents.judge` |
 | `chat_answer` | LLM 调用 | chat 路径基于检索上下文生成短答 | `agents.chat_answer` |
 
 接口合同以 `docs/agent-interface-spec.md` 和 `backend/app/schemas/state.py` 为准。

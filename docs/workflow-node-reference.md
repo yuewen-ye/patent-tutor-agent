@@ -10,8 +10,10 @@
 | `planner` | 确定性 + Store | 最新画像、BKT、静态双轴 | `learning_path`、`dual_axis_snapshot`、`path_decision` |
 | `retrieve_context` | 检索服务 | chat 问题 | `retrieval_context` |
 | `expert_a` | LLM + Tool | 画像、路径、检索、专家阶段数据 | 草稿、互评、修订、`course_package` |
-| `expert_b` | LLM + Tool | 画像、检索、专家阶段数据 | 草稿、互评、修订、阶段推进 |
-| `judge` | LLM | 专家 A 整合稿、画像、路径、检索 | `judge_report`、反馈阶段标志 |
+| `expert_b` | LLM + Tool | 画像、检索、专家阶段数据 | 草稿、互评、修订 |
+| `_experts_barrier` | 确定性 | A/B 同阶段完成结果 | 推进 `expert_phase`，并行扇出或转 A 整合 |
+| `expert_a_integration` | LLM + Tool | 专家 A/B 修订稿 | `course_package`；复用专家 A Agent 的整合阶段 |
+| `judge` | LLM | 专家 A 整合稿、画像、路径、检索 | `judge_report`；通过则完成，不通过则设置反馈阶段 |
 | `chat_answer` | LLM | chat 检索结果 | `chat_answer` |
 
 ## 与上一版逐节点对照
@@ -27,24 +29,24 @@
 | `planner` | `planner` | 从 LLM Agent 改为确定性节点；直接读取数据库最新画像与 BKT 掌握度，计算混淆轴和学习路径。 |
 | `retrieve_context` | `retrieve_context` | 保留；仍是 chat 路径的确定性检索节点。 |
 | `chat_answer` | `chat_answer` | 保留；仍基于检索结果生成快速回答。 |
-| `expert_a` | `expert_a` | 保留多阶段 Agent；依次完成草稿、互评、修订和课程包整合，不再把整合稿交给独立发布节点。 |
-| `expert_b` | `expert_b` | 保留多阶段 Agent；依次完成草稿、互评和修订，并驱动阶段推进。 |
-| `judge` | `judge` | 保留审核职责；不再决定发布、重整合或质量失败分支，审核后统一进入反馈。 |
-| `_prepare_cross_review` | 无独立节点 | 删除；阶段切换由 `expert_b` 的状态更新完成。 |
-| `_prepare_expert_revision` | 无独立节点 | 删除；阶段切换由 `expert_b` 的状态更新完成。 |
-| `_prepare_course_integration` | 无独立节点 | 删除；阶段切换由 `expert_b` 的状态更新完成。 |
+| `expert_a` | `expert_a` / `expert_a_integration` | 保留一个多阶段 Agent；与 B 并行完成前三阶段，再单独整合课程包。图中整合别名用于表达不同拓扑职责。 |
+| `expert_b` | `expert_b` | 保留多阶段 Agent；与 A 并行完成草稿、互评和修订，不再单独驱动阶段。 |
+| `judge` | `judge` | 保留审核职责；通过后结束课程会话，不通过则直接进入反馈。 |
+| `_prepare_cross_review` | `_experts_barrier` | 合并为一个汇合节点；等待 A/B 草稿都完成后再并行互评。 |
+| `_prepare_expert_revision` | `_experts_barrier` | 合并为一个汇合节点；等待 A/B 互评都完成后再并行修订。 |
+| `_prepare_course_integration` | `_experts_barrier` | 合并为一个汇合节点；等待 A/B 修订都完成后转专家 A 整合。 |
 | `revise_integration` | 无独立节点 | 删除；Judge 不再触发整合稿循环，修改建议保存在审核产物中。 |
 | `publish_final_learning` | 无独立节点 | 删除；不生成最终 Markdown，`course_package.md` 只是可审计的过程产物。 |
-| `quality_gate_failed` | 无独立节点 | 删除；完成状态由反馈阶段写入，Judge 结论保留在 `judge_report.md`。 |
+| `quality_gate_failed` | 无独立节点 | 删除；Judge 结论保留在 `judge_report.md`，路由只区分通过与不通过。 |
 
-因此当前主链不是旧版的“专家阶段控制节点 + 发布门控”，而是：
-`diagnosis_feedback → planner → expert_a/expert_b → judge → diagnosis_feedback`。
+因此当前主链是：
+`diagnosis_feedback → planner → A/B 三阶段并行 → A 整合 → judge → END 或 feedback`。
 
 ## 路由
 
-- teach：`route → diagnosis_feedback → planner → A/B 多阶段协作 → judge → diagnosis_feedback → END`
+- teach：`route → diagnosis_feedback → planner → A/B 三阶段并行 → A 整合 → judge → END 或 feedback`
 - chat：`route → retrieve_context → chat_answer → END`
 - diagnose：`route → diagnosis_feedback → END`
 - feedback：`_init → diagnosis_feedback → END`
 
-Judge 不改写教学正文，也不控制发布。无论 `decision` 是 `accept`、`accept_with_minor_revision` 还是 `revise`，后继节点都是 `diagnosis_feedback` 的反馈阶段，裁决内容留在审计产物中。
+Judge 不改写教学正文。`accept` 和 `accept_with_minor_revision` 结束课程会话；学员正常学习并提交练习后，由独立 feedback 会话评分并更新画像。`revise` 直接进入当前会话的反馈阶段，不等待学员作答。裁决内容始终保留在审计产物中。

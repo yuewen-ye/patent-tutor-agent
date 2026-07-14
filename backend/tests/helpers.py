@@ -13,7 +13,6 @@ _COMPLETED_STATE_KEYS = (
     "expert_b_draft",
     "course_package",
     "judge_report",
-    "feedback_result",
     "workflow_status",
     "artifacts",
 )

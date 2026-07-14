@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import threading
 from pathlib import Path
 from typing import cast
 
@@ -33,6 +34,8 @@ class PhaseLLMClient:
 
 class WorkflowLLMClient:
     def __init__(self) -> None:
+        self.agents: list[str] = []
+        self._agents_lock = threading.Lock()
         draft_a: dict[str, object] = {
             "expert": "expert_a",
             "style": "conservative_precise",
@@ -126,6 +129,8 @@ class WorkflowLLMClient:
         self, messages: list[LLMMessage], temperature: float, agent: str | None = None
     ) -> object:
         assert agent is not None
+        with self._agents_lock:
+            self.agents.append(agent)
         return self.queues[agent].pop(0)
 
     def generate_with_tools(
@@ -138,6 +143,25 @@ class WorkflowLLMClient:
         return LLMResponseWithTools(content=None, tool_calls=[])
 
 
+class ParallelPhaseLLMClient(WorkflowLLMClient):
+    def __init__(self) -> None:
+        super().__init__()
+        self._phase_calls = {"expert_a": 0, "expert_b": 0}
+        self._phase_lock = threading.Lock()
+        self._phase_barriers = [threading.Barrier(2) for _ in range(3)]
+
+    def generate_json(
+        self, messages: list[LLMMessage], temperature: float, agent: str | None = None
+    ) -> object:
+        if agent in self._phase_calls:
+            with self._phase_lock:
+                phase_index = self._phase_calls[agent]
+                self._phase_calls[agent] += 1
+            if phase_index < len(self._phase_barriers):
+                self._phase_barriers[phase_index].wait(timeout=2)
+        return super().generate_json(messages, temperature, agent)
+
+
 def test_graph_registers_diagnosis_feedback_agent_name() -> None:
     nodes = build_agent_nodes(PhaseLLMClient())
 
@@ -146,10 +170,17 @@ def test_graph_registers_diagnosis_feedback_agent_name() -> None:
     assert "feedback" not in nodes
 
 
-def test_judge_returns_to_diagnosis_feedback_without_publisher_nodes() -> None:
-    mermaid = export_workflow_mermaid(build_workflow(llm_client=PhaseLLMClient()))
+def test_graph_parallelizes_experts_and_branches_after_judge() -> None:
+    workflow = build_workflow(llm_client=PhaseLLMClient())
+    mermaid = export_workflow_mermaid(workflow)
+    edges = {(edge.source, edge.target) for edge in workflow.get_graph().edges}
 
-    assert "judge --> diagnosis_feedback" in mermaid
+    assert ("planner", "expert_a") in edges
+    assert ("planner", "expert_b") in edges
+    assert ("expert_a", "_experts_barrier") in edges
+    assert ("expert_b", "_experts_barrier") in edges
+    assert ("judge", "diagnosis_feedback") in edges
+    assert ("judge", "__end__") in edges
     assert "publish_final_learning" not in mermaid
     assert "quality_gate_failed" not in mermaid
     assert "revise_integration" not in mermaid
@@ -224,16 +255,33 @@ def test_diagnosis_normalizes_unknown_level_to_beginner() -> None:
     assert result["learner_profile"]["weak_points"] == ["新颖性"]
 
 
-def test_full_teach_flow_ends_with_feedback_and_only_process_markdown(
+def test_experts_run_concurrently_in_draft_review_and_revision(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
+    llm = ParallelPhaseLLMClient()
+
+    state = run_workflow(
+        session_id="parallel-experts",
+        user_input="掌握专利新颖性",
+        llm_client=llm,
+    )
+
+    assert state["judge_report"]["decision"] == "accept"
+    assert llm._phase_calls == {"expert_a": 4, "expert_b": 3}
+
+
+def test_accepted_teach_flow_waits_for_learner_answers_and_keeps_process_markdown(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
     artifact_root = tmp_path / "artifacts"
+    llm = WorkflowLLMClient()
 
     state = run_workflow(
         session_id="new-architecture",
         user_input="掌握专利新颖性",
-        llm_client=WorkflowLLMClient(),
+        llm_client=llm,
         artifact_root=artifact_root,
         learner_id="learner-1",
     )
@@ -247,7 +295,10 @@ def test_full_teach_flow_ends_with_feedback_and_only_process_markdown(
     assert (session_root / "round-01/expert_a_cross_review.md").is_file()
     assert (session_root / "round-01/course_package.md").is_file()
     assert (session_root / "round-01/judge_report.md").is_file()
-    assert (session_root / "feedback/feedback_report.md").is_file()
+    assert not (session_root / "feedback/feedback_report.md").exists()
+    assert "feedback_result" not in state
+    assert llm.agents.count("diagnosis_feedback") == 1
+    assert llm.agents[-1] == "judge"
     assert not (session_root / "final_learning.md").exists()
     assert not (session_root / "internal/exercise_answer_key.md").exists()
     manifest = json.loads((session_root / "manifest.json").read_text(encoding="utf-8"))

@@ -5,12 +5,15 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import threading
 from datetime import UTC, datetime
 from pathlib import Path
 from collections.abc import Mapping
 from typing import Any, Literal, cast
 
 from backend.app.schemas.state import MarkdownArtifact
+
+_MANIFEST_LOCK = threading.RLock()
 
 ArtifactKind = Literal[
     "learner_profile_report",
@@ -409,4 +412,5 @@ def write_manifest(*, artifact_root: Path, state: Mapping[str, Any], status: str
         "artifacts": state.get("artifacts", []),
         "updated_at": datetime.now(UTC).isoformat(),
     }
-    path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    with _MANIFEST_LOCK:
+        path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")

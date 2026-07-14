@@ -213,7 +213,7 @@ def test_session_websocket_replays_agent_events_until_completion(
 
     event_nodes = [message["event"]["node"] for message in messages if message["type"] == "agent_event"]
     assert "diagnosis_feedback" in event_nodes
-    assert event_nodes[-1] == "diagnosis_feedback"
+    assert event_nodes[-1] == "judge"
     assert messages[-1]["status"] == "completed"
 
 
@@ -264,17 +264,15 @@ def test_learner_api_returns_memory_and_session_history(
     learner_history = client.get("/learners/learner-api/history")
     learner_sessions = client.get("/learners/learner-api/sessions")
 
-    # Then: profile, learning history, and related session data are visible.
+    # Then: the initial profile and course session are visible before learner feedback.
     assert learner.status_code == 200
     learner_body = learner.json()
     assert learner_body["learner_id"] == "learner-api"
     assert learner_body["latest_profile"]["learning_goal"] == "学习专利新颖性"
-    assert learner_body["history"][0]["session_id"] == session_id
-    assert "新颖性" in learner_body["history"][0]["knowledge_points"]
+    assert learner_body["history"] == []
     assert learner_profiles.json()["profiles"][0]["learning_goal"] == "学习专利新颖性"
     history = learner_history.json()["history"]
-    assert len(history) == 1
-    assert history[0]["topic"] == "学习专利新颖性"
+    assert history == []
     assert learner_sessions.status_code == 200
     assert learner_sessions.json()["sessions"][0]["session_id"] == session_id
 

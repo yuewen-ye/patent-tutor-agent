@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, assert_never
 
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -115,10 +115,17 @@ def build_judge_node(llm_client: LLMClient) -> Node:
             agent="judge",
         )
         report = JudgeReport.model_validate(_normalize_judge_report(raw))
-        return {
+        updates: dict[str, Any] = {
             "judge_report": report.model_dump(),
-            "diagnosis_feedback_phase": "feedback",
             "events": [completed_event("judge", "reviewed expert A integration draft with LLM")],
         }
+        match report.decision:
+            case "accept" | "accept_with_minor_revision":
+                updates["workflow_status"] = "completed"
+            case "revise":
+                updates["diagnosis_feedback_phase"] = "feedback"
+            case unreachable:
+                assert_never(unreachable)
+        return updates
 
     return judge_node
