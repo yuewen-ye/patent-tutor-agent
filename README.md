@@ -479,8 +479,7 @@ PY
 
 - Milvus Lite 持久化数据位于 `backend/app/rag/data/milvus_lite.db/`
 - Collection 名称为 `law_knowledge_base`
-- 加载 BGE-M3 时依次尝试 `RAG_EMBEDDING_MODEL_PATH` 指定目录、Hugging Face 本地缓存，
-  最后才从配置的 HuggingFace 镜像下载；可用 `HF_HOME` 固定缓存位置
+- 首次运行从 Hugging Face 官方源下载 BGE-M3 模型
 
 `RetrievalChunk.metadata.retrieval_method` 字段标识数据来源，当前真实检索为 `"vector"`。检索初始化、编码、搜索或结果解析失败时，`rag_retrieve()` 会抛出 `RAGRetrievalError`，不会把失败伪装成空结果。
 
