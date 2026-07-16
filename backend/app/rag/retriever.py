@@ -15,6 +15,7 @@ os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 
 COLLECTION_NAME: Final = "law_knowledge_base"
 MODEL_NAME: Final = "BAAI/bge-m3"
+EMBEDDING_MODEL_PATH_ENV: Final = "RAG_EMBEDDING_MODEL_PATH"
 
 _milvus_client = None
 _embedding_model = None
@@ -68,6 +69,21 @@ def _lazy_import() -> None:
         )
 
 
+def _load_embedding_model(SentenceTransformer: type[Any]) -> Any:
+    """Prefer local model files and only use the configured mirror as a fallback."""
+    local_source = os.getenv(EMBEDDING_MODEL_PATH_ENV, "").strip()
+    local_candidates = [local_source, MODEL_NAME] if local_source else [MODEL_NAME]
+
+    for source in local_candidates:
+        try:
+            return SentenceTransformer(source, local_files_only=True)
+        except OSError:
+            continue
+
+    # HF_ENDPOINT is set above, so this fallback downloads from the configured mirror.
+    return SentenceTransformer(MODEL_NAME, local_files_only=False)
+
+
 def get_embedding_model() -> Any:
     global _embedding_model
     if _embedding_model is None:
@@ -81,7 +97,7 @@ def get_embedding_model() -> Any:
                         detail="SentenceTransformer missing",
                     )
                 try:
-                    _embedding_model = SentenceTransformer(MODEL_NAME)
+                    _embedding_model = _load_embedding_model(SentenceTransformer)
                 except (OSError, RuntimeError) as exc:
                     raise RAGRetrievalError(stage="embedding_model", detail=str(exc)) from exc
     return _embedding_model

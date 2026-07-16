@@ -54,3 +54,42 @@ def test_milvus_client_is_initialized_once_under_parallel_access(
     assert clients[0] is clients[1]
     assert init_count == 1
     assert clients[0].loaded_collections == [retriever.COLLECTION_NAME]
+
+
+def test_embedding_model_uses_local_cache_before_mirror_download(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, bool]] = []
+
+    class FakeSentenceTransformer:
+        def __init__(self, source: str, *, local_files_only: bool = False) -> None:
+            calls.append((source, local_files_only))
+            if local_files_only:
+                raise OSError("model is not cached")
+
+    monkeypatch.delenv(retriever.EMBEDDING_MODEL_PATH_ENV, raising=False)
+
+    model = retriever._load_embedding_model(FakeSentenceTransformer)
+
+    assert isinstance(model, FakeSentenceTransformer)
+    assert calls == [
+        (retriever.MODEL_NAME, True),
+        (retriever.MODEL_NAME, False),
+    ]
+
+
+def test_embedding_model_prefers_configured_local_directory(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, bool]] = []
+
+    class FakeSentenceTransformer:
+        def __init__(self, source: str, *, local_files_only: bool = False) -> None:
+            calls.append((source, local_files_only))
+
+    monkeypatch.setenv(retriever.EMBEDDING_MODEL_PATH_ENV, "D:/models/bge-m3")
+
+    model = retriever._load_embedding_model(FakeSentenceTransformer)
+
+    assert isinstance(model, FakeSentenceTransformer)
+    assert calls == [("D:/models/bge-m3", True)]
