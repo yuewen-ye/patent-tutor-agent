@@ -15,6 +15,7 @@ os.environ["HF_ENDPOINT"] = "https://huggingface.co"
 
 COLLECTION_NAME: Final = "law_knowledge_base"
 MODEL_NAME: Final = "BAAI/bge-m3"
+EMBEDDING_MODEL_PATH_ENV: Final = "RAG_EMBEDDING_MODEL_PATH"
 
 _milvus_client = None
 _embedding_model = None
@@ -81,7 +82,14 @@ def get_embedding_model() -> Any:
                         detail="SentenceTransformer missing",
                     )
                 try:
-                    _embedding_model = SentenceTransformer(MODEL_NAME)
+                    local_model_path = os.getenv(EMBEDDING_MODEL_PATH_ENV, "").strip()
+                    if local_model_path:
+                        _embedding_model = SentenceTransformer(
+                            local_model_path,
+                            local_files_only=True,
+                        )
+                    else:
+                        _embedding_model = SentenceTransformer(MODEL_NAME)
                 except (OSError, RuntimeError) as exc:
                     raise RAGRetrievalError(stage="embedding_model", detail=str(exc)) from exc
     return _embedding_model

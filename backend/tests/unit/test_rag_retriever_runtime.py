@@ -54,3 +54,22 @@ def test_milvus_client_is_initialized_once_under_parallel_access(
     assert clients[0] is clients[1]
     assert init_count == 1
     assert clients[0].loaded_collections == [retriever.COLLECTION_NAME]
+
+
+def test_embedding_model_uses_configured_local_directory(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[str, bool]] = []
+
+    class FakeSentenceTransformer:
+        def __init__(self, source: str, *, local_files_only: bool = False) -> None:
+            calls.append((source, local_files_only))
+
+    monkeypatch.setattr(retriever, "_embedding_model", None)
+    monkeypatch.setattr(retriever, "_sentence_transformers", FakeSentenceTransformer)
+    monkeypatch.setenv(retriever.EMBEDDING_MODEL_PATH_ENV, "D:/models/bge-m3")
+
+    model = retriever.get_embedding_model()
+
+    assert isinstance(model, FakeSentenceTransformer)
+    assert calls == [("D:/models/bge-m3", True)]
