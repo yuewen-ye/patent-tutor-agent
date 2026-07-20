@@ -6,7 +6,10 @@ from typing import Any, cast
 import httpx
 import pytest
 
-from backend.app.core.agent_runtime_config import clear_agent_runtime_config_cache
+from backend.app.core.agent_runtime_config import (
+    ProviderRuntimeConfig,
+    clear_agent_runtime_config_cache,
+)
 from backend.app.core.llm import (
     AGENT_PROVIDER_ENV,
     AgentLLMRouter,
@@ -78,6 +81,13 @@ def test_call_llm_posts_to_configured_openai_compatible_provider(monkeypatch) ->
 def test_call_llm_supports_three_configured_providers(
     monkeypatch, provider: LLMProvider, key_name: str, model_name: str, base_url: str
 ) -> None:
+    # This test exercises the legacy environment-variable fallback.  YAML is
+    # intentionally higher priority, so isolate the test from the developer's
+    # local config/agents.yaml provider settings.
+    monkeypatch.setattr(
+        "backend.app.core.llm.provider_runtime_config",
+        lambda _provider: ProviderRuntimeConfig(),
+    )
     monkeypatch.setenv(key_name, "provider-key")
     monkeypatch.setenv(f"{provider.upper()}_MODEL", model_name)
     monkeypatch.setenv(f"{provider.upper()}_BASE_URL", base_url)
