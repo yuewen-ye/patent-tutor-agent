@@ -12,12 +12,12 @@ _EXPECTED_PROMPT_DIRS: list[str] = [
     "route",
     "chat_answer",
     "planner",
-    "expert_b",
     "judge",
 ]
 _EXPECTED_PHASE_PROMPTS: dict[str, list[str]] = {
     "diagnosis": ["diagnosis_system.md", "feedback_system.md"],
     "expert_a": ["debate_system.md", "integration_system.md"],
+    "expert_b": ["draft_system.md", "cross_review_system.md", "revision_system.md"],
 }
 
 _AGENTS_DIR = Path(__file__).resolve().parents[2] / "app" / "agents"

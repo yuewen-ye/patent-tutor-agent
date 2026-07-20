@@ -59,7 +59,9 @@ def test_workflow_runs_single_round_with_real_llm(tmp_path: Path) -> None:
     assert len(completed["learning_path"]) >= 1
     assert completed["learning_path"][0]["node_id"]
 
-    assert completed["expert_a_draft"]["expert"] == "expert_a"
+    # integration 阶段把 A/B 融合稿（expert="A+B融合"）写入 expert_a_draft，
+    # 故 teach 完成后该字段的 expert 既可能是初稿 expert_a，也可能是融合稿 A+B融合。
+    assert completed["expert_a_draft"]["expert"] in {"expert_a", "A+B融合"}
     assert completed["expert_b_draft"]["expert"] == "expert_b"
     assert completed["expert_a_draft"]["draft_stage"] == "integration"
     assert completed["expert_a_draft"]["teaching_content"]

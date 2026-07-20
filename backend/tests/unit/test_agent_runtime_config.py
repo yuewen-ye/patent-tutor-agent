@@ -57,7 +57,7 @@ class ExpertToolTopKLLMClient:
     ) -> object:
         return {
             "expert": "expert_b",
-            "style": "vivid_teaching",
+            "style": "accessible",
             "knowledge_points": ["新颖性"],
             "legal_basis": ["专利法第二十二条"],
             "teaching_content": "结合检索结果解释新颖性。",
@@ -87,7 +87,7 @@ def clear_config_cache() -> Iterator[None]:
     clear_agent_runtime_config_cache()
 
 
-def test_planner_does_not_call_llm() -> None:
+def test_planner_calls_llm_with_configured_temperature() -> None:
     client = PlannerTemperatureLLMClient()
 
     build_planner_node(client)(
@@ -98,7 +98,7 @@ def test_planner_does_not_call_llm() -> None:
         }
     )
 
-    assert client.temperatures == []
+    assert client.temperatures == [0.3]
 
 
 def test_yaml_config_controls_expert_tool_temperature_and_default_top_k(

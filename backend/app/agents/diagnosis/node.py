@@ -16,6 +16,7 @@ from backend.app.agents.common import (
 )
 from backend.app.core.llm import LLMClient
 from backend.app.learner_memory.memory import load_profile_memories, save_learner_memories, save_profile_snapshot
+from backend.app.curriculum.learning_path import load_knowledge_dag
 from backend.app.schemas.context import WorkflowContext
 from backend.app.schemas.state import FeedbackResult, LearnerProfile, StateDict, completed_event
 
@@ -37,6 +38,15 @@ _KNOWLEDGE_LEVEL_ALIASES = {
 }
 
 
+def _kc_node_ids() -> list[str]:
+    """知识图全部 KC 节点 id（供诊断 Agent 在 knowledge 维度逐一输出 P(L) 锚点）。"""
+    try:
+        nodes = load_knowledge_dag().get("nodes", [])
+    except Exception:
+        return []
+    return [n["node_id"] for n in nodes if isinstance(n, dict) and n.get("node_id")]
+
+
 def _normalize_learner_profile_payload(raw: object) -> object:
     normalized = normalize_key_aliases(
         raw,
@@ -47,6 +57,7 @@ def _normalize_learner_profile_payload(raw: object) -> object:
             "weakPoints": "weak_points",
             "learningGoal": "learning_goal",
             "errorPattern": "error_pattern",
+            "fiveDimensions": "five_dimensions",
         },
     )
     if not isinstance(normalized, dict):
@@ -67,9 +78,14 @@ def build_diagnosis_phase_node(llm_client: LLMClient) -> Node:
                 "system",
                 schema_note(
                     "LearnerProfile",
-                    '{"education_background":"patent_exam_candidate","knowledge_level":"beginner",'
-                    '"learning_style":"case_first_then_rule","weak_points":["概念辨析"],'
-                    '"learning_goal":"学习目标"}',
+                    '{"education_background":"理工背景，有研发经验","knowledge_level":"beginner",'
+                    '"learning_style":"sensing/sequential","weak_points":["创造性三步法"],'
+                    '"learning_goal":"掌握新颖性与创造性判断流程","error_pattern":"concept_confusion","confidence":0.5,'
+                    '"five_dimensions":{"knowledge":{"novelty":{"pl":0.22,"ci_low":0.10,"ci_high":0.40,"observations":3,"low_confidence":true}},'
+                    '"cognition":{"remember":0.8,"understand":0.6,"apply":0.3,"analyze":0.2,"evaluate":0.1,"create":0.05},'
+                    '"style":{"perception":{"chosen":"sensing","strength":0.7},"input":{"chosen":"visual","strength":0.6},"processing":{"chosen":"active","strength":0.55},"understanding":{"chosen":"sequential","strength":0.65}},'
+                    '"progress":{"completed_nodes":["patent-law-basic"],"current_node":"novelty-basic","pending_nodes":["inventiveness"],"avg_time_per_node_min":25,"overall_completion_ratio":0.15},'
+                    '"affect":{"primary_state":"confused","confidence":0.5,"signals":["同节点停留超均值2倍"]}}}',
                 )
                 + _DIAGNOSIS_PROMPT,
             ),
@@ -78,7 +94,10 @@ def build_diagnosis_phase_node(llm_client: LLMClient) -> Node:
                 "当前学习需求：{user_input}\n"
                 "新学员问卷回答：{questionnaire_responses}\n"
                 "历史学习者画像：{historical_profiles}\n"
-                "请综合问卷和历史数据诊断学习者画像。",
+                "知识图全部 KC 节点（你须在 knowledge 维度**逐一**输出每个节点的 P(L) 估计；"
+                "未作答节点统一用 P(L₀)=0.15、置信区间 [0.02, 0.40]、observations=0、low_confidence=true）：\n"
+                "{kc_node_ids}\n\n"
+                "请综合问卷、历史数据与上述 KC 节点，诊断学习者画像（须含完整 five_dimensions）。",
             ),
         ]
     )
@@ -97,6 +116,7 @@ def build_diagnosis_phase_node(llm_client: LLMClient) -> Node:
                     ensure_ascii=False,
                 ),
                 historical_profiles=historical_profiles,
+                kc_node_ids="\n".join(f"- {n}" for n in _kc_node_ids()) or "（知识图未加载）",
             ),
             temperature=agent_temperature("diagnosis_feedback", 0.5),
             agent="diagnosis_feedback",
@@ -118,8 +138,13 @@ def build_feedback_phase_node(llm_client: LLMClient) -> Node:
                 "system",
                 schema_note(
                     "FeedbackResult",
-                    '{"questionnaire":["问题"],"next_action":"下一步",'
-                    '"profile_update_hint":"画像更新建议"}',
+                    '{"questionnaire":["请复述创造性三步法判断顺序"],"next_action":"插入新颖性案例强化模块",'
+                    '"profile_update_hint":"knowledge.创造性:0.12→0.35（Δ+0.23，触发重规划）",'
+                    '"five_dimensions":{"knowledge":{"inventiveness":{"pl":0.35,"ci_low":0.18,"ci_high":0.52,"observations":6,"low_confidence":false}},'
+                    '"cognition":{"remember":0.85,"understand":0.7,"apply":0.5,"analyze":0.4,"evaluate":0.3,"create":0.2},'
+                    '"style":{"perception":{"chosen":"sensing","strength":0.7},"input":{"chosen":"visual","strength":0.6},"processing":{"chosen":"active","strength":0.55},"understanding":{"chosen":"sequential","strength":0.65}},'
+                    '"progress":{"completed_nodes":["patent-law-basic","novelty-basic"],"current_node":"novelty-3step","pending_nodes":["inventiveness"],"avg_time_per_node_min":22,"overall_completion_ratio":0.4},'
+                    '"affect":{"primary_state":"interested","confidence":0.6,"signals":["主动提问"]}}}',
                 )
                 + _FEEDBACK_PHASE_PROMPT,
             ),
@@ -128,7 +153,10 @@ def build_feedback_phase_node(llm_client: LLMClient) -> Node:
                 "当前学习需求：{user_input}\n"
                 "初始学习者画像：{learner_profile}\n"
                 "裁判报告：{judge_report}\n"
-                "请作为 feedback 阶段，生成本轮反馈闭环建议。",
+                "知识图全部 KC 节点（回传 five_dimensions 时，knowledge 维度须**逐一**覆盖以下每个节点；"
+                "本轮未变化的节点沿用既有 P(L)，变化的节点更新）：\n"
+                "{kc_node_ids}\n\n"
+                "请作为 feedback 阶段，生成本轮反馈闭环建议（含完整 five_dimensions 快照）。",
             ),
         ]
     )
@@ -144,6 +172,7 @@ def build_feedback_phase_node(llm_client: LLMClient) -> Node:
                 user_input=state["user_input"],
                 learner_profile=current_profile,
                 judge_report=state.get("judge_report", {}),
+                kc_node_ids="\n".join(f"- {n}" for n in _kc_node_ids()) or "（知识图未加载）",
             ),
             temperature=agent_temperature("diagnosis_feedback", 0.5),
             agent="diagnosis_feedback",

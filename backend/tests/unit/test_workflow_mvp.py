@@ -33,12 +33,13 @@ class QueueLLMClient:
                     "questionnaire": ["本节最容易混淆什么？"],
                     "next_action": "完成练习后复盘",
                     "profile_update_hint": "继续观察新颖性判断步骤",
+                    "five_dimensions": {"knowledge": {"novelty": {"pl": 0.3, "ci_low": 0.15, "ci_high": 0.5, "observations": 3, "low_confidence": False}}, "cognition": {"remember": 0.8, "understand": 0.6, "apply": 0.4, "analyze": 0.3, "evaluate": 0.2, "create": 0.1}, "style": {"perception": {"chosen": "sensing", "strength": 0.7}, "input": {"chosen": "visual", "strength": 0.6}, "processing": {"chosen": "active", "strength": 0.55}, "understanding": {"chosen": "sequential", "strength": 0.65}}, "progress": {"completed_nodes": ["patent-law-basic"], "current_node": "novelty-basic", "pending_nodes": ["inventiveness"], "avg_time_per_node_min": 22, "overall_completion_ratio": 0.3}, "affect": {"primary_state": "interested", "confidence": 0.6, "signals": ["主动提问"]}},
                 },
             ],
             "expert_a": [
                 {
                     "expert": "expert_a",
-                    "style": "conservative_precise",
+                    "style": "conservative",
                     "knowledge_points": ["新颖性"],
                     "legal_basis": ["专利法第二十二条"],
                     "teaching_content": "严谨解释",
@@ -55,7 +56,7 @@ class QueueLLMClient:
                 },
                 {
                     "expert": "expert_a",
-                    "style": "conservative_precise",
+                    "style": "conservative",
                     "knowledge_points": ["新颖性"],
                     "legal_basis": ["专利法第二十二条"],
                     "teaching_content": "严谨解释修订稿",
@@ -63,7 +64,7 @@ class QueueLLMClient:
                 },
                 {
                     "expert": "expert_a",
-                    "style": "conservative_precise",
+                    "style": "conservative",
                     "knowledge_points": ["新颖性", "创造性"],
                     "legal_basis": ["专利法第二十二条"],
                     "teaching_content": "整合专家A和专家B后的教学内容",
@@ -73,7 +74,7 @@ class QueueLLMClient:
             "expert_b": [
                 {
                     "expert": "expert_b",
-                    "style": "vivid_teaching",
+                    "style": "accessible",
                     "knowledge_points": ["新颖性"],
                     "legal_basis": ["专利法第二十二条"],
                     "teaching_content": "生动解释",
@@ -90,7 +91,7 @@ class QueueLLMClient:
                 },
                 {
                     "expert": "expert_b",
-                    "style": "vivid_teaching",
+                    "style": "accessible",
                     "knowledge_points": ["新颖性"],
                     "legal_basis": ["专利法第二十二条"],
                     "teaching_content": "生动解释修订稿",
@@ -155,14 +156,14 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm(
     )
 
     completed = completed_teach_state(state)
-    assert len(llm_client.calls) == 10
+    assert len(llm_client.calls) == 11
     assert completed["session_id"] == "demo-session"
     assert completed["learner_profile"]["knowledge_level"] == "beginner"
     assert completed["learning_path"]
-    assert completed["expert_a_draft"]["style"] == "conservative_precise"
+    assert completed["expert_a_draft"]["style"] == "conservative"
     assert completed["expert_a_draft"]["draft_stage"] == "integration"
     assert completed["expert_a_draft"]["teaching_content"] == "整合专家A和专家B后的教学内容"
-    assert completed["expert_b_draft"]["style"] == "vivid_teaching"
+    assert completed["expert_b_draft"]["style"] == "accessible"
     assert completed["judge_report"]["decision"] == "accept"
     assert completed["workflow_status"] == "completed"
     assert completed["course_package"]["teaching_content"] == "整合专家A和专家B后的教学内容"
@@ -181,7 +182,7 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm(
     assert len(completed["retrieval_context"]) >= 1
     # Verify agent call order
     assert llm_client.agents[:2] == ["route", "diagnosis_feedback"]
-    assert "planner" not in llm_client.agents
+    assert "planner" in llm_client.agents
     assert "tool_agent" not in llm_client.agents
     assert "expert_a" in llm_client.agents
     assert "expert_b" in llm_client.agents

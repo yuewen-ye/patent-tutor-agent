@@ -26,8 +26,36 @@ class MemoryQueueLLMClient:
                 "learning_goal": learning_goal,
             },
             {
+                "nodes": [
+                    {
+                        "node_id": "novelty-basic",
+                        "node_name": "新颖性基础",
+                        "duration_min": 20,
+                        "strategy": "先学概念+法条拆解",
+                        "prerequisites": [],
+                        "difficulty_cap": "L2",
+                    }
+                ],
+                "question_scope": {
+                    "backward_review": [
+                        {"node_id": "novelty-basic", "difficulty": "L2", "goal": "验证巩固"}
+                    ],
+                    "forward_probe": [
+                        {"node_id": "inventiveness", "difficulty": "L1", "goal": "探测下一节点"}
+                    ],
+                    "weakness_probe": [
+                        {"node_id": "doctrine-of-equivalents", "difficulty": "L3", "goal": "薄弱点挑战"}
+                    ],
+                },
+                "iteration_directive": {
+                    "type": "降维",
+                    "trigger": "当前节点 L1 答对率 < 60%",
+                    "action": "降低抽象度",
+                },
+            },
+            {
                 "expert": "expert_a",
-                "style": "conservative_precise",
+                "style": "conservative",
                 "knowledge_points": ["新颖性"],
                 "legal_basis": ["专利法第二十二条"],
                 "teaching_content": "严谨解释",
@@ -35,7 +63,7 @@ class MemoryQueueLLMClient:
             },
             {
                 "expert": "expert_b",
-                "style": "vivid_teaching",
+                "style": "accessible",
                 "knowledge_points": ["新颖性"],
                 "legal_basis": ["专利法第二十二条"],
                 "teaching_content": "案例解释",
@@ -61,7 +89,7 @@ class MemoryQueueLLMClient:
             },
             {
                 "expert": "expert_a",
-                "style": "conservative_precise",
+                "style": "conservative",
                 "knowledge_points": ["新颖性"],
                 "legal_basis": ["专利法第二十二条"],
                 "teaching_content": "严谨解释修订稿",
@@ -69,7 +97,7 @@ class MemoryQueueLLMClient:
             },
             {
                 "expert": "expert_b",
-                "style": "vivid_teaching",
+                "style": "accessible",
                 "knowledge_points": ["新颖性"],
                 "legal_basis": ["专利法第二十二条"],
                 "teaching_content": "案例解释修订稿",
@@ -77,7 +105,7 @@ class MemoryQueueLLMClient:
             },
             {
                 "expert": "expert_a",
-                "style": "conservative_precise",
+                "style": "conservative",
                 "knowledge_points": ["新颖性"],
                 "legal_basis": ["专利法第二十二条"],
                 "teaching_content": "整合专家 A 和专家 B 后的教学内容",
@@ -95,6 +123,7 @@ class MemoryQueueLLMClient:
                 "questionnaire": ["本节最容易混淆什么？"],
                 "next_action": "完成练习后复盘",
                 "profile_update_hint": weak_point,
+                "five_dimensions": {"knowledge": {"novelty": {"pl": 0.3, "ci_low": 0.15, "ci_high": 0.5, "observations": 3, "low_confidence": False}}, "cognition": {"remember": 0.8, "understand": 0.6, "apply": 0.4, "analyze": 0.3, "evaluate": 0.2, "create": 0.1}, "style": {"perception": {"chosen": "sensing", "strength": 0.7}, "input": {"chosen": "visual", "strength": 0.6}, "processing": {"chosen": "active", "strength": 0.55}, "understanding": {"chosen": "sequential", "strength": 0.65}}, "progress": {"completed_nodes": ["patent-law-basic"], "current_node": "novelty-basic", "pending_nodes": ["inventiveness"], "avg_time_per_node_min": 22, "overall_completion_ratio": 0.3}, "affect": {"primary_state": "interested", "confidence": 0.6, "signals": ["主动提问"]}},
             },
         ]
 

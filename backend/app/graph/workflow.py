@@ -109,6 +109,7 @@ def _call_node(
 _ARTIFACT_FIELDS = (
     "learner_profile",
     "learning_path",
+    "path_decision",
     "retrieval_context",
     "expert_a_draft",
     "expert_b_draft",
@@ -310,17 +311,31 @@ def _route_after_experts_barrier(
             assert_never(unreachable)
 
 
+# judge 最多打回重整合的次数（超过则强制完成，避免无限循环）
+MAX_JUDGE_REVISIONS = 2
+
+
 def _route_after_judge(
     state: StateDict,
-) -> Literal["diagnosis_feedback", "__end__"]:
+) -> Literal["expert_a_integration", "__end__"]:
     decision = JudgeReport.model_validate(state.get("judge_report", {})).decision
     match decision:
         case "accept" | "accept_with_minor_revision":
-            print("▸ [路由] judge 通过 → 等待学员学习并提交练习", file=sys.stderr)
+            print("▸ [路由] judge 通过 → 完成", file=sys.stderr)
             return "__end__"
         case "revise":
-            print("▸ [路由] judge 未通过 → 直接反馈", file=sys.stderr)
-            return "diagnosis_feedback"
+            attempts = int(state.get("judge_attempts", 0))
+            if attempts >= MAX_JUDGE_REVISIONS:
+                print(
+                    f"▸ [路由] judge 已打回 {attempts} 次仍不通过 → 强制完成（防死循环）",
+                    file=sys.stderr,
+                )
+                return "__end__"
+            print(
+                f"▸ [路由] judge 第 {attempts} 次打回 → expert_a_integration 重新整合",
+                file=sys.stderr,
+            )
+            return "expert_a_integration"
         case unreachable:
             assert_never(unreachable)
 
@@ -352,6 +367,7 @@ def build_workflow(
         )
         updates["expert_phase"] = "draft"
         updates["workflow_status"] = "running"
+        updates["judge_attempts"] = 0
         return updates
 
     def _wrap(name: str, artifact: bool = True, node_label: str | None = None) -> Any:
@@ -424,7 +440,7 @@ def build_workflow(
     builder.add_conditional_edges(
         "judge",
         _route_after_judge,
-        {"diagnosis_feedback": "diagnosis_feedback", "__end__": END},
+        {"expert_a_integration": "expert_a_integration", "__end__": END},
     )
 
     builder.add_edge("chat_answer", END)

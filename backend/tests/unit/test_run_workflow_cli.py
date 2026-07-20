@@ -12,7 +12,7 @@ def test_summary_lines_render_concise_workflow_result() -> None:
             "workflow_status": "completed",
             "course_package": {
                 "expert": "expert_a",
-                "style": "conservative_precise",
+                "style": "conservative",
                 "knowledge_points": ["新颖性"],
                 "legal_basis": ["《专利法》第二十二条"],
                 "teaching_content": "专家 A 整合后的教学内容",

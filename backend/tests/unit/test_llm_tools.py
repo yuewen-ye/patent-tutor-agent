@@ -264,5 +264,5 @@ class TestAgentNameExtension:
         names: list[AgentName] = ["route", "diagnosis_feedback", "chat_answer"]
         for name in names:
             assert name in AgentName.__args__  # type: ignore[attr-defined]
-        assert "planner" not in AgentName.__args__  # type: ignore[attr-defined]
+        assert "planner" in AgentName.__args__  # type: ignore[attr-defined]
         assert "tool_agent" not in AgentName.__args__  # type: ignore[attr-defined]

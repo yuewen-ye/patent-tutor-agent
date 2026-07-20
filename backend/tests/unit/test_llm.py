@@ -15,6 +15,7 @@ from backend.app.core.llm import (
     LLMProviderError,
     call_llm,
     call_llm_json,
+    load_provider_config,
 )
 
 pytestmark = pytest.mark.unit
@@ -54,7 +55,7 @@ def test_call_llm_posts_to_configured_openai_compatible_provider(monkeypatch) ->
     assert captured["url"] == "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
     assert captured["authorization"] == "Bearer qwen-key"
     assert captured["body"] == {
-        "model": "qwen3.7-max",
+        "model": load_provider_config("qwen").model,
         "messages": [{"role": "user", "content": "你好"}],
         "temperature": 0.2,
         "stream": False,
@@ -97,7 +98,7 @@ def test_call_llm_supports_three_configured_providers(
         == "ok"
     )
     assert seen["url"] == f"{base_url}/chat/completions"
-    assert cast(dict[str, Any], seen["body"])["model"] == model_name
+    assert cast(dict[str, Any], seen["body"])["model"] == load_provider_config(provider).model
 
 
 def test_call_llm_json_adds_json_mode_and_parses_response(monkeypatch) -> None:
@@ -186,3 +187,50 @@ def test_agent_llm_router_reads_agent_specific_provider_config(monkeypatch, tmp_
     assert router.provider_for("diagnosis_feedback") == "qwen"
     assert "planner" not in router.agent_providers
     assert router.provider_for("expert_b") == "glm"
+
+
+def test_load_provider_config_env_timeout_overrides_yaml(monkeypatch) -> None:
+    # 回归测试：修复 `or` 短路 bug 后，.env 的 LLM_TIMEOUT_SECONDS / LLM_RETRY_TIMES
+    # 必须能覆盖 yaml（llm_runtime_config）里配的值，而非被永远忽略。
+    class _LlmCfg:
+        timeout_seconds = 90.0
+        retry_times = 5
+
+    class _ProvCfg:
+        model_name = "deepseek-v4-flash"
+        base_url = None
+
+    monkeypatch.setattr("backend.app.core.llm.load_dotenv", lambda *a, **k: None)
+    monkeypatch.setattr("backend.app.core.llm.llm_runtime_config", lambda: _LlmCfg())
+    monkeypatch.setattr("backend.app.core.llm.provider_runtime_config", lambda p: _ProvCfg())
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
+    monkeypatch.setenv("LLM_TIMEOUT_SECONDS", "600")
+    monkeypatch.setenv("LLM_RETRY_TIMES", "7")
+
+    cfg = load_provider_config("deepseek")
+
+    assert cfg.timeout_seconds == 600.0
+    assert cfg.retry_times == 7
+
+
+def test_load_provider_config_falls_back_to_yaml_when_env_unset(monkeypatch) -> None:
+    # env 未设置时，应回退到 yaml（llm_runtime_config）配置，原行为不可被破坏。
+    class _LlmCfg:
+        timeout_seconds = 90.0
+        retry_times = 5
+
+    class _ProvCfg:
+        model_name = "deepseek-v4-flash"
+        base_url = None
+
+    monkeypatch.setattr("backend.app.core.llm.load_dotenv", lambda *a, **k: None)
+    monkeypatch.setattr("backend.app.core.llm.llm_runtime_config", lambda: _LlmCfg())
+    monkeypatch.setattr("backend.app.core.llm.provider_runtime_config", lambda p: _ProvCfg())
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
+    monkeypatch.delenv("LLM_TIMEOUT_SECONDS", raising=False)
+    monkeypatch.delenv("LLM_RETRY_TIMES", raising=False)
+
+    cfg = load_provider_config("deepseek")
+
+    assert cfg.timeout_seconds == 90.0
+    assert cfg.retry_times == 5
