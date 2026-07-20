@@ -83,7 +83,7 @@ providers:
     model_name: deepseek-v4-flash
     base_url: https://api.deepseek.com
   qwen:
-    model_name: qwen3.7-max
+    model_name: qwen3.7-max-2026-05-17
     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
 
 agents:
@@ -360,7 +360,7 @@ providers:
     model_name: deepseek-v4-flash
     base_url: https://api.deepseek.com
   glm:
-    model_name: glm-5.1
+    model_name: glm-5.2
     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
 
 agents:

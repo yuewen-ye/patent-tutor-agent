@@ -44,6 +44,15 @@ def _normalize_judge_report(raw: object) -> object:
     if not isinstance(raw, dict):
         return raw
     normalized = dict(raw)
+    # scores: 兼容 LLM 偶发的浮点/字符串形态 → int（schema 要求 int 1-5）
+    for _f in ("accuracy_score", "adaptation_score", "completeness_score"):
+        _v = normalized.get(_f)
+        if isinstance(_v, float):
+            normalized[_f] = int(round(_v))
+        elif isinstance(_v, str):
+            _s = _v.strip()
+            if _s and _s.replace(".", "", 1).isdigit():
+                normalized[_f] = int(round(float(_s)))
     decision = str(normalized.get("decision", "")).strip().lower()
     if decision in _DECISION_NORMALIZATION:
         normalized["decision"] = _DECISION_NORMALIZATION[decision]
@@ -82,7 +91,7 @@ def build_judge_node(llm_client: LLMClient) -> Node:
                 schema_note(
                     "JudgeReport",
                     '{"decision":"accept_with_minor_revision","accuracy_score":5,'
-                    '"adaptation_score":4,"completeness_score":4,"disputes":[],"rationale":"理由"}',
+                    '"adaptation_score":4,"completeness_score":4,"adaptation_rate":0.8,"disputes":[],"rationale":"理由"}',
                 )
                 + _EXTRA_TEXT,
             ),
@@ -115,15 +124,22 @@ def build_judge_node(llm_client: LLMClient) -> Node:
             agent="judge",
         )
         report = JudgeReport.model_validate(_normalize_judge_report(raw))
+        # adaptation_rate 由代码根据已校验的 adaptation_score 确定性计算，
+        # 覆盖 LLM 可能算错/漏填的值，保证 rate == round(score/5.0, 2)。
+        report_dict = report.model_dump()
+        report_dict["adaptation_rate"] = round(report.adaptation_score / 5.0, 2)
         updates: dict[str, Any] = {
-            "judge_report": report.model_dump(),
+            "judge_report": report_dict,
             "events": [completed_event("judge", "reviewed expert A integration draft with LLM")],
         }
         match report.decision:
             case "accept" | "accept_with_minor_revision":
                 updates["workflow_status"] = "completed"
             case "revise":
-                updates["diagnosis_feedback_phase"] = "feedback"
+                # 打回重产：递增计数（由 workflow 路由决定回到 integration 重新整合，
+                # 还是达到上限后强制完成），不再走 diagnosis_feedback（那是学员练习反馈闭环）。
+                attempts = int(state.get("judge_attempts", 0))
+                updates["judge_attempts"] = attempts + 1
             case unreachable:
                 assert_never(unreachable)
         return updates

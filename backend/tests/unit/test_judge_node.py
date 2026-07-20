@@ -133,3 +133,31 @@ def test_judge_adds_fallback_revision_request_when_revise_has_no_requests() -> N
             "basis": None,
         }
     ]
+
+
+def test_judge_recomputes_adaptation_rate_from_score() -> None:
+    """adaptation_rate 由代码从 adaptation_score 确定性计算，覆盖 LLM 的错误值。"""
+    node = build_judge_node(
+        JudgeLLMClient(
+            {
+                "decision": "accept",
+                "accuracy_score": 5,
+                "adaptation_score": 4,
+                "completeness_score": 5,
+                "adaptation_rate": 0.1,  # LLM 算错，应被覆盖为 4/5=0.8
+                "disputes": [],
+                "rationale": "整合稿准确、适配良好。",
+            }
+        )
+    )
+    state: StateDict = {
+        "session_id": "debug",
+        "user_input": "学习新颖性和创造性",
+        "events": [],
+        "expert_a_draft": {},
+        "expert_b_draft": {},
+    }
+
+    result = node(state)
+
+    assert result["judge_report"]["adaptation_rate"] == 0.8

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Literal, Protocol, Self, cast
@@ -27,6 +28,7 @@ AgentName = Literal[
     "judge",
     "route",
     "chat_answer",
+    "planner",
 ]
 
 DEFAULT_PROVIDER: LLMProvider = "deepseek"
@@ -42,14 +44,14 @@ DEFAULT_CONFIG: dict[LLMProvider, dict[str, str]] = {
         "api_key_env": "QWEN_API_KEY",
         "model_env": "QWEN_MODEL",
         "base_url_env": "QWEN_BASE_URL",
-        "model": "qwen3.7-max",
+        "model": "qwen3.7-max-2026-05-17",
         "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
     },
     "glm": {
         "api_key_env": "GLM_API_KEY",
         "model_env": "GLM_MODEL",
         "base_url_env": "GLM_BASE_URL",
-        "model": "glm-5.1",
+        "model": "glm-5.2",
         "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
     },
 }
@@ -61,6 +63,23 @@ AGENT_PROVIDER_ENV: dict[AgentName, str] = {
     "route": "ROUTE_PROVIDER",
     "chat_answer": "CHAT_ANSWER_PROVIDER",
 }
+
+# ── Per-provider 并发信号量 ──────────────────────────────────────────────
+# 限制同一 provider 同时“在飞”的 HTTP 请求数，避免并发节点（如 expert_a /
+# expert_b 同时打同一个 deepseek key）被上游服务端排队/限流而长时间挂起
+# → ReadTimeout。默认 2；若仍偶发超时可设为 1（彻底串行化该 provider）。
+_PROVIDER_SEMAPHORES: dict[str, threading.Semaphore] = {}
+_PROVIDER_SEMAPHORES_LOCK = threading.Lock()
+
+
+def _provider_semaphore(provider: str) -> threading.Semaphore:
+    with _PROVIDER_SEMAPHORES_LOCK:
+        sem = _PROVIDER_SEMAPHORES.get(provider)
+        if sem is None:
+            limit = int(os.getenv("LLM_MAX_CONCURRENCY", "2"))
+            sem = threading.Semaphore(max(1, limit))
+            _PROVIDER_SEMAPHORES[provider] = sem
+        return sem
 
 
 @dataclass(frozen=True)
@@ -184,8 +203,10 @@ def load_provider_config(provider: LLMProvider, model_name: str | None = None) -
         api_key=api_key,
         model=configured_model,
         base_url=configured_base_url.rstrip("/"),
-        timeout_seconds=llm_config.timeout_seconds or float(os.getenv("LLM_TIMEOUT_SECONDS", "30")),
-        retry_times=llm_config.retry_times or int(os.getenv("LLM_RETRY_TIMES", "3")),
+        # env 显式覆盖优先于 yaml/config，再回退默认值
+        # （修复原 `or` 短路：yaml 配了值后 .env 的 LLM_TIMEOUT_SECONDS / LLM_RETRY_TIMES 永远失效）
+        timeout_seconds=float(os.getenv("LLM_TIMEOUT_SECONDS") or llm_config.timeout_seconds or 30),
+        retry_times=int(os.getenv("LLM_RETRY_TIMES") or llm_config.retry_times or 3),
     )
 
 
@@ -271,8 +292,9 @@ def _post_chat_completion(
     )
 
     try:
-        response = client.post(
-            f"{config.base_url}/chat/completions",
+        with _provider_semaphore(config.provider):
+            response = client.post(
+                f"{config.base_url}/chat/completions",
             headers={
                 "Authorization": f"Bearer {config.api_key}",
                 "Content-Type": "application/json",
@@ -372,8 +394,9 @@ def _post_chat_completion_with_tools(
     )
 
     try:
-        response = client.post(
-            f"{config.base_url}/chat/completions",
+        with _provider_semaphore(config.provider):
+            response = client.post(
+                f"{config.base_url}/chat/completions",
             headers={
                 "Authorization": f"Bearer {config.api_key}",
                 "Content-Type": "application/json",
