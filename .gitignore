@@ -25,3 +25,5 @@ graphify-out/
 backend/app/rag/data/milvus_lite.db/LOCK
 backend/app/rag/data/milvus_lite.db/**/wal/
 backend/app/rag/data/milvus_lite.db/**/*.prev
+
+/data
