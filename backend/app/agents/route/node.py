@@ -26,8 +26,22 @@ _TEACH_HINTS = (
     "继续深入",
     "深入了解",
 )
+_CHAT_HINTS = (
+    "什么是",
+    "什么叫",
+    "怎么理解",
+    "如何理解",
+    "区别",
+    "对比",
+    "区别是什么",
+    "定义",
+    "举例",
+    "有哪些",
+    "？",
+    "?",
+)
 
-_LocalIntent = Literal["teach", "diagnose"]
+_LocalIntent = Literal["teach", "diagnose", "chat"]
 
 
 def _local_intent_hint(user_input: str) -> tuple[_LocalIntent, str] | None:
@@ -35,6 +49,9 @@ def _local_intent_hint(user_input: str) -> tuple[_LocalIntent, str] | None:
         return "diagnose", "本地规则识别为诊断请求"
     if any(hint in user_input for hint in _TEACH_HINTS):
         return "teach", "本地规则识别为系统学习请求"
+    # 单点问答（含问号或定义/对比类词）直接判 chat，避免被误路由进 teach 全链路
+    if any(hint in user_input for hint in _CHAT_HINTS):
+        return "chat", "本地规则识别为单点问答"
     return None
 
 

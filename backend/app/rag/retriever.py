@@ -8,16 +8,20 @@ from typing import Any, Final
 
 from backend.app.schemas.state import RetrievalChunk, RetrievalMetadata
 
-os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+os.environ["HF_ENDPOINT"] = "https://huggingface.co"
 
 COLLECTION_NAME: Final = "law_knowledge_base"
 MODEL_NAME: Final = "BAAI/bge-m3"
+EMBEDDING_MODEL_PATH_ENV: Final = "RAG_EMBEDDING_MODEL_PATH"
 
 _milvus_client = None
 _embedding_model = None
 _sentence_transformers = None
 _MILVUS_CLIENT_LOCK: Final = Lock()
 _EMBEDDING_MODEL_LOCK: Final = Lock()
+# 串行化编码调用：bge-m3 的 FastTokenizer 非线程安全，expert_a/expert_b 在 LangGraph
+# 并发执行时会同时调用 rag_retrieve → model.encode 抢同一把 tokenizer 锁 → "Already borrowed"。
+_EMBEDDING_ENCODE_LOCK: Final = Lock()
 
 
 class RAGRetrievalError(RuntimeError):
@@ -78,7 +82,14 @@ def get_embedding_model() -> Any:
                         detail="SentenceTransformer missing",
                     )
                 try:
-                    _embedding_model = SentenceTransformer(MODEL_NAME)
+                    local_model_path = os.getenv(EMBEDDING_MODEL_PATH_ENV, "").strip()
+                    if local_model_path:
+                        _embedding_model = SentenceTransformer(
+                            local_model_path,
+                            local_files_only=True,
+                        )
+                    else:
+                        _embedding_model = SentenceTransformer(MODEL_NAME)
                 except (OSError, RuntimeError) as exc:
                     raise RAGRetrievalError(stage="embedding_model", detail=str(exc)) from exc
     return _embedding_model
@@ -119,7 +130,9 @@ def rag_retrieve(query: str = "", top_k: int = 5) -> list[RetrievalChunk]:
         raise RAGRetrievalError(stage="setup", detail=str(exc)) from exc
 
     try:
-        query_vector = model.encode([query], normalize_embeddings=True)[0].tolist()
+        # 加锁串行化：规避并发 encode 时 bge-m3 tokenizer "Already borrowed"
+        with _EMBEDDING_ENCODE_LOCK:
+            query_vector = model.encode([query], normalize_embeddings=True)[0].tolist()
     except RAGRetrievalError:
         raise
     except (AttributeError, IndexError, RuntimeError, ValueError) as exc:

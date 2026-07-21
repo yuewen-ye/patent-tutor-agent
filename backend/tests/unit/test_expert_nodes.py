@@ -18,7 +18,7 @@ class CamelCaseExpertLLMClient:
         self.calls.append("generate_json")
         return {
             "expert": "expert_b",
-            "style": "vivid_teaching",
+            "style": "accessible",
             "knowledgePoints": ["新颖性"],
             "legalBasis": ["专利法第二十二条"],
             "teachingContent": "用案例解释新颖性。",
@@ -46,7 +46,7 @@ class ToolCallingExpertLLMClient:
         self.calls.append("generate_json")
         return {
             "expert": "expert_b",
-            "style": "vivid_teaching",
+            "style": "accessible",
             "knowledge_points": ["新颖性"],
             "legal_basis": ["专利法第二十二条"],
             "teaching_content": "结合检索结果解释新颖性。",
@@ -86,8 +86,8 @@ def test_expert_b_accepts_known_provider_camel_case_keys_as_contract_fields() ->
     )
 
     draft = result["expert_b_draft"]
-    assert draft["knowledge_points"] == ["新颖性"]
-    assert draft["legal_basis"] == ["专利法第二十二条"]
+    assert draft["knowledge_points"] == [{"node_id": "", "kc_name": "新颖性"}]
+    assert draft["legal_basis"] == [{"article": "专利法第二十二条", "source": None}]
     assert draft["teaching_content"] == "用案例解释新颖性。"
     assert "knowledgePoints" not in draft
     assert client.calls == ["generate_with_tools", "generate_json"]

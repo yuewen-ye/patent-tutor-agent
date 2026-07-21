@@ -38,7 +38,7 @@ class WorkflowLLMClient:
         self._agents_lock = threading.Lock()
         draft_a: dict[str, object] = {
             "expert": "expert_a",
-            "style": "conservative_precise",
+            "style": "conservative",
             "knowledge_points": ["新颖性"],
             "legal_basis": ["专利法第二十二条"],
             "teaching_content": "严谨解释新颖性。",
@@ -46,7 +46,7 @@ class WorkflowLLMClient:
         }
         draft_b = {
             "expert": "expert_b",
-            "style": "vivid_teaching",
+            "style": "accessible",
             "knowledge_points": ["新颖性"],
             "legal_basis": ["专利法第二十二条"],
             "teaching_content": "用案例解释新颖性。",
@@ -84,7 +84,7 @@ class WorkflowLLMClient:
         integrated.update(
             {
                 "teaching_content": "课程正文",
-                "interactive_questions": ["如何判断新颖性？"],
+                "interactive_questions": [{"qid": "q1", "category": "理解", "difficulty": "易", "question": "如何判断新颖性？", "answer": ""}],
                 "exercises": [
                     {
                         "question_id": "q1",
@@ -109,6 +109,7 @@ class WorkflowLLMClient:
                     "questionnaire": ["本节内容是否清楚？"],
                     "next_action": "完成本节练习",
                     "profile_update_hint": "记录本轮审核结果",
+                    "five_dimensions": {"knowledge": {"novelty": {"pl": 0.3, "ci_low": 0.15, "ci_high": 0.5, "observations": 3, "low_confidence": False}}, "cognition": {"remember": 0.8, "understand": 0.6, "apply": 0.4, "analyze": 0.3, "evaluate": 0.2, "create": 0.1}, "style": {"perception": {"chosen": "sensing", "strength": 0.7}, "input": {"chosen": "visual", "strength": 0.6}, "processing": {"chosen": "active", "strength": 0.55}, "understanding": {"chosen": "sequential", "strength": 0.65}}, "progress": {"completed_nodes": ["patent-law-basic"], "current_node": "novelty-basic", "pending_nodes": ["inventiveness"], "avg_time_per_node_min": 22, "overall_completion_ratio": 0.3}, "affect": {"primary_state": "interested", "confidence": 0.6, "signals": ["主动提问"]}},
                 },
             ],
             "expert_a": [draft_a, review_a, draft_a, integrated],
@@ -179,7 +180,7 @@ def test_graph_parallelizes_experts_and_branches_after_judge() -> None:
     assert ("planner", "expert_b") in edges
     assert ("expert_a", "_experts_barrier") in edges
     assert ("expert_b", "_experts_barrier") in edges
-    assert ("judge", "diagnosis_feedback") in edges
+    assert ("judge", "expert_a_integration") in edges
     assert ("judge", "__end__") in edges
     assert "publish_final_learning" not in mermaid
     assert "quality_gate_failed" not in mermaid
@@ -326,6 +327,7 @@ def test_feedback_mode_reuses_diagnosis_feedback_and_skips_course_agents(
                 "questionnaire": ["为什么选择该答案？"],
                 "next_action": "复习单独对比原则",
                 "profile_update_hint": "新颖性判断已改善",
+                "five_dimensions": {"knowledge": {"novelty": {"pl": 0.3, "ci_low": 0.15, "ci_high": 0.5, "observations": 3, "low_confidence": False}}, "cognition": {"remember": 0.8, "understand": 0.6, "apply": 0.4, "analyze": 0.3, "evaluate": 0.2, "create": 0.1}, "style": {"perception": {"chosen": "sensing", "strength": 0.7}, "input": {"chosen": "visual", "strength": 0.6}, "processing": {"chosen": "active", "strength": 0.55}, "understanding": {"chosen": "sequential", "strength": 0.65}}, "progress": {"completed_nodes": ["patent-law-basic"], "current_node": "novelty-basic", "pending_nodes": ["inventiveness"], "avg_time_per_node_min": 22, "overall_completion_ratio": 0.3}, "affect": {"primary_state": "interested", "confidence": 0.6, "signals": ["主动提问"]}},
             }
 
         def generate_with_tools(
@@ -363,9 +365,10 @@ def test_feedback_mode_reuses_diagnosis_feedback_and_skips_course_agents(
     assert (root / "learner_profile_update.md").is_file()
 
 
-def test_rejected_judge_still_returns_to_feedback_without_publishing(
+def test_rejected_judge_triggers_reintegration_then_accepts(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """judge 判 revise 时应打回 expert_a 重新整合（最终稿被修正），二审 accept 后完成。"""
     monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
     llm = WorkflowLLMClient()
     rejected = {
@@ -383,9 +386,21 @@ def test_rejected_judge_still_returns_to_feedback_without_publishing(
             }
         ],
     }
-    llm.queues["judge"] = [rejected]
-    artifact_root = tmp_path / "artifacts"
+    accepted = {
+        "decision": "accept_with_minor_revision",
+        "accuracy_score": 5,
+        "adaptation_score": 5,
+        "completeness_score": 5,
+        "disputes": [],
+        "rationale": "修正后通过",
+    }
+    llm.queues["judge"] = [rejected, accepted]
+    # 重新整合需要 expert_a 多一次 integration 响应（基于原整合稿修正）
+    integrated_revised = dict(llm.queues["expert_a"][3])
+    integrated_revised["teaching_content"] = "修正后的课程正文（已补充法条与案例依据）"
+    llm.queues["expert_a"].append(integrated_revised)
 
+    artifact_root = tmp_path / "artifacts"
     state = run_workflow(
         session_id="rejected-course",
         user_input="掌握专利新颖性",
@@ -395,10 +410,16 @@ def test_rejected_judge_still_returns_to_feedback_without_publishing(
 
     session_root = artifact_root / "sessions" / "rejected-course"
     assert "workflow_status" in state
-    assert "feedback_result" in state
     assert state["workflow_status"] == "completed"
-    assert state["feedback_result"]["next_action"] == "完成本节练习"
-    assert not (session_root / "final_learning.md").exists()
+    # 打回一次 + 二审一次 = 2 次 judge
+    assert llm.agents.count("judge") == 2
+    # expert_a 被调用 5 次（draft/cross_review/revision/integration + 重新整合）
+    assert llm.agents.count("expert_a") == 5
+    # 最终稿被修改：course_package 是重新整合的修正版
+    assert state["course_package"]["teaching_content"] == (
+        "修正后的课程正文（已补充法条与案例依据）"
+    )
+    assert state["judge_report"]["decision"] == "accept_with_minor_revision"
     assert (session_root / "round-01/course_package.md").is_file()
     assert (session_root / "round-01/judge_report.md").is_file()
     manifest = json.loads((session_root / "manifest.json").read_text(encoding="utf-8"))

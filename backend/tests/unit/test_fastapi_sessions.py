@@ -26,8 +26,36 @@ class QueueLLMClient:
                 "learning_goal": "学习专利新颖性",
             },
             {
+                "nodes": [
+                    {
+                        "node_id": "novelty-basic",
+                        "node_name": "新颖性基础",
+                        "duration_min": 20,
+                        "strategy": "先学概念+法条拆解",
+                        "prerequisites": [],
+                        "difficulty_cap": "L2",
+                    }
+                ],
+                "question_scope": {
+                    "backward_review": [
+                        {"node_id": "novelty-basic", "difficulty": "L2", "goal": "验证巩固"}
+                    ],
+                    "forward_probe": [
+                        {"node_id": "inventiveness", "difficulty": "L1", "goal": "探测下一节点"}
+                    ],
+                    "weakness_probe": [
+                        {"node_id": "doctrine-of-equivalents", "difficulty": "L3", "goal": "薄弱点挑战"}
+                    ],
+                },
+                "iteration_directive": {
+                    "type": "降维",
+                    "trigger": "当前节点 L1 答对率 < 60%",
+                    "action": "降低抽象度",
+                },
+            },
+            {
                 "expert": "expert_a",
-                "style": "conservative_precise",
+                "style": "conservative",
                 "knowledge_points": ["新颖性"],
                 "legal_basis": ["专利法第二十二条"],
                 "teaching_content": "严谨解释新颖性。",
@@ -35,7 +63,7 @@ class QueueLLMClient:
             },
             {
                 "expert": "expert_b",
-                "style": "vivid_teaching",
+                "style": "accessible",
                 "knowledge_points": ["新颖性"],
                 "legal_basis": ["专利法第二十二条"],
                 "teaching_content": "用案例解释新颖性。",
@@ -61,7 +89,7 @@ class QueueLLMClient:
             },
             {
                 "expert": "expert_a",
-                "style": "conservative_precise",
+                "style": "conservative",
                 "knowledge_points": ["新颖性"],
                 "legal_basis": ["专利法第二十二条"],
                 "teaching_content": "专家A修订内容。",
@@ -69,7 +97,7 @@ class QueueLLMClient:
             },
             {
                 "expert": "expert_b",
-                "style": "vivid_teaching",
+                "style": "accessible",
                 "knowledge_points": ["新颖性"],
                 "legal_basis": ["专利法第二十二条"],
                 "teaching_content": "专家B修订内容。",
@@ -77,7 +105,7 @@ class QueueLLMClient:
             },
             {
                 "expert": "expert_a",
-                "style": "conservative_precise",
+                "style": "conservative",
                 "knowledge_points": ["新颖性"],
                 "legal_basis": ["专利法第二十二条"],
                 "teaching_content": "专家A整合两位专家观点后的最终教学内容。",
@@ -95,6 +123,7 @@ class QueueLLMClient:
                 "questionnaire": ["本节最容易混淆什么？"],
                 "next_action": "完成练习后复盘",
                 "profile_update_hint": "继续观察新颖性判断步骤",
+                "five_dimensions": {"knowledge": {"novelty": {"pl": 0.3, "ci_low": 0.15, "ci_high": 0.5, "observations": 3, "low_confidence": False}}, "cognition": {"remember": 0.8, "understand": 0.6, "apply": 0.4, "analyze": 0.3, "evaluate": 0.2, "create": 0.1}, "style": {"perception": {"chosen": "sensing", "strength": 0.7}, "input": {"chosen": "visual", "strength": 0.6}, "processing": {"chosen": "active", "strength": 0.55}, "understanding": {"chosen": "sequential", "strength": 0.65}}, "progress": {"completed_nodes": ["patent-law-basic"], "current_node": "novelty-basic", "pending_nodes": ["inventiveness"], "avg_time_per_node_min": 22, "overall_completion_ratio": 0.3}, "affect": {"primary_state": "interested", "confidence": 0.6, "signals": ["主动提问"]}},
             },
         ]
 
@@ -159,7 +188,9 @@ def test_session_api_creates_background_workflow_and_returns_snapshot(
     assert snapshot["session_id"] == session_id
     assert snapshot["status"] == "completed"
     assert snapshot["state"]["expert_a_draft"]["draft_stage"] == "integration"
-    assert snapshot["state"]["expert_a_draft"]["legal_basis"] == ["专利法第二十二条"]
+    assert snapshot["state"]["expert_a_draft"]["legal_basis"] == [
+        {"article": "专利法第二十二条", "source": None}
+    ]
     assert snapshot["state"]["expert_a_draft"] == completed["expert_a_draft"]
     assert snapshot["state"]["workflow_status"] == "completed"
     assert "final_learning_markdown" not in snapshot["state"]

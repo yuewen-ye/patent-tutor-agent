@@ -33,12 +33,13 @@ class DebateQueueLLMClient:
                     "questionnaire": ["本节最容易混淆什么？"],
                     "next_action": "完成练习后复盘",
                     "profile_update_hint": "继续观察新颖性判断步骤",
+                    "five_dimensions": {"knowledge": {"novelty": {"pl": 0.3, "ci_low": 0.15, "ci_high": 0.5, "observations": 3, "low_confidence": False}}, "cognition": {"remember": 0.8, "understand": 0.6, "apply": 0.4, "analyze": 0.3, "evaluate": 0.2, "create": 0.1}, "style": {"perception": {"chosen": "sensing", "strength": 0.7}, "input": {"chosen": "visual", "strength": 0.6}, "processing": {"chosen": "active", "strength": 0.55}, "understanding": {"chosen": "sequential", "strength": 0.65}}, "progress": {"completed_nodes": ["patent-law-basic"], "current_node": "novelty-basic", "pending_nodes": ["inventiveness"], "avg_time_per_node_min": 22, "overall_completion_ratio": 0.3}, "affect": {"primary_state": "interested", "confidence": 0.6, "signals": ["主动提问"]}},
                 },
             ],
             "expert_a": [
                 {
                     "expert": "expert_a",
-                    "style": "conservative_precise",
+                    "style": "conservative",
                     "knowledge_points": ["新颖性"],
                     "legal_basis": ["《专利法》第二十二条"],
                     "teaching_content": "严谨但缺少案例。",
@@ -55,7 +56,7 @@ class DebateQueueLLMClient:
                 },
                 {
                     "expert": "expert_a",
-                    "style": "conservative_precise",
+                    "style": "conservative",
                     "knowledge_points": ["新颖性", "现有技术"],
                     "legal_basis": ["《专利法》第二十二条"],
                     "teaching_content": "已按 judge 意见补充法条和案例。",
@@ -63,7 +64,7 @@ class DebateQueueLLMClient:
                 },
                 {
                     "expert": "expert_a",
-                    "style": "conservative_precise",
+                    "style": "conservative",
                     "knowledge_points": ["新颖性", "现有技术", "案例判断"],
                     "legal_basis": ["《专利法》第二十二条"],
                     "teaching_content": "专家A整合A/B辩论结果后的教学内容",
@@ -73,7 +74,7 @@ class DebateQueueLLMClient:
             "expert_b": [
                 {
                     "expert": "expert_b",
-                    "style": "vivid_teaching",
+                    "style": "accessible",
                     "knowledge_points": ["新颖性"],
                     "legal_basis": ["《专利法》第二十二条"],
                     "teaching_content": "生动但法条回扣不足。",
@@ -90,7 +91,7 @@ class DebateQueueLLMClient:
                 },
                 {
                     "expert": "expert_b",
-                    "style": "vivid_teaching",
+                    "style": "accessible",
                     "knowledge_points": ["新颖性", "案例判断"],
                     "legal_basis": ["《专利法》第二十二条"],
                     "teaching_content": "已按 judge 意见补充案例解释。",

@@ -92,6 +92,8 @@ class RetrievalMetadata(ContractModel):
 - 从 `backend/app/rag/data/milvus_lite.db/` 的 `law_knowledge_base` collection 检索 Top-K 片段
 - `retrieval_method = "vector"`
 - 检索初始化、编码、搜索或结果解析失败时抛出 `RAGRetrievalError`，不再静默返回空列表
+- 首次运行从 Hugging Face 官方源下载 BGE-M3 模型
+- 设置 `RAG_EMBEDDING_MODEL_PATH` 后从该完整本地目录加载 BGE-M3，不访问网络
 
 `RAG_RETRIEVAL_MODE=mock` 时调用 `backend/app/retrieval/mock.py` 中的固定法条片段，`retrieval_method = "manual"`。mock 与选择器放在 `retrieval/`，真实向量实现保留在 `rag/`。
 

@@ -25,3 +25,12 @@ graphify-out/
 backend/app/rag/data/milvus_lite.db/LOCK
 backend/app/rag/data/milvus_lite.db/**/wal/
 backend/app/rag/data/milvus_lite.db/**/*.prev
+
+/data
+# 嵌入模型权重（体积大，本地/HF 拉取，不入库）
+bge-m3/
+
+# 系统 / 临时垃圾文件（不入库）
+.DS_Store
+*.bak
+temp_clone/
