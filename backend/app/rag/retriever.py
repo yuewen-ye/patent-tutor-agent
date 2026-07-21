@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-import atexit
 import importlib
 import os
-import shutil
-import time
 from pathlib import Path
 from threading import Lock
 from typing import Any, Final
@@ -169,30 +166,3 @@ def rag_retrieve(query: str = "", top_k: int = 5) -> list[RetrievalChunk]:
         return chunks
     except (KeyError, TypeError, IndexError, ValueError) as exc:
         raise RAGRetrievalError(stage="result_parse", detail=str(exc)) from exc
-
-
-def _cleanup_runtime_files() -> None:
-    db_path = Path(_get_db_path())
-    if not db_path.exists():
-        return
-    time.sleep(1)
-    lock_file = db_path / "LOCK"
-    if lock_file.exists():
-        try:
-            lock_file.unlink()
-        except Exception:
-            pass
-    for wal_dir in db_path.rglob("wal"):
-        if wal_dir.is_dir():
-            try:
-                shutil.rmtree(wal_dir)
-            except Exception:
-                pass
-    for prev_file in db_path.rglob("*.prev"):
-        try:
-            prev_file.unlink()
-        except Exception:
-            pass
-
-
-atexit.register(_cleanup_runtime_files)

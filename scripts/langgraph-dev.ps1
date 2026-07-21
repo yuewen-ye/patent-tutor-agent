@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
@@ -44,6 +44,20 @@ if (-not $env:UV_CACHE_DIR) {
 
 if (-not $env:UV_PYTHON_INSTALL_DIR) {
     $env:UV_PYTHON_INSTALL_DIR = Join-Path $repoRoot ".uv-python"
+}
+
+$dbPath = Join-Path $repoRoot "backend\app\rag\data\milvus_lite.db"
+if (Test-Path $dbPath) {
+    $lockFile = Join-Path $dbPath "LOCK"
+    if (Test-Path $lockFile) {
+        Remove-Item $lockFile -Force -ErrorAction SilentlyContinue
+        Write-Host "[init] 已清理残留 LOCK 文件"
+    }
+    Get-ChildItem -Path $dbPath -Recurse -File | Set-ItemProperty -Name IsReadOnly -Value $true
+    $fileCount = (Get-ChildItem -Path $dbPath -Recurse -File).Count
+    Write-Host "[init] 数据库已设为只读（$fileCount 个文件）"
+} else {
+    Write-Host "[init] 数据库目录不存在，跳过只读设置"
 }
 
 uv run langgraph dev --no-reload --no-browser --host 127.0.0.1 --port 8124
