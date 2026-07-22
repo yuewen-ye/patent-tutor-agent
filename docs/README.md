@@ -13,6 +13,7 @@
 | `api-testing-guide.md` | FastAPI 接口含义、调用顺序和请求示例 |
 | `rag-interface-spec.md` | RAG 选择器、检索合同和真实/mock 模式 |
 | `implementation-plan.md` | 当前基线和后续实施顺序 |
+| `patent-tutor-rdb-design.md` | MySQL 关系型数据库设计、数据边界和持久化方案 |
 
 运行时行为冲突时，以 `backend/app/graph/workflow.py`、
 `backend/app/schemas/state.py` 和实际 API 路由为准，并同步修正文档。
