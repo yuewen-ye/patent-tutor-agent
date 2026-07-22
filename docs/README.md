@@ -19,6 +19,12 @@
 运行时行为冲突时，以 `backend/app/graph/workflow.py`、
 `backend/app/schemas/state.py` 和实际 API 路由为准，并同步修正文档。
 
+## 讲解辅助
+
+| 文件 | 用途 |
+|---|---|
+| `database-design-presentation-guide.md` | 面向汇报和答辩的数据库设计易懂讲解稿；技术细节仍以关系库设计文档和代码为准 |
+
 ## 架构资料
 
 | 文件 | 用途 |
