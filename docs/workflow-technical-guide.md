@@ -34,7 +34,8 @@ POST /sessions/{course_session_id}/exercise-responses
 - 混淆对定义来自 `backend/app/curriculum/data/confusion-pairs.json`，运行时不改写静态定义。
 - `planner` 不调用 LLM。它读取数据库中该学员的最新画像和 BKT 掌握度，再由 `backend/app/curriculum/learning_path.py` 确定性计算路径。
 - 混淆风险同时考虑画像中的 `weak_points` 和相关概念的 BKT 掌握度；低掌握度会提高 `learner_risk` 并记录 `adjustment_reason`。
-- FastAPI 默认使用 `data/learner_memory.sqlite3` 保存画像、历史和 BKT。Studio 由 LangGraph Dev 管理自己的 Store，不会自动读取这份 SQLite；要让 Studio 复用产品数据，必须显式接入同一个持久化 Store，或通过 FastAPI 启动产品流程。
+- FastAPI 默认使用 MySQL 保存画像、历史、BKT、会话状态、事件、题目和作答。通过 `PATENT_TUTOR_MYSQL_URL` 配置连接，首次数据库操作时自动执行 `backend/app/persistence/migrations/` 中的迁移。旧 `learner_memory.sqlite3` 仅作为历史迁移输入，不再承担生产写入。
+- Studio 由 LangGraph Dev 管理自己的 Store，不会自动读取 FastAPI 的 MySQL；要让 Studio 复用产品数据，必须显式注入同一个持久化 Store，或通过 FastAPI 启动产品流程。
 
 ## 3. Markdown 过程产物
 
@@ -64,7 +65,9 @@ artifacts/sessions/{session_id}/
 
 每个 Markdown 都先由通过 Pydantic 校验的结构化数据渲染，使用固定标题、表格和 JSON 代码块。`manifest.json` 保存路径、类型、生成节点、SHA-256 与时间戳，状态只允许 `running/completed/failed/canceled`。
 
-## 4. 前端读取方式
+## 4. 持久化边界与前端读取方式
+
+数据库保存结构化状态、索引、事件和 Artifact 元数据；正文 Markdown 仍保存在 `artifacts/`，数据库中的 `content_path` 只保存相对路径和校验哈希。会话工作流不依赖前端参与，前端通过 API 查询状态和路径，再读取 Artifact 正文。
 
 前端先通过 `GET /sessions/{session_id}` 获取 `artifacts` 数组，再使用 `GET /sessions/{session_id}/artifacts/{path}` 读取 Markdown 原文。服务端会限制路径必须位于该会话目录且后缀为 `.md`。
 

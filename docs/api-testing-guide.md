@@ -8,7 +8,7 @@
 uv run pytest backend/tests/unit/test_learning_flow_api.py::test_reproducible_questionnaire_teach_exercise_feedback_journey -m unit -s
 ```
 
-测试使用固定的 fake LLM 响应、临时 SQLite 文件和临时 artifacts 目录，按真实 FastAPI HTTP 接口依次执行问卷、
+测试使用固定的 fake LLM 响应、兼容用的临时 SQLite Store 和临时 artifacts 目录，按真实 FastAPI HTTP 接口依次执行问卷、
 教学、练习提交、反馈和学情读取；测试结束后临时目录由 pytest 清理。
 
 ## 1. 新学员主流程
@@ -43,6 +43,8 @@ GET  /learners/{learner_id}
 1. 提交问卷接口本身就会创建课程会话，不需要随后再调用 `POST /sessions`。
 2. 提交练习接口会创建新的反馈会话，反馈会话 ID 不等于课程会话 ID。
 3. `POST /sessions` 是 chat、diagnose 或跳过问卷直接 teach 的通用入口。
+
+生产服务默认使用 MySQL；配置 `PATENT_TUTOR_MYSQL_URL` 后，服务会将会话状态、事件、画像、BKT、题目、作答和 Artifact 索引写入数据库。正文仍通过 Artifact 接口从 `artifacts/` 读取。
 
 ## 2. 主流程逐步说明
 

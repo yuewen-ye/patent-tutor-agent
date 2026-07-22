@@ -18,8 +18,8 @@
 └───────┬───────────┬───────┘
         │           │
 ┌───────▼──────┐  ┌─▼──────────────────────────┐
-│ LLM Router   │  │ SQLiteLearnerStore         │
-│ provider cfg │  │ profile / history / BKT    │
+│ LLM Router   │  │ MySQLLearnerStore          │
+│ provider cfg │  │ session / profile / BKT    │
 └───────┬──────┘  └───────────┬────────────────┘
         │                     │
 ┌───────▼─────────────────────▼────────────────┐
@@ -27,4 +27,4 @@
 └──────────────────────────────────────────────┘
 ```
 
-结构化 StateDict 是业务真值；Markdown 是从已校验状态生成的过程审计材料。Planner 直接读取 learner store，不调用 LLM。
+结构化 StateDict 是业务真值；MySQL 保存状态、索引、事件和学习数据，Markdown 正文仍是写入 `artifacts/` 的过程审计材料。Planner 直接读取 learner store，不调用 LLM。

@@ -76,6 +76,7 @@ class SQLiteLearnerStore:
         profile: dict[str, Any],
         key: str | None = None,
         created_at: str | None = None,
+        source: str | None = None,
     ) -> None:
         payload = dict(profile)
         payload["session_id"] = session_id

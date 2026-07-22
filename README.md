@@ -2,7 +2,7 @@
 
 知识产权管理与专利代理实务多 Agent 系统。仓库采用 **Monorepo 单仓库 + 前后端分离**：后端负责 FastAPI 服务、LangGraph 多 Agent 编排、统一模型调用和 RAG 知识库模块；前端负责后续 React 交互与 Agent 运行状态可视化。
 
-当前已完成：三路由工作流（teach/chat/diagnose）、同一 `diagnosis_feedback` Agent 的诊断/反馈两阶段、SQLite 学员画像与 BKT、双知识轴和确定性路径、专家 A/B 三阶段并行协作与 A 整合、Judge 条件审核、规范化 Markdown 过程产物、独立练习反馈会话，以及 FastAPI/SSE/WebSocket/Studio/CLI 运行入口。详见 `docs/workflow-technical-guide.md`。
+当前已完成：三路由工作流（teach/chat/diagnose）、同一 `diagnosis_feedback` Agent 的诊断/反馈两阶段、MySQL 学员画像与 BKT、双知识轴和确定性路径、专家 A/B 三阶段并行协作与 A 整合、Judge 条件审核、规范化 Markdown 过程产物、独立练习反馈会话，以及 FastAPI/SSE/WebSocket/Studio/CLI 运行入口。详见 `docs/workflow-technical-guide.md`。
 
 ## 从零到 LangGraph Studio
 
@@ -70,7 +70,10 @@ DEEPSEEK_API_KEY=sk-your-key-here
 
 # 非密钥模型参数从 YAML 读取
 AGENT_CONFIG_PATH=config/agents.yaml
-LEARNER_MEMORY_STORE_PATH=data/learner_memory.sqlite3
+# 生产持久化（MySQL 8.0+）
+PATENT_TUTOR_MYSQL_URL=mysql://patent_tutor:password@127.0.0.1:3306/patent_tutor
+PATENT_TUTOR_MYSQL_POOL_SIZE=5
+PATENT_TUTOR_MYSQL_AUTO_MIGRATE=true
 ```
 
 支持 `deepseek`、`qwen`、`glm` 三个 provider。每个 Agent 的 provider、model、temperature、top_k 等非密钥参数在 `config/agents.yaml` 里调整。
@@ -229,7 +232,8 @@ https://smith.langchain.com/studio/?baseUrl=http://localhost:8124
 │   │   ├── core/               # Agent/LLM 运行配置、provider 和 AgentLLMRouter
 │   │   ├── curriculum/         # 双知识轴静态数据与确定性路径计算
 │   │   ├── graph/              # LangGraph StateGraph workflow
-│   │   ├── learner_memory/     # 学员画像、历史、BKT 与 SQLite Store
+│   │   ├── learner_memory/     # 学员画像、历史、BKT Store 接口与兼容实现
+│   │   ├── persistence/        # MySQL 连接池、迁移和业务 Repository
 │   │   ├── onboarding/         # 入学问卷读取与 Markdown 定义
 │   │   ├── rag/                # 真实 Milvus Lite + BGE-M3 检索
 │   │   ├── retrieval/          # real/mock 检索模式选择
@@ -287,7 +291,7 @@ START → _init → route ──┬── diagnose: diagnosis_feedback[diagnosis
 |------|------|------|-----------------|
 | `route` | LLM 调用 + 本地兜底 | 分类用户意图 teach/chat/diagnose；明显学习/诊断请求会覆盖误路由 | `agents.route` |
 | `diagnosis_feedback` | LLM 调用 + Store | diagnosis 阶段读取问卷/历史画像；feedback 阶段生成问卷、下一步动作和画像更新 | `agents.diagnosis_feedback` |
-| `planner` | 确定性算法 + Store | 从 SQLite 画像/BKT 和静态双轴计算个性化路径，不调用 LLM | — |
+| `planner` | 确定性算法 + Store | 从 MySQL 画像/BKT 和静态双轴计算个性化路径，不调用 LLM | — |
 | `retrieve_context` | 无 LLM | chat 路径固定检索法条上下文 | — |
 | `expert_a` | LLM + Tool 调用 | 保守严谨、法条优先；承担草稿、互评、修订和整合阶段 | `agents.expert_a` |
 | `expert_b` | LLM + Tool 调用 | 生动灵活、面向案例；承担草稿、互评和修订阶段 | `agents.expert_b` |
@@ -302,9 +306,9 @@ Planner 计算路径时组合两类数据：
 
 - `backend/app/curriculum/data/knowledge-dag.json`：所有学员共享的知识点、前置关系、难度和考试权重。
 - `backend/app/curriculum/data/confusion-pairs.json`：所有学员共享的易混淆概念对和基础风险。
-- `data/learner_memory.sqlite3`：每名学员自己的问卷、画像、历史和 BKT 掌握度。
+- MySQL：每名学员自己的问卷、画像、历史、BKT 掌握度、会话状态、题目和作答记录。
 
-前两项是版本化的静态课程地图，不会在会话中被 LLM 改写；SQLite 数据是学员在地图上的当前位置。
+前两项是版本化的静态课程地图，不会在会话中被 LLM 改写；MySQL 数据是学员在地图上的当前位置。
 例如静态图规定“专利授权实质条件”是“新颖性”的前置知识，而某学员的新颖性掌握度只有
 `0.30`，Planner 就会保留必要前置节点并提高相关混淆对的个人风险。静态 JSON 在进程内缓存，
 修改后需要重启 FastAPI、CLI 或 LangGraph Dev 进程。
@@ -499,7 +503,7 @@ PY
 - `GET /questionnaires/onboarding` — 返回版本化新学员问卷 Markdown
 - `POST /learners/{learner_id}/questionnaire-responses` — 保存问卷并创建课程会话
 - `POST /sessions/{course_session_id}/exercise-responses` — 保存作答并创建独立反馈会话
-- `GET /sessions` — 分页列出内存中的会话摘要，支持按 `status`、`learner_id` 筛选
+- `GET /sessions` — 分页列出 MySQL 持久化的会话摘要，内存对象只作为运行时缓存，支持按 `status`、`learner_id` 筛选
 - `GET /sessions/{session_id}` — 返回当前 StateDict 快照和会话状态
 - `DELETE /sessions/{session_id}` — 取消运行中的会话，状态保持为 `canceled`
 - `GET /sessions/{session_id}/events/stream` — SSE 推送 AgentEvent
@@ -512,7 +516,8 @@ PY
 
 服务层配置：
 
-- 默认 learner memory 与 BKT 写入 `data/learner_memory.sqlite3`，可通过 `LEARNER_MEMORY_STORE_PATH` 覆盖
+- 默认 learner memory、BKT、会话和题目作答写入 MySQL；通过 `PATENT_TUTOR_MYSQL_URL` 配置连接
+- `backend/app/persistence/migrations/` 中的迁移会在首次数据库操作时自动执行；旧 SQLite 仅作为迁移输入，不再作为生产写入目标
 - 历史 JSON 只通过 `backend/scripts/migrate_learner_memory.py` 显式幂等迁移，不会自动导入
 - artifact API 直接读取会话目录，服务重启、内存会话清理后仍可读取历史 Markdown
 - `PATENT_TUTOR_CORS_ORIGINS` 支持逗号分隔的允许来源；为空时不启用 CORS

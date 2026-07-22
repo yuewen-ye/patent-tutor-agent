@@ -134,11 +134,21 @@ def save_learner_memories(
     if learner_profile:
         learner_profile["created_at"] = created_at
         learner_profile["session_id"] = state["session_id"]
-        store.put(
-            learner_namespace(learner_id, "profile"),
-            str(uuid.uuid4()),
-            learner_profile,
-        )
+        save_profile = getattr(store, "save_profile", None)
+        if callable(save_profile):
+            save_profile(
+                learner_id=learner_id,
+                session_id=state["session_id"],
+                profile=learner_profile,
+                key=str(uuid.uuid4()),
+                source="feedback",
+            )
+        else:
+            store.put(
+                learner_namespace(learner_id, "profile"),
+                str(uuid.uuid4()),
+                learner_profile,
+            )
 
     learning_path = state.get("learning_path", [])
     history = {
@@ -150,11 +160,20 @@ def save_learner_memories(
         "next_action": feedback_result.get("next_action"),
         "created_at": created_at,
     }
-    store.put(
-        learner_namespace(learner_id, "history"),
-        str(uuid.uuid4()),
-        history,
-    )
+    save_history = getattr(store, "save_history", None)
+    if callable(save_history):
+        save_history(
+            learner_id=learner_id,
+            session_id=state["session_id"],
+            event_type="feedback_completed",
+            payload=history,
+        )
+    else:
+        store.put(
+            learner_namespace(learner_id, "history"),
+            str(uuid.uuid4()),
+            history,
+        )
 
 
 def save_profile_snapshot(
@@ -169,7 +188,25 @@ def save_profile_snapshot(
     created_at = datetime.now(UTC).isoformat()
     payload = dict(profile)
     payload.update({"created_at": created_at, "session_id": state["session_id"]})
-    store.put(learner_namespace(learner_id, "profile"), state["session_id"], payload)
+    save_profile = getattr(store, "save_profile", None)
+    if callable(save_profile):
+        try:
+            save_profile(
+                learner_id=learner_id,
+                session_id=state["session_id"],
+                profile=payload,
+                key=state["session_id"],
+                source="diagnosis",
+            )
+        except TypeError:
+            save_profile(
+                learner_id=learner_id,
+                session_id=state["session_id"],
+                profile=payload,
+                key=state["session_id"],
+            )
+    else:
+        store.put(learner_namespace(learner_id, "profile"), state["session_id"], payload)
 
 
 def save_history_snapshot(
@@ -191,11 +228,21 @@ def save_history_snapshot(
             "created_at": datetime.now(UTC).isoformat(),
         }
     )
-    store.put(
-        learner_namespace(learner_id, "history"),
-        f"{state['session_id']}:{event_type}",
-        value,
-    )
+    save_history = getattr(store, "save_history", None)
+    if callable(save_history):
+        save_history(
+            learner_id=learner_id,
+            session_id=state["session_id"],
+            event_type=event_type,
+            payload=value,
+            key=f"{state['session_id']}:{event_type}",
+        )
+    else:
+        store.put(
+            learner_namespace(learner_id, "history"),
+            f"{state['session_id']}:{event_type}",
+            value,
+        )
 
 
 def learner_memory_snapshot(

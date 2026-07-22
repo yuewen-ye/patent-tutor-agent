@@ -10,6 +10,28 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 class ServiceSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    mysql_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("PATENT_TUTOR_MYSQL_URL", "MYSQL_URL"),
+    )
+    mysql_pool_size: int = Field(
+        default=5,
+        ge=1,
+        le=50,
+        validation_alias=AliasChoices("PATENT_TUTOR_MYSQL_POOL_SIZE", "MYSQL_POOL_SIZE"),
+    )
+    mysql_connect_timeout: int = Field(
+        default=5,
+        ge=1,
+        le=60,
+        validation_alias=AliasChoices(
+            "PATENT_TUTOR_MYSQL_CONNECT_TIMEOUT", "MYSQL_CONNECT_TIMEOUT"
+        ),
+    )
+    mysql_auto_migrate: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("PATENT_TUTOR_MYSQL_AUTO_MIGRATE", "MYSQL_AUTO_MIGRATE"),
+    )
     learner_memory_store_path: Path = Field(
         default=Path("data/learner_memory.sqlite3"),
         validation_alias=AliasChoices("LEARNER_MEMORY_STORE_PATH", "learner_memory_store_path"),

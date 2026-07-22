@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 from typing import Any, cast
@@ -56,9 +55,10 @@ def main() -> None:
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
 
+    from backend.app.config import load_service_settings
     from backend.app.core.llm import AGENT_PROVIDER_ENV, AgentLLMRouter, AgentName, LLMProvider
     from backend.app.graph.workflow import run_workflow
-    from backend.app.learner_memory.sqlite_store import SQLiteLearnerStore
+    from backend.app.persistence.repositories import MySQLLearnerStore
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -108,6 +108,7 @@ def main() -> None:
     provider_plan = {agent: router.provider_for(agent) for agent in AGENT_PROVIDER_ENV}
     print(f"Provider plan: {provider_plan}", file=sys.stderr)
 
+    service_settings = load_service_settings()
     state = run_workflow(
         session_id=args.session_id,
         user_input=args.user_input,
@@ -115,8 +116,11 @@ def main() -> None:
         artifact_root=args.artifact_root,
         learner_id=args.learner_id,
         workflow_mode=args.mode,
-        store=SQLiteLearnerStore(
-            Path(os.getenv("LEARNER_MEMORY_STORE_PATH", "data/learner_memory.sqlite3"))
+        store=MySQLLearnerStore(
+            url=service_settings.mysql_url,
+            pool_size=service_settings.mysql_pool_size,
+            connect_timeout=service_settings.mysql_connect_timeout,
+            auto_migrate=service_settings.mysql_auto_migrate,
         ),
     )
     if args.json:

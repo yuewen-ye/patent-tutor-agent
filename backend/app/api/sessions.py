@@ -75,7 +75,7 @@ def create_sessions_router(session_service: SessionService) -> APIRouter:
     @router.get(
         "/sessions",
         response_model=SessionsListResponse,
-        description="List filtered, paginated summaries of in-memory workflow sessions.",
+        description="List filtered, paginated summaries of persisted workflow sessions.",
     )
     def list_sessions(
         session_status: Annotated[

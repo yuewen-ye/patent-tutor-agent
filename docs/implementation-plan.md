@@ -6,7 +6,7 @@
 |---|---|---|
 | 工作流 | 已完成 | teach/chat/diagnose + 独立 feedback 入口 |
 | 学情 Agent | 已完成 | 单一 `diagnosis_feedback` 节点，诊断/反馈两阶段 |
-| 学习路径 | 已完成 | SQLite 画像 + BKT + 静态双轴 + 确定性路径算法 |
+| 学习路径 | 已完成 | MySQL 画像 + BKT + 静态双轴 + 确定性路径算法 |
 | 专家协作 | 已完成 | A/B 并行草稿、并行互评、并行修订，随后由 A 整合 |
 | 审核闭环 | 已完成 | 不通过时 Expert A 重新整合并持续复审；通过后等待练习提交，再创建独立 `diagnosis_feedback[feedback]` 会话 |
 | 过程产物 | 已完成 | 所有节点输出落到 `artifacts/sessions/{id}` 的 Markdown + manifest |
@@ -19,8 +19,8 @@
 
 ```text
 问卷 → diagnosis_feedback(diagnosis)
-     → SQLite profile
-     → planner(SQLite profile + BKT + 双轴)
+     → MySQL profile
+     → planner(MySQL profile + BKT + 双轴)
      → expert_a/expert_b 三阶段并行协作
      → course_package.md
      → judge_report.md

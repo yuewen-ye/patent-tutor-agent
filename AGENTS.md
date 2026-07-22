@@ -55,7 +55,8 @@ uv export --format requirements-txt --output-file requirements.txt
 │   │   ├── core/                # provider clients, runtime config and AgentLLMRouter
 │   │   ├── curriculum/          # dual-axis data and deterministic path planning
 │   │   ├── graph/               # StateGraph wiring and runtime side effects
-│   │   ├── learner_memory/      # Store helpers and SQLite profile/BKT persistence
+│   │   ├── learner_memory/      # Store helpers and learner profile/BKT contracts
+│   │   ├── persistence/         # MySQL pool, migrations and business repositories
 │   │   ├── onboarding/          # questionnaire loader and Markdown definition
 │   │   ├── rag/                 # real Milvus Lite + BGE-M3 retrieval
 │   │   ├── retrieval/           # real/mock retrieval selection boundary
@@ -184,12 +185,13 @@ Schema changes must update, in order:
 
 ## Learner Memory And Dual Axes
 
-FastAPI and the CLI use `SQLiteLearnerStore` at `data/learner_memory.sqlite3` by default. It stores
-profile snapshots, learning history and BKT mastery. The old JSON store is migration input only via
-`backend/scripts/migrate_learner_memory.py`.
+FastAPI and the CLI use `MySQLLearnerStore` by default, configured by `PATENT_TUTOR_MYSQL_URL`. It
+stores profile snapshots, learning history, BKT mastery, workflow state, events, questions, attempts
+and Artifact indexes. The old SQLite/JSON stores are migration or test compatibility inputs only;
+`backend/scripts/migrate_learner_memory.py` remains the legacy JSON-to-SQLite utility.
 
 The default graph checkpointer is in-memory. LangGraph Studio uses the Store/checkpointing managed by
-LangGraph Dev and does not automatically read FastAPI's SQLite learner store. Product workflows that
+LangGraph Dev and does not automatically read FastAPI's MySQL learner store. Product workflows that
 must use persisted learner data should run through FastAPI or explicitly inject the same Store.
 
 Planner reads these backend runtime assets directly:

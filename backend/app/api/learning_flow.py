@@ -49,7 +49,13 @@ class ExerciseResponseItem(BaseModel):
 
     question_id: str = Field(min_length=1)
     answer: Any
-    observed_correct: bool | None = None
+    selected_option: str | None = None
+    response_ms: int | None = Field(default=None, ge=0)
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=255)
+    observed_correct: bool | None = Field(
+        default=None,
+        description="兼容旧客户端的观测字段；MySQL 生产路径优先使用服务端答案判定。",
+    )
     skill_id: str | None = None
 
 

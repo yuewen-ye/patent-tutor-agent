@@ -16,8 +16,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api import create_api_router
 from backend.app.config import ServiceSettings, load_service_settings
-from backend.app.learner_memory.sqlite_store import SQLiteLearnerStore
 from backend.app.middleware import RequestIDMiddleware
+from backend.app.persistence.repositories import MySQLLearnerStore
 from backend.app.services.session_service import SessionService
 
 def create_app(
@@ -53,7 +53,12 @@ def create_app(
 
 def _create_default_session_service(settings: ServiceSettings) -> SessionService:
     return SessionService(
-        store=SQLiteLearnerStore(settings.learner_memory_store_path),
+        store=MySQLLearnerStore(
+            url=settings.mysql_url,
+            pool_size=settings.mysql_pool_size,
+            connect_timeout=settings.mysql_connect_timeout,
+            auto_migrate=settings.mysql_auto_migrate,
+        ),
         session_ttl_seconds=settings.session_ttl_seconds,
     )
 

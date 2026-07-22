@@ -12,7 +12,7 @@ def create_health_router(session_service: SessionService) -> APIRouter:
     @router.get(
         "/health",
         response_model=HealthResponse,
-        description="Report process liveness and in-memory session counts.",
+        description="Report process liveness and runtime-cache session counts.",
     )
     def health() -> HealthResponse:
         return HealthResponse(

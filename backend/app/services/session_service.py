@@ -86,6 +86,7 @@ class SessionService:
             "workflow_mode": workflow_mode,
             "input_payload": input_payload or {},
             "parent_session_id": parent_session_id,
+            "workflow_status": "running",
         }
         record = SessionRecord(
             session_id=session_id,
@@ -116,6 +117,17 @@ class SessionService:
         )
         record.thread = thread
         write_manifest(artifact_root=self.artifact_root, state=initial_state, status="running")
+        persist_created = getattr(self._store, "persist_session_created", None)
+        if callable(persist_created):
+            persist_created(
+                session_id=session_id,
+                learner_id=learner_id,
+                user_input=user_input,
+                workflow_mode=workflow_mode,
+                input_payload=input_payload or {},
+                parent_session_id=parent_session_id,
+                state=initial_state,
+            )
         if start_immediately:
             thread.start()
         return record
@@ -141,6 +153,14 @@ class SessionService:
             input_payload={"questionnaire_responses": responses},
             start_immediately=False,
         )
+        save_onboarding = getattr(self._store, "save_onboarding_response", None)
+        if callable(save_onboarding):
+            save_onboarding(
+                learner_id=learner_id,
+                session_id=record.session_id,
+                responses=responses,
+                questionnaire_version=onboarding_questionnaire()["version"],
+            )
         questionnaire = onboarding_questionnaire()["markdown"]
         questionnaire_artifact = write_process_markdown(
             artifact_root=self.artifact_root,
@@ -166,6 +186,7 @@ class SessionService:
             existing = list(record.state.get("artifacts", []))
             record.state["artifacts"] = existing + [questionnaire_artifact, submission_artifact]
             write_manifest(artifact_root=self.artifact_root, state=record.state, status="running")
+        self._persist_state(record.session_id, record.state, {"artifacts": [questionnaire_artifact, submission_artifact]})
         thread = getattr(record, "thread", None)
         if thread is not None:
             thread.start()
@@ -190,16 +211,6 @@ class SessionService:
             event_type="exercise_submitted",
             payload={"course_session_id": course_session_id, "responses": responses},
         )
-        update_mastery = getattr(self._store, "update_mastery", None)
-        if callable(update_mastery):
-            for response in responses:
-                observed = response.get("observed_correct")
-                if isinstance(observed, bool):
-                    update_mastery(
-                        learner_id,
-                        str(response.get("skill_id") or response["question_id"]),
-                        observed_correct=observed,
-                    )
         record = self.create_session(
             user_input=json.dumps(responses, ensure_ascii=False),
             learner_id=learner_id,
@@ -211,6 +222,48 @@ class SessionService:
             parent_session_id=course_session_id,
             start_immediately=False,
         )
+        register_questions = getattr(self._store, "register_questions_from_state", None)
+        if callable(register_questions):
+            register_questions(session_id=course_session_id, state=course_record.state)
+        record_attempts = getattr(self._store, "record_attempts", None)
+        if callable(record_attempts):
+            attempt_results = record_attempts(
+                student_id=learner_id,
+                source_session_id=course_session_id,
+                attempt_session_id=record.session_id,
+                responses=responses,
+            )
+            result_by_question = {
+                str(result.get("question_id")): result
+                for result in attempt_results
+                if isinstance(result, dict) and result.get("question_id")
+            }
+            responses = [
+                {
+                    **response,
+                    "observed_correct": result_by_question[response["question_id"]].get(
+                        "is_correct"
+                    ),
+                }
+                if response.get("question_id") in result_by_question
+                else response
+                for response in responses
+            ]
+            record.state["input_payload"] = {
+                "course_session_id": course_session_id,
+                "exercise_responses": responses,
+            }
+        else:
+            update_mastery = getattr(self._store, "update_mastery", None)
+            if callable(update_mastery):
+                for response in responses:
+                    observed = response.get("observed_correct")
+                    if isinstance(observed, bool):
+                        update_mastery(
+                            learner_id,
+                            str(response.get("skill_id") or response["question_id"]),
+                            observed_correct=observed,
+                        )
         submission_markdown = (
             "# 练习提交\n\n"
             f"- 原课程会话：{course_session_id}\n"
@@ -230,6 +283,7 @@ class SessionService:
             existing = list(record.state.get("artifacts", []))
             record.state["artifacts"] = existing + [artifact]
             write_manifest(artifact_root=self.artifact_root, state=record.state, status="running")
+        self._persist_state(record.session_id, record.state, {"artifacts": [artifact]})
         thread = getattr(record, "thread", None)
         if thread is not None:
             thread.start()
@@ -265,7 +319,30 @@ class SessionService:
     def get_session(self, session_id: str) -> SessionRecord | None:
         self.prune_expired_sessions()
         with self._lock:
-            return self._sessions.get(session_id)
+            record = self._sessions.get(session_id)
+        if record is not None:
+            return record
+        load_persisted = getattr(self._store, "load_session", None)
+        if not callable(load_persisted):
+            return None
+        persisted = load_persisted(session_id)
+        if not persisted:
+            return None
+        record = SessionRecord(
+            session_id=str(persisted["session_id"]),
+            user_input=str(persisted.get("state", {}).get("user_input", "")),
+            learner_id=persisted.get("learner_id"),
+            status=persisted["status"],
+            state=cast(StateDict, persisted.get("state", {})),
+            created_at=str(persisted["created_at"]),
+            updated_at=str(persisted["updated_at"]),
+        )
+        record.error = persisted.get("error")
+        if record.status in _TERMINAL_STATUSES:
+            record.done.set()
+        with self._lock:
+            self._sessions.setdefault(session_id, record)
+            return self._sessions[session_id]
 
     def require_session(self, session_id: str) -> SessionRecord:
         record = self.get_session(session_id)
@@ -276,7 +353,17 @@ class SessionService:
     def list_sessions(self) -> list[SessionRecord]:
         self.prune_expired_sessions()
         with self._lock:
-            return sorted(self._sessions.values(), key=lambda record: record.created_at, reverse=True)
+            current = dict(self._sessions)
+        list_persisted = getattr(self._store, "list_sessions", None)
+        if callable(list_persisted):
+            for item in list_persisted():
+                session_id = str(item["session_id"])
+                if session_id in current:
+                    continue
+                persisted = self.get_session(session_id)
+                if persisted is not None:
+                    current[session_id] = persisted
+        return sorted(current.values(), key=lambda record: record.created_at, reverse=True)
 
     def snapshot(self, session_id: str) -> dict[str, Any]:
         record = self.require_session(session_id)
@@ -309,6 +396,13 @@ class SessionService:
                 artifact_root=self.artifact_root,
                 state=record.state,
                 status="canceled",
+            )
+            record.state["workflow_status"] = "canceled"
+            self._persist_state(
+                session_id,
+                record.state,
+                status="canceled",
+                error=record.error,
             )
             self.event_bridge.publish(
                 session_id,
@@ -367,6 +461,15 @@ class SessionService:
         }
 
     def readiness(self) -> ReadinessStatus:
+        store_readiness = getattr(self._store, "readiness", None)
+        if callable(store_readiness):
+            result = store_readiness()
+            if not result.get("ready"):
+                return {
+                    "ready": False,
+                    "status": "not_ready",
+                    "reason": str(result.get("reason") or "Persistent store is not ready."),
+                }
         if self._llm_client is not None:
             return {"ready": True, "status": "ready", "reason": None}
         try:
@@ -515,10 +618,16 @@ class SessionService:
                 record.state = cast(StateDict, merged_state)
                 record.status = "completed"
                 record.updated_at = utc_now()
+                record.state["workflow_status"] = "completed"
                 write_manifest(
                     artifact_root=self.artifact_root,
                     state=record.state,
                     status=record.status,
+                )
+                self._persist_state(
+                    session_id,
+                    record.state,
+                    status="completed",
                 )
         except SessionCancelled:
             with self._lock:
@@ -526,6 +635,13 @@ class SessionService:
                 record.status = "canceled"
                 record.error = record.error or "Session canceled."
                 record.updated_at = utc_now()
+                record.state["workflow_status"] = "canceled"
+                self._persist_state(
+                    session_id,
+                    record.state,
+                    status="canceled",
+                    error=record.error,
+                )
         except Exception as exc:  # noqa: BLE001  # noqa: BROAD_EXCEPT_OK
             with self._lock:
                 record = self._sessions[session_id]
@@ -534,10 +650,17 @@ class SessionService:
                 record.status = "failed"
                 record.error = str(exc)
                 record.updated_at = utc_now()
+                record.state["workflow_status"] = "failed"
                 write_manifest(
                     artifact_root=self.artifact_root,
                     state=record.state,
                     status="failed",
+                )
+                self._persist_state(
+                    session_id,
+                    record.state,
+                    status="failed",
+                    error=record.error,
                 )
         finally:
             self.event_bridge.close(session_id)
@@ -545,6 +668,7 @@ class SessionService:
                 self._sessions[session_id].done.set()
 
     def _merge_state_update(self, session_id: str, updates: dict[str, Any]) -> None:
+        state: StateDict
         with self._lock:
             record = self._sessions[session_id]
             if record.status == "canceled":
@@ -558,6 +682,26 @@ class SessionService:
                     state[key] = value
             record.state = cast(StateDict, state)
             record.updated_at = utc_now()
+        self._persist_state(session_id, state, updates)
+
+    def _persist_state(
+        self,
+        session_id: str,
+        state: StateDict,
+        updates: dict[str, Any] | None = None,
+        *,
+        status: str | None = None,
+        error: str | None = None,
+    ) -> None:
+        persist = getattr(self._store, "persist_workflow_update", None)
+        if callable(persist):
+            persist(
+                session_id=session_id,
+                state=dict(state),
+                updates=updates or {},
+                status=status,
+                error=error,
+            )
 
     def _cancel_requested(self, session_id: str) -> bool:
         with self._lock:
