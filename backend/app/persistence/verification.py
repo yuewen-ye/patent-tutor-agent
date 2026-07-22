@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path, PurePosixPath
-from typing import TypedDict
+from typing import Any, Mapping, TypedDict
 import uuid
 
 from backend.app.persistence.db import MySQLDatabase
@@ -84,6 +84,17 @@ def _check(name: str, passed: bool, detail: str) -> VerificationCheck:
     return {"name": name, "passed": passed, "detail": detail}
 
 
+def _row_value(row: Mapping[str, Any], key: str) -> Any:
+    """Read a DictCursor value without relying on metadata column-name casing."""
+    if key in row:
+        return row[key]
+    folded_key = key.casefold()
+    for column_name, value in row.items():
+        if str(column_name).casefold() == folded_key:
+            return value
+    raise KeyError(key)
+
+
 def verify_schema(database: MySQLDatabase) -> list[VerificationCheck]:
     checks: list[VerificationCheck] = []
     expected = database.expected_migrations()
@@ -112,7 +123,7 @@ def verify_schema(database: MySQLDatabase) -> list[VerificationCheck]:
             (database.settings.database,),
         )
         rows = cursor.fetchall()
-        tables = {str(row["table_name"]) for row in rows}
+        tables = {str(_row_value(row, "table_name")) for row in rows}
         missing_tables = sorted(REQUIRED_TABLES - tables)
         checks.append(
             _check(
@@ -124,9 +135,10 @@ def verify_schema(database: MySQLDatabase) -> list[VerificationCheck]:
             )
         )
         invalid_engines = sorted(
-            str(row["table_name"])
+            str(_row_value(row, "table_name"))
             for row in rows
-            if row.get("engine") and str(row["engine"]).casefold() != "innodb"
+            if _row_value(row, "engine")
+            and str(_row_value(row, "engine")).casefold() != "innodb"
         )
         checks.append(
             _check(
@@ -138,10 +150,10 @@ def verify_schema(database: MySQLDatabase) -> list[VerificationCheck]:
             )
         )
         invalid_collations = sorted(
-            str(row["table_name"])
+            str(_row_value(row, "table_name"))
             for row in rows
-            if row.get("table_collation")
-            and not str(row["table_collation"]).casefold().startswith("utf8mb4")
+            if _row_value(row, "table_collation")
+            and not str(_row_value(row, "table_collation")).casefold().startswith("utf8mb4")
         )
         checks.append(
             _check(
@@ -158,7 +170,9 @@ def verify_schema(database: MySQLDatabase) -> list[VerificationCheck]:
             "WHERE constraint_schema=%s",
             (database.settings.database,),
         )
-        foreign_keys = {str(row["constraint_name"]) for row in cursor.fetchall()}
+        foreign_keys = {
+            str(_row_value(row, "constraint_name")) for row in cursor.fetchall()
+        }
         missing_keys = sorted(REQUIRED_FOREIGN_KEYS - foreign_keys)
         checks.append(
             _check(

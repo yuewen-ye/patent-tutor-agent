@@ -203,8 +203,12 @@ class MySQLDatabase:
                 return self._connect_tracked()
             connection = self._pool.get()
         try:
-            connection.ping(reconnect=True)
+            connection.ping()
         except Exception:
+            try:
+                connection.close()
+            except Exception:
+                pass
             with self._pool_lock:
                 self._created = max(0, self._created - 1)
                 self._created += 1

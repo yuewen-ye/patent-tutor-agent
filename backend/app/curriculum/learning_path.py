@@ -150,14 +150,11 @@ def build_dual_axis_snapshot(
 
     # ── 薄弱点 → 节点 id 集合（用共享索引，支持中文名 / 英文 id / 名字子串）──
     name_to_id, id_to_name = _build_node_name_index(knowledge)
-    weak_node_ids = _resolve_weak_nodes(profile.get("weak_points", []), name_to_id, id_to_name)
 
     runtime_pairs: list[dict[str, Any]] = []
     for pair in confusion["confusion_pairs"]:
         concept_a = str(pair.get("concept_a") or pair.get("node_a", ""))
         concept_b = str(pair.get("concept_b") or pair.get("node_b", ""))
-        related = [str(_r) for _r in pair.get("related_nodes", []) if _r]
-        pair_nodes = {concept_a, concept_b} | set(related)
         matched, match_reason = _pair_weak_match(
             pair, profile.get("weak_points", []), name_to_id, id_to_name
         )

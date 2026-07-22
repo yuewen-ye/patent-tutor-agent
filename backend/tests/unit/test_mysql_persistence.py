@@ -11,6 +11,7 @@ from backend.app.persistence.repositories import MySQLLearnerStore, _answer_matc
 from backend.app.persistence.verification import (
     REQUIRED_FOREIGN_KEYS,
     REQUIRED_TABLES,
+    _row_value,
     run_write_smoke_test,
 )
 
@@ -60,6 +61,25 @@ def test_failed_pool_connection_does_not_leak_capacity(monkeypatch: pytest.Monke
     with pytest.raises(OSError, match="connection failed"):
         database._acquire()
     assert database._created == 0
+
+
+def test_pool_health_check_does_not_request_driver_reconnect() -> None:
+    class HealthyConnection:
+        def __init__(self) -> None:
+            self.pinged = False
+
+        def ping(self) -> None:
+            self.pinged = True
+
+    database = MySQLDatabase(url="mysql://root:password@localhost/patent_tutor")
+    connection = HealthyConnection()
+    database._pool.put(connection)
+    database._created = 1
+
+    acquired = database._acquire()
+
+    assert acquired is connection
+    assert connection.pinged is True
 
 
 def test_readiness_reports_pending_migrations_without_applying_them() -> None:
@@ -141,6 +161,13 @@ def test_verifier_requirements_match_migration_contract() -> None:
         assert f"CREATE TABLE IF NOT EXISTS {table}" in migration_text
     for foreign_key in REQUIRED_FOREIGN_KEYS:
         assert f"CONSTRAINT {foreign_key}" in migration_text
+
+
+def test_verifier_reads_information_schema_columns_case_insensitively() -> None:
+    row = {"TABLE_NAME": "sessions", "ENGINE": "InnoDB"}
+
+    assert _row_value(row, "table_name") == "sessions"
+    assert _row_value(row, "engine") == "InnoDB"
 
 
 @pytest.mark.parametrize(

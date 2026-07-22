@@ -948,7 +948,7 @@ class MySQLLearnerStore:
                         "INSERT IGNORE INTO questions(question_id, session_id, round_id, qid, kind, "
                         "category, difficulty, question_key, source_tag, kc_node_id, kc, question_text, "
                         "answer_json, options_json, evidence_json, question_version, status, created_at) "
-                        "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'state-v1','published',%s)",
+                        "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'state-v1','published',%s)",
                         (
                             question_id,
                             session_id,
