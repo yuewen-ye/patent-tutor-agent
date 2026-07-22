@@ -18,7 +18,7 @@ START → _init → route ──┬── diagnose → diagnosis_feedback[diagno
                                       → expert_a[integration]
                                       → judge
                                          ├── accept/minor → END
-                                         └── revise → diagnosis_feedback[feedback] → END
+                                         └── revise → expert_a[integration] → judge（循环直到通过）
 
 审核通过后的独立练习反馈请求：
 POST /sessions/{course_session_id}/exercise-responses
@@ -26,7 +26,7 @@ POST /sessions/{course_session_id}/exercise-responses
   → _init → diagnosis_feedback[feedback] → END
 ```
 
-`diagnosis_feedback` 是一个多阶段 Agent 节点，通过 `diagnosis_feedback_phase` 在诊断和反馈阶段重入。专家 A、B 也各自只有一个 Agent，通过 `expert_phase` 在草稿、互评和修订阶段重入；三个阶段都并行执行，由 `_experts_barrier` 等待双方完成并推进阶段。整合阶段只运行专家 A。Judge 通过时课程会话结束，等待学员提交练习；Judge 不通过时当前会话直接进入反馈阶段。不存在长时间挂起等待学员输入的图节点。
+`diagnosis_feedback` 是一个多阶段 Agent 节点，通过 `diagnosis_feedback_phase` 在诊断和反馈阶段重入。专家 A、B 也各自只有一个 Agent，通过 `expert_phase` 在草稿、互评和修订阶段重入；三个阶段都并行执行，由 `_experts_barrier` 等待双方完成并推进阶段。整合阶段只运行专家 A。Judge 通过时课程会话结束，等待学员提交练习；Judge 不通过时回到 Expert A integration 重新整合并再次审核，直到通过。学员反馈只在提交练习后创建的独立 feedback 会话中生成。
 
 ## 2. 路径与混淆轴
 
@@ -60,7 +60,7 @@ artifacts/sessions/{session_id}/
   feedback/grading_report.md
 ```
 
-`course_package.md` 是专家整合阶段的过程稿；`judge_report.md` 始终保留。审核通过时，反馈文件在学员提交练习后的独立会话中生成；审核不通过时，反馈文件在当前课程会话中生成。系统不会生成 `final_learning.md` 或独立答案文件。
+`course_package.md` 是专家整合阶段的过程稿；`judge_report.md` 始终保留。Judge 不通过时，当前课程会话回到 Expert A integration 并持续复审；审核通过后，反馈文件只在学员提交练习后的独立会话中生成。系统不会生成 `final_learning.md` 或独立答案文件。
 
 每个 Markdown 都先由通过 Pydantic 校验的结构化数据渲染，使用固定标题、表格和 JSON 代码块。`manifest.json` 保存路径、类型、生成节点、SHA-256 与时间戳，状态只允许 `running/completed/failed/canceled`。
 

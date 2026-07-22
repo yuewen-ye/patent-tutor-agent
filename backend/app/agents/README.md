@@ -33,5 +33,5 @@
 - 模型 provider/model/temperature/top_k 不在 Agent 节点中写死，运行时优先由 `config/agents.yaml` 和 `AgentLLMRouter` 决定；`.env` 只放 API key 和本机路径，旧 `*_PROVIDER` 等环境变量仅作兼容回退。
 - 详细 JSON Schema、错误对象和降级策略以 `docs/agent-interface-spec.md` 为准。
 - teach 主工作流由 `expert_a` / `expert_b` 使用 `generate_with_tools()` 按需检索；其他 LLM 节点仍使用 `generate_json()`。
-- `diagnosis_feedback` 的诊断阶段读取 Store。Judge 不通过时当前会话直接执行 feedback；审核通过后，学员提交练习才创建独立 feedback 会话并写入反馈结果。
+- `diagnosis_feedback` 的诊断阶段读取 Store。Judge 不通过时当前会话回到 Expert A integration，持续整合并复审直到通过；审核通过后，学员提交练习才创建独立 feedback 会话并写入反馈结果。
 - 多阶段 Agent 必须为每个阶段提供独立提示词文件，命名为 `<阶段名>_system.md`。当前 `diagnosis/` 使用 `diagnosis_system.md` / `feedback_system.md`，`expert_a/` 使用 `debate_system.md` / `integration_system.md`。

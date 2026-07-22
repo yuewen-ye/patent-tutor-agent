@@ -70,17 +70,12 @@ def test_workflow_runs_single_round_with_real_llm(tmp_path: Path) -> None:
     assert completed["judge_report"]["decision"] in {
         "accept",
         "accept_with_minor_revision",
-        "revise",
     }
     assert 1 <= completed["judge_report"]["accuracy_score"] <= 5
     assert 1 <= completed["judge_report"]["adaptation_score"] <= 5
     assert 1 <= completed["judge_report"]["completeness_score"] <= 5
 
-    decision = completed["judge_report"]["decision"]
-    if decision == "revise":
-        assert "feedback_result" in completed
-    else:
-        assert "feedback_result" not in completed
+    assert "feedback_result" not in completed
     assert "final_answer" not in completed
 
     assert completed["artifacts"]
@@ -98,7 +93,7 @@ def test_workflow_runs_single_round_with_real_llm(tmp_path: Path) -> None:
     for expected in expected_artifacts:
         assert expected in artifact_paths, f"Missing artifact: {expected}"
     feedback_path = "artifacts/sessions/pytest-integration/feedback/feedback_report.md"
-    assert (feedback_path in artifact_paths) is (decision == "revise")
+    assert feedback_path not in artifact_paths
 
     manifest_path = (
         tmp_path / "artifacts" / "sessions" / "pytest-integration" / "manifest.json"
@@ -155,8 +150,6 @@ def test_workflow_event_ordering_is_correct_with_real_llm(tmp_path: Path) -> Non
     assert "retrieve_context" not in completed_events
     assert "expert_a" in completed_events and "expert_b" in completed_events
     assert "judge_report" in state
-    decision = state["judge_report"]["decision"]
-    if decision == "revise":
-        assert completed_events[-2:] == ["judge", "diagnosis_feedback"]
-    else:
-        assert completed_events[-1] == "judge"
+    assert state["judge_report"]["decision"] in {"accept", "accept_with_minor_revision"}
+    assert completed_events.count("diagnosis_feedback") == 1
+    assert completed_events[-1] == "judge"

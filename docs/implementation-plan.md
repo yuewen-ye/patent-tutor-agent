@@ -8,7 +8,7 @@
 | 学情 Agent | 已完成 | 单一 `diagnosis_feedback` 节点，诊断/反馈两阶段 |
 | 学习路径 | 已完成 | SQLite 画像 + BKT + 静态双轴 + 确定性路径算法 |
 | 专家协作 | 已完成 | A/B 并行草稿、并行互评、并行修订，随后由 A 整合 |
-| 审核闭环 | 已完成 | 通过后等待练习提交；不通过时直接进入 `diagnosis_feedback[feedback]` |
+| 审核闭环 | 已完成 | 不通过时 Expert A 重新整合并持续复审；通过后等待练习提交，再创建独立 `diagnosis_feedback[feedback]` 会话 |
 | 过程产物 | 已完成 | 所有节点输出落到 `artifacts/sessions/{id}` 的 Markdown + manifest |
 | 服务化 | 已完成 | FastAPI、SSE、WebSocket、CLI、LangGraph Studio |
 | RAG | 已完成 | mock/real 选择器，真实模式为 Milvus Lite + BGE-M3 |
@@ -24,9 +24,8 @@
      → expert_a/expert_b 三阶段并行协作
      → course_package.md
      → judge_report.md
-     ├─ 通过 → 课程会话结束 → 学员提交练习 → 独立 feedback 会话
-     └─ 不通过 → 当前会话直接 diagnosis_feedback(feedback)
-                  → feedback Markdown + SQLite history/profile
+     └─ Judge 不通过 → Expert A 重新整合 → Judge（循环直到通过）
+        通过后课程会话结束 → 学员提交练习 → 独立 feedback 会话
 ```
 
 前端从 Session JSON 读取结构化状态，从 artifact API 读取 Markdown。`course_package` 是过程稿种类，Session/manifest 状态才是完成依据。

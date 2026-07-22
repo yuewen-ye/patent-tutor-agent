@@ -269,7 +269,7 @@ START → _init → route ──┬── diagnose: diagnosis_feedback[diagnosis
                                       ↓
                                      judge
                          ┌────────────┴────────────┐
-                    通过 → END             不通过 → feedback → END
+                    通过 → END             不通过 → expert_a（整合）→ judge（循环直到通过）
 ```
 
 审核通过后，前端展示课程和习题；学员调用练习提交接口后，系统创建独立 feedback 会话。
@@ -291,7 +291,7 @@ START → _init → route ──┬── diagnose: diagnosis_feedback[diagnosis
 | `retrieve_context` | 无 LLM | chat 路径固定检索法条上下文 | — |
 | `expert_a` | LLM + Tool 调用 | 保守严谨、法条优先；承担草稿、互评、修订和整合阶段 | `agents.expert_a` |
 | `expert_b` | LLM + Tool 调用 | 生动灵活、面向案例；承担草稿、互评和修订阶段 | `agents.expert_b` |
-| `judge` | LLM 调用 | 审核 A 整合稿；通过则结束课程会话，不通过则直接进入反馈 | `agents.judge` |
+| `judge` | LLM 调用 | 审核 A 整合稿；通过则结束课程会话，不通过则回到 Expert A 重新整合并复审 | `agents.judge` |
 | `chat_answer` | LLM 调用 | chat 路径基于检索上下文生成短答 | `agents.chat_answer` |
 
 接口合同以 `docs/agent-interface-spec.md` 和 `backend/app/schemas/state.py` 为准。

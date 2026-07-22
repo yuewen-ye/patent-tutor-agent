@@ -52,12 +52,9 @@ class TestTeachRoute:
         assert "expert_b_draft" in state
         assert "judge_report" in state
         assert state["judge_report"]["decision"] in {
-            "accept", "accept_with_minor_revision", "revise",
+            "accept", "accept_with_minor_revision",
         }
-        if state["judge_report"]["decision"] == "revise":
-            assert "feedback_result" in state
-        else:
-            assert "feedback_result" not in state
+        assert "feedback_result" not in state
         assert "final_answer" not in state
         assert state["expert_a_draft"]["draft_stage"] == "integration"
         assert state["expert_a_draft"]["teaching_content"]

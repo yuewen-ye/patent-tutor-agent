@@ -96,7 +96,7 @@ START -> _init -> route
                -> _experts_barrier
                -> expert_a[integration] -> judge
                     accept/minor -> END
-                    revise       -> diagnosis_feedback[feedback] -> END
+                    revise       -> expert_a[integration] -> judge（循环直到通过）
 
 POST /sessions/{course_session_id}/exercise-responses
   -> independent feedback session
@@ -107,9 +107,9 @@ POST /sessions/{course_session_id}/exercise-responses
 experts finish the same phase. `expert_a_integration` is a graph alias that invokes the existing
 Expert A node in integration phase; it is not a sixth Agent.
 
-Judge approval ends the course-generation session. The learner studies and submits exercises later,
-which creates a separate feedback session. A `revise` decision enters feedback immediately and does
-not wait for learner input. The graph has no interrupt-based long wait.
+Judge approval ends the course-generation session. A `revise` decision returns to Expert A
+integration and repeats until Judge accepts the course. The learner studies and submits exercises
+later, which creates a separate feedback session. The graph has no interrupt-based long wait.
 
 ## Node Responsibilities
 
@@ -124,7 +124,7 @@ not wait for learner input. The graph has no interrupt-based long wait.
 | `judge` | LLM | evaluate integrated course without rewriting it | `judge_report` |
 | `chat_answer` | LLM | answer chat requests from retrieved context | `chat_answer` |
 
-Do not reintroduce removed `tool_agent`, `finalize`, debate-round counters, integration revision loops,
+Do not reintroduce removed `tool_agent`, `finalize`, or debate-round counters,
 `final_learning_markdown`, `exercise_answer_key`, or `quality_gate_failed` nodes/fields.
 
 ## Agent Node Pattern

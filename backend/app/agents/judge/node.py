@@ -136,10 +136,9 @@ def build_judge_node(llm_client: LLMClient) -> Node:
             case "accept" | "accept_with_minor_revision":
                 updates["workflow_status"] = "completed"
             case "revise":
-                # 打回重产：递增计数（由 workflow 路由决定回到 integration 重新整合，
-                # 还是达到上限后强制完成），不再走 diagnosis_feedback（那是学员练习反馈闭环）。
-                attempts = int(state.get("judge_attempts", 0))
-                updates["judge_attempts"] = attempts + 1
+                # 课程尚未通过：workflow 路由会回到 expert_a integration，直到 Judge 通过。
+                # 学员练习反馈是独立的 feedback 会话，不在这里触发。
+                pass
             case unreachable:
                 assert_never(unreachable)
         return updates

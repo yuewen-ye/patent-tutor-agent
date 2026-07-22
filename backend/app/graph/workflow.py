@@ -311,10 +311,6 @@ def _route_after_experts_barrier(
             assert_never(unreachable)
 
 
-# judge 最多打回重整合的次数（超过则强制完成，避免无限循环）
-MAX_JUDGE_REVISIONS = 2
-
-
 def _route_after_judge(
     state: StateDict,
 ) -> Literal["expert_a_integration", "__end__"]:
@@ -324,17 +320,7 @@ def _route_after_judge(
             print("▸ [路由] judge 通过 → 完成", file=sys.stderr)
             return "__end__"
         case "revise":
-            attempts = int(state.get("judge_attempts", 0))
-            if attempts >= MAX_JUDGE_REVISIONS:
-                print(
-                    f"▸ [路由] judge 已打回 {attempts} 次仍不通过 → 强制完成（防死循环）",
-                    file=sys.stderr,
-                )
-                return "__end__"
-            print(
-                f"▸ [路由] judge 第 {attempts} 次打回 → expert_a_integration 重新整合",
-                file=sys.stderr,
-            )
+            print("▸ [路由] judge 未通过 → expert_a_integration 重新整合", file=sys.stderr)
             return "expert_a_integration"
         case unreachable:
             assert_never(unreachable)
@@ -367,7 +353,6 @@ def build_workflow(
         )
         updates["expert_phase"] = "draft"
         updates["workflow_status"] = "running"
-        updates["judge_attempts"] = 0
         return updates
 
     def _wrap(name: str, artifact: bool = True, node_label: str | None = None) -> Any:

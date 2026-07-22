@@ -29,7 +29,7 @@ graph TD;
 	expert_a_integration --> judge;
 	expert_b --> _experts_barrier;
 	judge -.-> __end__;
-	judge -.-> diagnosis_feedback;
+	judge -.-> expert_a_integration;
 	planner --> expert_a;
 	planner --> expert_b;
 	retrieve_context -.-> chat_answer;

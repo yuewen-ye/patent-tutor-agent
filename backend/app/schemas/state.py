@@ -486,7 +486,6 @@ class StateDict(TypedDict):
     expert_a_revision: NotRequired[dict[str, Any]]
     expert_b_revision: NotRequired[dict[str, Any]]
     course_package: NotRequired[dict[str, Any]]
-    judge_attempts: NotRequired[int]
     workflow_status: NotRequired[Literal["running", "completed", "failed", "canceled"]]
 
 
