@@ -37,13 +37,14 @@ class MySQLSettings:
             )
         if not parsed.hostname:
             raise MySQLConfigurationError("MySQL URL must include a host.")
-        database = parsed.path.lstrip("/") or cls.database
+        defaults = cls()
+        database = parsed.path.lstrip("/") or defaults.database
         if not re.fullmatch(r"[A-Za-z0-9_]+", database):
             raise MySQLConfigurationError("MySQL database name contains invalid characters.")
         return cls(
             host=parsed.hostname,
             port=parsed.port or 3306,
-            user=unquote(parsed.username or cls.user),
+            user=unquote(parsed.username or defaults.user),
             password=unquote(parsed.password or ""),
             database=database,
         )
@@ -89,7 +90,7 @@ class MySQLDatabase:
 
     def _driver(self) -> Any:
         try:
-            import pymysql
+            import pymysql  # type: ignore[import-untyped]
         except ModuleNotFoundError as exc:  # pragma: no cover - depends on environment
             raise MySQLConfigurationError(
                 "PyMySQL is required for MySQL persistence. Run `uv sync`."
@@ -161,14 +162,45 @@ class MySQLDatabase:
                 connection.close()
             self._initialized = True
 
+    def expected_migrations(self) -> list[str]:
+        return [migration.stem for migration in sorted(self.migrations_dir.glob("*.sql"))]
+
+    def applied_migrations(self) -> list[str]:
+        connection = self._connect(with_database=True)
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT version FROM schema_migrations ORDER BY version")
+                return [str(row["version"]) for row in cursor.fetchall()]
+        finally:
+            connection.close()
+
+    def pending_migrations(self) -> list[str]:
+        applied = set(self.applied_migrations())
+        return [version for version in self.expected_migrations() if version not in applied]
+
+    def unexpected_migrations(self) -> list[str]:
+        expected = set(self.expected_migrations())
+        return [version for version in self.applied_migrations() if version not in expected]
+
+    def _connect_tracked(self) -> Any:
+        try:
+            return self._connect()
+        except Exception:
+            with self._pool_lock:
+                self._created = max(0, self._created - 1)
+            raise
+
     def _acquire(self) -> Any:
         try:
             connection = self._pool.get_nowait()
         except Empty:
+            create_new = False
             with self._pool_lock:
                 if self._created < self.pool_size:
                     self._created += 1
-                    return self._connect()
+                    create_new = True
+            if create_new:
+                return self._connect_tracked()
             connection = self._pool.get()
         try:
             connection.ping(reconnect=True)
@@ -176,7 +208,7 @@ class MySQLDatabase:
             with self._pool_lock:
                 self._created = max(0, self._created - 1)
                 self._created += 1
-            return self._connect()
+            return self._connect_tracked()
         return connection
 
     def _release(self, connection: Any) -> None:

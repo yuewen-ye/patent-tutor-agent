@@ -34,7 +34,7 @@
 
 ### P1 稳定性
 
-- 将 LangGraph checkpointer 从内存迁移到 SQLite/PostgreSQL。
+- 将 LangGraph checkpointer 从内存迁移到 MySQL 持久化适配器。
 - 将 Session 索引和任务执行从进程内线程迁移到持久化队列。
 - 对 Provider 5xx/429 增加可配置降级策略与明确的节点错误事件。
 - 增加 OpenTelemetry/结构化日志与告警。

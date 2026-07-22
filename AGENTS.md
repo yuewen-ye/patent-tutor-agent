@@ -25,6 +25,7 @@ uv run python backend/scripts/run_workflow.py \
   --artifact-root artifacts \
   --learner-id learner-demo \
   --mode teach
+uv run python backend/scripts/verify_mysql.py --apply-migrations --smoke-write
 ./scripts/langgraph-dev.sh
 ./scripts/langgraph-stop.sh
 uv run pytest -m unit
@@ -186,9 +187,9 @@ Schema changes must update, in order:
 ## Learner Memory And Dual Axes
 
 FastAPI and the CLI use `MySQLLearnerStore` by default, configured by `PATENT_TUTOR_MYSQL_URL`. It
-stores profile snapshots, learning history, BKT mastery, workflow state, events, questions, attempts
-and Artifact indexes. The old SQLite/JSON stores are migration or test compatibility inputs only;
-`backend/scripts/migrate_learner_memory.py` remains the legacy JSON-to-SQLite utility.
+stores profile snapshots, learning history, BKT mastery and audit events, workflow state, events,
+questions, attempts and Artifact indexes. SQLite stores are unit-test substitutes only; there is no
+SQLite-to-MySQL production data migration because the former database contains no business data.
 
 The default graph checkpointer is in-memory. LangGraph Studio uses the Store/checkpointing managed by
 LangGraph Dev and does not automatically read FastAPI's MySQL learner store. Product workflows that

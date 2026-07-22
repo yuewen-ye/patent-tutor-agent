@@ -1,6 +1,6 @@
 import pytest
 
-from backend.app.agents.planner.node import build_planner_node
+from backend.app.agents.planner.node import _knowledge_pl_map, build_planner_node
 from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinition
 from backend.app.schemas.state import StateDict
 
@@ -80,6 +80,18 @@ class FailingPlannerLLMClient:
         agent: str | None = None,
     ) -> LLMResponseWithTools:
         return LLMResponseWithTools(content=None, tool_calls=[])
+
+
+def test_current_mastery_overrides_stale_profile_snapshot() -> None:
+    profile = {
+        "five_dimensions": {"knowledge": {"novelty": {"pl": 0.2}}},
+        "mastery": {"novelty": 0.85, "inventive-step": 0.4},
+    }
+
+    mastery = _knowledge_pl_map(profile)
+
+    assert mastery["novelty"]["pl"] == 0.85
+    assert mastery["inventive-step"]["pl"] == 0.4
 
 
 def test_planner_uses_llm_with_prompt() -> None:

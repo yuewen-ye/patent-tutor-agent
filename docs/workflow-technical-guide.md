@@ -34,7 +34,7 @@ POST /sessions/{course_session_id}/exercise-responses
 - 混淆对定义来自 `backend/app/curriculum/data/confusion-pairs.json`，运行时不改写静态定义。
 - `planner` 不调用 LLM。它读取数据库中该学员的最新画像和 BKT 掌握度，再由 `backend/app/curriculum/learning_path.py` 确定性计算路径。
 - 混淆风险同时考虑画像中的 `weak_points` 和相关概念的 BKT 掌握度；低掌握度会提高 `learner_risk` 并记录 `adjustment_reason`。
-- FastAPI 默认使用 MySQL 保存画像、历史、BKT、会话状态、事件、题目和作答。通过 `PATENT_TUTOR_MYSQL_URL` 配置连接，首次数据库操作时自动执行 `backend/app/persistence/migrations/` 中的迁移。旧 `learner_memory.sqlite3` 仅作为历史迁移输入，不再承担生产写入。
+- FastAPI 默认使用 MySQL 保存画像、历史、BKT 及其状态转移审计、会话状态、事件、题目和作答。通过 `PATENT_TUTOR_MYSQL_URL` 配置连接；演示环境可以自动迁移，生产环境应在发布阶段显式执行版本化迁移。SQLite 没有业务数据，只保留为单元测试替身。
 - Studio 由 LangGraph Dev 管理自己的 Store，不会自动读取 FastAPI 的 MySQL；要让 Studio 复用产品数据，必须显式注入同一个持久化 Store，或通过 FastAPI 启动产品流程。
 
 ## 3. Markdown 过程产物

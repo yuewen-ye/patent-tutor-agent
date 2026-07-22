@@ -24,9 +24,15 @@ _PLANNER_SYSTEM_PROMPT = load_prompt(__file__, "system.md")
 
 
 def _knowledge_pl_map(profile: dict[str, Any]) -> dict[str, Any]:
-    """提取画像中每个知识节点的 BKT 掌握概率 P(L)。"""
+    """提取每个知识节点的 BKT 掌握概率，数据库当前值覆盖旧画像快照。"""
     fd = profile.get("five_dimensions") or {}
-    return fd.get("knowledge", {}) or {}
+    knowledge = dict(fd.get("knowledge", {}) or {})
+    current_mastery = profile.get("mastery") or {}
+    if isinstance(current_mastery, dict):
+        for node_id, probability in current_mastery.items():
+            if probability is not None:
+                knowledge[str(node_id)] = {"pl": float(probability)}
+    return knowledge
 
 
 def _difficulty_cap_for(node_id: str, pl_map: dict[str, Any], weak_node_ids: set[str]) -> str:

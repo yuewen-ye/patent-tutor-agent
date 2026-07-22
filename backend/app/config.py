@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Annotated, Literal
 
 from pydantic import AliasChoices, Field, field_validator
@@ -31,10 +30,6 @@ class ServiceSettings(BaseSettings):
     mysql_auto_migrate: bool = Field(
         default=True,
         validation_alias=AliasChoices("PATENT_TUTOR_MYSQL_AUTO_MIGRATE", "MYSQL_AUTO_MIGRATE"),
-    )
-    learner_memory_store_path: Path = Field(
-        default=Path("data/learner_memory.sqlite3"),
-        validation_alias=AliasChoices("LEARNER_MEMORY_STORE_PATH", "learner_memory_store_path"),
     )
     session_ttl_seconds: int = Field(
         default=3600,

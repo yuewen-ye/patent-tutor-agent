@@ -318,6 +318,7 @@ Planner 计算路径时组合两类数据：
 ```bash
 uv sync                                           # 安装依赖
 uv run python backend/main.py                     # 启动 FastAPI 服务（端口 8000）
+uv run python backend/scripts/verify_mysql.py --apply-migrations --smoke-write  # 验收真实 MySQL
 uv run pytest -m unit                              # 单元测试，不调用真实模型
 uv run pytest -m "not integration"                 # 全部本地测试，不调用真实模型
 uv run pytest -m integration                       # 真实 Provider 集成测试，需要 API Key
@@ -517,8 +518,9 @@ PY
 服务层配置：
 
 - 默认 learner memory、BKT、会话和题目作答写入 MySQL；通过 `PATENT_TUTOR_MYSQL_URL` 配置连接
-- `backend/app/persistence/migrations/` 中的迁移会在首次数据库操作时自动执行；旧 SQLite 仅作为迁移输入，不再作为生产写入目标
-- 历史 JSON 只通过 `backend/scripts/migrate_learner_memory.py` 显式幂等迁移，不会自动导入
+- 演示环境可在首次数据库操作时自动执行 `backend/app/persistence/migrations/`；生产环境应关闭自动迁移并在发布阶段显式执行
+- SQLite 没有业务数据，不执行 SQLite 到 MySQL 的生产数据迁移；SQLite Store 只作为单元测试替身
+- 使用 `uv run python backend/scripts/verify_mysql.py --apply-migrations --smoke-write` 完成真实 MySQL 验收
 - artifact API 直接读取会话目录，服务重启、内存会话清理后仍可读取历史 Markdown
 - `PATENT_TUTOR_CORS_ORIGINS` 支持逗号分隔的允许来源；为空时不启用 CORS
 - `PATENT_TUTOR_CORS_ALLOW_CREDENTIALS` 控制 CORS credential

@@ -14,6 +14,7 @@
 | `rag-interface-spec.md` | RAG 选择器、检索合同和真实/mock 模式 |
 | `implementation-plan.md` | 当前基线和后续实施顺序 |
 | `patent-tutor-rdb-design.md` | MySQL 关系型数据库设计、数据边界和持久化方案 |
+| `mysql-verification-guide.md` | MySQL 初始化、真实写入冒烟测试和成功判定标准 |
 
 运行时行为冲突时，以 `backend/app/graph/workflow.py`、
 `backend/app/schemas/state.py` 和实际 API 路由为准，并同步修正文档。

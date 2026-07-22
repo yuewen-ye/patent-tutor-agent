@@ -220,7 +220,24 @@ class MySQLLearnerStore:
 
     def readiness(self) -> dict[str, Any]:
         try:
-            self.database.ensure_initialized()
+            if self.database.auto_migrate:
+                self.database.ensure_initialized()
+            else:
+                pending = self.database.pending_migrations()
+                if pending:
+                    return {
+                        "ready": False,
+                        "status": "not_ready",
+                        "reason": f"Pending MySQL migrations: {', '.join(pending)}",
+                    }
+            unexpected = self.database.unexpected_migrations()
+            if unexpected:
+                return {
+                    "ready": False,
+                    "status": "not_ready",
+                    "reason": "Database has migrations unknown to this application: "
+                    f"{', '.join(unexpected)}",
+                }
         except Exception as exc:  # noqa: BLE001 - health endpoint must return a reason
             return {"ready": False, "status": "not_ready", "reason": str(exc)}
         return {"ready": True, "status": "ready", "reason": None}
@@ -649,6 +666,27 @@ class MySQLLearnerStore:
                 now,
             ),
         )
+        cursor.execute(
+            "INSERT INTO mastery_events(mastery_event_id, student_id, node_id, attempt_id, "
+            "observed_correct, prior_pl, posterior_pl, updated_pl, p_init, p_transit, p_guess, "
+            "p_slip, model_version, created_at) "
+            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'bkt-v1',%s)",
+            (
+                uuid.uuid4().hex,
+                learner_id,
+                skill_id,
+                attempt_id,
+                int(observed_correct),
+                current,
+                posterior,
+                updated,
+                P_L0,
+                P_T,
+                P_G,
+                P_S,
+                now,
+            ),
+        )
         return updated
 
     def _write_state(self, connection: Any, session_id: str, state: dict[str, Any], now: datetime) -> None:
@@ -966,7 +1004,7 @@ class MySQLLearnerStore:
                         citation_id,
                         item["article"],
                         item.get("source"),
-                        "verified" if item.get("source") else "unverified",
+                        "unverified",
                         now,
                     ),
                 )
