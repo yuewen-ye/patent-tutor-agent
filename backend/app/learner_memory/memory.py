@@ -143,6 +143,7 @@ def save_learner_memories(
     learning_path = state.get("learning_path", [])
     history = {
         "session_id": state["session_id"],
+        "event_type": "feedback_completed",
         "topic": learner_profile.get("learning_goal") or state["user_input"],
         "knowledge_points": [item.get("node_name") for item in learning_path if item.get("node_name")],
         "profile_update_hint": feedback_result.get("profile_update_hint"),

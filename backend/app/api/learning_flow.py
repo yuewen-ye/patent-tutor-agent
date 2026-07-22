@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.app.api.models import SessionCreatedResponse
@@ -104,15 +104,30 @@ def create_learning_flow_router(session_service: SessionService) -> APIRouter:
     @router.post(
         "/sessions/{course_session_id}/exercise-responses",
         response_model=SessionCreatedResponse,
+        responses={
+            403: {"description": "The learner does not own the course session."},
+            404: {"description": "Course session not found."},
+            409: {"description": "Course session is not completed yet."},
+        },
     )
     def submit_exercises(
         course_session_id: str, request: ExerciseSubmission
     ) -> SessionCreatedResponse:
-        record = session_service.create_feedback_session(
-            learner_id=request.learner_id,
-            course_session_id=course_session_id,
-            responses=[item.model_dump() for item in request.responses],
-        )
+        try:
+            record = session_service.create_feedback_session(
+                learner_id=request.learner_id,
+                course_session_id=course_session_id,
+                responses=[item.model_dump() for item in request.responses],
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course session not found.") from exc
+        except PermissionError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Learner does not own the course session.",
+            ) from exc
+        except RuntimeError as exc:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
         return SessionCreatedResponse(session_id=record.session_id, status=record.status)
 
     return router

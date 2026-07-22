@@ -74,6 +74,7 @@ class SessionService:
         workflow_mode: Literal["auto", "teach", "chat", "diagnose", "feedback"] = "auto",
         input_payload: dict[str, Any] | None = None,
         parent_session_id: str | None = None,
+        start_immediately: bool = True,
     ) -> SessionRecord:
         session_id = uuid.uuid4().hex
         now = utc_now()
@@ -115,7 +116,8 @@ class SessionService:
         )
         record.thread = thread
         write_manifest(artifact_root=self.artifact_root, state=initial_state, status="running")
-        thread.start()
+        if start_immediately:
+            thread.start()
         return record
 
     def create_course_from_questionnaire(
@@ -137,6 +139,7 @@ class SessionService:
             learner_id=learner_id,
             workflow_mode="teach",
             input_payload={"questionnaire_responses": responses},
+            start_immediately=False,
         )
         questionnaire = onboarding_questionnaire()["markdown"]
         questionnaire_artifact = write_process_markdown(
@@ -163,6 +166,9 @@ class SessionService:
             existing = list(record.state.get("artifacts", []))
             record.state["artifacts"] = existing + [questionnaire_artifact, submission_artifact]
             write_manifest(artifact_root=self.artifact_root, state=record.state, status="running")
+        thread = getattr(record, "thread", None)
+        if thread is not None:
+            thread.start()
         return record
 
     def create_feedback_session(
@@ -172,6 +178,11 @@ class SessionService:
         course_session_id: str,
         responses: list[dict[str, Any]],
     ) -> SessionRecord:
+        course_record = self.require_session(course_session_id)
+        if course_record.learner_id != learner_id:
+            raise PermissionError("Learner does not own the course session.")
+        if course_record.status != "completed":
+            raise RuntimeError("Course session must be completed before exercise submission.")
         submission_id = uuid.uuid4().hex
         self._save_history(
             learner_id=learner_id,
@@ -198,6 +209,7 @@ class SessionService:
                 "exercise_responses": responses,
             },
             parent_session_id=course_session_id,
+            start_immediately=False,
         )
         submission_markdown = (
             "# 练习提交\n\n"
@@ -218,6 +230,9 @@ class SessionService:
             existing = list(record.state.get("artifacts", []))
             record.state["artifacts"] = existing + [artifact]
             write_manifest(artifact_root=self.artifact_root, state=record.state, status="running")
+        thread = getattr(record, "thread", None)
+        if thread is not None:
+            thread.start()
         return record
 
     def _save_history(

@@ -1,5 +1,16 @@
 # FastAPI 接口说明与调用顺序
 
+## 0. 可复现的完整链路测试
+
+不依赖外部 LLM API 的完整业务链路测试：
+
+```bash
+uv run pytest backend/tests/unit/test_learning_flow_api.py::test_reproducible_questionnaire_teach_exercise_feedback_journey -m unit -s
+```
+
+测试使用固定的 fake LLM 响应、临时 SQLite 文件和临时 artifacts 目录，按真实 FastAPI HTTP 接口依次执行问卷、
+教学、练习提交、反馈和学情读取；测试结束后临时目录由 pytest 清理。
+
 ## 1. 新学员主流程
 
 ```text
@@ -166,7 +177,9 @@ POST /sessions/{course_session_id}/exercise-responses
 - `observed_correct`：判分结果，可选；
 - `skill_id`：对应知识点，可选。
 
-后端保存练习、更新掌握度并创建 feedback 会话。前端把返回的 `session_id` 保存为 `feedback_session_id`。
+课程会话必须已经是 `completed`，且请求中的 `learner_id` 必须与课程会话一致；否则分别返回
+`404`（课程会话不存在）、`403`（学员不匹配）或 `409`（课程尚未完成）。通过校验后，后端保存练习、
+更新掌握度并创建 feedback 会话。前端把返回的 `session_id` 保存为 `feedback_session_id`。
 
 ### 步骤 6：等待并读取反馈
 
