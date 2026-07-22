@@ -11,6 +11,49 @@ uv run pytest backend/tests/unit/test_learning_flow_api.py::test_reproducible_qu
 测试使用固定的 fake LLM 响应、兼容用的临时 SQLite Store 和临时 artifacts 目录，按真实 FastAPI HTTP 接口依次执行问卷、
 教学、练习提交、反馈和学情读取；测试结束后临时目录由 pytest 清理。
 
+### 0.1 对正在运行的服务执行完整业务流程
+
+先配置 MySQL 和 LLM Provider，并在第一个终端启动 FastAPI：
+
+```powershell
+uv run python backend/main.py
+```
+
+在第二个终端运行真实 HTTP 演示脚本：
+
+```powershell
+uv run python backend/scripts/run_api_journey.py `
+  --base-url http://127.0.0.1:8000 `
+  --learner-id dbeaver-demo-001 `
+  --output-json artifacts/api-journey-result.json
+```
+
+脚本会依次访问：
+
+```text
+GET  /health
+GET  /health/ready
+GET  /questionnaires/onboarding
+POST /learners/{learner_id}/questionnaire-responses
+GET  /sessions/{course_session_id}（轮询）
+GET  /sessions（验证持久化列表查询）
+GET  /sessions/{course_session_id}/artifacts/{artifact_path}
+POST /sessions/{course_session_id}/exercise-responses
+GET  /sessions/{feedback_session_id}（轮询）
+GET  /sessions/{feedback_session_id}/artifacts/{artifact_path}
+GET  /learners/{learner_id}
+GET  /learners/{learner_id}/profiles
+GET  /learners/{learner_id}/history
+GET  /learners/{learner_id}/sessions
+```
+
+脚本从 `state.course_package` 自动选择带标准答案的题目，只提交原始答案，不发送
+`observed_correct`，因此会真实经过服务端判题、`attempts` 幂等写入和 BKT 更新。默认提交正确答案；
+可使用 `--answer-mode incorrect` 验证答错分支。使用 `--help` 查看超时、轮询间隔、题目数量和自定义
+问卷 JSON 等全部参数。
+
+该脚本访问真实运行服务，会产生真实 MySQL 和 Artifact 数据；它不是使用临时数据库的单元测试。
+
 ## 1. 新学员主流程
 
 ```text
@@ -271,8 +314,8 @@ POST /sessions
 | 事件 | `WS /sessions/{session_id}/events` | 使用 WebSocket 监听事件 |
 | 产物 | `GET /sessions/{session_id}/artifacts/{artifact_path}` | 读取 Markdown 产物 |
 
-`GET /sessions` 只返回当前 FastAPI 进程中的会话，不等于学员数据库中的全部历史。
-该接口不返回工作流 `state`，完整结果请使用 `GET /sessions/{session_id}`。
+`GET /sessions` 会合并当前 FastAPI 进程中的会话和 MySQL 持久化会话。该接口不返回工作流
+`state`，完整结果请使用 `GET /sessions/{session_id}`。
 
 列表接口支持以下可选查询参数：
 

@@ -156,3 +156,168 @@ LIMIT 20;
 - 验证结束后没有残留 `verify-*` 测试学员或会话。
 
 如果当前机器没有 MySQL 服务，只能说明“代码级验证通过、真实 MySQL 验证未执行”，不能宣称数据库部署已经验收成功。
+
+## 7. 使用 DBeaver 查看业务数据
+
+### 7.1 从环境变量拆分连接参数
+
+假设 `.env` 中配置为：
+
+```env
+PATENT_TUTOR_MYSQL_URL=mysql://patent_tutor:your-password@127.0.0.1:3306/patent_tutor
+```
+
+DBeaver 中填写：
+
+| DBeaver 字段 | 示例值 | 对应 URL 部分 |
+|---|---|---|
+| Driver | MySQL | MySQL 8 及以上选择 `MySQL` |
+| Host | `127.0.0.1` | `@` 后、端口前 |
+| Port | `3306` | 冒号后的端口 |
+| Database | `patent_tutor` | URL 最后的路径 |
+| Username | `patent_tutor` | `mysql://` 后、冒号前 |
+| Password | `your-password` | 用户名冒号后、`@` 前 |
+| Server Time Zone | `UTC` | 本项目数据库时间统一按 UTC 写入 |
+
+不要把 `.env` 中的密码复制到文档、截图或 Git。生产数据库建议为 DBeaver 单独创建只读账号。
+
+### 7.2 创建连接
+
+1. 打开 DBeaver，选择 **Database → New Database Connection**。
+2. 搜索并选择 **MySQL**。MySQL 8 及以上不要选择 `MySQL (old)`。
+3. 按上表填写 Host、Port、Database、Username 和 Password。
+4. 首次连接时允许 DBeaver 下载 MySQL JDBC Driver。
+5. 点击 **Test Connection**；成功后点击 **Finish**。
+6. 在 Database Navigator 展开 `patent_tutor → Tables`；如果刚运行完脚本看不到新数据，按 `F5`
+   刷新表或连接。
+
+远程数据库不要直接暴露 3306。应在连接设置的 SSH 或 SSL 页面配置隧道/证书；生产查看连接可在
+Connection Details → Security 中设置为只读，降低误修改风险。
+
+DBeaver 官方参考：[创建连接](https://dbeaver.com/docs/dbeaver/Create-Connection/)、
+[MySQL 驱动配置](https://dbeaver.com/docs/dbeaver/Database-driver-MySQL/)。
+
+### 7.3 推荐查看顺序
+
+运行 `run_api_journey.py --learner-id dbeaver-demo-001` 后，在 DBeaver 新建 SQL Editor，整段执行：
+
+```sql
+USE patent_tutor;
+SET @learner_id = 'dbeaver-demo-001';
+
+-- 1. 学员及课程/反馈会话；feedback 行的 parent_session_id 指向课程会话
+SELECT session_id, parent_session_id, workflow_mode, status,
+       learning_goal, created_at, completed_at
+FROM sessions
+WHERE student_id = @learner_id
+ORDER BY created_at;
+
+-- 2. 问卷原始回答
+SELECT response_id, session_id, questionnaire_version,
+       JSON_PRETTY(responses_json) AS responses, submitted_at
+FROM onboarding_responses
+WHERE student_id = @learner_id
+ORDER BY submitted_at;
+
+-- 3. 当前画像和画像历史
+SELECT student_id, profile_version, knowledge_level,
+       JSON_PRETTY(profile_json) AS current_profile, updated_at
+FROM student_profiles
+WHERE student_id = @learner_id;
+
+SELECT profile_version, source, session_id,
+       JSON_PRETTY(profile_json) AS profile,
+       JSON_PRETTY(mastery_snapshot) AS mastery_snapshot,
+       snapshot_at
+FROM profile_history
+WHERE student_id = @learner_id
+ORDER BY profile_version;
+
+-- 4. Planner 生成的学习路径
+SELECT lp.session_id, lp.path_version, lp.order_idx, lp.node_id,
+       lp.node_name, lp.difficulty_cap, lp.strategy
+FROM learning_paths AS lp
+JOIN sessions AS s ON s.session_id = lp.session_id
+WHERE s.student_id = @learner_id
+ORDER BY lp.session_id, lp.path_version, lp.order_idx;
+
+-- 5. 课程题目和服务端答案
+SELECT q.session_id, q.qid, q.kind, q.kc_node_id,
+       q.question_text, JSON_PRETTY(q.answer_json) AS answer
+FROM questions AS q
+JOIN sessions AS s ON s.session_id = q.session_id
+WHERE s.student_id = @learner_id
+ORDER BY q.created_at;
+
+-- 6. 原始作答和服务端判题结果
+SELECT a.attempt_id, a.session_id AS feedback_session_id,
+       q.qid, JSON_PRETTY(a.raw_answer_json) AS raw_answer,
+       a.is_correct, a.grading_status, a.grading_source,
+       a.idempotency_key, a.created_at
+FROM attempts AS a
+JOIN questions AS q ON q.question_id = a.question_id
+WHERE a.student_id = @learner_id
+ORDER BY a.created_at;
+
+-- 7. 当前 BKT 掌握度
+SELECT node_id, pl, observations, correct_count, incorrect_count,
+       last_attempt_id, updated_at
+FROM student_node_mastery
+WHERE student_id = @learner_id
+ORDER BY updated_at;
+
+-- 8. BKT 更新审计：prior → posterior → updated
+SELECT node_id, attempt_id, observed_correct,
+       prior_pl, posterior_pl, updated_pl,
+       p_init, p_transit, p_guess, p_slip,
+       model_version, created_at
+FROM mastery_events
+WHERE student_id = @learner_id
+ORDER BY created_at;
+
+-- 9. Markdown 文件索引；正文仍位于 artifacts 目录
+SELECT a.session_id, a.artifact_kind, a.title,
+       a.content_path, a.content_sha256, a.created_by, a.created_at
+FROM artifacts AS a
+JOIN sessions AS s ON s.session_id = a.session_id
+WHERE s.student_id = @learner_id
+ORDER BY a.created_at;
+
+-- 10. 反馈摘要
+SELECT f.session_id, JSON_PRETTY(f.evaluation_signals) AS evaluation_signals,
+       JSON_PRETTY(f.bkt_update) AS bkt_update, f.created_at
+FROM feedback_logs AS f
+WHERE f.student_id = @learner_id
+ORDER BY f.created_at;
+```
+
+### 7.4 查看完整工作流状态和事件
+
+获得 `course_session_id` 或 `feedback_session_id` 后，可以继续执行：
+
+```sql
+SET @session_id = '把脚本输出的 session_id 填在这里';
+
+SELECT revision, JSON_PRETTY(state_json) AS complete_state, updated_at
+FROM session_states
+WHERE session_id = @session_id;
+
+SELECT sequence_no, JSON_PRETTY(event_json) AS event, created_at
+FROM session_events
+WHERE session_id = @session_id
+ORDER BY sequence_no;
+
+SELECT round_number, integration_attempt, stage, status,
+       judge_decision, created_at, completed_at
+FROM rounds
+WHERE session_id = @session_id
+ORDER BY round_number, integration_attempt;
+```
+
+DBeaver 的结果网格中，双击 JSON 单元格可以打开 Value 面板查看完整内容。若只想看课程包，可执行：
+
+```sql
+SELECT JSON_PRETTY(JSON_EXTRACT(state_json, '$.course_package')) AS course_package
+FROM session_states
+WHERE session_id = @session_id;
+```
