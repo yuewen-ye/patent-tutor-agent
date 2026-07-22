@@ -22,7 +22,7 @@ providers:
     model_name: deepseek-v4-flash
     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
   qwen:
-    model_name: qwen3.7-max
+    model_name: qwen3.7-plus
     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
   glm:
     model_name: glm-5.2
