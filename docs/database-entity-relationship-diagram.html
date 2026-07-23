@@ -1,0 +1,802 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>专利导学系统数据库实体关系图</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f3f6fb;
+      --panel: rgba(255, 255, 255, 0.94);
+      --text: #172033;
+      --muted: #667085;
+      --line: #a8b2c4;
+      --main: #e36a2e;
+      --logical: #7b61c9;
+      --selected: #1769aa;
+      --shadow: 0 10px 30px rgba(28, 45, 78, 0.10);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    }
+
+    header {
+      position: fixed;
+      inset: 0 0 auto 0;
+      z-index: 30;
+      min-height: 72px;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      background: var(--panel);
+      border-bottom: 1px solid #dce3ee;
+      box-shadow: 0 4px 18px rgba(28, 45, 78, 0.08);
+    }
+
+    .title {
+      min-width: 330px;
+      margin-right: auto;
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .title p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    button, input {
+      height: 36px;
+      border: 1px solid #ccd5e2;
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+    }
+
+    button {
+      padding: 0 13px;
+      cursor: pointer;
+    }
+
+    button:hover { border-color: #8da2bb; }
+
+    button.active {
+      color: #fff;
+      background: #1769aa;
+      border-color: #1769aa;
+    }
+
+    input {
+      width: 220px;
+      padding: 0 11px;
+    }
+
+    .icon-button {
+      width: 36px;
+      padding: 0;
+      font-size: 18px;
+    }
+
+    #viewport {
+      position: fixed;
+      inset: 72px 0 0 0;
+      overflow: hidden;
+      cursor: grab;
+      background:
+        radial-gradient(circle at 1px 1px, #cfd8e6 1px, transparent 1.2px) 0 0 / 24px 24px,
+        var(--bg);
+    }
+
+    #viewport.dragging { cursor: grabbing; }
+
+    #world {
+      position: absolute;
+      width: 3000px;
+      height: 1660px;
+      transform-origin: 0 0;
+      user-select: none;
+    }
+
+    #connections {
+      position: absolute;
+      inset: 0;
+      width: 3000px;
+      height: 1660px;
+      overflow: visible;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .group {
+      position: absolute;
+      border: 2px solid var(--group-border);
+      border-radius: 24px;
+      background: var(--group-bg);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+      z-index: 1;
+    }
+
+    .group-title {
+      position: absolute;
+      top: 18px;
+      left: 24px;
+      z-index: 5;
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    .group-title strong {
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .group-title span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .entity {
+      position: absolute;
+      z-index: 6;
+      padding: 14px 16px;
+      border: 1px solid #cfd8e6;
+      border-left: 5px solid var(--entity-accent, #6685a8);
+      border-radius: 13px;
+      background: #fff;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+    }
+
+    .entity:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 34px rgba(28, 45, 78, 0.16);
+    }
+
+    .entity.selected {
+      outline: 4px solid rgba(23, 105, 170, 0.26);
+      border-color: var(--selected);
+    }
+
+    .entity.dimmed { opacity: 0.22; }
+
+    .entity .name {
+      margin-bottom: 7px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 18px;
+      font-weight: 700;
+      color: #182b49;
+    }
+
+    .entity .purpose {
+      margin-bottom: 9px;
+      font-size: 13px;
+      color: #344054;
+    }
+
+    .entity .keys {
+      padding-top: 8px;
+      border-top: 1px solid #edf0f5;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 11px;
+      line-height: 1.6;
+      color: var(--muted);
+      white-space: normal;
+    }
+
+    .entity.root {
+      border-left-width: 8px;
+      border-color: #2675b8;
+      background: linear-gradient(145deg, #ffffff, #f2f8ff);
+    }
+
+    .entity.root .name { color: #0f5f9d; }
+
+    .relation {
+      fill: none;
+      stroke: var(--line);
+      stroke-width: 2;
+      opacity: 0.45;
+    }
+
+    .relation.logical {
+      stroke: var(--logical);
+      stroke-dasharray: 9 7;
+      opacity: 0.5;
+    }
+
+    .relation.main {
+      stroke: var(--main);
+      stroke-width: 5;
+      opacity: 0.9;
+      marker-end: url(#arrow-main);
+    }
+
+    .relation.hidden { display: none; }
+
+    .relation.highlight {
+      stroke: var(--selected);
+      stroke-width: 5;
+      opacity: 1;
+    }
+
+    .line-label {
+      fill: #41516a;
+      font-size: 12px;
+      paint-order: stroke;
+      stroke: var(--bg);
+      stroke-width: 5px;
+      stroke-linejoin: round;
+    }
+
+    .line-label.main-label {
+      fill: #9e3f13;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .line-label.hidden { display: none; }
+
+    #detail {
+      position: fixed;
+      z-index: 40;
+      right: 18px;
+      bottom: 18px;
+      width: min(420px, calc(100vw - 36px));
+      max-height: 48vh;
+      overflow: auto;
+      padding: 18px;
+      border: 1px solid #d7dfeb;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.97);
+      box-shadow: 0 18px 46px rgba(28, 45, 78, 0.18);
+      display: none;
+    }
+
+    #detail.visible { display: block; }
+
+    #detail h2 {
+      margin: 0 34px 7px 0;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 19px;
+    }
+
+    #detail p {
+      margin: 7px 0;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    #detail .detail-keys {
+      padding: 10px;
+      border-radius: 8px;
+      background: #f5f7fa;
+      font-family: Consolas, "Courier New", monospace;
+      color: #475467;
+    }
+
+    #detail ul {
+      margin: 8px 0 0;
+      padding-left: 20px;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    #detail-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 30px;
+      height: 30px;
+      padding: 0;
+    }
+
+    .legend {
+      position: fixed;
+      z-index: 20;
+      left: 16px;
+      bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 9px 12px;
+      border: 1px solid #d8e0eb;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.9);
+      color: var(--muted);
+      font-size: 12px;
+      pointer-events: none;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-line {
+      width: 34px;
+      height: 0;
+      border-top: 3px solid var(--line);
+    }
+
+    .legend-line.main { border-color: var(--main); }
+    .legend-line.logical {
+      border-color: var(--logical);
+      border-top-style: dashed;
+    }
+
+    .hint {
+      position: fixed;
+      z-index: 20;
+      right: 18px;
+      top: 88px;
+      padding: 7px 10px;
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.86);
+      color: var(--muted);
+      font-size: 12px;
+      pointer-events: none;
+    }
+
+    @media (max-width: 900px) {
+      header { min-height: 118px; }
+      #viewport { top: 118px; }
+      .title { min-width: 100%; }
+      input { width: 170px; }
+      .hint { top: 132px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title">
+      <h1>专利导学系统数据库实体关系图</h1>
+      <p>25 张表 · MySQL · 点击表可查看与它直接相关的实体</p>
+    </div>
+    <div class="controls">
+      <button id="main-mode" class="active" type="button">业务主链</button>
+      <button id="all-mode" type="button">全部关系</button>
+      <input id="search" type="search" placeholder="搜索表名，例如 sessions">
+      <button id="zoom-out" class="icon-button" type="button" aria-label="缩小">−</button>
+      <button id="zoom-in" class="icon-button" type="button" aria-label="放大">＋</button>
+      <button id="reset" type="button">适应窗口</button>
+    </div>
+  </header>
+
+  <main id="viewport" aria-label="可缩放和拖动的数据库实体关系图">
+    <div id="world">
+      <svg id="connections" viewBox="0 0 3000 1660" aria-hidden="true">
+        <defs>
+          <marker id="arrow-main" markerWidth="10" markerHeight="10" refX="8" refY="5"
+                  orient="auto" markerUnits="strokeWidth">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#e36a2e"></path>
+          </marker>
+        </defs>
+      </svg>
+    </div>
+  </main>
+
+  <aside id="detail" aria-live="polite">
+    <button id="detail-close" type="button" aria-label="关闭">×</button>
+    <h2 id="detail-name"></h2>
+    <p id="detail-purpose"></p>
+    <p id="detail-keys" class="detail-keys"></p>
+    <p><strong>直接关系</strong></p>
+    <ul id="detail-relations"></ul>
+  </aside>
+
+  <div class="legend">
+    <span class="legend-item"><span class="legend-line main"></span>业务主链</span>
+    <span class="legend-item"><span class="legend-line"></span>数据库外键</span>
+    <span class="legend-item"><span class="legend-line logical"></span>逻辑关联</span>
+  </div>
+  <div class="hint">滚轮缩放 · 按住空白处拖动 · 点击表查看关系</div>
+
+  <script>
+    const groups = [
+      { id: "support", title: "数据库版本与静态目录", note: "迁移记录和共享课程定义",
+        x: 50, y: 50, w: 600, h: 250, border: "#b9c5d5", bg: "rgba(238,242,247,.86)" },
+      { id: "identity", title: "学员身份", note: "账号和登录会话",
+        x: 50, y: 340, w: 600, h: 520, border: "#77a8d7", bg: "rgba(226,240,253,.72)" },
+      { id: "workflow", title: "会话与工作流", note: "所有业务流程的运行中心",
+        x: 700, y: 50, w: 1100, h: 810, border: "#66a88b", bg: "rgba(225,245,237,.72)" },
+      { id: "profile", title: "学员画像与记忆", note: "当前画像、历史和薄弱点",
+        x: 1850, y: 50, w: 1100, h: 810, border: "#9a83c9", bg: "rgba(240,234,252,.72)" },
+      { id: "loop", title: "教学闭环", note: "问卷、动态题目、作答和反馈",
+        x: 50, y: 920, w: 1250, h: 650, border: "#dd9867", bg: "rgba(254,239,226,.78)" },
+      { id: "adaptive", title: "自适应学习", note: "路径、教学指令和 BKT",
+        x: 1350, y: 920, w: 900, h: 650, border: "#cf7f93", bg: "rgba(252,232,238,.72)" },
+      { id: "artifact", title: "课程产物与法律引用", note: "文件索引和引用追踪",
+        x: 2300, y: 920, w: 650, h: 650, border: "#c5a63a", bg: "rgba(251,246,218,.78)" }
+    ];
+
+    const entities = [
+      { id: "schema_migrations", group: "support", x: 80, y: 150, w: 170, h: 105,
+        purpose: "记录已经执行的数据库结构迁移", keys: "PK version" },
+      { id: "knowledge_nodes", group: "support", x: 260, y: 150, w: 180, h: 105,
+        purpose: "带版本的知识节点目录", keys: "PK catalog_version + node_id" },
+      { id: "confusion_pairs", group: "support", x: 450, y: 150, w: 170, h: 105,
+        purpose: "带版本的易混淆概念对", keys: "PK catalog_version + pair_id" },
+
+      { id: "students", group: "identity", x: 155, y: 455, w: 390, h: 150, root: true,
+        purpose: "学员根表，其他学员业务数据最终归属于它", keys: "PK student_id\nUK login_id / email" },
+      { id: "auth_sessions", group: "identity", x: 155, y: 655, w: 390, h: 135,
+        purpose: "登录令牌、过期时间和撤销状态", keys: "PK auth_session_id\nFK student_id" },
+
+      { id: "sessions", group: "workflow", x: 1035, y: 155, w: 430, h: 170, root: true,
+        purpose: "课程、诊断、聊天和反馈工作流的会话主表", keys: "PK session_id\nFK student_id\nFK parent_session_id → sessions" },
+      { id: "session_states", group: "workflow", x: 770, y: 420, w: 390, h: 135,
+        purpose: "每个会话最新的完整结构化状态", keys: "PK/FK session_id" },
+      { id: "session_events", group: "workflow", x: 1285, y: 420, w: 390, h: 135,
+        purpose: "按顺序保存工作流运行事件", keys: "PK event_id\nFK session_id" },
+      { id: "session_checkpoints", group: "workflow", x: 770, y: 640, w: 390, h: 135,
+        purpose: "工作流中断恢复所需的检查点", keys: "PK checkpoint_id\nFK session_id" },
+      { id: "rounds", group: "workflow", x: 1285, y: 640, w: 390, h: 135,
+        purpose: "专家协作、整合尝试和 Judge 审核轮次", keys: "PK round_id\nFK session_id" },
+
+      { id: "student_profiles", group: "profile", x: 1930, y: 175, w: 410, h: 145, root: true,
+        purpose: "学员当前最新画像", keys: "PK/FK student_id" },
+      { id: "profile_history", group: "profile", x: 2440, y: 175, w: 410, h: 145,
+        purpose: "每次画像变化形成的历史快照", keys: "PK profile_history_id\nFK student_id / session_id / round_id" },
+      { id: "student_weak_points", group: "profile", x: 1930, y: 420, w: 410, h: 145,
+        purpose: "从画像中拆出的可查询薄弱点", keys: "PK weak_point_id\nFK student_id" },
+      { id: "memory_items", group: "profile", x: 2440, y: 420, w: 410, h: 145,
+        purpose: "Agent 使用的历史记忆和补充上下文", keys: "PK namespace + item_key\n无数据库外键" },
+
+      { id: "onboarding_responses", group: "loop", x: 90, y: 1080, w: 270, h: 160,
+        purpose: "学员提交的原始问卷答案", keys: "PK response_id\nFK student_id / session_id" },
+      { id: "questions", group: "loop", x: 390, y: 1080, w: 270, h: 160,
+        purpose: "课程中由模型动态生成的题目实例", keys: "PK question_id\nFK session_id / round_id" },
+      { id: "attempts", group: "loop", x: 690, y: 1080, w: 270, h: 160,
+        purpose: "学员提交的答案、判题状态和结果", keys: "PK attempt_id\nFK student_id / question_id / session_id" },
+      { id: "feedback_logs", group: "loop", x: 990, y: 1080, w: 270, h: 160,
+        purpose: "反馈阶段的结构化评价与 BKT 摘要", keys: "PK feedback_id\nFK student_id / session_id / profile_history_id" },
+
+      { id: "learning_paths", group: "adaptive", x: 1400, y: 1070, w: 360, h: 150,
+        purpose: "一次规划产生的知识节点顺序", keys: "PK path_item_id\nFK session_id" },
+      { id: "session_directives", group: "adaptive", x: 1840, y: 1070, w: 360, h: 150,
+        purpose: "Planner 下发的出题和教学指令", keys: "PK directive_id\nFK session_id" },
+      { id: "student_node_mastery", group: "adaptive", x: 1400, y: 1330, w: 360, h: 160, root: true,
+        purpose: "学员在每个知识节点上的当前 BKT 掌握度", keys: "PK student_id + node_id\nFK student_id" },
+      { id: "mastery_events", group: "adaptive", x: 1840, y: 1330, w: 360, h: 160,
+        purpose: "每次作答引起的掌握度变化明细", keys: "PK mastery_event_id\nFK student_id / attempt_id" },
+
+      { id: "artifacts", group: "artifact", x: 2380, y: 1060, w: 490, h: 160, root: true,
+        purpose: "Markdown 文件的路径、哈希和归属索引", keys: "PK artifact_id\nFK session_id / round_id" },
+      { id: "artifact_citations", group: "artifact", x: 2350, y: 1340, w: 280, h: 155,
+        purpose: "课程产物与法条之间的多对多关联", keys: "PK artifact_id + citation_id + occurrence\nFK artifact_id / citation_id" },
+      { id: "legal_citations", group: "artifact", x: 2650, y: 1340, w: 250, h: 155,
+        purpose: "法条、来源、引文和核验状态", keys: "PK citation_id" }
+    ];
+
+    const relations = [
+      ["students", "auth_sessions", "fk", "一个学员可有多个登录会话"],
+      ["students", "sessions", "fk", "一个学员可有多个业务会话"],
+      ["sessions", "session_states", "fk", "一个会话至多一条最新状态"],
+      ["sessions", "session_events", "fk", "一个会话包含多个事件"],
+      ["sessions", "session_checkpoints", "fk", "一个会话可包含多个检查点"],
+      ["sessions", "rounds", "fk", "一个课程会话包含多个专家轮次"],
+      ["students", "student_profiles", "fk", "一个学员至多一份当前画像"],
+      ["students", "profile_history", "fk", "一个学员拥有多份画像历史"],
+      ["sessions", "profile_history", "fk", "画像历史可关联产生它的会话"],
+      ["rounds", "profile_history", "fk", "画像历史可关联专家轮次"],
+      ["students", "student_weak_points", "fk", "一个学员可有多个薄弱点"],
+      ["students", "memory_items", "logical", "通过命名空间形成逻辑关联"],
+      ["students", "student_node_mastery", "fk", "一个学员对应多个知识点掌握度"],
+      ["students", "mastery_events", "fk", "掌握度变化归属于学员"],
+      ["sessions", "learning_paths", "fk", "一个会话可保存多个路径节点"],
+      ["sessions", "session_directives", "fk", "一个会话可保存多个指令版本"],
+      ["students", "onboarding_responses", "fk", "问卷回答归属于学员"],
+      ["sessions", "onboarding_responses", "fk", "问卷回答关联课程会话"],
+      ["sessions", "questions", "fk", "课程会话生成多道题目"],
+      ["rounds", "questions", "fk", "题目可追溯到专家轮次"],
+      ["students", "attempts", "fk", "作答归属于学员"],
+      ["questions", "attempts", "fk", "一道题可对应多次作答"],
+      ["sessions", "attempts", "fk", "作答归属于反馈会话"],
+      ["attempts", "mastery_events", "fk", "一次有效作答至多触发一次掌握度更新"],
+      ["students", "feedback_logs", "fk", "反馈归属于学员"],
+      ["sessions", "feedback_logs", "fk", "反馈归属于反馈会话"],
+      ["profile_history", "feedback_logs", "fk", "反馈可关联更新后的画像历史"],
+      ["sessions", "artifacts", "fk", "一个会话产生多个课程产物"],
+      ["rounds", "artifacts", "fk", "产物可追溯到专家轮次"],
+      ["artifacts", "artifact_citations", "fk", "一个产物可包含多条引用关系"],
+      ["legal_citations", "artifact_citations", "fk", "一条法条可被多个产物引用"],
+      ["knowledge_nodes", "student_weak_points", "logical", "通过 matched_node_id 逻辑关联"],
+      ["knowledge_nodes", "student_node_mastery", "logical", "通过 node_id 逻辑关联"],
+      ["knowledge_nodes", "mastery_events", "logical", "通过 node_id 逻辑关联"],
+      ["knowledge_nodes", "learning_paths", "logical", "通过 node_id 逻辑关联"],
+      ["knowledge_nodes", "questions", "logical", "通过 kc_node_id 逻辑关联"],
+      ["confusion_pairs", "knowledge_nodes", "logical", "通过 related_nodes JSON 逻辑关联"]
+    ].map((r, i) => ({ id: `r${i}`, from: r[0], to: r[1], type: r[2], label: r[3] }));
+
+    const mainFlow = [
+      ["students", "onboarding_responses", "学员提交问卷"],
+      ["onboarding_responses", "sessions", "创建课程会话"],
+      ["sessions", "student_profiles", "初始诊断"],
+      ["student_profiles", "learning_paths", "规划路径"],
+      ["learning_paths", "questions", "生成课程题目"],
+      ["questions", "attempts", "学员作答"],
+      ["attempts", "mastery_events", "BKT 更新事件"],
+      ["mastery_events", "student_node_mastery", "更新当前掌握度"],
+      ["attempts", "feedback_logs", "生成反馈"],
+      ["feedback_logs", "profile_history", "形成画像历史"],
+      ["profile_history", "student_profiles", "更新当前画像"]
+    ].map((r, i) => ({ id: `m${i}`, from: r[0], to: r[1], type: "main", label: r[2] }));
+
+    const world = document.getElementById("world");
+    const svg = document.getElementById("connections");
+    const viewport = document.getElementById("viewport");
+
+    groups.forEach(group => {
+      const el = document.createElement("section");
+      el.className = "group";
+      el.style.cssText = `left:${group.x}px;top:${group.y}px;width:${group.w}px;height:${group.h}px;` +
+        `--group-border:${group.border};--group-bg:${group.bg};`;
+      el.innerHTML = `<div class="group-title"><strong>${group.title}</strong><span>${group.note}</span></div>`;
+      world.appendChild(el);
+    });
+
+    entities.forEach(entity => {
+      const group = groups.find(g => g.id === entity.group);
+      const el = document.createElement("article");
+      el.id = entity.id;
+      el.className = `entity${entity.root ? " root" : ""}`;
+      el.style.cssText = `left:${entity.x}px;top:${entity.y}px;width:${entity.w}px;min-height:${entity.h}px;` +
+        `--entity-accent:${group.border};`;
+      el.innerHTML = `<div class="name">${entity.id}</div><div class="purpose">${entity.purpose}</div>` +
+        `<div class="keys">${entity.keys.replaceAll("\n", "<br>")}</div>`;
+      el.addEventListener("click", event => {
+        event.stopPropagation();
+        selectEntity(entity.id);
+      });
+      world.appendChild(el);
+    });
+
+    function anchorPoints(fromId, toId) {
+      const a = document.getElementById(fromId);
+      const b = document.getElementById(toId);
+      const ac = { x: a.offsetLeft + a.offsetWidth / 2, y: a.offsetTop + a.offsetHeight / 2 };
+      const bc = { x: b.offsetLeft + b.offsetWidth / 2, y: b.offsetTop + b.offsetHeight / 2 };
+      const dx = bc.x - ac.x;
+      const dy = bc.y - ac.y;
+      let start, end;
+
+      if (Math.abs(dx) > Math.abs(dy)) {
+        start = { x: ac.x + Math.sign(dx) * a.offsetWidth / 2, y: ac.y };
+        end = { x: bc.x - Math.sign(dx) * b.offsetWidth / 2, y: bc.y };
+      } else {
+        start = { x: ac.x, y: ac.y + Math.sign(dy) * a.offsetHeight / 2 };
+        end = { x: bc.x, y: bc.y - Math.sign(dy) * b.offsetHeight / 2 };
+      }
+      return { start, end };
+    }
+
+    function pathData(start, end) {
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        const bend = Math.max(70, Math.abs(dx) * 0.42);
+        return `M ${start.x} ${start.y} C ${start.x + Math.sign(dx) * bend} ${start.y}, ` +
+          `${end.x - Math.sign(dx) * bend} ${end.y}, ${end.x} ${end.y}`;
+      }
+      const bend = Math.max(70, Math.abs(dy) * 0.42);
+      return `M ${start.x} ${start.y} C ${start.x} ${start.y + Math.sign(dy) * bend}, ` +
+        `${end.x} ${end.y - Math.sign(dy) * bend}, ${end.x} ${end.y}`;
+    }
+
+    function drawRelation(relation) {
+      const ns = "http://www.w3.org/2000/svg";
+      const { start, end } = anchorPoints(relation.from, relation.to);
+      const path = document.createElementNS(ns, "path");
+      path.id = relation.id;
+      path.dataset.from = relation.from;
+      path.dataset.to = relation.to;
+      path.setAttribute("d", pathData(start, end));
+      path.setAttribute("class", `relation ${relation.type}`);
+      svg.appendChild(path);
+
+      const text = document.createElementNS(ns, "text");
+      text.dataset.path = relation.id;
+      text.setAttribute("class", `line-label${relation.type === "main" ? " main-label" : ""}`);
+      const textPath = document.createElementNS(ns, "textPath");
+      textPath.setAttribute("href", `#${relation.id}`);
+      textPath.setAttribute("startOffset", "50%");
+      textPath.setAttribute("text-anchor", "middle");
+      textPath.textContent = relation.label;
+      text.appendChild(textPath);
+      svg.appendChild(text);
+    }
+
+    relations.forEach(drawRelation);
+    mainFlow.forEach(drawRelation);
+
+    let mode = "main";
+    let selected = null;
+    let scale = 1;
+    let translateX = 0;
+    let translateY = 0;
+    let dragging = false;
+    let lastX = 0;
+    let lastY = 0;
+
+    function applyTransform() {
+      world.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    }
+
+    function fitWorld() {
+      const rect = viewport.getBoundingClientRect();
+      scale = Math.min((rect.width - 40) / 3000, (rect.height - 40) / 1660);
+      scale = Math.max(0.22, Math.min(scale, 1));
+      translateX = (rect.width - 3000 * scale) / 2;
+      translateY = (rect.height - 1660 * scale) / 2;
+      applyTransform();
+    }
+
+    function setMode(nextMode) {
+      mode = nextMode;
+      selected = null;
+      document.querySelectorAll(".entity").forEach(el => el.classList.remove("selected", "dimmed"));
+      document.getElementById("detail").classList.remove("visible");
+      document.getElementById("main-mode").classList.toggle("active", mode === "main");
+      document.getElementById("all-mode").classList.toggle("active", mode === "all");
+
+      relations.forEach(rel => {
+        document.getElementById(rel.id).classList.toggle("hidden", mode !== "all");
+        document.querySelector(`[data-path="${rel.id}"]`).classList.add("hidden");
+      });
+      mainFlow.forEach(rel => {
+        document.getElementById(rel.id).classList.toggle("hidden", mode !== "main");
+        document.querySelector(`[data-path="${rel.id}"]`).classList.toggle("hidden", mode !== "main");
+      });
+    }
+
+    function selectEntity(id) {
+      selected = id;
+      const connected = new Set([id]);
+      relations.forEach(rel => {
+        const active = rel.from === id || rel.to === id;
+        const path = document.getElementById(rel.id);
+        const label = document.querySelector(`[data-path="${rel.id}"]`);
+        path.classList.toggle("hidden", !active);
+        path.classList.toggle("highlight", active);
+        label.classList.toggle("hidden", !active);
+        if (active) {
+          connected.add(rel.from);
+          connected.add(rel.to);
+        }
+      });
+      mainFlow.forEach(rel => {
+        document.getElementById(rel.id).classList.add("hidden");
+        document.querySelector(`[data-path="${rel.id}"]`).classList.add("hidden");
+      });
+      document.querySelectorAll(".entity").forEach(el => {
+        el.classList.toggle("selected", el.id === id);
+        el.classList.toggle("dimmed", !connected.has(el.id));
+      });
+
+      const entity = entities.find(item => item.id === id);
+      const direct = relations.filter(rel => rel.from === id || rel.to === id);
+      document.getElementById("detail-name").textContent = entity.id;
+      document.getElementById("detail-purpose").textContent = entity.purpose;
+      document.getElementById("detail-keys").innerHTML = entity.keys.replaceAll("\n", "<br>");
+      document.getElementById("detail-relations").innerHTML = direct.length
+        ? direct.map(rel => {
+            const other = rel.from === id ? rel.to : rel.from;
+            const type = rel.type === "fk" ? "外键" : "逻辑关联";
+            return `<li><code>${other}</code>：${rel.label}（${type}）</li>`;
+          }).join("")
+        : "<li>没有与业务表建立数据库外键。</li>";
+      document.getElementById("detail").classList.add("visible");
+      focusEntity(id);
+    }
+
+    function closeDetail() {
+      setMode(mode);
+    }
+
+    function focusEntity(id) {
+      const entity = document.getElementById(id);
+      const rect = viewport.getBoundingClientRect();
+      scale = Math.max(scale, 0.72);
+      translateX = rect.width / 2 - (entity.offsetLeft + entity.offsetWidth / 2) * scale;
+      translateY = rect.height / 2 - (entity.offsetTop + entity.offsetHeight / 2) * scale;
+      applyTransform();
+    }
+
+    document.getElementById("main-mode").addEventListener("click", () => setMode("main"));
+    document.getElementById("all-mode").addEventListener("click", () => setMode("all"));
+    document.getElementById("reset").addEventListener("click", fitWorld);
+    document.getElementById("detail-close").addEventListener("click", closeDetail);
+
+    document.getElementById("zoom-in").addEventListener("click", () => {
+      scale = Math.min(1.6, scale * 1.18);
+      applyTransform();
+    });
+    document.getElementById("zoom-out").addEventListener("click", () => {
+      scale = Math.max(0.2, scale / 1.18);
+      applyTransform();
+    });
+
+    document.getElementById("search").addEventListener("input", event => {
+      const query = event.target.value.trim().toLowerCase();
+      document.querySelectorAll(".entity").forEach(el => {
+        el.classList.toggle("dimmed", Boolean(query) && !el.id.toLowerCase().includes(query));
+      });
+      if (query) {
+        const exact = entities.find(entity => entity.id.toLowerCase() === query);
+        if (exact) selectEntity(exact.id);
+      }
+    });
+
+    viewport.addEventListener("mousedown", event => {
+      if (event.target.closest(".entity")) return;
+      dragging = true;
+      lastX = event.clientX;
+      lastY = event.clientY;
+      viewport.classList.add("dragging");
+    });
+    window.addEventListener("mousemove", event => {
+      if (!dragging) return;
+      translateX += event.clientX - lastX;
+      translateY += event.clientY - lastY;
+      lastX = event.clientX;
+      lastY = event.clientY;
+      applyTransform();
+    });
+    window.addEventListener("mouseup", () => {
+      dragging = false;
+      viewport.classList.remove("dragging");
+    });
+
+    viewport.addEventListener("wheel", event => {
+      event.preventDefault();
+      const rect = viewport.getBoundingClientRect();
+      const mouseX = event.clientX - rect.left;
+      const mouseY = event.clientY - rect.top;
+      const worldX = (mouseX - translateX) / scale;
+      const worldY = (mouseY - translateY) / scale;
+      const factor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
+      const nextScale = Math.max(0.2, Math.min(1.6, scale * factor));
+      translateX = mouseX - worldX * nextScale;
+      translateY = mouseY - worldY * nextScale;
+      scale = nextScale;
+      applyTransform();
+    }, { passive: false });
+
+    world.addEventListener("click", event => {
+      if (!event.target.closest(".entity")) closeDetail();
+    });
+
+    window.addEventListener("resize", fitWorld);
+    setMode("main");
+    fitWorld();
+  </script>
+</body>
+</html>
