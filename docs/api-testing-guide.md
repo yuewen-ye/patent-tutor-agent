@@ -11,7 +11,46 @@ uv run pytest backend/tests/unit/test_learning_flow_api.py::test_reproducible_qu
 测试使用固定的 fake LLM 响应、兼容用的临时 SQLite Store 和临时 artifacts 目录，按真实 FastAPI HTTP 接口依次执行问卷、
 教学、练习提交、反馈和学情读取；测试结束后临时目录由 pytest 清理。
 
-### 0.1 对正在运行的服务执行完整业务流程
+### 0.1 `.env` 中主要环境变量的含义
+
+FastAPI 启动时会读取项目根目录的 `.env`。业务流程脚本只通过 HTTP 访问 FastAPI，不会自己连接
+MySQL 或调用 LLM，因此第二个终端不需要重复加载这些变量。
+
+| 环境变量 | 含义 | 本地演示建议 |
+|---|---|---|
+| `DEEPSEEK_API_KEY` | DeepSeek API 密钥 | 只有 `config/agents.yaml` 选用 DeepSeek 时必填 |
+| `QWEN_API_KEY` | 通义千问 API 密钥 | 只有选用 Qwen 时必填 |
+| `GLM_API_KEY` | 智谱 GLM API 密钥 | 只有选用 GLM 时必填 |
+| `LANGSMITH_API_KEY` | LangSmith/Studio 连接与追踪密钥 | 仅运行普通 FastAPI 时可以留空 |
+| `AGENT_CONFIG_PATH` | Agent Provider、模型、温度等配置文件路径 | 使用 `config/agents.yaml` |
+| `PATENT_TUTOR_MYSQL_URL` | MySQL 用户、密码、地址、端口和 database | 必须指向 MySQL 8.0+ 的 `patent_tutor` |
+| `PATENT_TUTOR_MYSQL_POOL_SIZE` | FastAPI 最多保留的 MySQL 连接数 | 本地使用 `5` |
+| `PATENT_TUTOR_MYSQL_CONNECT_TIMEOUT` | 建立 MySQL 连接的超时秒数 | 本地使用 `5` |
+| `PATENT_TUTOR_MYSQL_AUTO_MIGRATE` | 首次数据库操作时是否自动执行待应用迁移 | 本地可用 `true`，生产建议部署阶段迁移后设为 `false` |
+| `ARTIFACT_ROOT` | Markdown、manifest 的根目录 | 使用 `artifacts` |
+| `WORKFLOW_LOG_ROOT` | `workflow.log.jsonl` 的根目录 | 使用 `artifacts` |
+| `RAG_RETRIEVAL_MODE` | `real` 使用 Milvus Lite+BGE-M3；`mock` 使用固定演示片段 | 不验证真实 RAG 时使用 `mock` |
+| `RAG_EMBEDDING_MODEL_PATH` | 本机完整 BGE-M3 模型目录 | `real` 模式且模型已下载时填写 |
+| `PATENT_TUTOR_SESSION_TTL_SECONDS` | 已结束会话在进程内存中的保留时间 | 默认 `3600` |
+| `PATENT_TUTOR_CORS_ORIGINS` | 允许浏览器跨域访问的前端 Origin，逗号分隔 | 没有独立前端时留空 |
+| `PATENT_TUTOR_CORS_ALLOW_CREDENTIALS` | 跨域请求是否允许 Cookie/认证信息 | 当前演示使用 `false` |
+| `PATENT_TUTOR_ENV` | 运行环境标签：development/test/production | 本地使用 `development` |
+
+`PATENT_TUTOR_MYSQL_URL` 示例：
+
+```env
+PATENT_TUTOR_MYSQL_URL=mysql://patent_tutor:your-password@127.0.0.1:3306/patent_tutor
+```
+
+其结构是：
+
+```text
+mysql://用户名:密码@MySQL主机:端口/database
+```
+
+`.env` 只保存机器本地配置和密钥，不得提交到 Git。
+
+### 0.2 对正在运行的服务执行完整业务流程
 
 先配置 MySQL 和 LLM Provider，并在第一个终端启动 FastAPI：
 
@@ -19,13 +58,34 @@ uv run pytest backend/tests/unit/test_learning_flow_api.py::test_reproducible_qu
 uv run python backend/main.py
 ```
 
-在第二个终端运行真实 HTTP 演示脚本：
+在第二个终端执行 PowerShell 启动脚本：
+
+```powershell
+.\scripts\run-api-journey.ps1
+```
+
+指定学员、答错分支或提交题目数量：
+
+```powershell
+.\scripts\run-api-journey.ps1 `
+  -LearnerId dbeaver-demo-002 `
+  -AnswerMode incorrect `
+  -MaxExercises 2
+```
+
+如果 PowerShell 执行策略阻止本地脚本，可以只对本次进程使用：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run-api-journey.ps1
+```
+
+启动脚本内部等价于：
 
 ```powershell
 uv run python backend/scripts/run_api_journey.py `
   --base-url http://127.0.0.1:8000 `
   --learner-id dbeaver-demo-001 `
-  --output-json artifacts/api-journey-result.json
+  --output-json artifacts/api-journey-dbeaver-demo-001.json
 ```
 
 脚本会依次访问：
@@ -51,6 +111,10 @@ GET  /learners/{learner_id}/sessions
 `observed_correct`，因此会真实经过服务端判题、`attempts` 幂等写入和 BKT 更新。默认提交正确答案；
 可使用 `--answer-mode incorrect` 验证答错分支。使用 `--help` 查看超时、轮询间隔、题目数量和自定义
 问卷 JSON 等全部参数。
+
+默认问卷回答为 Q1-Q22、Q47 和 Q48。脚本会读取问卷接口返回的完整 Markdown，从中提取
+`**Q数字**` 格式的题号，并在提交前确认 24 条回答都能匹配当前问卷；它不会根据题目内容自动猜答案，
+实际提交值来自脚本中的 `DEFAULT_QUESTIONNAIRE_RESPONSES`。
 
 该脚本访问真实运行服务，会产生真实 MySQL 和 Artifact 数据；它不是使用临时数据库的单元测试。
 

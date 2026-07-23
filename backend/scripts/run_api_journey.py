@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 import hashlib
 import json
 from pathlib import Path
+import re
 import sys
 import time
 from typing import Any
@@ -20,10 +21,42 @@ import httpx
 TERMINAL_STATUSES = {"completed", "failed", "canceled"}
 DEFAULT_QUESTIONNAIRE_RESPONSES: list[dict[str, Any]] = [
     {"question_id": "Q1", "answer": "B"},
-    {"question_id": "Q2", "answer": "D"},
-    {"question_id": "Q23", "answer": "B"},
-    {"question_id": "Q31", "answer": "D"},
-    {"question_id": "Q47", "answer": "希望结合案例系统学习专利新颖性。"},
+    {"question_id": "Q2", "answer": "C"},
+    {"question_id": "Q3", "answer": "D"},
+    {"question_id": "Q4", "answer": "A"},
+    {"question_id": "Q5", "answer": "B"},
+    {"question_id": "Q6", "answer": "C"},
+    {"question_id": "Q7", "answer": "B"},
+    {"question_id": "Q8", "answer": "C"},
+    {"question_id": "Q9", "answer": "A"},
+    {"question_id": "Q10", "answer": "A"},
+    {"question_id": "Q11", "answer": "C"},
+    {"question_id": "Q12", "answer": "B"},
+    {"question_id": "Q13", "answer": "C"},
+    {"question_id": "Q14", "answer": "B"},
+    {"question_id": "Q15", "answer": "A"},
+    {"question_id": "Q16", "answer": "C"},
+    {"question_id": "Q17", "answer": "D"},
+    {"question_id": "Q18", "answer": "A"},
+    {"question_id": "Q19", "answer": "D"},
+    {"question_id": "Q20", "answer": "A"},
+    {"question_id": "Q21", "answer": "B"},
+    {"question_id": "Q22", "answer": "B"},
+    {
+        "question_id": "Q47",
+        "answer": (
+            "我从事商标与著作权管理已近四年，流程层面比较熟悉，但专利对我而言属于全新领域。"
+            "当前最大的盲区在于技术性判断，例如创造性的把握尺度、权利要求中\"必要技术特征\""
+            "的界定，这些概念仅从定义层面难以真正理解。"
+        ),
+    },
+    {
+        "question_id": "Q48",
+        "answer": (
+            "建议将专利与商标、著作权在申请流程与保护范围上作对比讲解，有助于我在已有认知框架"
+            "内建立专利的整体概念，也为后续统筹企业知识产权运营积累基础。"
+        ),
+    },
 ]
 
 
@@ -58,8 +91,15 @@ class ApiJourney:
 
         self._step("3", "读取新学员问卷")
         questionnaire = self._request_json("GET", "/questionnaires/onboarding")
+        question_ids = _validate_questionnaire_responses(
+            questionnaire, self.config.questionnaire_responses
+        )
         print(
             f"    问卷：{questionnaire.get('id')}，版本：{questionnaire.get('version')}"
+        )
+        print(
+            f"    已读取 Markdown 中的 {len(question_ids)} 个题号；"
+            f"本次 {len(self.config.questionnaire_responses)} 条回答均已匹配。"
         )
 
         learner_path = quote(self.config.learner_id, safe="")
@@ -148,6 +188,8 @@ class ApiJourney:
             "course_session_id": course_session_id,
             "feedback_session_id": feedback_session_id,
             "questionnaire_version": questionnaire.get("version"),
+            "questionnaire_question_count": len(question_ids),
+            "questionnaire_response_count": len(self.config.questionnaire_responses),
             "submitted_question_ids": [
                 item["question_id"] for item in exercise_responses
             ],
@@ -350,6 +392,37 @@ def _response_error(method: str, path: str, response: httpx.Response) -> str:
     return f"{method} {path} -> HTTP {response.status_code}: {detail}"
 
 
+def _validate_questionnaire_responses(
+    questionnaire: dict[str, Any], responses: list[dict[str, Any]]
+) -> list[str]:
+    markdown = questionnaire.get("markdown")
+    if not isinstance(markdown, str) or not markdown.strip():
+        raise JourneyError("问卷接口没有返回非空 markdown 正文。")
+    question_ids = re.findall(r"(?m)^\*\*(Q\d+)\*\*", markdown)
+    if not question_ids:
+        raise JourneyError("无法从问卷 Markdown 中解析任何 **Q数字** 格式的题号。")
+    available = set(question_ids)
+    submitted = [str(item.get("question_id") or "") for item in responses]
+    duplicates = sorted({qid for qid in submitted if submitted.count(qid) > 1})
+    if duplicates:
+        raise JourneyError(f"问卷回答包含重复题号：{', '.join(duplicates)}")
+    missing = sorted(
+        (qid for qid in submitted if qid not in available),
+        key=_question_number,
+    )
+    if missing:
+        raise JourneyError(
+            "以下回答在当前问卷 Markdown 中找不到对应问题："
+            f"{', '.join(missing)}"
+        )
+    return question_ids
+
+
+def _question_number(question_id: str) -> int:
+    match = re.fullmatch(r"Q(\d+)", question_id)
+    return int(match.group(1)) if match else sys.maxsize
+
+
 def _load_questionnaire_responses(path: Path | None) -> list[dict[str, Any]]:
     if path is None:
         return [dict(item) for item in DEFAULT_QUESTIONNAIRE_RESPONSES]
@@ -379,7 +452,12 @@ def _parser() -> argparse.ArgumentParser:
         default=None,
         help="Defaults to api-demo-<UTC timestamp> so every run is easy to locate in MySQL.",
     )
-    parser.add_argument("--learning-goal", default="系统掌握专利新颖性判断")
+    parser.add_argument(
+        "--learning-goal",
+        default=(
+            "在商标与著作权经验基础上，系统理解专利申请流程、保护范围、创造性与权利要求判断"
+        ),
+    )
     parser.add_argument(
         "--questionnaire-responses",
         type=Path,

@@ -8,14 +8,47 @@ import pytest
 
 from backend.scripts.run_api_journey import (
     ApiJourney,
+    DEFAULT_QUESTIONNAIRE_RESPONSES,
     JourneyConfig,
     JourneyError,
     _artifact_api_path,
     _build_exercise_responses,
+    _validate_questionnaire_responses,
 )
 
 
 pytestmark = pytest.mark.unit
+
+
+def test_default_questionnaire_answers_match_requested_profile() -> None:
+    answers = {
+        str(item["question_id"]): item["answer"]
+        for item in DEFAULT_QUESTIONNAIRE_RESPONSES
+    }
+
+    assert list(answers) == [*(f"Q{index}" for index in range(1, 23)), "Q47", "Q48"]
+    assert answers["Q2"] == "C"
+    assert answers["Q6"] == "C"
+    assert answers["Q22"] == "B"
+    assert "商标与著作权管理已近四年" in str(answers["Q47"])
+    assert "专利与商标、著作权" in str(answers["Q48"])
+
+
+def test_questionnaire_responses_are_validated_against_markdown() -> None:
+    questionnaire = {"markdown": "**Q1** 第一题\n\n**Q47** 开放题"}
+
+    assert _validate_questionnaire_responses(
+        questionnaire,
+        [
+            {"question_id": "Q1", "answer": "B"},
+            {"question_id": "Q47", "answer": "说明"},
+        ],
+    ) == ["Q1", "Q47"]
+
+    with pytest.raises(JourneyError, match="Q48"):
+        _validate_questionnaire_responses(
+            questionnaire, [{"question_id": "Q48", "answer": "期望"}]
+        )
 
 
 def test_artifact_api_path_removes_storage_prefix() -> None:
@@ -85,7 +118,7 @@ def test_api_journey_calls_complete_rest_flow() -> None:
                 {
                     "id": "patent-tutor-onboarding",
                     "version": "1.0.0",
-                    "markdown": "# questionnaire",
+                    "markdown": "# questionnaire\n\n**Q1** Demo question",
                 },
             )
         if request.method == "POST" and path.endswith("/questionnaire-responses"):
