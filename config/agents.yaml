@@ -14,8 +14,8 @@
 
 llm:
   default_provider: deepseek
-  timeout_seconds: 90
-  retry_times: 3
+  timeout_seconds: 300
+  retry_times: 1
 
 providers:
   deepseek:
@@ -33,7 +33,7 @@ agents:
     provider: deepseek
     temperature: 0.0
   diagnosis_feedback:
-    provider: glm
+    provider: qwen
     temperature: 0.5
   expert_a:
     provider: deepseek
@@ -47,7 +47,7 @@ agents:
     tool_temperature: 0.3
     top_k: 5
   judge:
-    provider: glm
+    provider: qwen
     temperature: 0.0
   chat_answer:
     provider: qwen

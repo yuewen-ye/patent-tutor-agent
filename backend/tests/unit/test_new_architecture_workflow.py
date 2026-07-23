@@ -216,7 +216,16 @@ def test_diagnosis_receives_questionnaire_responses() -> None:
                 "events": [],
                 "diagnosis_feedback_phase": "diagnosis",
                 "input_payload": {
-                    "questionnaire_responses": [{"question_id": "Q01", "answer": "零基础"}]
+                    "questionnaire_responses": [{"question_id": "Q01", "answer": "B"}],
+                    "questionnaire_context": [
+                        {
+                            "question_id": "Q01",
+                            "question": "是否接触过专利法？",
+                            "options": {"A": "系统学习过", "B": "零基础"},
+                            "answer": "B",
+                            "selected_option": "零基础",
+                        }
+                    ],
                 },
             },
         )
@@ -224,6 +233,7 @@ def test_diagnosis_receives_questionnaire_responses() -> None:
 
     prompt_text = "\n".join(message.content or "" for message in llm.messages)
     assert "Q01" in prompt_text
+    assert "是否接触过专利法" in prompt_text
     assert "零基础" in prompt_text
 
 
@@ -254,6 +264,81 @@ def test_diagnosis_normalizes_unknown_level_to_beginner() -> None:
 
     assert result["learner_profile"]["knowledge_level"] == "beginner"
     assert result["learner_profile"]["weak_points"] == ["新颖性"]
+
+
+def test_diagnosis_completes_unobserved_knowledge_nodes_with_cold_start_prior() -> None:
+    class PartialKnowledgeLLM(PhaseLLMClient):
+        def generate_json(
+            self, messages: list[LLMMessage], temperature: float, agent: str | None = None
+        ) -> object:
+            return {
+                "education_background": "知识产权管理经验",
+                "knowledge_level": "beginner",
+                "learning_style": "case_first_then_rule",
+                "weak_points": ["创造性"],
+                "learning_goal": "学习创造性判断",
+                "confidence": 0.6,
+                "five_dimensions": {
+                    "knowledge": {
+                        "inventive-step": {
+                            "pl": 0.2,
+                            "ci_low": 0.08,
+                            "ci_high": 0.38,
+                            "observations": 2,
+                            "low_confidence": True,
+                        }
+                    },
+                    "cognition": {
+                        "remember": 0.6,
+                        "understand": 0.5,
+                        "apply": 0.3,
+                        "analyze": 0.2,
+                        "evaluate": 0.1,
+                        "create": 0.05,
+                    },
+                    "style": {
+                        "perception": {"chosen": "sensing", "strength": 0.7},
+                        "input": {"chosen": "verbal", "strength": 0.6},
+                        "processing": {"chosen": "reflective", "strength": 0.6},
+                        "understanding": {"chosen": "sequential", "strength": 0.7},
+                    },
+                    "progress": {
+                        "completed_nodes": [],
+                        "current_node": "inventive-step",
+                        "pending_nodes": [],
+                        "overall_completion_ratio": 0.0,
+                    },
+                    "affect": {
+                        "primary_state": "interested",
+                        "confidence": 0.6,
+                        "signals": ["主动描述学习需求"],
+                    },
+                },
+            }
+
+    result = build_diagnosis_feedback_node(PartialKnowledgeLLM())(
+        cast(
+            StateDict,
+            {
+                "session_id": "partial-knowledge",
+                "user_input": "学习创造性判断",
+                "events": [],
+                "diagnosis_feedback_phase": "diagnosis",
+                "input_payload": {"questionnaire_responses": []},
+            },
+        )
+    )
+
+    knowledge = result["learner_profile"]["five_dimensions"]["knowledge"]
+    assert len(knowledge) == 69
+    assert knowledge["inventive-step"]["pl"] == 0.2
+    assert knowledge["novelty"] == {
+        "pl": 0.15,
+        "ci_low": 0.02,
+        "ci_high": 0.4,
+        "observations": 0,
+        "low_confidence": True,
+    }
 
 
 def test_experts_run_concurrently_in_draft_review_and_revision(

@@ -28,6 +28,8 @@ POST /sessions/{course_session_id}/exercise-responses
 
 `diagnosis_feedback` 是一个多阶段 Agent 节点，通过 `diagnosis_feedback_phase` 在诊断和反馈阶段重入。专家 A、B 也各自只有一个 Agent，通过 `expert_phase` 在草稿、互评和修订阶段重入；三个阶段都并行执行，由 `_experts_barrier` 等待双方完成并推进阶段。整合阶段只运行专家 A。Judge 通过时课程会话结束，等待学员提交练习；Judge 不通过时回到 Expert A integration 重新整合并再次审核，直到通过。学员反馈只在提交练习后创建的独立 feedback 会话中生成。
 
+新学员问卷在服务层被解析为题目正文、选项、学员答案和已选选项正文后再交给诊断 Agent，原始回答仍保留用于审计。为避免真实模型生成 69 个重复冷启动节点造成长响应，诊断 Agent 只估计有证据的知识节点，反馈 Agent 只返回本轮变化节点；后端依据静态知识 DAG 确定性补齐或沿用其余节点，最终状态仍是完整知识快照。
+
 ## 2. 路径与混淆轴
 
 - 知识轴来自 `backend/app/curriculum/data/knowledge-dag.json`。

@@ -100,11 +100,17 @@ def create_learning_flow_router(session_service: SessionService) -> APIRouter:
     def submit_questionnaire(
         learner_id: str, request: QuestionnaireSubmission
     ) -> SessionCreatedResponse:
-        record = session_service.create_course_from_questionnaire(
-            learner_id=learner_id,
-            learning_goal=request.learning_goal,
-            responses=[item.model_dump() for item in request.responses],
-        )
+        try:
+            record = session_service.create_course_from_questionnaire(
+                learner_id=learner_id,
+                learning_goal=request.learning_goal,
+                responses=[item.model_dump() for item in request.responses],
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=str(exc),
+            ) from exc
         return SessionCreatedResponse(session_id=record.session_id, status=record.status)
 
     @router.post(

@@ -39,12 +39,60 @@ _KNOWLEDGE_LEVEL_ALIASES = {
 
 
 def _kc_node_ids() -> list[str]:
-    """知识图全部 KC 节点 id（供诊断 Agent 在 knowledge 维度逐一输出 P(L) 锚点）。"""
+    """Return every valid KC node id from the static knowledge graph."""
     try:
         nodes = load_knowledge_dag().get("nodes", [])
     except Exception:
         return []
     return [n["node_id"] for n in nodes if isinstance(n, dict) and n.get("node_id")]
+
+
+def _kc_node_name_aliases() -> dict[str, str]:
+    try:
+        nodes = load_knowledge_dag().get("nodes", [])
+    except Exception:
+        return {}
+    return {
+        str(node["node_name"]): str(node["node_id"])
+        for node in nodes
+        if isinstance(node, dict) and node.get("node_id") and node.get("node_name")
+    }
+
+
+def _complete_knowledge_snapshot(
+    payload: object,
+    *,
+    base_knowledge: object = None,
+) -> object:
+    """Fill omitted KC states deterministically while preserving observed model estimates."""
+
+    if not isinstance(payload, dict):
+        return payload
+    five_dimensions = payload.get("five_dimensions")
+    if not isinstance(five_dimensions, dict):
+        return payload
+
+    node_ids = _kc_node_ids()
+    valid_ids = set(node_ids)
+    name_aliases = _kc_node_name_aliases()
+    default_state = {
+        "pl": 0.15,
+        "ci_low": 0.02,
+        "ci_high": 0.40,
+        "observations": 0,
+        "low_confidence": True,
+    }
+    completed = {node_id: dict(default_state) for node_id in node_ids}
+    for source in (base_knowledge, five_dimensions.get("knowledge")):
+        if not isinstance(source, dict):
+            continue
+        for raw_node_id, state in source.items():
+            node_id = str(raw_node_id)
+            normalized_id = node_id if node_id in valid_ids else name_aliases.get(node_id)
+            if normalized_id is not None and isinstance(state, dict):
+                completed[normalized_id] = state
+    five_dimensions["knowledge"] = completed
+    return payload
 
 
 def _normalize_learner_profile_payload(raw: object) -> object:
@@ -68,7 +116,7 @@ def _normalize_learner_profile_payload(raw: object) -> object:
     weak_points = normalized.get("weak_points")
     if isinstance(weak_points, str):
         normalized["weak_points"] = [weak_points] if weak_points else []
-    return normalized
+    return _complete_knowledge_snapshot(normalized)
 
 
 def build_diagnosis_phase_node(llm_client: LLMClient) -> Node:
@@ -92,12 +140,13 @@ def build_diagnosis_phase_node(llm_client: LLMClient) -> Node:
             (
                 "user",
                 "当前学习需求：{user_input}\n"
-                "新学员问卷回答：{questionnaire_responses}\n"
+                "新学员问卷题目、选项和回答：{questionnaire_context}\n"
                 "历史学习者画像：{historical_profiles}\n"
-                "知识图全部 KC 节点（你须在 knowledge 维度**逐一**输出每个节点的 P(L) 估计；"
-                "未作答节点统一用 P(L₀)=0.15、置信区间 [0.02, 0.40]、observations=0、low_confidence=true）：\n"
+                "知识图合法 KC 节点 id（knowledge 只输出有问卷或历史证据的节点；"
+                "其余节点由后端按 P(L₀)=0.15 的冷启动先验补齐）：\n"
                 "{kc_node_ids}\n\n"
-                "请综合问卷、历史数据与上述 KC 节点，诊断学习者画像（须含完整 five_dimensions）。",
+                "请综合问卷与历史数据诊断学习者画像。须含完整 five_dimensions，"
+                "但 knowledge 不要重复输出没有观测证据的节点。",
             ),
         ]
     )
@@ -107,14 +156,15 @@ def build_diagnosis_phase_node(llm_client: LLMClient) -> Node:
     ) -> dict[str, Any]:
         memories = load_profile_memories(runtime)
         historical_profiles = json.dumps(memories, ensure_ascii=False) if memories else "无"
+        input_payload = state.get("input_payload", {})
+        questionnaire_context = input_payload.get("questionnaire_context") or input_payload.get(
+            "questionnaire_responses", []
+        )
         raw = llm_client.generate_json(
             messages_from_prompt(
                 prompt,
                 user_input=state["user_input"],
-                questionnaire_responses=json.dumps(
-                    state.get("input_payload", {}).get("questionnaire_responses", []),
-                    ensure_ascii=False,
-                ),
+                questionnaire_context=json.dumps(questionnaire_context, ensure_ascii=False),
                 historical_profiles=historical_profiles,
                 kc_node_ids="\n".join(f"- {n}" for n in _kc_node_ids()) or "（知识图未加载）",
             ),
@@ -153,10 +203,11 @@ def build_feedback_phase_node(llm_client: LLMClient) -> Node:
                 "当前学习需求：{user_input}\n"
                 "初始学习者画像：{learner_profile}\n"
                 "裁判报告：{judge_report}\n"
-                "知识图全部 KC 节点（回传 five_dimensions 时，knowledge 维度须**逐一**覆盖以下每个节点；"
-                "本轮未变化的节点沿用既有 P(L)，变化的节点更新）：\n"
+                "知识图合法 KC 节点 id（knowledge 只输出本轮有证据发生变化的节点；"
+                "其余节点由后端沿用既有 P(L)）：\n"
                 "{kc_node_ids}\n\n"
-                "请作为 feedback 阶段，生成本轮反馈闭环建议（含完整 five_dimensions 快照）。",
+                "请作为 feedback 阶段生成本轮反馈闭环建议。须含 five_dimensions 的五个维度，"
+                "knowledge 不要重复输出未变化节点。",
             ),
         ]
     )
@@ -177,7 +228,14 @@ def build_feedback_phase_node(llm_client: LLMClient) -> Node:
             temperature=agent_temperature("diagnosis_feedback", 0.5),
             agent="diagnosis_feedback",
         )
-        feedback = FeedbackResult.model_validate(raw)
+        base_knowledge = (
+            current_profile.get("five_dimensions", {}).get("knowledge", {})
+            if isinstance(current_profile.get("five_dimensions"), dict)
+            else {}
+        )
+        feedback = FeedbackResult.model_validate(
+            _complete_knowledge_snapshot(raw, base_knowledge=base_knowledge)
+        )
         feedback_dict = feedback.model_dump()
         updated_profile = current_profile
         updated_profile["profile_update_hint"] = feedback.profile_update_hint

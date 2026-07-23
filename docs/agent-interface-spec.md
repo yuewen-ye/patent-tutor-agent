@@ -71,7 +71,9 @@ Judge 的 `decision` 是图分支条件。`accept` 和 `accept_with_minor_revisi
 
 ## 4. 画像与路径合同
 
-`diagnosis_feedback[diagnosis]` 必须把 `input_payload.questionnaire_responses` 和 Store 历史画像共同传入模型。成功后保存画像快照。
+问卷提交进入服务层后，原始 `input_payload.questionnaire_responses` 保留用于审计；服务层根据版本化问卷定义生成 `input_payload.questionnaire_context`，为每条回答补充题目正文、选项和已选选项正文。`diagnosis_feedback[diagnosis]` 必须优先把该上下文和 Store 历史画像共同传入模型，旧会话缺少上下文时才回退到原始回答。
+
+模型只返回有问卷或历史证据的 `five_dimensions.knowledge` 节点。诊断节点按静态知识 DAG 将未返回节点确定性补为冷启动先验 `P(L₀)=0.15`、区间 `[0.02, 0.40]`、`observations=0`、`low_confidence=true`，再校验并保存完整画像快照。反馈阶段只让模型返回本轮变化节点，后端沿用旧值并补齐完整快照。
 
 Planner 必须：
 

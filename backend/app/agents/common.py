@@ -286,6 +286,19 @@ def normalize_expert_draft_payload(raw: object) -> object:
                         iq["question"] = iq.pop("stem")
                     else:
                         iq.pop("stem")
+                # Qwen may copy assessment-only trace fields into interactive questions.
+                # Keep the KC reference through the contract field and remove only the
+                # known redundant evidence fields; unknown extras still fail validation.
+                if "kcNodeId" in iq and not iq.get("kc_node_id"):
+                    iq["kc_node_id"] = iq.pop("kcNodeId")
+                if "sourceTag" in iq and not iq.get("source_tag"):
+                    iq["source_tag"] = iq.pop("sourceTag")
+                if "kc" in iq:
+                    if not iq.get("kc_node_id"):
+                        iq["kc_node_id"] = iq["kc"]
+                    iq.pop("kc")
+                iq.pop("source", None)
+                iq.pop("evidence", None)
                 # 题型口径归一化：category/difficulty/source_tag 中英文→规范枚举
                 if "category" in iq:
                     iq["category"] = _norm_category(iq["category"])

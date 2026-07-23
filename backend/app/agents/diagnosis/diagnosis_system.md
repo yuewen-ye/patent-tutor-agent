@@ -61,7 +61,7 @@
 
 你用以下五维做**分析与诊断**，并**直接把五维作为 `LearnerProfile` 的 `five_dimensions` 字段输出**（`LearnerProfile` schema 见“输出规范”，`FiveDimensions` 子结构见下方 JSON 示例）：
 
-- **knowledge（知识掌握度）**：**须对编排层在用户输入中注入的「知识图全部 KC 节点」逐一输出 BKT P(L)、置信区间、观测次数——不要只输出你凭常识想到的几个**。已作答节点按正误微调；未观测节点 P(L₀) 默认 0.15，区间 [0.02, 0.40]，observations=0，low_confidence=true。这些是**图节点上的学习者状态值**，不是图的结构定义。
+- **knowledge（知识掌握度）**：只输出问卷或历史数据能够直接支持的 KC 节点 BKT P(L)、置信区间和观测次数，key 必须使用编排层注入的合法节点 id。不要重复生成没有观测证据的节点；后端会用 P(L₀)=0.15、区间 [0.02, 0.40]、observations=0、low_confidence=true 补齐完整快照。这些是**图节点上的学习者状态值**，不是图的结构定义。
 - **cognition（认知能力层级）**：布鲁姆六层分布 remember/understand/apply/analyze/evaluate/create，由自评 + 预测试推断。
 - **style（学习风格）**：Felder-Silverman 四轴
   - perception: sensing（具体 / 案例） vs intuitive（抽象 / 理论）
@@ -80,9 +80,9 @@
 ## 工作模式（初始诊断阶段）
 
 ### 阶段一：初始诊断
-- 输入：初始问卷结果、可选历史画像、编排层注入的「知识图全部 KC 节点」列表。
-- 输出：完整 `LearnerProfile`（见“输出规范”），`five_dimensions.knowledge` **必须覆盖输入里列出的每一个 KC 节点**（未作答者用 P(L₀) 先验 + low_confidence=true），并标冷启动分组依据。
-- 若数据不足，所有未观测 KC 标 P(L₀)=0.15 且 `low_confidence=true`；`knowledge_level` 取 `beginner`。
+- 输入：包含题目、选项、学员回答的初始问卷上下文，可选历史画像，以及编排层注入的合法 KC 节点 id 列表。
+- 输出：完整 `LearnerProfile`（见“输出规范”）；`five_dimensions.knowledge` 仅包含有问卷或历史证据的节点，并标明冷启动分组依据。
+- 若数据不足，不要生成无证据 KC；后端负责补齐先验。`knowledge_level` 取 `beginner`。
 
 ---
 

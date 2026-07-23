@@ -98,6 +98,37 @@ def test_expert_draft_normalization_drops_redundant_stem_field() -> None:
     assert "stem" not in iqs[2]
 
 
+def test_expert_draft_normalization_cleans_assessment_fields_from_questions() -> None:
+    normalized = normalize_expert_draft_payload(
+        {
+            "interactive_questions": [
+                {
+                    "qid": "q1",
+                    "category": "apply",
+                    "difficulty": "L2",
+                    "question": "该方法能否授予专利权？",
+                    "answer": "不能",
+                    "kc": "non-patentable-subject",
+                    "source": "《专利法》第二十五条",
+                    "evidence": "属于疾病诊断方法",
+                }
+            ]
+        }
+    )
+
+    assert isinstance(normalized, dict)
+    assert normalized["interactive_questions"] == [
+        {
+            "qid": "q1",
+            "category": "apply",
+            "difficulty": "L2",
+            "question": "该方法能否授予专利权？",
+            "answer": "不能",
+            "kc_node_id": "non-patentable-subject",
+        }
+    ]
+
+
 def test_expert_draft_normalization_drops_block_plan_legal_anchor_flag() -> None:
     # 真实 LLM 在 integration 阶段把 legal_anchor 当布尔标志塞进 block_plan.blocks[]，
     # 而它其实是 block_type 的合法取值、不是 block 顶层字段 → extra="forbid" 会拒收。

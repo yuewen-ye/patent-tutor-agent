@@ -27,7 +27,10 @@ from backend.app.core.llm import (
 from backend.app.runtime_outputs.artifacts import write_manifest, write_process_markdown
 from backend.app.graph.workflow import arun_workflow
 from backend.app.learner_memory.memory import learner_memory_snapshot
-from backend.app.onboarding.questionnaire import onboarding_questionnaire
+from backend.app.onboarding.questionnaire import (
+    onboarding_questionnaire,
+    resolve_questionnaire_responses,
+)
 from backend.app.schemas.state import StateDict
 from backend.app.services.artifact_paths import InvalidArtifactPathError, normalize_artifact_path
 from backend.app.services.cancellation import CancelAwareLLMClient, SessionCancelled
@@ -150,7 +153,10 @@ class SessionService:
             user_input=learning_goal,
             learner_id=learner_id,
             workflow_mode="teach",
-            input_payload={"questionnaire_responses": responses},
+            input_payload={
+                "questionnaire_responses": responses,
+                "questionnaire_context": resolve_questionnaire_responses(responses),
+            },
             start_immediately=False,
         )
         save_onboarding = getattr(self._store, "save_onboarding_response", None)

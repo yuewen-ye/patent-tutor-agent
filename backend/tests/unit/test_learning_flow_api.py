@@ -295,7 +295,7 @@ def test_questionnaire_submission_is_persisted_before_course_session(
         "/learners/learner-1/questionnaire-responses",
         json={
             "learning_goal": "掌握专利新颖性",
-            "responses": [{"question_id": "Q01", "answer": "零基础"}],
+            "responses": [{"question_id": "Q1", "answer": "B"}],
         },
     )
 
@@ -303,7 +303,7 @@ def test_questionnaire_submission_is_persisted_before_course_session(
     assert response.json() == {"session_id": "course-session", "status": "running"}
     history = service.learner_memory("learner-1")["history"]
     assert history[0]["event_type"] == "questionnaire_submitted"
-    assert history[0]["responses"][0]["question_id"] == "Q01"
+    assert history[0]["responses"][0]["question_id"] == "Q1"
 
 
 def test_exercise_submission_creates_separate_feedback_session(
