@@ -412,6 +412,12 @@ def test_feedback_mode_reuses_diagnosis_feedback_and_skips_course_agents(
                 "questionnaire": ["为什么选择该答案？"],
                 "next_action": "复习单独对比原则",
                 "profile_update_hint": "新颖性判断已改善",
+                "bkt_update": {
+                    "skill_id": "novelty",
+                    "observed_correct": True,
+                    "error_pattern": "none",
+                    "confidence": 0.9,
+                },
                 "five_dimensions": {"knowledge": {"novelty": {"pl": 0.3, "ci_low": 0.15, "ci_high": 0.5, "observations": 3, "low_confidence": False}}, "cognition": {"remember": 0.8, "understand": 0.6, "apply": 0.4, "analyze": 0.3, "evaluate": 0.2, "create": 0.1}, "style": {"perception": {"chosen": "sensing", "strength": 0.7}, "input": {"chosen": "visual", "strength": 0.6}, "processing": {"chosen": "active", "strength": 0.55}, "understanding": {"chosen": "sequential", "strength": 0.65}}, "progress": {"completed_nodes": ["patent-law-basic"], "current_node": "novelty-basic", "pending_nodes": ["inventiveness"], "avg_time_per_node_min": 22, "overall_completion_ratio": 0.3}, "affect": {"primary_state": "interested", "confidence": 0.6, "signals": ["主动提问"]}},
             }
 
@@ -444,6 +450,7 @@ def test_feedback_mode_reuses_diagnosis_feedback_and_skips_course_agents(
     assert "grading_report" in state
     assert state["workflow_status"] == "completed"
     assert state["grading_report"][0]["question_id"] == "q1"
+    assert state["feedback_result"]["bkt_update"]["error_pattern"] is None
     root = artifact_root / "sessions" / "feedback-1" / "feedback"
     assert (root / "feedback_report.md").is_file()
     assert (root / "grading_report.md").is_file()

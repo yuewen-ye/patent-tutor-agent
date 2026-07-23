@@ -36,6 +36,22 @@ _KNOWLEDGE_LEVEL_ALIASES = {
     "high": "advanced",
     "高级": "advanced",
 }
+_NO_ERROR_PATTERN_ALIASES = {
+    "",
+    "none",
+    "null",
+    "n/a",
+    "na",
+    "no_error",
+    "no-error",
+    "no error",
+    "not_applicable",
+    "not applicable",
+    "无",
+    "无错误",
+    "没有错误",
+    "不适用",
+}
 
 
 def _kc_node_ids() -> list[str]:
@@ -117,6 +133,41 @@ def _normalize_learner_profile_payload(raw: object) -> object:
     if isinstance(weak_points, str):
         normalized["weak_points"] = [weak_points] if weak_points else []
     return _complete_knowledge_snapshot(normalized)
+
+
+def _normalize_feedback_payload(raw: object) -> object:
+    """Normalize known provider variants without weakening the feedback contract."""
+
+    normalized = normalize_key_aliases(
+        raw,
+        {
+            "teachingEvaluation": "teaching_evaluation",
+            "nextAction": "next_action",
+            "profileUpdateHint": "profile_update_hint",
+            "fiveDimensions": "five_dimensions",
+            "bktUpdate": "bkt_update",
+        },
+    )
+    if not isinstance(normalized, dict):
+        return normalized
+    bkt_update = normalize_key_aliases(
+        normalized.get("bkt_update"),
+        {
+            "skillId": "skill_id",
+            "observedCorrect": "observed_correct",
+            "errorPattern": "error_pattern",
+        },
+    )
+    if not isinstance(bkt_update, dict):
+        return normalized
+    error_pattern = bkt_update.get("error_pattern")
+    if (
+        isinstance(error_pattern, str)
+        and error_pattern.strip().casefold() in _NO_ERROR_PATTERN_ALIASES
+    ):
+        bkt_update["error_pattern"] = None
+    normalized["bkt_update"] = bkt_update
+    return normalized
 
 
 def build_diagnosis_phase_node(llm_client: LLMClient) -> Node:
@@ -234,7 +285,10 @@ def build_feedback_phase_node(llm_client: LLMClient) -> Node:
             else {}
         )
         feedback = FeedbackResult.model_validate(
-            _complete_knowledge_snapshot(raw, base_knowledge=base_knowledge)
+            _complete_knowledge_snapshot(
+                _normalize_feedback_payload(raw),
+                base_knowledge=base_knowledge,
+            )
         )
         feedback_dict = feedback.model_dump()
         updated_profile = current_profile

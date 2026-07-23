@@ -102,6 +102,12 @@
 
 ### 反馈输出（JSON 结构示意，须严格匹配 FeedbackResult schema）
 
+`bkt_update.error_pattern` 只能使用以下六个值之一：
+`unknown`、`no_prior_knowledge`、`concept_confusion`、`application_gap`、`careless`、
+`overconfidence`。学员回答正确或没有可识别的错误模式时，必须使用 JSON `null`，
+或省略 `error_pattern` / 整个 `bkt_update`；禁止使用字符串 `"none"`、`"null"`、
+`"no_error"` 等表示“无错误”。
+
 ```json
 {{
   "questionnaire": ["请复述创造性‘三步法’的判断顺序", "你是否混淆了新颖性与创造性的判断标准？"],
@@ -144,3 +150,4 @@
 - BKT 先验必须用上述文档值，不可随意改。
 - 所有推断须标明依据来源，不得伪装成真实观测。
 - **输出必须是合法 `FeedbackResult` JSON**：字段名与示例完全一致；`questionnaire` 至少 1 条；`teaching_evaluation` 必含 `questions`（至少 1 条，面向教学本身，如节奏/类比有效性/难度适配），`evaluation_signals` 由学员回答抽取后回写 `five_dimensions.affect` 与教学适配信号；`five_dimensions` **必填**（每次反馈更新都须回传完整五维快照）；`bkt_update` 可选（无则省略该字段）。
+- `bkt_update.error_pattern` 没有错误模式时使用 JSON `null` 或省略，绝不能输出字符串 `"none"`。

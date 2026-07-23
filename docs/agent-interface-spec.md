@@ -88,6 +88,10 @@ Planner 必须：
 - `agent_output_json_schemas()` 只导出实际使用 JSON 模式的合同：诊断、反馈、专家 A/B、Judge、Route、ChatAnswer。
 - Planner 没有 LLM JSON Schema；检索服务返回 `RetrievalChunk`。
 - Provider 字段别名必须先规范化再校验。
+- `FeedbackResult.bkt_update.error_pattern` 只接受 `unknown`、`no_prior_knowledge`、
+  `concept_confusion`、`application_gap`、`careless`、`overconfidence` 或 JSON `null`。
+  反馈边界会将模型常见的 `"none"`、`"no_error"` 等“无错误”别名规范化为 `null`，
+  其他未知值仍然校验失败。
 - Judge 只评估，不生成教学正文。
 
 ## 6. MarkdownArtifact
