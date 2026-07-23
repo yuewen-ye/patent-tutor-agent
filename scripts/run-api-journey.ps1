@@ -1,13 +1,13 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$BaseUrl = "http://127.0.0.1:8000",
-    [string]$LearnerId = "dbeaver-demo-001",
+    [string]$LearnerId = "yuewen-ye99",
     [ValidateSet("correct", "incorrect")]
     [string]$AnswerMode = "correct",
     [ValidateRange(1, 20)]
-    [int]$MaxExercises = 1,
+    [int]$MaxExercises = 3,
     [ValidateRange(1, 86400)]
-    [int]$WorkflowTimeout = 900
+    [int]$WorkflowTimeout = 1500
 )
 
 $ErrorActionPreference = "Stop"
