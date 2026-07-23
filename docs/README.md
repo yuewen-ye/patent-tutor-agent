@@ -24,7 +24,7 @@
 | 文件 | 用途 |
 |---|---|
 | `database-design-presentation-guide.md` | 面向汇报和答辩的数据库设计易懂讲解稿；技术细节仍以关系库设计文档和代码为准 |
-| `database-entity-relationship-diagram.html` | 可搜索、缩放和按表查看关系的交互式数据库实体关系图，覆盖当前 25 张表 |
+| `database-relationship-diagram.html` | 可搜索、缩放和按表查看关系的交互式数据库关系图，覆盖当前 25 张表 |
 
 ## 架构资料
 
