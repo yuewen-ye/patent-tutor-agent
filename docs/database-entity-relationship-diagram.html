@@ -367,19 +367,19 @@
     }
 
     .flow-summary {
-      position: fixed;
-      z-index: 20;
-      top: 84px;
+      position: absolute;
+      z-index: 8;
+      top: 8px;
       left: 50%;
       transform: translateX(-50%);
       width: max-content;
-      max-width: calc(100vw - 36px);
-      padding: 8px 13px;
-      border: 1px solid #edc2aa;
-      border-radius: 9px;
-      background: rgba(255, 248, 243, 0.94);
+      max-width: 1500px;
+      padding: 12px 22px;
+      border: 2px solid #edc2aa;
+      border-radius: 14px;
+      background: rgba(255, 248, 243, 0.92);
       color: #8d3d18;
-      font-size: 13px;
+      font-size: 26px;
       font-weight: 700;
       text-align: center;
       pointer-events: none;
@@ -390,7 +390,6 @@
       #viewport { top: 118px; }
       .title { min-width: 100%; }
       input { width: 170px; }
-      .flow-summary { top: 130px; }
     }
   </style>
 </head>
@@ -420,6 +419,9 @@
           </marker>
         </defs>
       </svg>
+      <div id="flow-summary" class="flow-summary">
+        主链：问卷 → 会话 → 画像 → 学习路径 → 题目 → 作答 → 掌握度 → 反馈 → 更新画像
+      </div>
     </div>
   </main>
 
@@ -436,9 +438,6 @@
     <span class="legend-item"><span class="legend-line main"></span>业务主链</span>
     <span class="legend-item"><span class="legend-line"></span>数据库外键</span>
     <span class="legend-item"><span class="legend-line logical"></span>逻辑关联</span>
-  </div>
-  <div id="flow-summary" class="flow-summary">
-    主链：问卷 → 会话 → 画像 → 学习路径 → 题目 → 作答 → 掌握度 → 反馈 → 更新画像
   </div>
   <div class="hint">滚轮缩放 · 按住空白处拖动 · 点击表查看关系</div>
 
