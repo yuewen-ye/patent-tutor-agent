@@ -1,5 +1,48 @@
 # FastAPI 接口说明与调用顺序
 
+## 推荐的新学员 CAT 诊断流程
+
+推荐流程不是一次性让 LLM 猜测知识掌握度，而是先创建可恢复的 CAT 会话，逐题提交答案，完成后
+自动创建课程会话：
+
+```text
+POST /learners/{learner_id}/diagnostic-sessions
+  → POST /learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}/responses（重复）
+  → POST /learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}/complete（可提前结束）
+  → GET /sessions/{course_session_id}
+```
+
+创建请求示例：
+
+```json
+{
+  "learning_goal": "系统学习专利新颖性",
+  "education_background": "理工背景+有研发经验",
+  "responses": [
+    {"question_id": "Q23", "answer": "B"}
+  ]
+}
+```
+
+每次作答只提交题目 ID 和选项 ID；正确答案由服务端固定题库判定：
+
+```json
+{
+  "question_id": "q_patent-law-foundation_001",
+  "answer": "B",
+  "idempotency_key": "client-attempt-001"
+}
+```
+
+响应包含本题判分、BKT 更新、诊断进度和下一题。达到停止条件时响应会带回
+`course_session_id`；也可以调用 `complete` 显式结束当前诊断并创建课程。读取诊断状态使用：
+
+```text
+GET /learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}
+```
+
+原有问卷提交后直接创建课程的接口仍可使用，用于兼容旧客户端和现有链路脚本。
+
 ## 0. 可复现的完整链路测试
 
 不依赖外部 LLM API 的完整业务链路测试：
@@ -118,7 +161,7 @@ GET  /learners/{learner_id}/sessions
 
 该脚本访问真实运行服务，会产生真实 MySQL 和 Artifact 数据；它不是使用临时数据库的单元测试。
 
-## 1. 新学员主流程
+## 1. 兼容的新学员问卷直达流程
 
 ```text
 GET  /questionnaires/onboarding
@@ -147,11 +190,13 @@ GET  /learners/{learner_id}
 
 关键规则：
 
-1. 提交问卷接口本身就会创建课程会话，不需要随后再调用 `POST /sessions`。
-2. 提交练习接口会创建新的反馈会话，反馈会话 ID 不等于课程会话 ID。
-3. `POST /sessions` 是 chat、diagnose 或跳过问卷直接 teach 的通用入口。
+1. 该流程用于兼容旧客户端；新客户端优先使用文首 CAT 诊断流程。
+2. 提交问卷接口本身就会创建课程会话，不需要随后再调用 `POST /sessions`。
+3. 提交练习接口会创建新的反馈会话，反馈会话 ID 不等于课程会话 ID。
+4. `POST /sessions` 是 chat、diagnose 或跳过问卷直接 teach 的通用入口。
 
-生产服务默认使用 MySQL；配置 `PATENT_TUTOR_MYSQL_URL` 后，服务会将会话状态、事件、画像、BKT、题目、作答和 Artifact 索引写入数据库。正文仍通过 Artifact 接口从 `artifacts/` 读取。
+生产服务默认使用 MySQL；配置 `PATENT_TUTOR_MYSQL_URL` 后，服务会将 CAT 诊断、会话状态、事件、
+画像、BKT、题目、作答和 Artifact 索引写入数据库。正文仍通过 Artifact 接口从 `artifacts/` 读取。
 
 ## 2. 主流程逐步说明
 
@@ -365,6 +410,10 @@ POST /sessions
 | 健康 | `GET /health/ready` | 检查是否具备创建工作流的基本条件 |
 | 问卷 | `GET /questionnaires/onboarding` | 获取问卷 Markdown |
 | 问卷 | `POST /learners/{learner_id}/questionnaire-responses` | 保存问卷并创建课程会话 |
+| 诊断 | `POST /learners/{learner_id}/diagnostic-sessions` | 创建 CAT/BKT 诊断会话 |
+| 诊断 | `GET /learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}` | 读取诊断进度和当前题 |
+| 诊断 | `POST /learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}/responses` | 服务端判题、更新 BKT 并选择下一题 |
+| 诊断 | `POST /learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}/complete` | 固化快照并创建课程会话 |
 | 会话 | `POST /sessions` | 创建通用 teach/chat/diagnose 会话 |
 | 会话 | `GET /sessions` | 分页列出当前进程会话摘要 |
 | 会话 | `GET /sessions/{session_id}` | 查询状态和结果 |

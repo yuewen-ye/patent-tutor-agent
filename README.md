@@ -2,7 +2,11 @@
 
 知识产权管理与专利代理实务多 Agent 系统。仓库采用 **Monorepo 单仓库 + 前后端分离**：后端负责 FastAPI 服务、LangGraph 多 Agent 编排、统一模型调用和 RAG 知识库模块；前端负责后续 React 交互与 Agent 运行状态可视化。
 
-当前已完成：三路由工作流（teach/chat/diagnose）、同一 `diagnosis_feedback` Agent 的诊断/反馈两阶段、MySQL 学员画像与 BKT、双知识轴和确定性路径、专家 A/B 三阶段并行协作与 A 整合、Judge 条件审核、规范化 Markdown 过程产物、独立练习反馈会话，以及 FastAPI/SSE/WebSocket/Studio/CLI 运行入口。详见 `docs/workflow-technical-guide.md`。
+当前已完成：三路由工作流（teach/chat/diagnose）、服务端 CAT 自适应初始诊断、统一 BKT
+掌握度更新与知识 DAG 传播、同一 `diagnosis_feedback` Agent 的诊断/反馈两阶段、MySQL 学员画像与
+BKT、双知识轴和确定性路径、专家 A/B 三阶段并行协作与 A 整合、Judge 条件审核、规范化
+Markdown 过程产物、独立练习反馈会话，以及 FastAPI/SSE/WebSocket/Studio/CLI 运行入口。
+详见 `docs/workflow-technical-guide.md`。
 
 ## 从零到 LangGraph Studio
 
@@ -232,7 +236,7 @@ https://smith.langchain.com/studio/?baseUrl=http://localhost:8124
 │   │   ├── core/               # Agent/LLM 运行配置、provider 和 AgentLLMRouter
 │   │   ├── curriculum/         # 双知识轴静态数据与确定性路径计算
 │   │   ├── graph/              # LangGraph StateGraph workflow
-│   │   ├── learner_memory/     # 学员画像、历史、BKT Store 接口与兼容实现
+│   │   ├── learner_memory/     # 学员画像、历史、CAT/BKT 引擎与 Store
 │   │   ├── persistence/        # MySQL 连接池、迁移和业务 Repository
 │   │   ├── onboarding/         # 入学问卷读取与 Markdown 定义
 │   │   ├── rag/                # 真实 Milvus Lite + BGE-M3 检索
@@ -306,7 +310,8 @@ Planner 计算路径时组合两类数据：
 
 - `backend/app/curriculum/data/knowledge-dag.json`：所有学员共享的知识点、前置关系、难度和考试权重。
 - `backend/app/curriculum/data/confusion-pairs.json`：所有学员共享的易混淆概念对和基础风险。
-- MySQL：每名学员自己的问卷、画像、历史、BKT 掌握度、会话状态、题目和作答记录。
+- MySQL：每名学员自己的问卷、CAT 诊断会话与作答、画像、历史、BKT 掌握度、会话状态、
+  课程题目和作答记录。
 
 前两项是版本化的静态课程地图，不会在会话中被 LLM 改写；MySQL 数据是学员在地图上的当前位置。
 例如静态图规定“专利授权实质条件”是“新颖性”的前置知识，而某学员的新颖性掌握度只有
@@ -502,6 +507,9 @@ PY
 - `GET /health/ready` — 就绪检查，注入 LLM client 时直接 ready，默认环境下校验 provider 配置
 - `POST /sessions` — 创建会话并后台启动工作流
 - `GET /questionnaires/onboarding` — 返回版本化新学员问卷 Markdown
+- `POST /learners/{learner_id}/diagnostic-sessions` — 创建 CAT/BKT 初始诊断
+- `POST /learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}/responses` — 提交一题并获取下一题
+- `POST /learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}/complete` — 结束诊断并创建课程
 - `POST /learners/{learner_id}/questionnaire-responses` — 保存问卷并创建课程会话
 - `POST /sessions/{course_session_id}/exercise-responses` — 保存作答并创建独立反馈会话
 - `GET /sessions` — 分页列出 MySQL 持久化的会话摘要，内存对象只作为运行时缓存，支持按 `status`、`learner_id` 筛选

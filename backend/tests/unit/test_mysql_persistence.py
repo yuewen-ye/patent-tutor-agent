@@ -1,13 +1,19 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 import os
 from pathlib import Path
+from typing import Iterator
 import uuid
 
 import pytest
 
 from backend.app.persistence.db import MySQLConfigurationError, MySQLDatabase, MySQLSettings, _split_sql
-from backend.app.persistence.repositories import MySQLLearnerStore, _answer_matches
+from backend.app.persistence.repositories import (
+    MySQLLearnerStore,
+    _answer_matches,
+    _diagnostic_observation_counts,
+)
 from backend.app.persistence.verification import (
     REQUIRED_FOREIGN_KEYS,
     REQUIRED_TABLES,
@@ -16,9 +22,7 @@ from backend.app.persistence.verification import (
 )
 
 
-pytestmark = pytest.mark.unit
-
-
+@pytest.mark.unit
 def test_mysql_url_parser_supports_encoded_credentials() -> None:
     settings = MySQLSettings.from_url(
         "mysql+pymysql://user%40demo:p%40ss@db.example:3307/patent_tutor"
@@ -31,11 +35,13 @@ def test_mysql_url_parser_supports_encoded_credentials() -> None:
     assert settings.database == "patent_tutor"
 
 
+@pytest.mark.unit
 def test_mysql_url_rejects_unsafe_database_name() -> None:
     with pytest.raises(MySQLConfigurationError):
         MySQLSettings.from_url("mysql://root:password@localhost/patent-tutor")
 
 
+@pytest.mark.unit
 def test_mysql_url_uses_concrete_defaults_for_missing_user_and_database() -> None:
     settings = MySQLSettings.from_url("mysql://127.0.0.1")
 
@@ -43,6 +49,7 @@ def test_mysql_url_uses_concrete_defaults_for_missing_user_and_database() -> Non
     assert settings.database == "patent_tutor"
 
 
+@pytest.mark.unit
 def test_mysql_database_is_lazy_without_opening_a_connection() -> None:
     database = MySQLDatabase(url="mysql://root:password@localhost/patent_tutor")
 
@@ -50,6 +57,7 @@ def test_mysql_database_is_lazy_without_opening_a_connection() -> None:
     assert database._initialized is False
 
 
+@pytest.mark.unit
 def test_failed_pool_connection_does_not_leak_capacity(monkeypatch: pytest.MonkeyPatch) -> None:
     database = MySQLDatabase(url="mysql://root:password@localhost/patent_tutor")
 
@@ -63,6 +71,7 @@ def test_failed_pool_connection_does_not_leak_capacity(monkeypatch: pytest.Monke
     assert database._created == 0
 
 
+@pytest.mark.unit
 def test_pool_health_check_does_not_request_driver_reconnect() -> None:
     class HealthyConnection:
         def __init__(self) -> None:
@@ -82,6 +91,7 @@ def test_pool_health_check_does_not_request_driver_reconnect() -> None:
     assert connection.pinged is True
 
 
+@pytest.mark.unit
 def test_readiness_reports_pending_migrations_without_applying_them() -> None:
     class PendingDatabase:
         auto_migrate = False
@@ -101,6 +111,7 @@ def test_readiness_reports_pending_migrations_without_applying_them() -> None:
     }
 
 
+@pytest.mark.unit
 def test_migration_splitter_keeps_each_statement() -> None:
     statements = _split_sql(
         "-- comment\nCREATE TABLE a (id INT);\n\n"
@@ -110,6 +121,7 @@ def test_migration_splitter_keeps_each_statement() -> None:
     assert statements == ["CREATE TABLE a (id INT)", "CREATE TABLE b (id INT)"]
 
 
+@pytest.mark.unit
 def test_mysql_schema_contains_business_tables() -> None:
     migration = Path("backend/app/persistence/migrations/001_initial.sql").read_text(
         encoding="utf-8"
@@ -137,10 +149,15 @@ def test_mysql_schema_contains_business_tables() -> None:
     assert "integration_attempt" in migration
 
 
+@pytest.mark.unit
 def test_versioned_migrations_include_mastery_audit() -> None:
     database = MySQLDatabase(url="mysql://root:password@localhost/patent_tutor")
 
-    assert database.expected_migrations() == ["001_initial", "002_mastery_events"]
+    assert database.expected_migrations() == [
+        "001_initial",
+        "002_mastery_events",
+        "003_cat_diagnostics",
+    ]
 
     audit_migration = Path(
         "backend/app/persistence/migrations/002_mastery_events.sql"
@@ -150,7 +167,139 @@ def test_versioned_migrations_include_mastery_audit() -> None:
     assert "posterior_pl DOUBLE NOT NULL" in audit_migration
     assert "updated_pl DOUBLE NOT NULL" in audit_migration
 
+    cat_migration = Path(
+        "backend/app/persistence/migrations/003_cat_diagnostics.sql"
+    ).read_text(encoding="utf-8")
+    assert "CREATE TABLE IF NOT EXISTS diagnostic_sessions" in cat_migration
+    assert "CREATE TABLE IF NOT EXISTS diagnostic_attempts" in cat_migration
+    assert "CREATE TABLE IF NOT EXISTS diagnostic_mastery_events" in cat_migration
+    assert "uq_mastery_event_attempt_node" in cat_migration
+    assert "skills_json JSON" in cat_migration
 
+
+@pytest.mark.unit
+def test_diagnostic_observation_counts_support_multi_skill_questions() -> None:
+    counts = _diagnostic_observation_counts(
+        [
+            {
+                "direct_steps": [
+                    {"skill_id": "novelty", "observed_correct": True},
+                    {"skill_id": "prior-art", "observed_correct": True},
+                ]
+            },
+            {
+                "direct_steps": [
+                    {"skill_id": "novelty", "observed_correct": False},
+                ]
+            },
+        ]
+    )
+
+    assert counts == {"novelty": (1, 1), "prior-art": (1, 0)}
+
+
+@pytest.mark.unit
+def test_diagnostic_repository_sql_bindings_without_live_mysql() -> None:
+    class RecordingCursor:
+        def __init__(self) -> None:
+            self.executions: list[tuple[str, tuple[object, ...]]] = []
+            self.rowcount = 1
+
+        def execute(self, sql: str, params: tuple[object, ...] = ()) -> None:
+            assert sql.count("%s") == len(params)
+            self.executions.append((sql, params))
+            self.rowcount = 1
+
+        @staticmethod
+        def fetchone() -> None:
+            return None
+
+    class RecordingConnection:
+        def __init__(self) -> None:
+            self.recording_cursor = RecordingCursor()
+
+        def cursor(self) -> RecordingCursor:
+            return self.recording_cursor
+
+    class RecordingDatabase:
+        auto_migrate = True
+
+        def __init__(self) -> None:
+            self.connection = RecordingConnection()
+
+        @contextmanager
+        def transaction(self) -> Iterator[RecordingConnection]:
+            yield self.connection
+
+    database = RecordingDatabase()
+    store = MySQLLearnerStore(database=database)  # type: ignore[arg-type]
+    payload = {
+        "diagnostic_session_id": "diagnostic-1",
+        "learner_id": "learner-1",
+        "status": "running",
+        "learning_goal": "学习新颖性",
+        "education_background": "理工背景+有研发经验",
+    }
+    attempt = {
+        "question_id": "q-1",
+        "skills": ["novelty"],
+        "user_answer": "A",
+        "is_correct": True,
+        "response_time_ms": 1000,
+        "direct_steps": [
+            {
+                "skill_id": "novelty",
+                "observed_correct": True,
+                "prior_pl": 0.15,
+                "predicted_pl": 0.405,
+                "posterior_pl": 0.89,
+                "p_init": 0.15,
+                "p_transit": 0.30,
+                "p_guess": 0.08,
+                "p_slip": 0.05,
+                "model_version": "bkt-cat-v1",
+            }
+        ],
+        "inferred_changes": [
+            {
+                "skill_id": "patent-law-foundation",
+                "prior_pl": 0.15,
+                "posterior_pl": 0.30,
+            }
+        ],
+    }
+
+    store.save_diagnostic_session(payload=payload)
+    store.save_diagnostic_attempt(
+        diagnostic_session_id="diagnostic-1",
+        learner_id="learner-1",
+        attempt=attempt,
+        idempotency_key="attempt-1",
+    )
+    store.complete_diagnostic_session(
+        diagnostic_session_id="diagnostic-1",
+        learner_id="learner-1",
+        diagnostic_payload={
+            "knowledge": {
+                "novelty": {
+                    "pl": 0.89,
+                    "observations": 1,
+                    "inferred": False,
+                }
+            },
+            "answer_log": [attempt],
+        },
+    )
+
+    mastery_write = next(
+        params
+        for sql, params in database.connection.recording_cursor.executions
+        if sql.startswith("INSERT INTO student_node_mastery")
+    )
+    assert mastery_write[4:6] == (1, 0)
+
+
+@pytest.mark.unit
 def test_verifier_requirements_match_migration_contract() -> None:
     migration_text = "\n".join(
         path.read_text(encoding="utf-8")
@@ -163,6 +312,7 @@ def test_verifier_requirements_match_migration_contract() -> None:
         assert f"CONSTRAINT {foreign_key}" in migration_text
 
 
+@pytest.mark.unit
 def test_verifier_reads_information_schema_columns_case_insensitively() -> None:
     row = {"TABLE_NAME": "sessions", "ENGINE": "InnoDB"}
 
@@ -174,6 +324,7 @@ def test_verifier_reads_information_schema_columns_case_insensitively() -> None:
     ("expected", "actual", "matched"),
     [("A", "A", True), ("A", " a ", True), (["A", "B"], "B", True), ("A", "B", False)],
 )
+@pytest.mark.unit
 def test_server_answer_matching(expected: object, actual: object, matched: bool) -> None:
     assert _answer_matches(expected, actual) is matched
 

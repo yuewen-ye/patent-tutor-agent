@@ -150,7 +150,10 @@ LIMIT 20;
 
 - 单元测试、目标 Ruff 和 Pyright 检查通过。
 - 真实 MySQL 验证器返回退出码 0 和 `success=true`。
-- `001_initial`、`002_mastery_events` 均出现在 `schema_migrations`。
+- `001_initial`、`002_mastery_events`、`003_cat_diagnostics` 均出现在
+  `schema_migrations`。
+- `diagnostic_sessions`、`diagnostic_attempts`、`diagnostic_mastery_events` 三张 CAT 表及其
+  外键通过 schema 验证。
 - 隔离写入测试的服务端判题、BKT 更新、审计事件和会话回读全部通过。
 - Artifact 检查不存在非法路径、缺失文件或哈希不一致。
 - 验证结束后没有残留 `verify-*` 测试学员或会话。

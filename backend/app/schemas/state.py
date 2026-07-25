@@ -89,6 +89,7 @@ class KnowledgeNodeState(ContractModel):
     ci_high: float = Field(ge=0.0, le=1.0)
     observations: int = Field(default=0, ge=0)
     low_confidence: bool = False
+    inferred: bool = False
 
 
 class CognitionProfile(ContractModel):

@@ -1,0 +1,947 @@
+[
+  {
+    "id": "q_patent-law-foundation_001",
+    "skills": ["patent-law-foundation"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "以下哪项是专利制度的核心特征？",
+    "options": {"A": "以公开换取保护","B": "自动取得专利权","C": "永久垄断权","D": "仅保护发明"},
+    "correct_answer": "A",
+    "explanation": "专利制度以公开技术方案为代价，换取一定期限的独占权。B错误（需申请），C错误（有时间限制），D错误（保护发明、实用新型、外观设计）。"
+  },
+  {
+    "id": "q_patent-law-foundation_002",
+    "skills": ["patent-law-foundation"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "中国专利制度正式建立的标志是？",
+    "options": {"A": "《中华人民共和国专利法》颁布","B": "加入世界知识产权组织","C": "成立专利局","D": "实施专利代理条例"},
+    "correct_answer": "A",
+    "explanation": "1984年《专利法》的颁布标志着中国专利制度的正式建立。"
+  },
+  {
+    "id": "q_patent-system-overview_001",
+    "skills": ["patent-system-overview"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "专利制度与商业秘密保护制度的主要区别在于？",
+    "options": {"A": "保护期限不同","B": "是否以公开为前提","C": "保护对象不同","D": "所有上述"},
+    "correct_answer": "D",
+    "explanation": "专利以公开换保护，有固定期限；商业秘密无需公开，保护无固定期限。两者保护对象也有差异，因此 D 正确。"
+  },
+  {
+    "id": "q_patent-system-overview_002",
+    "skills": ["patent-system-overview"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "以下哪种表述最准确描述了专利制度的根本目的？",
+    "options": {"A": "保护发明人的人身权","B": "鼓励创新和促进技术进步","C": "增加国家财政收入","D": "防止技术外流"},
+    "correct_answer": "B",
+    "explanation": "专利制度的立法宗旨是鼓励发明创造，推动发明创造的应用，提高创新能力，促进科学技术进步和经济社会发展（《专利法》第一条）。"
+  },
+  {
+    "id": "q_patent-law-framework_001",
+    "skills": ["patent-law-framework"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "在专利法律体系中，以下哪项规范性文件具有最高法律效力？",
+    "options": {"A": "《专利法》","B": "《专利法实施细则》","C": "《专利审查指南》","D": "司法解释"},
+    "correct_answer": "A",
+    "explanation": "《专利法》由全国人大常委会制定，效力层级最高。细则由国务院制定，指南属部门规章，司法解释由最高法发布。"
+  },
+  {
+    "id": "q_patent-law-framework_002",
+    "skills": ["patent-law-framework"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "专利法属于知识产权法的哪一分支？",
+    "options": {"A": "工业产权法","B": "著作权法","C": "商业标记法","D": "商业秘密法"},
+    "correct_answer": "A",
+    "explanation": "专利权与商标权同属工业产权，是知识产权的重要组成部分。"
+  },
+  {
+    "id": "q_patent-rights-nature_001",
+    "skills": ["patent-rights-nature"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "专利权的地域性特征是指？",
+    "options": {"A": "专利权仅在授权国境内有效","B": "专利权在全球自动生效","C": "专利权可跨洲覆盖","D": "专利权依国际条约自动延展"},
+    "correct_answer": "A",
+    "explanation": "专利权具有严格的地域性，只在该国法律管辖范围内有效。"
+  },
+  {
+    "id": "q_patent-rights-nature_002",
+    "skills": ["patent-rights-nature", "patent-law-foundation"],
+    "p_g": 0.06, "p_s": 0.06,
+    "question_text": "发明专利权的保护期限自申请日起多少年？",
+    "options": {"A": "10年","B": "20年","C": "15年","D": "50年"},
+    "correct_answer": "B",
+    "explanation": "《专利法》第42条规定，发明专利权的期限为20年，自申请日起计算。"
+  },
+  {
+    "id": "q_patentability-substantive_001",
+    "skills": ["patentability-substantive"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "授予专利权的实质条件不包括以下哪项？",
+    "options": {"A": "新颖性","B": "创造性","C": "实用性","D": "艺术性"},
+    "correct_answer": "D",
+    "explanation": "发明和实用新型需要具备新颖性、创造性、实用性；外观设计需具有新颖性、明显区别且不与他人在先权利冲突。艺术性不是专利授权条件。"
+  },
+  {
+    "id": "q_patentability-substantive_002",
+    "skills": ["patentability-substantive"],
+    "p_g": 0.07, "p_s": 0.05,
+    "question_text": "对于实用新型专利，不审查的实质条件是？",
+    "options": {"A": "新颖性","B": "创造性","C": "实用性","D": "说明书充分公开"},
+    "correct_answer": "B",
+    "explanation": "实用新型初步审查不进行实质审查，但授权后无效程序可以评价其创造性。初审主要审查明显实质性缺陷（包括新颖性、实用性明显缺陷等），创造性不在初审审查范围。"
+  },
+  {
+    "id": "q_novelty_001",
+    "skills": ["novelty"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "判断发明的新颖性时，现有技术的时间基准是？",
+    "options": {"A": "申请日","B": "优先权日","C": "公开日","D": "授权日"},
+    "correct_answer": "B",
+    "explanation": "《专利法》第22条第2款，新颖性判断以优先权日（无优先权则以申请日）为基准，该日之前公开的技术为现有技术。"
+  },
+  {
+    "id": "q_novelty_002",
+    "skills": ["novelty"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "以下哪种情形会破坏发明的新颖性？",
+    "options": {"A": "在申请日当天发表的论文","B": "在优先权日前一天公开使用的技术","C": "内部保密文件","D": "抵触申请"},
+    "correct_answer": "D",
+    "explanation": "抵触申请虽然不属于现有技术，但根据《专利法》第22条第2款，由他人在申请日以前向专利局提出并在申请日以后公布的同样的发明专利申请，会破坏在后申请的新颖性。B选项属于现有技术公开（公开使用），也会破坏，但考察点更侧重于D的专门概念。本题意图考察新颖性破坏的几种情形。"
+  },
+  {
+    "id": "q_novelty_003",
+    "skills": ["novelty", "prior-art-definition"],
+    "p_g": 0.06, "p_s": 0.07,
+    "question_text": "某发明专利申请的优先权日为2024年1月1日。下列哪项公开不影响其新颖性？",
+    "options": {"A": "2023年12月31日出版的期刊","B": "2024年1月2日公开的使用","C": "2023年12月15日申请、2024年6月公开的他人相同发明（该申请享有2023年12月15日优先权）","D": "申请人自己在2024年1月5日参加的学术会议发表"},
+    "correct_answer": "B",
+    "explanation": "优先权日（2024.1.1）之后公开的内容不构成现有技术，不影响新颖性。A和C在优先权日之前，构成现有技术或抵触申请。D可能受宽限期影响，但不影响新颖性破坏判断。"
+  },
+  {
+    "id": "q_prior-art-definition_001",
+    "skills": ["prior-art-definition"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "现有技术的公开方式不包括？",
+    "options": {"A": "出版物公开","B": "使用公开","C": "口头公开","D": "内部传阅且保密"},
+    "correct_answer": "D",
+    "explanation": "现有技术必须是公众能够得知的状态。内部保密文件不构成公开。"
+  },
+  {
+    "id": "q_prior-art-definition_002",
+    "skills": ["prior-art-definition"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "使用公开需满足什么条件才能构成现有技术？",
+    "options": {"A": "任何使用行为都算公开","B": "公众能够得知技术内容的使用","C": "仅需在申请日前使用","D": "必须有文字记载"},
+    "correct_answer": "B",
+    "explanation": "使用公开要求技术方案处于公众能够得知的状态。如果使用行为没有导致技术方案为公众所知，则不构成公开。"
+  },
+  {
+    "id": "q_conflicting-application_001",
+    "skills": ["conflicting-application"],
+    "p_g": 0.06, "p_s": 0.07,
+    "question_text": "关于抵触申请，以下哪项表述是正确的？",
+    "options": {"A": "包括同一申请人的在先申请","B": "必须是向中国专利局提出的申请","C": "在后申请公开后才构成抵触","D": "可单独评价创造性"},
+    "correct_answer": "B",
+    "explanation": "抵触申请是由他人在申请日以前向专利局提出并在申请日以后公布的同样的发明或者实用新型专利申请。不包括本人申请。只能用于评价新颖性，不用于评价创造性。"
+  },
+  {
+    "id": "q_conflicting-application_002",
+    "skills": ["conflicting-application", "novelty"],
+    "p_g": 0.05, "p_s": 0.07,
+    "question_text": "甲于2025年1月1日提交发明专利申请，乙于2024年12月1日提交相同发明的申请，乙的申请于2025年6月公开。乙的申请对甲构成？",
+    "options": {"A": "现有技术","B": "抵触申请","C": "既不是现有技术也不是抵触申请","D": "重复授权"},
+    "correct_answer": "B",
+    "explanation": "乙的申请在甲的申请日之前，在甲申请日后公开，符合抵触申请的条件（他人、向中国专利局提出、相同发明、申请在先公开在后）。"
+  },
+  {
+    "id": "q_grace-period_001",
+    "skills": ["grace-period"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "不丧失新颖性的宽限期为多长时间？",
+    "options": {"A": "3个月","B": "6个月","C": "12个月","D": "18个月"},
+    "correct_answer": "B",
+    "explanation": "《专利法》第24条，宽限期为6个月，自申请日起算。"
+  },
+  {
+    "id": "q_grace-period_002",
+    "skills": ["grace-period"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "以下哪种情形可以享受宽限期？",
+    "options": {"A": "申请日以前6个月内在规定的国际展览会上首次展出","B": "申请日以前1年内在学术会议上发表","C": "申请日以前他人未经同意泄露其发明，但泄露发生在申请日前8个月","D": "申请人自己公开发表论文（无任何适用情形）"},
+    "correct_answer": "A",
+    "explanation": "宽限期仅适用于三种法定情形（国际展览会、学术会议、他人泄露），且时间限6个月内。A符合；B时间错误；C超出6个月；D不适用。"
+  },
+  {
+    "id": "q_inventive-step_001",
+    "skills": ["inventive-step"],
+    "p_g": 0.06, "p_s": 0.07,
+    "question_text": "创造性的判断中，“突出的实质性特点”是指？",
+    "options": {"A": "与现有技术相比有多个区别特征","B": "对所属领域技术人员而言是非显而易见的","C": "发明产生了商业成功","D": "解决了长期未解的技术难题"},
+    "correct_answer": "B",
+    "explanation": "《审查指南》规定，发明有突出的实质性特点是指对所属技术领域的技术人员来说，发明相对于现有技术是非显而易见的。"
+  },
+  {
+    "id": "q_inventive-step_002",
+    "skills": ["inventive-step", "three-step-method"],
+    "p_g": 0.05, "p_s": 0.07,
+    "question_text": "在创造性判断中，如果发明与现有技术相比具有预料不到的技术效果，应如何认定？",
+    "options": {"A": "一定具有创造性","B": "可以作为创造性判断的辅助因素","C": "与创造性无关","D": "仅用于实用性判断"},
+    "correct_answer": "A",
+    "explanation": "预料不到的技术效果是创造性判断的肯定性因素，通常可以直接认定具有创造性（《审查指南》第二部分第四章）。"
+  },
+  {
+    "id": "q_three-step-method_001",
+    "skills": ["three-step-method"],
+    "p_g": 0.05, "p_s": 0.08,
+    "question_text": "创造性三步法的正确顺序是？",
+    "options": {"A": "确定区别特征和实际解决的技术问题→确定最接近的现有技术→判断是否显而易见","B": "确定最接近的现有技术→确定区别特征和实际解决的技术问题→判断是否显而易见","C": "判断是否显而易见→确定区别特征→确定最接近现有技术","D": "确定实际解决的技术问题→确定区别特征→确定最接近现有技术"},
+    "correct_answer": "B",
+    "explanation": "三步法：(1)确定最接近的现有技术；(2)确定区别特征和实际解决的技术问题；(3)判断要求保护的发明对本领域技术人员是否显而易见。"
+  },
+  {
+    "id": "q_three-step-method_002",
+    "skills": ["three-step-method", "inventive-step"],
+    "p_g": 0.05, "p_s": 0.08,
+    "question_text": "在确定“实际解决的技术问题”时，下列哪个因素不应被考虑？",
+    "options": {"A": "区别特征所能达到的技术效果","B": "发明人在说明书中声称的效果","C": "说明书记载的技术效果","D": "本领域技术人员能够确定的技术效果"},
+    "correct_answer": "B",
+    "explanation": "实际解决的技术问题应根据区别特征在发明中能达到的技术效果确定，而不是基于发明人的主观声称。说明书未记载且本领域技术人员无法推知的效果不应作为依据。"
+  },
+  {
+    "id": "q_person-skilled-in-art_001",
+    "skills": ["person-skilled-in-art"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "“所属技术领域的技术人员”是一种？",
+    "options": {"A": "实际存在的技术人员","B": "法律拟制的假设人","C": "具有博士学位的专家","D": "专利审查员"},
+    "correct_answer": "B",
+    "explanation": "这是一种法律假设，他知晓申请日或优先权日之前该领域所有普通技术知识，能够获知该领域所有现有技术，但不具有创造能力。"
+  },
+  {
+    "id": "q_person-skilled-in-art_002",
+    "skills": ["person-skilled-in-art"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "所属技术领域的技术人员在创造性判断中，已知的知识包括？",
+    "options": {"A": "本领域所有现有技术","B": "本领域普通技术知识","C": "相关领域的某些技术","D": "以上都是"},
+    "correct_answer": "D",
+    "explanation": "他知晓该领域所有普通技术知识和现有技术，也能够获知相关领域的部分技术内容。"
+  },
+  {
+    "id": "q_practical-applicability_001",
+    "skills": ["practical-applicability"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "以下哪项属于不具有实用性的情形？",
+    "options": {"A": "违背能量守恒定律的永动机","B": "治疗疾病的方法","C": "用原子核变换方法获得的物质","D": "动植物品种"},
+    "correct_answer": "A",
+    "explanation": "实用性要求能够制造或使用并产生积极效果。违背自然规律的发明不能实施，缺乏实用性。B、C、D属于不授权主题，并非缺乏实用性。"
+  },
+  {
+    "id": "q_practical-applicability_002",
+    "skills": ["practical-applicability"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "实用性的“再现性”要求是指？",
+    "options": {"A": "能重复制造出相同产品","B": "能在不同产业中应用","C": "能产生经济效益","D": "符合社会需求"},
+    "correct_answer": "A",
+    "explanation": "再现性指所属技术领域的技术人员根据公开的技术内容，能够重复实施该技术方案，其结果不依赖于随机因素。"
+  },
+  {
+    "id": "q_design-patentability_001",
+    "skills": ["design-patentability"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "外观设计获得专利权的条件不包括？",
+    "options": {"A": "富有美感","B": "适于工业应用","C": "新设计","D": "显著的进步"},
+    "correct_answer": "D",
+    "explanation": "外观设计授权条件包括新颖性、明显区别、不与在先权利冲突、富有美感并适于工业应用。不需要“显著的进步”（那是对发明的要求）。"
+  },
+  {
+    "id": "q_design-patentability_002",
+    "skills": ["design-patentability", "general-consumer"],
+    "p_g": 0.06, "p_s": 0.06,
+    "question_text": "判断外观设计是否具有明显区别的主体是？",
+    "options": {"A": "所属技术领域的技术人员","B": "一般消费者","C": "专利审查员","D": "专业设计师"},
+    "correct_answer": "B",
+    "explanation": "外观设计的判断主体是一般消费者，而非所属技术领域的技术人员。"
+  },
+  {
+    "id": "q_non-patentable-subject_001",
+    "skills": ["non-patentable-subject"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "下列哪项属于可授予专利权的主题？",
+    "options": {"A": "科学发现","B": "疾病的诊断方法","C": "采用新的材料制成的产品","D": "原子核变换方法获得的物质"},
+    "correct_answer": "C",
+    "explanation": "科学发现、疾病诊断方法、原子核变换方法获得的物质均属不授予专利权的主题。采用新材料制成的产品属于技术方案，可授权。"
+  },
+  {
+    "id": "q_non-patentable-subject_002",
+    "skills": ["non-patentable-subject", "scientific-discovery-vs-invention"],
+    "p_g": 0.06, "p_s": 0.06,
+    "question_text": "发现了一种自然界存在的新材料，仅仅指出其存在，能否获得专利？",
+    "options": {"A": "可以，因为是新的","B": "不可以，属于科学发现","C": "可以，作为产品专利","D": "视情况而定"},
+    "correct_answer": "B",
+    "explanation": "单纯发现自然界已存在的东西不属于发明创造，不能被授予专利权。"
+  },
+  {
+    "id": "q_scientific-discovery-vs-invention_001",
+    "skills": ["scientific-discovery-vs-invention"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "下列哪项正确区分了科学发现与发明？",
+    "options": {"A": "发现是指出已知规律，发明是利用规律创造新技术方案","B": "发现和发明没有区别","C": "发明仅指产品","D": "发现可以申请专利"},
+    "correct_answer": "A",
+    "explanation": "科学发现揭示自然界已有规律，而发明是提出利用自然规律的技术方案。"
+  },
+  {
+    "id": "q_medical-method-exclusion_001",
+    "skills": ["medical-method-exclusion"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "以下哪个属于不授予专利权的疾病治疗方法？",
+    "options": {"A": "美容方法","B": "外科手术方法","C": "非治疗目的的生理参数测定方法","D": "牙科修复体的制造方法"},
+    "correct_answer": "B",
+    "explanation": "外科手术方法属于疾病治疗方法，不授予专利权。美容方法若非治疗目的，可授权；非治疗目的的生理参数测定也可授权。"
+  },
+  {
+    "id": "q_medical-method-exclusion_002",
+    "skills": ["medical-method-exclusion"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "关于疾病诊断方法，下列说法正确的是？",
+    "options": {"A": "所有与诊断相关的方法都不可授权","B": "只有在活的人体或动物体上实施且以获得疾病诊断结果或健康状况为直接目的的方法不可授权","C": "离体样本的检测方法一定不可授权","D": "诊断仪器本身不可授权"},
+    "correct_answer": "B",
+    "explanation": "根据《审查指南》，只有直接以有生命的人体或动物体为对象，且以获得疾病诊断结果或健康状况为直接目的的方法，才属于不可授权的诊断方法。离体样本检测可授权。"
+  },
+  {
+    "id": "q_public-order-morality_001",
+    "skills": ["public-order-morality"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "以下哪种发明因为违反社会公德而不授予专利权？",
+    "options": {"A": "赌博器具","B": "武器","C": "克隆人的方法","D": "毒品制造方法"},
+    "correct_answer": "C",
+    "explanation": "克隆人的方法直接违反社会公德，不可授权。赌博器具和毒品制造方法违反法律，武器不一定违反社会公德。A、D通常也因违法而不授，但C是社会公德条款的典型例证。"
+  },
+  {
+    "id": "q_patent-application-process_001",
+    "skills": ["patent-application-process"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "发明专利申请可以直接向下列哪个机构提交？",
+    "options": {"A": "地方知识产权局","B": "国家知识产权局专利局","C": "国务院","D": "科技部"},
+    "correct_answer": "B",
+    "explanation": "专利申请应当向国家知识产权局专利局提交。地方局仅负责受理某些实用新型和外观设计申请。"
+  },
+  {
+    "id": "q_patent-application-process_002",
+    "skills": ["patent-application-process"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "申请发明专利必须提交的文件不包括？",
+    "options": {"A": "说明书","B": "权利要求书","C": "检索报告","D": "摘要"},
+    "correct_answer": "C",
+    "explanation": "必要文件包括请求书、说明书（必要时附图）、权利要求书、摘要。检索报告在实质审查阶段由审查员出具，非申请人提交的初始文件。"
+  },
+  {
+    "id": "q_application-documents_001",
+    "skills": ["application-documents"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "说明书摘要的作用是？",
+    "options": {"A": "限定保护范围","B": "提供技术信息","C": "解释权利要求","D": "作为审查基础"},
+    "correct_answer": "B",
+    "explanation": "摘要仅用于提供技术信息，不具有法律效力，不能作为修改申请文件的依据或用来解释保护范围。"
+  },
+  {
+    "id": "q_application-documents_002",
+    "skills": ["application-documents", "specification-requirements"],
+    "p_g": 0.06, "p_s": 0.06,
+    "question_text": "申请文件中，用于确定专利权保护范围的法律文件是？",
+    "options": {"A": "说明书","B": "权利要求书","C": "摘要","D": "请求书"},
+    "correct_answer": "B",
+    "explanation": "发明或者实用新型专利权的保护范围以其权利要求的内容为准。"
+  },
+  {
+    "id": "q_specification-requirements_001",
+    "skills": ["specification-requirements"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "说明书“充分公开”的要求是指？",
+    "options": {"A": "详细描述所有可能的实施方式","B": "使所属技术领域的技术人员能够实现该发明","C": "提供实验数据","D": "公开商业实施细节"},
+    "correct_answer": "B",
+    "explanation": "《专利法》第26条第3款，说明书应当对发明或者实用新型作出清楚、完整的说明，以所属技术领域的技术人员能够实现为准。"
+  },
+  {
+    "id": "q_specification-requirements_002",
+    "skills": ["specification-requirements"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "说明书的组成部分一般按什么顺序排列？",
+    "options": {"A": "技术领域→背景技术→发明内容→附图说明→具体实施方式","B": "发明内容→技术领域→背景技术→具体实施方式","C": "背景技术→具体实施方式→发明内容","D": "随意顺序"},
+    "correct_answer": "A",
+    "explanation": "根据《专利法实施细则》第18条，说明书的顺序为：技术领域、背景技术、发明内容、附图说明、具体实施方式。"
+  },
+  {
+    "id": "q_claims-drafting-basics_001",
+    "skills": ["claims-drafting-basics"],
+    "p_g": 0.06, "p_s": 0.07,
+    "question_text": "独立权利要求与从属权利要求的根本区别在于？",
+    "options": {"A": "记载的必要技术特征数量","B": "是否包含引用关系","C": "保护范围大小","D": "是否记载前序部分"},
+    "correct_answer": "B",
+    "explanation": "从属权利要求必须引用在前的权利要求，而独立权利要求不引用。保护范围大小是结果，非定义。"
+  },
+  {
+    "id": "q_claims-drafting-basics_002",
+    "skills": ["claims-drafting-basics", "independent-claim"],
+    "p_g": 0.05, "p_s": 0.07,
+    "question_text": "独立权利要求应包括哪些部分？",
+    "options": {"A": "前序部分和特征部分","B": "引用部分和特征部分","C": "只有特征部分","D": "前序部分和限定部分"},
+    "correct_answer": "A",
+    "explanation": "独立权利要求分为前序部分（记载共有的必要技术特征）和特征部分（记载区别技术特征）。"
+  },
+  {
+    "id": "q_independent-claim_001",
+    "skills": ["independent-claim"],
+    "p_g": 0.06, "p_s": 0.07,
+    "question_text": "独立权利要求的保护范围由什么决定？",
+    "options": {"A": "前序部分+特征部分","B": "全部技术特征","C": "仅特征部分","D": "实施例"},
+    "correct_answer": "B",
+    "explanation": "保护范围由独立权利要求中记载的全部技术特征限定，采用全面覆盖原则。"
+  },
+  {
+    "id": "q_dependent-claim_001",
+    "skills": ["dependent-claim"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "从属权利要求对所引用的权利要求所起的作用是？",
+    "options": {"A": "扩大保护范围","B": "限定优选方案，缩小保护范围","C": "独立保护","D": "无实质作用"},
+    "correct_answer": "B",
+    "explanation": "从属权利要求通过附加技术特征进一步限定所引用的权利要求，保护范围更窄，但在无效程序中可作为“升级”防线。"
+  },
+  {
+    "id": "q_priority-right_001",
+    "skills": ["priority-right"],
+    "p_g": 0.06, "p_s": 0.07,
+    "question_text": "外国优先权的期限，对于发明是？",
+    "options": {"A": "6个月","B": "12个月","C": "18个月","D": "30个月"},
+    "correct_answer": "B",
+    "explanation": "发明和实用新型的外国优先权期限为自首次申请日起12个月，外观设计为6个月。"
+  },
+  {
+    "id": "q_priority-right_002",
+    "skills": ["priority-right", "foreign-priority", "domestic-priority"],
+    "p_g": 0.05, "p_s": 0.08,
+    "question_text": "关于本国优先权，以下哪项错误？",
+    "options": {"A": "适用于发明和实用新型","B": "在先申请自在后申请提出之日起视为撤回","C": "外观设计可享有本国优先权","D": "期限为12个月"},
+    "correct_answer": "C",
+    "explanation": "外观设计不能享有本国优先权，只能享有外国优先权。"
+  },
+  {
+    "id": "q_foreign-priority_001",
+    "skills": ["foreign-priority"],
+    "p_g": 0.06, "p_s": 0.07,
+    "question_text": "主张外国优先权时，首次申请的国家必须是？",
+    "options": {"A": "WTO成员国","B": "巴黎公约成员国","C": "与中国签订双边协议的国家","D": "B或C"},
+    "correct_answer": "D",
+    "explanation": "外国优先权适用于巴黎公约成员国或与中国有双边协议或按互惠原则承认优先权的国家。"
+  },
+  {
+    "id": "q_domestic-priority_001",
+    "skills": ["domestic-priority"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "申请本国优先权时，在先申请必须是？",
+    "options": {"A": "已经授权的专利","B": "已经撤回的申请","C": "在中国首次提出的申请","D": "PCT国际申请"},
+    "correct_answer": "C",
+    "explanation": "本国优先权的基础是在中国首次提出的相同主题的发明或实用新型专利申请。"
+  },
+  {
+    "id": "q_filing-date_001",
+    "skills": ["filing-date"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "如果邮寄专利申请文件，申请日如何确定？",
+    "options": {"A": "寄出的邮戳日","B": "专利局收到日","C": "专利局受理通知日","D": "文件发出日"},
+    "correct_answer": "A",
+    "explanation": "邮寄申请的，申请日以寄出的邮戳日为准。"
+  },
+  {
+    "id": "q_filing-date_002",
+    "skills": ["filing-date"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "申请日对专利具有重要的法律意义，不包括？",
+    "options": {"A": "确定专利权期限的起算日","B": "现有技术的判断时间点","C": "确定优先权的依据","D": "授权后保护范围的解释起点"},
+    "correct_answer": "D",
+    "explanation": "申请日用于确定专利权期限、新颖性和创造性判断的时间基准等，保护范围解释以权利要求为准。"
+  },
+  {
+    "id": "q_divisional-application_001",
+    "skills": ["divisional-application"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "分案申请可以保留原申请的什么？",
+    "options": {"A": "申请日","B": "优先权日","C": "A和B","D": "审查进度"},
+    "correct_answer": "C",
+    "explanation": "分案申请可以保留原申请的申请日和优先权日，但需要重新审查。"
+  },
+  {
+    "id": "q_divisional-application_002",
+    "skills": ["divisional-application"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "分案申请的内容不得超出什么范围？",
+    "options": {"A": "原申请公开的范围","B": "原申请权利要求书","C": "原申请摘要","D": "原申请附图"},
+    "correct_answer": "A",
+    "explanation": "分案申请不得超出原申请公开的范围，否则将被驳回。"
+  },
+  {
+    "id": "q_patent-examination_001",
+    "skills": ["patent-examination"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "发明专利的实质审查请求应当在自申请日起几年内提出？",
+    "options": {"A": "1年","B": "2年","C": "3年","D": "5年"},
+    "correct_answer": "C",
+    "explanation": "自申请日（有优先权的自优先权日）起3年内，申请人可提出实质审查请求。逾期未提出，申请视为撤回。"
+  },
+  {
+    "id": "q_patent-examination_002",
+    "skills": ["patent-examination", "preliminary-examination"],
+    "p_g": 0.06, "p_s": 0.06,
+    "question_text": "实用新型专利的审查制度是？",
+    "options": {"A": "初步审查+实质审查","B": "仅初步审查","C": "仅实质审查","D": "登记制"},
+    "correct_answer": "B",
+    "explanation": "实用新型和外观设计实行初步审查制，不进行实质审查。"
+  },
+  {
+    "id": "q_preliminary-examination_001",
+    "skills": ["preliminary-examination"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "初步审查主要审查什么内容？",
+    "options": {"A": "形式缺陷和明显实质性缺陷","B": "新颖性和创造性","C": "实用性","D": "商业价值"},
+    "correct_answer": "A",
+    "explanation": "初步审查审查申请文件的形式是否符合要求，以及是否存在明显实质性缺陷（如明显不属于保护主题）。"
+  },
+  {
+    "id": "q_substantive-examination_001",
+    "skills": ["substantive-examination"],
+    "p_g": 0.06, "p_s": 0.07,
+    "question_text": "实质审查中，审查员主要依据什么进行审查？",
+    "options": {"A": "申请人提交的对比文件","B": "审查员自行检索的现有技术","C": "仅依据说明书","D": "公众意见"},
+    "correct_answer": "B",
+    "explanation": "审查员负责检索，并根据检索到的现有技术评价申请的新颖性和创造性等。"
+  },
+  {
+    "id": "q_substantive-examination_002",
+    "skills": ["substantive-examination"],
+    "p_g": 0.06, "p_s": 0.07,
+    "question_text": "实质审查中，如果申请存在不符合三性要求的情况，审查员会发出？",
+    "options": {"A": "授权通知书","B": "驳回决定","C": "审查意见通知书","D": "补正通知书"},
+    "correct_answer": "C",
+    "explanation": "审查员发现缺陷时会发出审查意见通知书，给予申请人陈述意见或修改的机会。"
+  },
+  {
+    "id": "q_office-action-response_001",
+    "skills": ["office-action-response"],
+    "p_g": 0.06, "p_s": 0.07,
+    "question_text": "答复审查意见通知书的期限通常为？",
+    "options": {"A": "1个月","B": "2个月","C": "4个月","D": "6个月"},
+    "correct_answer": "C",
+    "explanation": "第一次审查意见通知书的答复期限为4个月，后续通知书的答复期限为2个月。均可延期。"
+  },
+  {
+    "id": "q_office-action-response_002",
+    "skills": ["office-action-response", "amendment-limits"],
+    "p_g": 0.05, "p_s": 0.08,
+    "question_text": "在答复审查意见时，对申请文件的修改不得？",
+    "options": {"A": "超出原说明书和权利要求书记载的范围","B": "增加新的技术特征","C": "删除权利要求","D": "修改摘要"},
+    "correct_answer": "A",
+    "explanation": "修改不得超出原说明书和权利要求书记载的范围，这是修改的基本原则。"
+  },
+  {
+    "id": "q_amendment-limits_001",
+    "skills": ["amendment-limits"],
+    "p_g": 0.06, "p_s": 0.07,
+    "question_text": "主动修改的时机是？",
+    "options": {"A": "在提出实质审查请求时，以及收到进入实质审查阶段通知书之日起3个月内","B": "任何时候","C": "在答复审查意见时","D": "在授权后"},
+    "correct_answer": "A",
+    "explanation": "发明专利申请人可在提出实质审查请求时，或收到进入实质审查阶段通知书之日起3个月内，主动修改。"
+  },
+  {
+    "id": "q_patent-reexamination_001",
+    "skills": ["patent-reexamination"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "对驳回决定不服的救济途径是？",
+    "options": {"A": "直接向法院起诉","B": "请求复审","C": "重新申请","D": "行政复议"},
+    "correct_answer": "B",
+    "explanation": "专利申请人对驳回决定不服的，可自收到通知之日起3个月内向专利局复审和无效审理部请求复审。"
+  },
+  {
+    "id": "q_reexamination-request_001",
+    "skills": ["reexamination-request"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "复审请求的提出期限是？",
+    "options": {"A": "收到驳回决定1个月内","B": "收到驳回决定3个月内","C": "申请日3年内","D": "任何时间"},
+    "correct_answer": "B",
+    "explanation": "自收到驳回决定之日起3个月内。"
+  },
+  {
+    "id": "q_collegial-review_001",
+    "skills": ["collegial-review"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "复审决定不包括以下哪种类型？",
+    "options": {"A": "撤销驳回决定","B": "维持驳回决定","C": "部分撤销","D": "宣告专利权无效"},
+    "correct_answer": "D",
+    "explanation": "复审决定针对驳回决定，包括撤销驳回、维持驳回等，不涉及宣告无效（那是无效宣告程序）。"
+  },
+  {
+    "id": "q_patent-invalidation_001",
+    "skills": ["patent-invalidation"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "无效宣告请求的启动主体是？",
+    "options": {"A": "只有专利权人","B": "任何单位或个人","C": "专利代理人","D": "审查员"},
+    "correct_answer": "B",
+    "explanation": "自专利授权公告之日起，任何单位或个人均可以请求宣告该专利权无效。"
+  },
+  {
+    "id": "q_invalidation-grounds_001",
+    "skills": ["invalidation-grounds"],
+    "p_g": 0.06, "p_s": 0.07,
+    "question_text": "无效宣告的法定理由不包括？",
+    "options": {"A": "缺乏三性","B": "权利要求得不到说明书支持","C": "专利产品销量不好","D": "修改超范围"},
+    "correct_answer": "C",
+    "explanation": "商业成功与否不是无效理由。"
+  },
+  {
+    "id": "q_oral-proceeding_001",
+    "skills": ["oral-proceeding"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "口头审理在无效程序中通常由谁提起？",
+    "options": {"A": "合议组可依职权决定","B": "必须由当事人请求","C": "法院安排","D": "专利局主动进行"},
+    "correct_answer": "A",
+    "explanation": "口头审理可由当事人请求，合议组也可根据案情需要依职权决定。"
+  },
+  {
+    "id": "q_patent-rights-protection_001",
+    "skills": ["patent-rights-protection"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "专利侵权的判断原则主要是？",
+    "options": {"A": "全面覆盖原则","B": "等同原则","C": "禁止反悔原则","D": "中心限定原则"},
+    "correct_answer": "A",
+    "explanation": "全面覆盖原则是判断侵权的基础，即被控侵权方案需包含权利要求记载的全部技术特征。"
+  },
+  {
+    "id": "q_protection-scope_001",
+    "skills": ["protection-scope"],
+    "p_g": 0.06, "p_s": 0.07,
+    "question_text": "确定发明专利权保护范围的主要依据是？",
+    "options": {"A": "说明书及附图","B": "权利要求书","C": "摘要","D": "审查历史"},
+    "correct_answer": "B",
+    "explanation": "《专利法》第64条，发明或者实用新型专利权的保护范围以其权利要求的内容为准。"
+  },
+  {
+    "id": "q_doctrine-of-equivalents_001",
+    "skills": ["doctrine-of-equivalents"],
+    "p_g": 0.05, "p_s": 0.08,
+    "question_text": "等同特征的判断标准是？",
+    "options": {"A": "完全相同","B": "三基本一普通（基本相同的功能，基本相同的效果，基本相同的手段，本领域普通技术人员无需创造性劳动即可联想）","C": "有区别即等同","D": "专利产品与被控产品相同"},
+    "correct_answer": "B",
+    "explanation": "等同特征是指与所记载的技术特征以基本相同的手段，实现基本相同的功能，达到基本相同的效果，并且本领域普通技术人员在被诉侵权行为发生时无需经过创造性劳动就能够联想到的特征。"
+  },
+  {
+    "id": "q_claim-interpretation_001",
+    "skills": ["claim-interpretation"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "解释权利要求时，内部证据不包括？",
+    "options": {"A": "权利要求书","B": "说明书","C": "审查档案","D": "技术词典"},
+    "correct_answer": "D",
+    "explanation": "内部证据包括权利要求书、说明书及附图、审查档案。外部证据包括工具书、教科书等。"
+  },
+  {
+    "id": "q_infringement-types_001",
+    "skills": ["infringement-types"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "下列哪种行为不构成直接侵权？",
+    "options": {"A": "制造专利产品","B": "销售专利产品","C": "仅拥有专利产品","D": "许诺销售专利产品"},
+    "correct_answer": "C",
+    "explanation": "为生产经营目的制造、使用、许诺销售、销售、进口专利产品构成直接侵权。单纯拥有不构成侵权。"
+  },
+  {
+    "id": "q_infringement-types_002",
+    "skills": ["infringement-types", "direct-infringement", "indirect-infringement"],
+    "p_g": 0.05, "p_s": 0.07,
+    "question_text": "间接侵权成立的必备条件是？",
+    "options": {"A": "存在直接侵权行为","B": "行为人主观故意","C": "提供的物品具有专用性","D": "以上都是"},
+    "correct_answer": "D",
+    "explanation": "间接侵权以直接侵权的存在为前提，且行为人须有主观故意，所提供的物品必须专用于实施专利。"
+  },
+  {
+    "id": "q_direct-infringement_001",
+    "skills": ["direct-infringement"],
+    "p_g": 0.06, "p_s": 0.07,
+    "question_text": "全面覆盖原则下，如果被控侵权产品包含权利要求全部技术特征，但增加了额外特征，是否侵权？",
+    "options": {"A": "不侵权","B": "侵权","C": "看情况","D": "只等同侵权"},
+    "correct_answer": "B",
+    "explanation": "全面覆盖原则下，被控侵权产品包含权利要求全部技术特征就构成侵权，增加特征不影响侵权成立。"
+  },
+  {
+    "id": "q_indirect-infringement_001",
+    "skills": ["indirect-infringement"],
+    "p_g": 0.06, "p_s": 0.07,
+    "question_text": "以下哪种行为可能构成间接侵权？",
+    "options": {"A": "明知某部件专门用于实施专利，仍提供该部件","B": "销售通用部件","C": "修理专利产品","D": "进口专利产品"},
+    "correct_answer": "A",
+    "explanation": "提供专门用于实施专利的部件，具有主观故意，可构成间接侵权。"
+  },
+  {
+    "id": "q_infringement-defenses_001",
+    "skills": ["infringement-defenses"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "专利侵权抗辩中，权利用尽的含义是？",
+    "options": {"A": "专利权到期后不再保护","B": "专利产品售出后，专利权人对该售出产品的使用和销售权用尽","C": "专利权人放弃专利权","D": "专利权被宣告无效"},
+    "correct_answer": "B",
+    "explanation": "权利用尽指专利产品经专利权人或其许可人售出后，对该售出产品的使用、销售等行为不再需要许可。"
+  },
+  {
+    "id": "q_infringement-defenses_002",
+    "skills": ["infringement-defenses", "prior-use-right"],
+    "p_g": 0.06, "p_s": 0.07,
+    "question_text": "先用权成立的条件是？",
+    "options": {"A": "在申请日前已经制造相同产品或做好必要准备","B": "产品已公开销售","C": "拥有专利权","D": "与专利权人达成协议"},
+    "correct_answer": "A",
+    "explanation": "在先申请日前已制造相同产品、使用相同方法或已作好制造、使用的必要准备，并且仅在原有范围内继续制造、使用的，不视为侵权。"
+  },
+  {
+    "id": "q_bolar-exemption_001",
+    "skills": ["bolar-exemption"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "Bolar例外主要适用于哪个领域？",
+    "options": {"A": "药品和医疗器械","B": "电子产品","C": "化工产品","D": "软件"},
+    "correct_answer": "A",
+    "explanation": "Bolar例外允许为提供药品或医疗器械行政审批所需信息而实施专利，适用于医药领域。"
+  },
+  {
+    "id": "q_prior-use-right_001",
+    "skills": ["prior-use-right"],
+    "p_g": 0.06, "p_s": 0.07,
+    "question_text": "先用权人可以在什么范围内继续实施？",
+    "options": {"A": "任意扩大范围","B": "仅在原有范围内","C": "在全国范围内","D": "在专利权人许可下"},
+    "correct_answer": "B",
+    "explanation": "先用权的实施限于申请日前的原有范围和规模。"
+  },
+  {
+    "id": "q_scientific-research-exemption_001",
+    "skills": ["scientific-research-exemption"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "为科研目的使用专利的行为不视为侵权，前提是？",
+    "options": {"A": "非商业目的的纯科学研究","B": "任何科研都可以","C": "营利性研究机构也可以","D": "只需注明出处"},
+    "correct_answer": "A",
+    "explanation": "专为科学研究和实验目的使用，且非商业目的，不视为侵权。"
+  },
+  {
+    "id": "q_exhaustion-of-rights_001",
+    "skills": ["exhaustion-of-rights"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "权利用尽原则是否适用于方法专利？",
+    "options": {"A": "不适用","B": "适用，但只限于依照该方法直接获得的产品","C": "完全适用","D": "视情况而定"},
+    "correct_answer": "B",
+    "explanation": "对于方法专利，权利用尽仅适用于依照该专利方法直接获得的产品。"
+  },
+  {
+    "id": "q_implied-license_001",
+    "skills": ["implied-license"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "专利权人销售专用部件的行为，通常可推断为？",
+    "options": {"A": "默示许可购买者使用该部件组装产品","B": "转让专利权","C": "放弃专利权","D": "未授权任何行为"},
+    "correct_answer": "A",
+    "explanation": "销售专用于实施专利的部件，可能暗示着给予购买者实施专利的许可（默示许可）。"
+  },
+  {
+    "id": "q_remedies_001",
+    "skills": ["remedies"],
+    "p_g": 0.06, "p_s": 0.07,
+    "question_text": "专利侵权损害赔偿的计算方式中，第一顺序是？",
+    "options": {"A": "侵权人获利","B": "权利人实际损失","C": "许可费合理倍数","D": "法定赔偿"},
+    "correct_answer": "B",
+    "explanation": "根据《专利法》第71条，赔偿数额按照权利人因被侵权所受到的实际损失或者侵权人因侵权所获得的利益确定；……赔偿数额还应当包括权利人为制止侵权行为所支付的合理开支。"
+  },
+  {
+    "id": "q_remedies_002",
+    "skills": ["remedies"],
+    "p_g": 0.06, "p_s": 0.07,
+    "question_text": "诉前禁令的正式名称是？",
+    "options": {"A": "财产保全","B": "行为保全","C": "证据保全","D": "先予执行"},
+    "correct_answer": "B",
+    "explanation": "在起诉前申请法院责令停止有关行为，属于行为保全（诉前禁令）。"
+  },
+  {
+    "id": "q_patent-agency-practice_001",
+    "skills": ["patent-agency-practice"],
+    "p_g": 0.06, "p_s": 0.07,
+    "question_text": "专利代理师资格考试中，实务卷考查的核心能力是？",
+    "options": {"A": "法律条文记忆","B": "权利要求撰写与答复","C": "文献翻译","D": "数学计算"},
+    "correct_answer": "B",
+    "explanation": "实务卷重点考察专利文件的撰写、审查意见的答复、无效请求和答辩等实务技能。"
+  },
+  {
+    "id": "q_claims-drafting-advanced_001",
+    "skills": ["claims-drafting-advanced"],
+    "p_g": 0.05, "p_s": 0.08,
+    "question_text": "在撰写独立权利要求时，对区别特征进行上位概括的目的是？",
+    "options": {"A": "缩小保护范围","B": "获得更宽的保护范围","C": "使权利要求更清晰","D": "满足形式要求"},
+    "correct_answer": "B",
+    "explanation": "使用上位概念可以涵盖更宽的保护范围，防止竞争对手轻易规避。"
+  },
+  {
+    "id": "q_oa-response-practice_001",
+    "skills": ["oa-response-practice"],
+    "p_g": 0.05, "p_s": 0.08,
+    "question_text": "在答复审查意见时，如果审查员认为权利要求不具备创造性，代理师应优先考虑？",
+    "options": {"A": "直接放弃","B": "争辩区别特征和所解决的技术问题是非显而易见的","C": "增加新的独立权利要求","D": "删除权利要求"},
+    "correct_answer": "B",
+    "explanation": "首先应尝试通过争辩现有技术没有给出技术启示，或区别特征带来了预料不到的效果，来捍卫创造性。"
+  },
+  {
+    "id": "q_invalidation-practice_001",
+    "skills": ["invalidation-practice"],
+    "p_g": 0.05, "p_s": 0.08,
+    "question_text": "在无效宣告请求中，请求人最常用的无效理由是？",
+    "options": {"A": "说明书公开不充分","B": "缺乏新颖性或创造性","C": "修改超范围","D": "重复授权"},
+    "correct_answer": "B",
+    "explanation": "缺乏新颖性或创造性是最常见且成功率较高的无效理由。"
+  },
+  {
+    "id": "q_related-laws_001",
+    "skills": ["related-laws"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "与专利代理密切相关的民事基本法律是？",
+    "options": {"A": "《刑法》","B": "《民法总则》","C": "《行政诉讼法》","D": "《商标法》"},
+    "correct_answer": "B",
+    "explanation": "《民法总则》中关于民事主体、法律行为、代理、时效等规定直接影响专利代理活动。"
+  },
+  {
+    "id": "q_civil-law-basics_001",
+    "skills": ["civil-law-basics"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "专利权人委托专利代理机构的行为属于？",
+    "options": {"A": "委托代理","B": "法定代理","C": "指定代理","D": "表见代理"},
+    "correct_answer": "A",
+    "explanation": "专利权人基于合同委托代理机构办理专利事务，属于委托代理关系。"
+  },
+  {
+    "id": "q_contract-law-tech_001",
+    "skills": ["contract-law-tech"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "合作开发完成的发明创造，其专利申请权的归属约定不明确时，权利属于？",
+    "options": {"A": "出资最多的一方","B": "共同所有","C": "国家","D": "完成单位的负责人"},
+    "correct_answer": "B",
+    "explanation": "根据《专利法》第8条，合作开发完成的发明创造，除另有协议外，申请专利的权利属于共同完成的单位或个人。"
+  },
+  {
+    "id": "q_contract-law-tech_002",
+    "skills": ["contract-law-tech", "employee-invention"],
+    "p_g": 0.06, "p_s": 0.06,
+    "question_text": "职务发明创造申请专利的权利属于？",
+    "options": {"A": "发明人","B": "单位","C": "发明人与单位共有","D": "国家"},
+    "correct_answer": "B",
+    "explanation": "执行本单位任务或主要利用本单位物质技术条件完成的发明创造，申请专利的权利属于该单位。"
+  },
+  {
+    "id": "q_employee-invention_001",
+    "skills": ["employee-invention"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "对于职务发明，发明人享有的权利包括？",
+    "options": {"A": "获得专利权","B": "署名权和获得奖励报酬的权利","C": "无偿实施","D": "转让权"},
+    "correct_answer": "B",
+    "explanation": "发明人有在专利文件中署名和获得单位奖励、报酬的权利。"
+  },
+  {
+    "id": "q_administrative-procedure_001",
+    "skills": ["administrative-procedure"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "对国家知识产权局驳回专利申请的决定不服，应当先？",
+    "options": {"A": "提起行政诉讼","B": "请求复审","C": "申请行政复议","D": "向国务院申诉"},
+    "correct_answer": "B",
+    "explanation": "复审是行政诉讼的前置程序。"
+  },
+  {
+    "id": "q_civil-procedure_001",
+    "skills": ["civil-procedure"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "专利侵权诉讼的第一审法院通常是？",
+    "options": {"A": "基层人民法院","B": "中级人民法院","C": "高级人民法院","D": "最高人民法院"},
+    "correct_answer": "B",
+    "explanation": "专利侵权案件由知识产权法院或最高人民法院指定的中级人民法院管辖。"
+  },
+  {
+    "id": "q_trips-agreement_001",
+    "skills": ["trips-agreement"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "TRIPS协定规定发明专利的保护期限不少于申请日起多少年？",
+    "options": {"A": "10年","B": "15年","C": "20年","D": "25年"},
+    "correct_answer": "C",
+    "explanation": "TRIPS要求发明专利保护期不少于自申请日起20年。"
+  },
+  {
+    "id": "q_pct-system_001",
+    "skills": ["pct-system"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "通过PCT途径可以？",
+    "options": {"A": "直接获得国际专利","B": "简化在多国申请的流程","C": "免除国家审查","D": "获得全球保护"},
+    "correct_answer": "B",
+    "explanation": "PCT不授予国际专利，仅提供一种简化多国申请的途径，最终授权仍由各指定国决定。"
+  },
+  {
+    "id": "q_pct-filing_001",
+    "skills": ["pct-filing"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "PCT国际申请的受理局通常是？",
+    "options": {"A": "WIPO国际局","B": "国家知识产权局或WIPO","C": "任何国家的专利局","D": "联合国"},
+    "correct_answer": "B",
+    "explanation": "中国申请人可向中国专利局或WIPO国际局提交PCT申请。"
+  },
+  {
+    "id": "q_pct-national-phase_001",
+    "skills": ["pct-national-phase"],
+    "p_g": 0.07, "p_s": 0.06,
+    "question_text": "进入中国国家阶段的PCT申请，最迟应在优先权日起多少个月内办理进入手续？",
+    "options": {"A": "20个月","B": "30个月","C": "32个月","D": "24个月"},
+    "correct_answer": "B",
+    "explanation": "通常为30个月，如申请人在国际阶段提出初步审查要求，可延迟至32个月，但中国目前接受30个月为基本期限，32个月为宽限。"
+  },
+  {
+    "id": "q_general-consumer_001",
+    "skills": ["general-consumer"],
+    "p_g": 0.08, "p_s": 0.05,
+    "question_text": "一般消费者对外观设计的何种方面有能力区分？",
+    "options": {"A": "技术构思","B": "整体视觉效果","C": "内部结构","D": "制造工艺"},
+    "correct_answer": "B",
+    "explanation": "一般消费者关注的是产品的整体视觉效果，能区分外观设计之间的差别，但不关注技术功能。"
+  },
+  {
+    "id": "q_multi_novelty_inventive_001",
+    "skills": ["novelty", "inventive-step"],
+    "p_g": 0.05, "p_s": 0.07,
+    "question_text": "一项发明具备新颖性，是否必然具备创造性？",
+    "options": {"A": "是","B": "否","C": "视领域而定","D": "只要没有抵触申请就有创造性"},
+    "correct_answer": "B",
+    "explanation": "新颖性和创造性是独立的要件，有新颖性不意味着有创造性（例如，与现有技术相比仅存在细微变化）。"
+  },
+  {
+    "id": "q_multi_three-step_inventive_001",
+    "skills": ["three-step-method", "inventive-step", "person-skilled-in-art"],
+    "p_g": 0.05, "p_s": 0.08,
+    "question_text": "在确定区别特征后，所确定的技术问题为什么不能含有该区别特征的技术手段？",
+    "options": {"A": "以防止事后诸葛亮","B": "为了简化","C": "提高效率","D": "法律规定"},
+    "correct_answer": "A",
+    "explanation": "确定技术问题时，不能将区别特征的技术手段纳入问题中，否则会落入“事后诸葛亮”的误区。"
+  },
+  {
+    "id": "q_multi_conflicting_prior_art_001",
+    "skills": ["conflicting-application", "prior-art-definition"],
+    "p_g": 0.05, "p_s": 0.07,
+    "question_text": "抵触申请与现有技术的根本区别在于？",
+    "options": {"A": "现有技术是申请日以前公开，抵触申请是申请日以前申请、申请日以后公开","B": "抵触申请可以评价创造性","C": "现有技术不破坏新颖性","D": "没有区别"},
+    "correct_answer": "A",
+    "explanation": "抵触申请在申请日前尚未公开，因此不属于现有技术，但法律将其拟制为影响新颖性的对比文件。"
+  },
+  {
+    "id": "q_multi_claims_independent_dependent_001",
+    "skills": ["independent-claim", "dependent-claim"],
+    "p_g": 0.06, "p_s": 0.07,
+    "question_text": "一项权利要求引用在前权利要求并增加了技术特征，它属于？",
+    "options": {"A": "独立权利要求","B": "从属权利要求","C": "产品权利要求","D": "方法权利要求"},
+    "correct_answer": "B",
+    "explanation": "包含引用关系并附加特征的即是从属权利要求。"
+  },
+  {
+    "id": "q_multi_infringement_defenses_001",
+    "skills": ["infringement-defenses", "exhaustion-of-rights", "implied-license"],
+    "p_g": 0.05, "p_s": 0.07,
+    "question_text": "专利权人销售用于实施专利的专用设备后，购买者使用该设备制造专利产品的行为属于？",
+    "options": {"A": "侵权","B": "默示许可，不侵权","C": "权利用尽","D": "先用权"},
+    "correct_answer": "B",
+    "explanation": "销售专用设备暗示了允许购买者使用其制造专利产品，属于默示许可。权利用尽仅针对售出的产品本身。"
+  }
+]

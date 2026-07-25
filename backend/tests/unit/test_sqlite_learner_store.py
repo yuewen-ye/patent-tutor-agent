@@ -69,6 +69,38 @@ def test_bkt_update_uses_configured_priors(tmp_path) -> None:
     correct = store.update_mastery("learner-1", "novelty", observed_correct=True)
     incorrect = store.update_mastery("learner-2", "novelty", observed_correct=False)
 
-    assert correct == pytest.approx(0.7577, abs=0.001)
-    assert incorrect == pytest.approx(0.2571, abs=0.001)
+    assert correct == pytest.approx(0.8710, abs=0.001)
+    assert incorrect == pytest.approx(0.0300, abs=0.001)
     assert store.mastery("learner-1")["novelty"] == pytest.approx(correct)
+
+
+@pytest.mark.unit
+def test_diagnostic_session_and_snapshot_are_durable(tmp_path) -> None:
+    database = tmp_path / "learners.sqlite3"
+    store = SQLiteLearnerStore(database)
+    payload = {
+        "diagnostic_session_id": "diagnostic-1",
+        "learner_id": "learner-1",
+        "status": "completed",
+        "learning_goal": "学习新颖性",
+        "education_background": "理工背景+有研发经验",
+        "created_at": "2026-07-25T00:00:00+00:00",
+    }
+
+    store.save_diagnostic_session(payload=payload)
+    store.complete_diagnostic_session(
+        diagnostic_session_id="diagnostic-1",
+        learner_id="learner-1",
+        diagnostic_payload={
+            "knowledge": {
+                "novelty": {
+                    "pl": 0.72,
+                    "observations": 2,
+                    "inferred": False,
+                }
+            }
+        },
+    )
+
+    assert SQLiteLearnerStore(database).load_diagnostic_session("diagnostic-1") == payload
+    assert SQLiteLearnerStore(database).mastery("learner-1")["novelty"] == pytest.approx(0.72)

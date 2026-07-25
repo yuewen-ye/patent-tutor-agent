@@ -1,6 +1,6 @@
 # 专利导学系统关系型数据库设计说明
 
-> 版本：v5（2026-07-23）
+> 版本：v6（2026-07-25）
 > 数据库：MySQL 8.0+
 > 范围：当前业务数据库设计、实际持久化行为与后续演进边界
 > 说明：本文只描述设计，不包含建表 SQL、迁移代码或 Repository 实现代码。可执行结构以
@@ -17,7 +17,7 @@
 - 保存学员、问卷、课程会话、反馈会话和完整工作流状态；
 - 保存当前画像、历史画像、薄弱点和知识点掌握度；
 - 保存学习路径、专家协作轮次、模型生成的题目和学员作答；
-- 保存判题结果、BKT 更新过程和反馈记录；
+- 保存 CAT 诊断会话、服务端判题、BKT 更新、知识 DAG 推断和反馈记录；
 - 保存 Markdown 产物的路径、哈希、类型、来源和归属；
 - 为前端查询、服务重启后的历史读取、问题排查和审计提供数据。
 
@@ -61,7 +61,7 @@
 | 当前投影 | 历史或事件来源 |
 |---|---|
 | `student_profiles` | `profile_history` |
-| `student_node_mastery` | `attempts`、`mastery_events` |
+| `student_node_mastery` | `attempts`、`mastery_events`、`diagnostic_mastery_events` |
 | `session_states` | `session_events`、`rounds` |
 
 ### 2.4 一致性
@@ -78,7 +78,8 @@
 
 - 当前学员画像以 `student_profiles` 为准；
 - 当前 BKT 掌握度以 `student_node_mastery` 为准；
-- 学习过程历史以 `attempts`、`mastery_events` 和 `profile_history` 为准；
+- 学习过程历史以 `attempts`、`mastery_events`、`diagnostic_attempts`、
+  `diagnostic_mastery_events` 和 `profile_history` 为准；
 - 课程知识 DAG 和易混淆对当前以后端 JSON 为准；
 - Markdown 正文以 Artifact 文件为准，数据库负责索引和校验。
 
@@ -113,7 +114,7 @@
 - 一个学员可以有多个课程、诊断、聊天和反馈会话；
 - 一个学员只有一份当前画像，但可以有多份历史画像；
 - 一个学员在每个知识点上只有一条当前掌握度记录；
-- 一个学员可以提交多次作答，每次作答最多触发一条 BKT 审计事件；
+- 一个学员可以提交多次作答；多技能题会为每个受影响节点分别生成 BKT 审计事件；
 - 一个学员可以有多个薄弱点和多条问卷提交历史。
 
 ### 4.2 以会话为中心
@@ -126,10 +127,12 @@
 
 ### 4.3 题目、作答和掌握度
 
-- 题目是课程生成结果的一部分，不依赖预先存在的固定题库；
+- 课程练习题是课程生成结果的一部分，不依赖预先存在的固定题库；初始 CAT 使用后端固定诊断题库；
 - `questions` 保存模型生成的题目实例及内部参考答案；
 - `attempts` 保存学员原始回答和判题结果；
-- `mastery_events` 保存一次已判定作答引起的 BKT 状态变化；
+- `mastery_events` 按“作答 + 知识节点”保存已判定课程作答引起的 BKT 状态变化；
+- `diagnostic_sessions`、`diagnostic_attempts` 和 `diagnostic_mastery_events` 保存固定题库
+  CAT 诊断及直接观测、DAG 推断审计；
 - `student_node_mastery` 保存每个知识点的最新 BKT 投影。
 
 ### 4.4 Artifact 和引用
@@ -150,7 +153,7 @@
 | 学员身份 | `students`、`auth_sessions` | 学员身份和预留认证会话 |
 | 会话运行 | `sessions`、`session_states`、`session_events`、`session_checkpoints`、`rounds` | 工作流会话、状态、事件、checkpoint 和专家轮次 |
 | 学员画像 | `student_profiles`、`profile_history`、`student_weak_points` | 当前画像、历史画像和薄弱点投影 |
-| 自适应学习 | `student_node_mastery`、`mastery_events`、`learning_paths`、`session_directives` | BKT 当前值、变化审计、路径和教学指令 |
+| 自适应学习 | `student_node_mastery`、`mastery_events`、`diagnostic_sessions`、`diagnostic_attempts`、`diagnostic_mastery_events`、`learning_paths`、`session_directives` | CAT 会话、BKT 当前值、直接观测与推断审计、路径和教学指令 |
 | 教学闭环 | `onboarding_responses`、`questions`、`attempts`、`feedback_logs` | 问卷、模型生成题目、作答和反馈 |
 | 产物审计 | `artifacts`、`legal_citations`、`artifact_citations` | 文件索引、法条引用和引用关系 |
 | 静态目录预留 | `knowledge_nodes`、`confusion_pairs` | 带版本的知识目录只读投影，当前尚未启用 |
@@ -373,16 +376,18 @@ Planner 读取这里的当前值。数据库中存在该节点时，它覆盖画
 | `mastery_event_id` | 事件主键 |
 | `student_id` | 所属学员 |
 | `node_id` | 被更新的知识节点 |
-| `attempt_id` | 触发更新的作答，可为空；非空时唯一 |
+| `attempt_id` | 触发更新的作答，可为空；与 `node_id` 联合唯一 |
 | `observed_correct` | 本次二值观测结果 |
 | `prior_pl` | 更新前 P(L) |
+| `predicted_pl` | 应用学习转移后的预测 P(L) |
 | `posterior_pl` | 结合本次答题后的后验值 |
-| `updated_pl` | 再考虑学习转移后的最终值 |
+| `updated_pl` | 本次最终 P(L)，当前等于 `posterior_pl` |
 | `p_init`、`p_transit`、`p_guess`、`p_slip` | 本次使用的 BKT 参数 |
 | `model_version` | BKT 版本 |
 | `created_at` | 事件时间 |
 
-正常学员作答必须关联 `attempts`。`attempt_id` 唯一可防止同一次作答被重复计入 BKT。
+正常学员作答必须关联 `attempts`。`(attempt_id, node_id)` 联合唯一可防止同一作答对同一技能
+重复更新，同时允许一道多技能题更新多个节点。
 
 ### 6.15 `learning_paths`
 
@@ -462,8 +467,8 @@ Artifact 读取必须同时校验会话归属、路径范围和 Markdown 后缀�
 | `status` | `draft`、`published` 或 `retired` |
 | `created_at` | 创建时间 |
 
-系统不存在必须预先维护的固定题库；每次课程都可以生成新的题目实例。数据库保存题目是为了后续
-展示、判题、审计和版本关联。
+课程练习不存在必须预先维护的固定题库；每次课程都可以生成新的题目实例。CAT 初始诊断使用独立
+固定题库，不写入本表。数据库保存课程题目是为了后续展示、判题、审计和版本关联。
 
 `answer_json` 和 `evidence_json` 是内部评分数据，正式学员接口不应返回。当前完整会话详情仍可能
 包含课程包中的答案，因此在接入真实前端前需要增加学员安全视图或专用题目 DTO。
@@ -592,9 +597,38 @@ Artifact 读取必须同时校验会话归属、路径范围和 Markdown 后缀�
 当前运行时权威来源是 `backend/app/curriculum/data/confusion-pairs.json`，该表尚未进入实际读写
 流程。
 
+### 6.26 `diagnostic_sessions`
+
+用途：保存一轮可恢复的 CAT 初始诊断。`payload_json` 包含题目选择器状态、69 节点 BKT tracker、
+当前题、作答日志和停止原因；`model_version` 当前为 `bkt-cat-v1`。状态只允许 `running` 或
+`completed`。
+
+### 6.27 `diagnostic_attempts`
+
+用途：保存固定诊断题库中的逐题作答。系统记录题目覆盖的全部 `skills_json`、服务端判定结果、
+响应耗时和会话内幂等键。学员接口不返回固定题库答案。
+
+### 6.28 `diagnostic_mastery_events`
+
+用途：按诊断作答和节点记录掌握度变化。`event_type=observed` 表示题目直接测量，保存完整 BKT
+参数与预测/后验值；`event_type=inferred` 表示知识 DAG 的父节点传播或剪枝推断，不伪装成直接
+观测。
+
 ---
 
 ## 7. 一次完整业务流程中的数据库读写
+
+### 7.0 推荐的 CAT 初始诊断
+
+1. 创建 `diagnostic_sessions`，把 tracker、CAT 选择器状态和首题写入 `payload_json`；
+2. 每次作答由服务端固定题库判分，写入 `diagnostic_attempts`；
+3. 同一事务写入该题对应的 `diagnostic_mastery_events`，区分 `observed` 与 `inferred`；
+4. 更新诊断会话状态并选择下一题；达到停止条件后固化 69 节点快照；
+5. 把有直接观测或 DAG 推断的节点投影到 `student_node_mastery`；
+6. 自动创建 `teach` 课程会话，并将诊断快照保存到 `sessions.input_payload`。
+
+诊断会话可由服务重启后的进程从 `payload_json` 恢复。课程会话创建后仍执行下述画像、规划、专家
+协作和审核流程；知识维度以 CAT/BKT 快照为权威来源。
 
 ### 7.1 前端获取问卷
 
@@ -822,7 +856,7 @@ Agent 不应直接持有数据库连接，也不应直接写 Markdown。标准�
 ### 12.2 幂等和并发
 
 - `attempts.idempotency_key` 防止重复提交；
-- `mastery_events.attempt_id` 防止重复更新 BKT；
+- `mastery_events.(attempt_id, node_id)` 防止同一作答对同一节点重复更新 BKT；
 - `session_states.revision` 防止旧状态覆盖新状态；
 - 专家并行写入必须依赖唯一 ID 和事务，不能靠执行先后猜测结果。
 
@@ -857,8 +891,9 @@ Agent 不应直接持有数据库连接，也不应直接写 Markdown。标准�
 | 问卷原始回答及完整诊断上下文 | 已实现 | 原始回答用于审计，题目和选项上下文进入课程会话输入 |
 | 当前画像、画像历史和薄弱点 | 已实现 | 当前投影与历史快照分离 |
 | BKT 当前值和状态转移审计 | 已实现 | `attempts`、mastery 和事件同事务 |
+| CAT 初始诊断与 DAG 推断审计 | 已实现 | 固定题库、可恢复会话、逐题作答和直接/推断事件 |
 | 学习路径和教学指令 | 已实现 | 按会话和版本保存 |
-| 专家轮次、模型生成题目和作答 | 已实现 | 题目不是固定题库 |
+| 专家轮次、模型生成题目和作答 | 已实现 | 课程练习题不是固定题库 |
 | 固定答案服务端判题 | 已实现 | 当前使用规范化精确比较 |
 | 主观题 LLM 语义评分 | 未实现 | 尚无评分量表、评分合同和审计记录 |
 | Artifact 索引和哈希验证 | 已实现 | 正文保存在文件系统 |

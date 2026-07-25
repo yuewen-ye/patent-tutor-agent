@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from backend.app.learner_memory.memory import JsonValue, StoredMemoryItem
+from backend.app.learner_memory.bkt.model import compute_bkt_step
 
 P_L0 = 0.15
 P_T = 0.25
@@ -127,15 +128,18 @@ class SQLiteLearnerStore:
         skill_id: str,
         *,
         observed_correct: bool,
+        p_transit: float = P_T,
+        p_guess: float = P_G,
+        p_slip: float = P_S,
     ) -> float:
         current = self.mastery(learner_id).get(skill_id, P_L0)
-        if observed_correct:
-            denominator = current * (1 - P_S) + (1 - current) * P_G
-            posterior = current * (1 - P_S) / denominator
-        else:
-            denominator = current * P_S + (1 - current) * (1 - P_G)
-            posterior = current * P_S / denominator
-        updated = posterior + (1 - posterior) * P_T
+        _, updated = compute_bkt_step(
+            current,
+            observed_correct=observed_correct,
+            p_transit=p_transit,
+            p_guess=p_guess,
+            p_slip=p_slip,
+        )
         with self._connect() as connection:
             connection.execute(
                 "INSERT INTO skill_mastery(learner_id, skill_id, probability, updated_at) "
@@ -152,6 +156,88 @@ class SQLiteLearnerStore:
                 (learner_id,),
             ).fetchall()
         return {str(row["skill_id"]): float(row["probability"]) for row in rows}
+
+    def save_diagnostic_session(self, *, payload: dict[str, Any]) -> None:
+        now = datetime.now(UTC).isoformat()
+        with self._connect() as connection:
+            connection.execute(
+                "INSERT INTO diagnostic_sessions("
+                "diagnostic_session_id, learner_id, status, payload_json, created_at, updated_at"
+                ") VALUES (?, ?, ?, ?, ?, ?) "
+                "ON CONFLICT(diagnostic_session_id) DO UPDATE SET "
+                "status=excluded.status, payload_json=excluded.payload_json, "
+                "updated_at=excluded.updated_at",
+                (
+                    payload["diagnostic_session_id"],
+                    payload["learner_id"],
+                    payload["status"],
+                    json.dumps(payload, ensure_ascii=False),
+                    payload.get("created_at") or now,
+                    now,
+                ),
+            )
+
+    def load_diagnostic_session(self, diagnostic_session_id: str) -> dict[str, Any] | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT payload_json FROM diagnostic_sessions WHERE diagnostic_session_id=?",
+                (diagnostic_session_id,),
+            ).fetchone()
+        return json.loads(str(row["payload_json"])) if row else None
+
+    def save_diagnostic_attempt(
+        self,
+        *,
+        diagnostic_session_id: str,
+        learner_id: str,
+        attempt: dict[str, Any],
+        idempotency_key: str | None,
+    ) -> None:
+        attempt_id = f"{diagnostic_session_id}:{len(self._diagnostic_attempts(diagnostic_session_id)) + 1}"
+        with self._connect() as connection:
+            connection.execute(
+                "INSERT OR IGNORE INTO diagnostic_attempts("
+                "attempt_id, diagnostic_session_id, learner_id, question_id, attempt_json, "
+                "idempotency_key, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    attempt_id,
+                    diagnostic_session_id,
+                    learner_id,
+                    attempt["question_id"],
+                    json.dumps(attempt, ensure_ascii=False),
+                    idempotency_key,
+                    datetime.now(UTC).isoformat(),
+                ),
+            )
+
+    def complete_diagnostic_session(
+        self,
+        *,
+        diagnostic_session_id: str,
+        learner_id: str,
+        diagnostic_payload: dict[str, Any],
+    ) -> None:
+        now = datetime.now(UTC).isoformat()
+        knowledge = diagnostic_payload.get("knowledge") or {}
+        with self._connect() as connection:
+            for skill_id, state in knowledge.items():
+                if not isinstance(state, dict):
+                    continue
+                if int(state.get("observations", 0)) <= 0 and not state.get("inferred"):
+                    continue
+                connection.execute(
+                    "INSERT INTO skill_mastery(learner_id, skill_id, probability, updated_at) "
+                    "VALUES (?, ?, ?, ?) ON CONFLICT(learner_id, skill_id) DO UPDATE SET "
+                    "probability=excluded.probability, updated_at=excluded.updated_at",
+                    (learner_id, str(skill_id), float(state["pl"]), now),
+                )
+
+    def _diagnostic_attempts(self, diagnostic_session_id: str) -> list[sqlite3.Row]:
+        with self._connect() as connection:
+            return connection.execute(
+                "SELECT attempt_id FROM diagnostic_attempts WHERE diagnostic_session_id=?",
+                (diagnostic_session_id,),
+            ).fetchall()
 
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.path, timeout=5)
@@ -172,6 +258,17 @@ class SQLiteLearnerStore:
                 "learner_id TEXT NOT NULL, skill_id TEXT NOT NULL, probability REAL NOT NULL "
                 "CHECK(probability >= 0 AND probability <= 1), updated_at TEXT NOT NULL, "
                 "PRIMARY KEY(learner_id, skill_id));"
+                "CREATE TABLE IF NOT EXISTS diagnostic_sessions ("
+                "diagnostic_session_id TEXT PRIMARY KEY, learner_id TEXT NOT NULL, "
+                "status TEXT NOT NULL, payload_json TEXT NOT NULL, created_at TEXT NOT NULL, "
+                "updated_at TEXT NOT NULL);"
+                "CREATE TABLE IF NOT EXISTS diagnostic_attempts ("
+                "attempt_id TEXT PRIMARY KEY, diagnostic_session_id TEXT NOT NULL, "
+                "learner_id TEXT NOT NULL, question_id TEXT NOT NULL, attempt_json TEXT NOT NULL, "
+                "idempotency_key TEXT, created_at TEXT NOT NULL, "
+                "UNIQUE(diagnostic_session_id, question_id), "
+                "UNIQUE(diagnostic_session_id, idempotency_key), "
+                "FOREIGN KEY(diagnostic_session_id) REFERENCES diagnostic_sessions(diagnostic_session_id));"
             )
 
 

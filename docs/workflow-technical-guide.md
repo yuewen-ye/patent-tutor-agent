@@ -2,6 +2,29 @@
 
 本文描述当前运行时实现。`StateDict` 中的结构化 JSON 是权威数据；Markdown 仅是可读取、可审查、可归档的过程产物，不存在额外“最终 Markdown”。
 
+## 0. CAT/BKT 初始诊断前置流程
+
+推荐的新学员入口先运行服务层的自适应诊断，再启动 `teach` 工作流：
+
+```text
+创建 diagnostic session
+  → CAT 选择下一题
+  → 服务端按固定题库判分
+  → BKT 更新直接测量节点
+  → 知识 DAG 向父节点传播并剪枝
+  → 达到置信度、无候选题或 40 题上限
+  → 固化 69 节点诊断快照
+  → 自动创建 teach 课程会话
+```
+
+算法版本为 `bkt-cat-v1`。BKT 参数由教育背景初始化，前 10 次直接观测提高转移率；每题可以覆盖
+`p_guess/p_slip`。CAT 使用期望信息增益选题，并结合先修关系、叶节点优先、父节点传播和确定性剪枝。
+没有直接观测且没有被剪枝的节点不能只凭先验落入阈值区间而被视为“已分类”。
+
+完成后的权威快照写入课程会话 `input_payload.diagnostic_snapshot`。诊断 Agent 仍负责学习动机、
+认知、元认知和行为等维度，但知识节点必须使用该快照，不得由 LLM 重算。原有直接提交问卷并创建
+课程的接口继续保留为兼容入口。
+
 ## 1. 当前工作流
 
 ```text
@@ -28,7 +51,10 @@ POST /sessions/{course_session_id}/exercise-responses
 
 `diagnosis_feedback` 是一个多阶段 Agent 节点，通过 `diagnosis_feedback_phase` 在诊断和反馈阶段重入。专家 A、B 也各自只有一个 Agent，通过 `expert_phase` 在草稿、互评和修订阶段重入；三个阶段都并行执行，由 `_experts_barrier` 等待双方完成并推进阶段。整合阶段只运行专家 A。Judge 通过时课程会话结束，等待学员提交练习；Judge 不通过时回到 Expert A integration 重新整合并再次审核，直到通过。学员反馈只在提交练习后创建的独立 feedback 会话中生成。
 
-新学员问卷在服务层被解析为题目正文、选项、学员答案和已选选项正文后再交给诊断 Agent，原始回答仍保留用于审计。为避免真实模型生成 69 个重复冷启动节点造成长响应，诊断 Agent 只估计有证据的知识节点，反馈 Agent 只返回本轮变化节点；后端依据静态知识 DAG 确定性补齐或沿用其余节点，最终状态仍是完整知识快照。
+推荐流程中，服务层把已完成 CAT/BKT 诊断的 69 节点快照注入课程会话，诊断 Agent 不能覆盖这些
+知识掌握度。兼容流程仍会把新学员问卷解析为题目正文、选项、学员答案和已选选项正文，再让诊断
+Agent 估计有证据的知识节点；后端依据静态知识 DAG 确定性补齐其余冷启动节点。反馈 Agent 只返回
+本轮变化节点，后端沿用未变化节点，最终状态始终是完整知识快照。
 
 ## 2. 路径与混淆轴
 
@@ -36,7 +62,10 @@ POST /sessions/{course_session_id}/exercise-responses
 - 混淆对定义来自 `backend/app/curriculum/data/confusion-pairs.json`，运行时不改写静态定义。
 - `planner` 不调用 LLM。它读取数据库中该学员的最新画像和 BKT 掌握度，再由 `backend/app/curriculum/learning_path.py` 确定性计算路径。
 - 混淆风险同时考虑画像中的 `weak_points` 和相关概念的 BKT 掌握度；低掌握度会提高 `learner_risk` 并记录 `adjustment_reason`。
-- FastAPI 默认使用 MySQL 保存画像、历史、BKT 及其状态转移审计、会话状态、事件、题目和作答。通过 `PATENT_TUTOR_MYSQL_URL` 配置连接；演示环境可以自动迁移，生产环境应在发布阶段显式执行版本化迁移。SQLite 没有业务数据，只保留为单元测试替身。
+- FastAPI 默认使用 MySQL 保存画像、历史、BKT 及其状态转移审计、CAT 诊断会话、诊断作答、
+  DAG 传播审计、课程会话状态、事件、题目和作答。通过 `PATENT_TUTOR_MYSQL_URL` 配置连接；
+  演示环境可以自动迁移，生产环境应在发布阶段显式执行版本化迁移。SQLite 没有业务数据，只保留
+  为单元测试替身。
 - Studio 由 LangGraph Dev 管理自己的 Store，不会自动读取 FastAPI 的 MySQL；要让 Studio 复用产品数据，必须显式注入同一个持久化 Store，或通过 FastAPI 启动产品流程。
 
 ## 3. Markdown 过程产物

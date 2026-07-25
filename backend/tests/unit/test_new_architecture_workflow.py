@@ -338,6 +338,7 @@ def test_diagnosis_completes_unobserved_knowledge_nodes_with_cold_start_prior() 
         "ci_high": 0.4,
         "observations": 0,
         "low_confidence": True,
+        "inferred": False,
     }
 
 

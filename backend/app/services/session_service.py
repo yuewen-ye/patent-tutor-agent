@@ -26,6 +26,7 @@ from backend.app.core.llm import (
 )
 from backend.app.runtime_outputs.artifacts import write_manifest, write_process_markdown
 from backend.app.graph.workflow import arun_workflow
+from backend.app.learner_memory.diagnostic_sessions import DiagnosticSessionManager
 from backend.app.learner_memory.memory import learner_memory_snapshot
 from backend.app.onboarding.questionnaire import (
     onboarding_questionnaire,
@@ -63,6 +64,7 @@ class SessionService:
         self._llm_client = llm_client
         self._checkpointer = checkpointer if checkpointer is not None else InMemorySaver()
         self._store = store if store is not None else InMemoryStore()
+        self._diagnostics = DiagnosticSessionManager(self._store)
         self.event_bridge = event_bridge or SessionEventBridge()
         self._session_ttl_seconds = session_ttl_seconds
         self._sessions: dict[str, SessionRecord] = {}
@@ -141,6 +143,8 @@ class SessionService:
         learner_id: str,
         learning_goal: str,
         responses: list[dict[str, Any]],
+        education_background: str | None = None,
+        diagnostic_payload: dict[str, Any] | None = None,
     ) -> SessionRecord:
         submission_id = uuid.uuid4().hex
         self._save_history(
@@ -156,6 +160,8 @@ class SessionService:
             input_payload={
                 "questionnaire_responses": responses,
                 "questionnaire_context": resolve_questionnaire_responses(responses),
+                "education_background": education_background,
+                "diagnostic_snapshot": diagnostic_payload,
             },
             start_immediately=False,
         )
@@ -198,6 +204,116 @@ class SessionService:
             thread.start()
         return record
 
+    def create_diagnostic_session(
+        self,
+        *,
+        learner_id: str,
+        learning_goal: str,
+        education_background: str,
+        responses: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        resolve_questionnaire_responses(responses)
+        progress = self._diagnostics.create(
+            learner_id=learner_id,
+            learning_goal=learning_goal,
+            education_background=education_background,
+            questionnaire_responses=responses,
+        )
+        self._save_history(
+            learner_id=learner_id,
+            session_id=progress["diagnostic_session_id"],
+            event_type="diagnostic_started",
+            payload={
+                "learning_goal": learning_goal,
+                "education_background": education_background,
+            },
+        )
+        return progress
+
+    def diagnostic_progress(
+        self,
+        *,
+        learner_id: str,
+        diagnostic_session_id: str,
+    ) -> dict[str, Any]:
+        session = self._diagnostics.get(diagnostic_session_id)
+        if session.learner_id != learner_id:
+            raise PermissionError("Learner does not own the diagnostic session.")
+        return self._diagnostics.public_progress(session)
+
+    def submit_diagnostic_response(
+        self,
+        *,
+        learner_id: str,
+        diagnostic_session_id: str,
+        question_id: str,
+        answer: str,
+        response_ms: int | None,
+        idempotency_key: str | None,
+    ) -> dict[str, Any]:
+        session = self._diagnostics.get(diagnostic_session_id)
+        if session.learner_id != learner_id:
+            raise PermissionError("Learner does not own the diagnostic session.")
+        progress = self._diagnostics.submit_answer(
+            diagnostic_session_id,
+            question_id=question_id,
+            answer=answer,
+            response_ms=response_ms,
+            idempotency_key=idempotency_key,
+        )
+        return self._start_course_after_diagnostic(session, progress)
+
+    def complete_diagnostic_session(
+        self,
+        *,
+        learner_id: str,
+        diagnostic_session_id: str,
+    ) -> dict[str, Any]:
+        session = self._diagnostics.get(diagnostic_session_id)
+        if session.learner_id != learner_id:
+            raise PermissionError("Learner does not own the diagnostic session.")
+        progress = self._diagnostics.complete(diagnostic_session_id)
+        return self._start_course_after_diagnostic(session, progress)
+
+    def _start_course_after_diagnostic(
+        self,
+        session: Any,
+        progress: dict[str, Any],
+    ) -> dict[str, Any]:
+        if progress["status"] != "completed" or progress.get("course_session_id"):
+            return progress
+        with self._lock:
+            refreshed = self._diagnostics.get(session.diagnostic_session_id)
+            if refreshed.course_session_id:
+                progress["course_session_id"] = refreshed.course_session_id
+                return progress
+            diagnostic_payload = self._diagnostics.diagnostic_payload(
+                session.diagnostic_session_id
+            )
+            course = self.create_course_from_questionnaire(
+                learner_id=session.learner_id,
+                learning_goal=session.learning_goal,
+                responses=session.questionnaire_responses,
+                education_background=session.education_background,
+                diagnostic_payload=diagnostic_payload,
+            )
+            self._diagnostics.attach_course_session(
+                session.diagnostic_session_id,
+                course_session_id=course.session_id,
+            )
+        self._save_history(
+            learner_id=session.learner_id,
+            session_id=session.diagnostic_session_id,
+            event_type="diagnostic_completed",
+            payload={
+                "course_session_id": course.session_id,
+                "answered_questions": progress["answered_questions"],
+                "termination_reason": progress["termination_reason"],
+            },
+        )
+        progress["course_session_id"] = course.session_id
+        return progress
+
     def create_feedback_session(
         self,
         *,
@@ -233,11 +349,14 @@ class SessionService:
             register_questions(session_id=course_session_id, state=course_record.state)
         record_attempts = getattr(self._store, "record_attempts", None)
         if callable(record_attempts):
-            attempt_results = record_attempts(
-                student_id=learner_id,
-                source_session_id=course_session_id,
-                attempt_session_id=record.session_id,
-                responses=responses,
+            attempt_results = cast(
+                list[dict[str, Any]],
+                record_attempts(
+                    student_id=learner_id,
+                    source_session_id=course_session_id,
+                    attempt_session_id=record.session_id,
+                    responses=responses,
+                ),
             )
             result_by_question = {
                 str(result.get("question_id")): result
@@ -265,11 +384,17 @@ class SessionService:
                 for response in responses:
                     observed = response.get("observed_correct")
                     if isinstance(observed, bool):
-                        update_mastery(
-                            learner_id,
-                            str(response.get("skill_id") or response["question_id"]),
-                            observed_correct=observed,
-                        )
+                        skill_ids = response.get("skill_ids")
+                        if not isinstance(skill_ids, list) or not skill_ids:
+                            skill_ids = [
+                                str(response.get("skill_id") or response["question_id"])
+                            ]
+                        for skill_id in skill_ids:
+                            update_mastery(
+                                learner_id,
+                                str(skill_id),
+                                observed_correct=observed,
+                            )
         submission_markdown = (
             "# 练习提交\n\n"
             f"- 原课程会话：{course_session_id}\n"
@@ -674,7 +799,7 @@ class SessionService:
                 self._sessions[session_id].done.set()
 
     def _merge_state_update(self, session_id: str, updates: dict[str, Any]) -> None:
-        state: StateDict
+        state: dict[str, Any]
         with self._lock:
             record = self._sessions[session_id]
             if record.status == "canceled":
@@ -686,9 +811,10 @@ class SessionService:
                     state[key] = (existing if isinstance(existing, list) else []) + value
                 else:
                     state[key] = value
-            record.state = cast(StateDict, state)
+            typed_state = cast(StateDict, state)
+            record.state = typed_state
             record.updated_at = utc_now()
-        self._persist_state(session_id, state, updates)
+        self._persist_state(session_id, typed_state, updates)
 
     def _persist_state(
         self,

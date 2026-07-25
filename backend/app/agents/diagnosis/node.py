@@ -135,6 +135,41 @@ def _normalize_learner_profile_payload(raw: object) -> object:
     return _complete_knowledge_snapshot(normalized)
 
 
+def _apply_diagnostic_snapshot(raw: object, diagnostic_snapshot: object) -> object:
+    """Make deterministic CAT/BKT knowledge authoritative over the LLM payload."""
+
+    if not isinstance(raw, dict) or not isinstance(diagnostic_snapshot, dict):
+        return raw
+    knowledge = diagnostic_snapshot.get("knowledge")
+    if not isinstance(knowledge, dict):
+        return raw
+    five_dimensions = raw.get("five_dimensions")
+    if not isinstance(five_dimensions, dict):
+        five_dimensions = {}
+        raw["five_dimensions"] = five_dimensions
+    five_dimensions["knowledge"] = knowledge
+    education_background = diagnostic_snapshot.get("education_background")
+    if education_background:
+        raw["education_background"] = str(education_background)
+    node_names = {
+        str(node["node_id"]): str(node.get("node_name") or node["node_id"])
+        for node in load_knowledge_dag().get("nodes", [])
+        if isinstance(node, dict) and node.get("node_id")
+    }
+    measured_weaknesses = [
+        node_names.get(str(node_id), str(node_id))
+        for node_id, state in knowledge.items()
+        if isinstance(state, dict)
+        and int(state.get("observations", 0)) > 0
+        and float(state.get("pl", 0.0)) < 0.4
+    ]
+    if measured_weaknesses:
+        existing = raw.get("weak_points")
+        existing_list = list(existing) if isinstance(existing, list) else []
+        raw["weak_points"] = list(dict.fromkeys([*measured_weaknesses, *existing_list]))
+    return raw
+
+
 def _normalize_feedback_payload(raw: object) -> object:
     """Normalize known provider variants without weakening the feedback contract."""
 
@@ -192,6 +227,9 @@ def build_diagnosis_phase_node(llm_client: LLMClient) -> Node:
                 "user",
                 "当前学习需求：{user_input}\n"
                 "新学员问卷题目、选项和回答：{questionnaire_context}\n"
+                "CAT/BKT 确定性知识快照（knowledge 权威来源，不得改写）："
+                "{diagnostic_snapshot}\n"
+                "CAT 答题日志（用于解释认知、进度和情感信号）：{diagnostic_answer_log}\n"
                 "历史学习者画像：{historical_profiles}\n"
                 "知识图合法 KC 节点 id（knowledge 只输出有问卷或历史证据的节点；"
                 "其余节点由后端按 P(L₀)=0.15 的冷启动先验补齐）：\n"
@@ -211,18 +249,29 @@ def build_diagnosis_phase_node(llm_client: LLMClient) -> Node:
         questionnaire_context = input_payload.get("questionnaire_context") or input_payload.get(
             "questionnaire_responses", []
         )
+        diagnostic_snapshot = input_payload.get("diagnostic_snapshot") or {}
         raw = llm_client.generate_json(
             messages_from_prompt(
                 prompt,
                 user_input=state["user_input"],
                 questionnaire_context=json.dumps(questionnaire_context, ensure_ascii=False),
+                diagnostic_snapshot=json.dumps(diagnostic_snapshot, ensure_ascii=False),
+                diagnostic_answer_log=json.dumps(
+                    diagnostic_snapshot.get("answer_log", [])
+                    if isinstance(diagnostic_snapshot, dict)
+                    else [],
+                    ensure_ascii=False,
+                ),
                 historical_profiles=historical_profiles,
                 kc_node_ids="\n".join(f"- {n}" for n in _kc_node_ids()) or "（知识图未加载）",
             ),
             temperature=agent_temperature("diagnosis_feedback", 0.5),
             agent="diagnosis_feedback",
         )
-        profile = LearnerProfile.model_validate(_normalize_learner_profile_payload(raw))
+        normalized = _normalize_learner_profile_payload(raw)
+        profile = LearnerProfile.model_validate(
+            _apply_diagnostic_snapshot(normalized, diagnostic_snapshot)
+        )
         save_profile_snapshot(runtime, state, profile.model_dump())
         return {
             "learner_profile": profile.model_dump(),

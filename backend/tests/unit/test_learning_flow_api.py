@@ -27,6 +27,34 @@ class EndToEndQueueLLM:
                     "learning_style": "case_first_then_rule",
                     "weak_points": ["新颖性判断步骤"],
                     "learning_goal": "系统掌握专利新颖性判断",
+                    "five_dimensions": {
+                        "knowledge": {},
+                        "cognition": {
+                            "remember": 0.6,
+                            "understand": 0.5,
+                            "apply": 0.3,
+                            "analyze": 0.2,
+                            "evaluate": 0.1,
+                            "create": 0.05,
+                        },
+                        "style": {
+                            "perception": {"chosen": "sensing", "strength": 0.7},
+                            "input": {"chosen": "visual", "strength": 0.6},
+                            "processing": {"chosen": "active", "strength": 0.55},
+                            "understanding": {"chosen": "sequential", "strength": 0.65},
+                        },
+                        "progress": {
+                            "completed_nodes": [],
+                            "current_node": "novelty",
+                            "pending_nodes": [],
+                            "overall_completion_ratio": 0.0,
+                        },
+                        "affect": {
+                            "primary_state": "interested",
+                            "confidence": 0.6,
+                            "signals": ["愿意完成自适应诊断"],
+                        },
+                    },
                 },
                 {
                     "questionnaire": ["哪一步最容易混淆？"],
@@ -286,6 +314,119 @@ def test_frontend_can_fetch_versioned_onboarding_questionnaire(
     assert "48" in body["markdown"]
 
 
+def test_cat_diagnostic_session_updates_mastery_and_starts_course(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, service = _client(tmp_path, monkeypatch)
+    learner_id = "learner-1"
+    started = client.post(
+        f"/learners/{learner_id}/diagnostic-sessions",
+        json={
+            "learning_goal": "系统掌握专利新颖性判断",
+            "education_background": "理工背景+有研发经验",
+            "responses": [{"question_id": "Q23", "answer": "B"}],
+        },
+    )
+
+    assert started.status_code == 200, started.text
+    initial = started.json()
+    diagnostic_session_id = initial["diagnostic_session_id"]
+    question = initial["current_question"]
+    selected = next(iter(question["options"]))
+    answered = client.post(
+        f"/learners/{learner_id}/diagnostic-sessions/"
+        f"{diagnostic_session_id}/responses",
+        json={
+            "question_id": question["question_id"],
+            "answer": selected,
+            "response_ms": 1500,
+            "idempotency_key": "diagnostic-answer-1",
+        },
+    )
+
+    assert answered.status_code == 200, answered.text
+    assert answered.json()["answered_questions"] == 1
+    completed = client.post(
+        f"/learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}/complete"
+    )
+    assert completed.status_code == 200, completed.text
+    assert completed.json()["status"] == "completed"
+    assert completed.json()["course_session_id"] == "course-session"
+    assert completed.json()["knowledge_snapshot"]
+    assert service.learner_memory(learner_id)["mastery"]
+
+
+def test_completed_cat_snapshot_is_authoritative_in_course_profile(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
+    llm = EndToEndQueueLLM()
+    service = SessionService(
+        artifact_root=tmp_path / "artifacts",
+        llm_client=llm,
+        store=SQLiteLearnerStore(tmp_path / "learner-memory.sqlite3"),
+    )
+    client = TestClient(create_app(session_service=service))
+    learner_id = "learner-cat-e2e"
+    initial = client.post(
+        f"/learners/{learner_id}/diagnostic-sessions",
+        json={
+            "learning_goal": "系统掌握专利新颖性判断",
+            "education_background": "理工背景+有研发经验",
+            "responses": [{"question_id": "Q23", "answer": "B"}],
+        },
+    ).json()
+    question = initial["current_question"]
+    selected = next(iter(question["options"]))
+    client.post(
+        f"/learners/{learner_id}/diagnostic-sessions/"
+        f"{initial['diagnostic_session_id']}/responses",
+        json={
+            "question_id": question["question_id"],
+            "answer": selected,
+            "response_ms": 1200,
+        },
+    )
+    completed = client.post(
+        f"/learners/{learner_id}/diagnostic-sessions/"
+        f"{initial['diagnostic_session_id']}/complete"
+    ).json()
+
+    course_state = service.wait_for_completion(completed["course_session_id"], timeout=10)
+    learner_profile = course_state.get("learner_profile")
+    input_payload = course_state.get("input_payload")
+    assert isinstance(learner_profile, dict)
+    assert isinstance(input_payload, dict)
+    profile_knowledge = learner_profile["five_dimensions"]["knowledge"]
+
+    assert profile_knowledge == completed["knowledge_snapshot"]
+    assert any(state["observations"] == 1 for state in profile_knowledge.values())
+    assert input_payload["diagnostic_snapshot"]["model_version"] == "bkt-cat-v1"
+
+
+def test_diagnostic_session_enforces_learner_ownership(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, _ = _client(tmp_path, monkeypatch)
+    started = client.post(
+        "/learners/learner-1/diagnostic-sessions",
+        json={
+            "learning_goal": "学习专利法",
+            "education_background": "其他",
+            "responses": [{"question_id": "Q23", "answer": "A"}],
+        },
+    ).json()
+
+    response = client.get(
+        f"/learners/other/diagnostic-sessions/{started['diagnostic_session_id']}"
+    )
+
+    assert response.status_code == 403
+
+
 def test_questionnaire_submission_is_persisted_before_course_session(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -344,19 +485,16 @@ def test_exercise_submission_validates_course_session_boundary(
 ) -> None:
     client, service = _client(tmp_path, monkeypatch)
 
-    if course_lookup == "missing":
-        def require_session(_: str) -> SimpleNamespace:
+    def require_session(session_id: str) -> SimpleNamespace:
+        if course_lookup == "missing":
             raise KeyError("course-session")
-    else:
         learner_id = "other-learner" if course_lookup == "foreign" else "learner-1"
         session_status = "completed" if course_lookup == "foreign" else "running"
-
-        def require_session(session_id: str) -> SimpleNamespace:
-            return SimpleNamespace(
-                session_id=session_id,
-                learner_id=learner_id,
-                status=session_status,
-            )
+        return SimpleNamespace(
+            session_id=session_id,
+            learner_id=learner_id,
+            status=session_status,
+        )
 
     monkeypatch.setattr(service, "require_session", require_session)
     response = client.post(

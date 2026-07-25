@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.app.api.models import SessionCreatedResponse
+from backend.app.learner_memory.bkt.contracts import DiagnosticProgress
 from backend.app.onboarding.questionnaire import onboarding_questionnaire
 from backend.app.services.session_service import SessionService
 
@@ -38,6 +39,10 @@ class QuestionnaireSubmission(BaseModel):
     )
 
     learning_goal: str = Field(min_length=1, description="学员本阶段的学习目标。")
+    education_background: str | None = Field(
+        default=None,
+        description="可选的结构化教育背景；CAT 诊断流程使用它选择 BKT 先验。",
+    )
     responses: list[QuestionnaireResponseItem] = Field(
         min_length=1,
         description="问卷回答列表；正式流程应提交学员已填写的全部题目。",
@@ -57,6 +62,7 @@ class ExerciseResponseItem(BaseModel):
         description="兼容旧客户端的观测字段；MySQL 生产路径优先使用服务端答案判定。",
     )
     skill_id: str | None = None
+    skill_ids: list[str] | None = None
 
 
 class ExerciseSubmission(BaseModel):
@@ -86,6 +92,49 @@ class ExerciseSubmission(BaseModel):
     )
 
 
+class DiagnosticSessionSubmission(BaseModel):
+    model_config = ConfigDict(
+        frozen=True,
+        json_schema_extra={
+            "examples": [
+                {
+                    "learning_goal": "系统掌握专利新颖性判断",
+                    "education_background": "理工背景+有研发经验",
+                    "responses": [
+                        {"question_id": "Q23", "answer": "B"},
+                        {"question_id": "Q31", "answer": "D"},
+                    ],
+                }
+            ]
+        },
+    )
+
+    learning_goal: str = Field(min_length=1)
+    education_background: str = Field(min_length=1)
+    responses: list[QuestionnaireResponseItem] = Field(min_length=1)
+
+
+class DiagnosticResponseSubmission(BaseModel):
+    model_config = ConfigDict(
+        frozen=True,
+        json_schema_extra={
+            "examples": [
+                {
+                    "question_id": "q_patent-law-foundation_001",
+                    "answer": "A",
+                    "response_ms": 5200,
+                    "idempotency_key": "learner-001-diagnostic-1",
+                }
+            ]
+        },
+    )
+
+    question_id: str = Field(min_length=1)
+    answer: str = Field(min_length=1)
+    response_ms: int | None = Field(default=None, ge=0)
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=255)
+
+
 def create_learning_flow_router(session_service: SessionService) -> APIRouter:
     router = APIRouter(tags=["learning-flow"])
 
@@ -105,6 +154,7 @@ def create_learning_flow_router(session_service: SessionService) -> APIRouter:
                 learner_id=learner_id,
                 learning_goal=request.learning_goal,
                 responses=[item.model_dump() for item in request.responses],
+                education_background=request.education_background,
             )
         except ValueError as exc:
             raise HTTPException(
@@ -112,6 +162,115 @@ def create_learning_flow_router(session_service: SessionService) -> APIRouter:
                 detail=str(exc),
             ) from exc
         return SessionCreatedResponse(session_id=record.session_id, status=record.status)
+
+    @router.post(
+        "/learners/{learner_id}/diagnostic-sessions",
+        response_model=DiagnosticProgress,
+    )
+    def create_diagnostic_session(
+        learner_id: str,
+        request: DiagnosticSessionSubmission,
+    ) -> DiagnosticProgress:
+        try:
+            progress = session_service.create_diagnostic_session(
+                learner_id=learner_id,
+                learning_goal=request.learning_goal,
+                education_background=request.education_background,
+                responses=[item.model_dump() for item in request.responses],
+            )
+        except (ValueError, RuntimeError) as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=str(exc),
+            ) from exc
+        return DiagnosticProgress.model_validate(progress)
+
+    @router.get(
+        "/learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}",
+        response_model=DiagnosticProgress,
+    )
+    def get_diagnostic_session(
+        learner_id: str,
+        diagnostic_session_id: str,
+    ) -> DiagnosticProgress:
+        try:
+            progress = session_service.diagnostic_progress(
+                learner_id=learner_id,
+                diagnostic_session_id=diagnostic_session_id,
+            )
+        except KeyError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Diagnostic session not found.",
+            ) from exc
+        except PermissionError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Learner does not own the diagnostic session.",
+            ) from exc
+        return DiagnosticProgress.model_validate(progress)
+
+    @router.post(
+        "/learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}/responses",
+        response_model=DiagnosticProgress,
+    )
+    def submit_diagnostic_response(
+        learner_id: str,
+        diagnostic_session_id: str,
+        request: DiagnosticResponseSubmission,
+    ) -> DiagnosticProgress:
+        try:
+            progress = session_service.submit_diagnostic_response(
+                learner_id=learner_id,
+                diagnostic_session_id=diagnostic_session_id,
+                question_id=request.question_id,
+                answer=request.answer,
+                response_ms=request.response_ms,
+                idempotency_key=request.idempotency_key,
+            )
+        except KeyError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Diagnostic session not found.",
+            ) from exc
+        except PermissionError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Learner does not own the diagnostic session.",
+            ) from exc
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=str(exc),
+            ) from exc
+        except RuntimeError as exc:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        return DiagnosticProgress.model_validate(progress)
+
+    @router.post(
+        "/learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}/complete",
+        response_model=DiagnosticProgress,
+    )
+    def complete_diagnostic_session(
+        learner_id: str,
+        diagnostic_session_id: str,
+    ) -> DiagnosticProgress:
+        try:
+            progress = session_service.complete_diagnostic_session(
+                learner_id=learner_id,
+                diagnostic_session_id=diagnostic_session_id,
+            )
+        except KeyError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Diagnostic session not found.",
+            ) from exc
+        except PermissionError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Learner does not own the diagnostic session.",
+            ) from exc
+        return DiagnosticProgress.model_validate(progress)
 
     @router.post(
         "/sessions/{course_session_id}/exercise-responses",
