@@ -434,6 +434,8 @@ class LearningProgressDecision(ContractModel):
     minimum_observations: int = Field(ge=1)
     direct_evidence: bool
     reason: str
+    plan_id: str | None = None
+    plan_version: int | None = Field(default=None, ge=1)
 
 
 class FeedbackResult(ContractModel):

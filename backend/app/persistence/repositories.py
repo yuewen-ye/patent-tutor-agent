@@ -17,6 +17,7 @@ from backend.app.learner_memory.bkt.model import (
     parameters_for_background,
 )
 from backend.app.learner_memory.sqlite_store import P_L0, P_G, P_S, P_T
+from backend.app.curriculum.learning_plan import plan_node_status
 from backend.app.persistence.db import MySQLDatabase
 
 
@@ -225,6 +226,9 @@ class MySQLLearnerStore:
                 connection, _json_dump(namespace_history), namespace_history, limit, None
             )
             mastery = self._mastery_on_connection(connection, learner_id)
+            active_learning_plan = self._active_learning_plan_on_connection(
+                connection, learner_id
+            )
         return {
             "learner_id": learner_id,
             "latest_profile": dict(profiles[0].value) if profiles else None,
@@ -232,7 +236,193 @@ class MySQLLearnerStore:
             "profiles": [dict(item.value) for item in profiles],
             "history": [dict(item.value) for item in history],
             "mastery": mastery,
+            "active_learning_plan": active_learning_plan,
         }
+
+    def active_learning_plan(self, learner_id: str) -> dict[str, Any] | None:
+        with self.database.transaction() as connection:
+            return self._active_learning_plan_on_connection(connection, learner_id)
+
+    def create_learning_plan(
+        self,
+        *,
+        learner_id: str,
+        source_session_id: str,
+        learning_goal: str,
+        learning_goal_hash: str,
+        knowledge_graph_version: str,
+        nodes: list[dict[str, Any]],
+        progress: dict[str, Any],
+        replan_reason: str,
+    ) -> dict[str, Any]:
+        now = _db_now()
+        plan_id = uuid.uuid4().hex
+        with self.database.transaction() as connection:
+            self._ensure_student(connection, learner_id, now)
+            cursor = connection.cursor()
+            cursor.execute(
+                "SELECT student_id FROM students WHERE student_id=%s FOR UPDATE",
+                (learner_id,),
+            )
+            cursor.fetchone()
+            cursor.execute(
+                "SELECT COALESCE(MAX(plan_version), 0) AS max_version "
+                "FROM learner_learning_plans WHERE student_id=%s",
+                (learner_id,),
+            )
+            version_row = cursor.fetchone()
+            plan_version = int(version_row["max_version"]) + 1
+            cursor.execute(
+                "UPDATE learner_learning_plans SET status='superseded', updated_at=%s "
+                "WHERE student_id=%s AND status='active'",
+                (now, learner_id),
+            )
+            source_session_ref = self._existing_id(
+                connection, "sessions", "session_id", source_session_id
+            )
+            current_node = str(progress.get("current_node") or "") or None
+            current_order_idx = next(
+                (
+                    index
+                    for index, node in enumerate(nodes)
+                    if str(node.get("node_id") or "") == current_node
+                ),
+                None,
+            )
+            status = "active" if current_node else "completed"
+            cursor.execute(
+                "INSERT INTO learner_learning_plans("
+                "plan_id, student_id, source_session_id, last_session_id, learning_goal, "
+                "learning_goal_hash, knowledge_graph_version, plan_version, status, "
+                "current_node_id, current_order_idx, progress_json, replan_reason, "
+                "last_progress_decision, created_at, updated_at, completed_at"
+                ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                (
+                    plan_id,
+                    learner_id,
+                    source_session_ref,
+                    source_session_ref,
+                    learning_goal,
+                    learning_goal_hash,
+                    knowledge_graph_version,
+                    plan_version,
+                    status,
+                    current_node,
+                    current_order_idx,
+                    _json_dump(progress),
+                    replan_reason,
+                    None,
+                    now,
+                    now,
+                    now if status == "completed" else None,
+                ),
+            )
+            for order_idx, node in enumerate(nodes):
+                node_id = str(node["node_id"])
+                node_status = plan_node_status(node_id, progress)
+                cursor.execute(
+                    "INSERT INTO learner_learning_plan_nodes("
+                    "plan_id, node_id, node_name, prerequisites, difficulty_cap, strategy, "
+                    "node_json, order_idx, node_status, completed_at, created_at, updated_at"
+                    ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                    (
+                        plan_id,
+                        node_id,
+                        str(node.get("node_name") or node_id),
+                        _json_dump(node.get("prerequisites") or []),
+                        node.get("difficulty_cap"),
+                        node.get("strategy"),
+                        _json_dump(node),
+                        order_idx,
+                        node_status,
+                        now if node_status == "completed" else None,
+                        now,
+                        now,
+                    ),
+                )
+            cursor.execute(
+                "SELECT * FROM learner_learning_plans WHERE plan_id=%s",
+                (plan_id,),
+            )
+            row = cursor.fetchone()
+            return self._learning_plan_from_row(connection, row)
+
+    def update_learning_plan_progress(
+        self,
+        *,
+        learner_id: str,
+        plan_id: str,
+        source_session_id: str,
+        progress: dict[str, Any],
+        decision: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        now = _db_now()
+        with self.database.transaction() as connection:
+            cursor = connection.cursor()
+            cursor.execute(
+                "SELECT * FROM learner_learning_plans "
+                "WHERE plan_id=%s AND student_id=%s FOR UPDATE",
+                (plan_id, learner_id),
+            )
+            row = cursor.fetchone()
+            if not row:
+                return None
+            current_node = str(progress.get("current_node") or "") or None
+            cursor.execute(
+                "SELECT node_id, order_idx FROM learner_learning_plan_nodes "
+                "WHERE plan_id=%s ORDER BY order_idx",
+                (plan_id,),
+            )
+            node_rows = cursor.fetchall()
+            current_order_idx = next(
+                (
+                    int(node["order_idx"])
+                    for node in node_rows
+                    if str(node["node_id"]) == current_node
+                ),
+                None,
+            )
+            status = "active" if current_node else "completed"
+            session_ref = self._existing_id(
+                connection, "sessions", "session_id", source_session_id
+            )
+            cursor.execute(
+                "UPDATE learner_learning_plans SET last_session_id=%s, status=%s, "
+                "current_node_id=%s, current_order_idx=%s, progress_json=%s, "
+                "last_progress_decision=%s, updated_at=%s, completed_at=%s "
+                "WHERE plan_id=%s",
+                (
+                    session_ref,
+                    status,
+                    current_node,
+                    current_order_idx,
+                    _json_dump(progress),
+                    _json_dump(decision),
+                    now,
+                    now if status == "completed" else None,
+                    plan_id,
+                ),
+            )
+            for node in node_rows:
+                node_id = str(node["node_id"])
+                node_status = plan_node_status(node_id, progress)
+                cursor.execute(
+                    "UPDATE learner_learning_plan_nodes SET node_status=%s, completed_at=%s, "
+                    "updated_at=%s WHERE plan_id=%s AND node_id=%s",
+                    (
+                        node_status,
+                        now if node_status == "completed" else None,
+                        now,
+                        plan_id,
+                        node_id,
+                    ),
+                )
+            cursor.execute(
+                "SELECT * FROM learner_learning_plans WHERE plan_id=%s",
+                (plan_id,),
+            )
+            updated = cursor.fetchone()
+            return self._learning_plan_from_row(connection, updated)
 
     def mastery(self, learner_id: str) -> dict[str, float]:
         with self.database.transaction() as connection:
@@ -843,6 +1033,80 @@ class MySQLLearnerStore:
                 "source, status, first_seen_at, last_seen_at) VALUES (%s,%s,%s,%s,'active',%s,%s)",
                 (uuid.uuid4().hex, learner_id, str(weak_text), "profile", now, now),
             )
+
+    def _active_learning_plan_on_connection(
+        self,
+        connection: Any,
+        learner_id: str,
+    ) -> dict[str, Any] | None:
+        cursor = connection.cursor()
+        cursor.execute(
+            "SELECT * FROM learner_learning_plans "
+            "WHERE student_id=%s AND status='active' "
+            "ORDER BY plan_version DESC LIMIT 1",
+            (learner_id,),
+        )
+        row = cursor.fetchone()
+        return self._learning_plan_from_row(connection, row) if row else None
+
+    def _learning_plan_from_row(
+        self,
+        connection: Any,
+        row: dict[str, Any],
+    ) -> dict[str, Any]:
+        plan_id = str(row["plan_id"])
+        cursor = connection.cursor()
+        cursor.execute(
+            "SELECT node_id, node_name, order_idx, node_status, node_json, completed_at "
+            "FROM learner_learning_plan_nodes WHERE plan_id=%s ORDER BY order_idx",
+            (plan_id,),
+        )
+        nodes: list[dict[str, Any]] = []
+        node_states: list[dict[str, Any]] = []
+        for node_row in cursor.fetchall():
+            node = _json_load(node_row.get("node_json"), {}) or {}
+            if not isinstance(node, dict):
+                node = {}
+            node.setdefault("node_id", str(node_row["node_id"]))
+            node.setdefault("node_name", str(node_row["node_name"]))
+            nodes.append(node)
+            node_states.append(
+                {
+                    "node_id": str(node_row["node_id"]),
+                    "order_idx": int(node_row["order_idx"]),
+                    "status": str(node_row["node_status"]),
+                    "completed_at": (
+                        _iso(node_row["completed_at"])
+                        if node_row.get("completed_at")
+                        else None
+                    ),
+                }
+            )
+        return {
+            "plan_id": plan_id,
+            "learner_id": str(row["student_id"]),
+            "source_session_id": row.get("source_session_id"),
+            "last_session_id": row.get("last_session_id"),
+            "learning_goal": str(row["learning_goal"]),
+            "learning_goal_hash": str(row["learning_goal_hash"]),
+            "knowledge_graph_version": str(row["knowledge_graph_version"]),
+            "plan_version": int(row["plan_version"]),
+            "status": str(row["status"]),
+            "current_node": row.get("current_node_id"),
+            "current_order_idx": row.get("current_order_idx"),
+            "progress": _json_load(row.get("progress_json"), {}) or {},
+            "replan_reason": str(row.get("replan_reason") or ""),
+            "last_progress_decision": (
+                _json_load(row.get("last_progress_decision"), None)
+            ),
+            "nodes": nodes,
+            "node_states": node_states,
+            "created_at": _iso(row["created_at"]),
+            "updated_at": _iso(row["updated_at"]),
+            "completed_at": (
+                _iso(row["completed_at"]) if row.get("completed_at") else None
+            ),
+        }
 
     def _mastery_on_connection(self, connection: Any, learner_id: str) -> dict[str, float]:
         cursor = connection.cursor()

@@ -351,6 +351,13 @@ class ApiJourney:
                 f"本节={path_decision.get('current_node_id') or '无'}；"
                 f"待学={len(path_decision.get('pending_node_ids') or [])}"
             )
+        if isinstance(path_decision, dict) and path_decision.get("plan_id"):
+            print(
+                "    学习计划："
+                f"id={path_decision['plan_id']}；"
+                f"version={path_decision.get('plan_version')}；"
+                f"reused={path_decision.get('plan_reused')}"
+            )
         if cat_knowledge_snapshot is not None:
             self._validate_cat_course_handoff(
                 course_state,
@@ -445,6 +452,7 @@ class ApiJourney:
             "course_artifact": course_artifact_path,
             "feedback_artifact": feedback_artifact_path,
             "mastery": learner.get("mastery", {}),
+            "active_learning_plan": learner.get("active_learning_plan"),
             "profile_count": len(profiles.get("profiles", [])),
             "history_count": len(history.get("history", [])),
             "learner_session_count": len(learner_sessions.get("sessions", [])),

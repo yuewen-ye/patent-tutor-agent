@@ -411,6 +411,8 @@ WS  /sessions/{feedback_session_id}/events
   `state.learner_profile_update.five_dimensions.knowledge` 都来自该快照；
 - `state.feedback_result.learning_progress` 给出 `current_node_before`、
   `current_node_after`、`advanced`、阈值、观测数和确定性判定原因；
+- 课程 `state.path_decision` 给出 `plan_id`、`plan_version`、`plan_reused`；反馈的
+  `learning_progress` 携带相同计划标识并持久化推进结果；
 - `state.learner_profile_update.five_dimensions.progress` 与上述游标判定一致；
 - Agent 原始输出不包含 `knowledge` 或 BKT 数值。
 
@@ -434,7 +436,7 @@ GET /learners/{learner_id}/history
 GET /learners/{learner_id}/sessions
 ```
 
-- `/learners/{learner_id}`：画像、历史、掌握度的汇总，前端优先使用。
+- `/learners/{learner_id}`：画像、历史、掌握度和 `active_learning_plan` 的汇总，前端优先使用。
 - `/profiles`：历次学员画像。
 - `/history`：问卷、练习和反馈历史。
 - `/sessions`：当前会话和持久化历史会话摘要。

@@ -397,7 +397,7 @@
   <header>
     <div class="title">
       <h1>专利导学系统数据库关系图</h1>
-      <p>25 张表 · MySQL · 点击表可查看与它直接相关的实体</p>
+      <p>27 张表 · MySQL · 点击表可查看与它直接相关的实体</p>
     </div>
     <div class="controls">
       <button id="main-mode" class="active" type="button">业务主链</button>
@@ -454,7 +454,7 @@
       { id: "loop", title: "教学闭环", note: "问卷、动态题目、作答和反馈",
         x: 50, y: 920, w: 1250, h: 650, border: "#dd9867", bg: "rgba(254,239,226,.78)" },
       { id: "adaptive", title: "自适应学习", note: "路径、教学指令和 BKT",
-        x: 1350, y: 920, w: 900, h: 650, border: "#cf7f93", bg: "rgba(252,232,238,.72)" },
+        x: 1350, y: 920, w: 900, h: 880, border: "#cf7f93", bg: "rgba(252,232,238,.72)" },
       { id: "artifact", title: "课程产物与法律引用", note: "文件索引和引用追踪",
         x: 2300, y: 920, w: 650, h: 650, border: "#c5a63a", bg: "rgba(251,246,218,.78)" }
     ];
@@ -505,9 +505,13 @@
         purpose: "一次规划产生的知识节点顺序", keys: "PK path_item_id\nFK session_id" },
       { id: "session_directives", group: "adaptive", x: 1840, y: 1070, w: 360, h: 150,
         purpose: "Planner 下发的出题和教学指令", keys: "PK directive_id\nFK session_id" },
-      { id: "student_node_mastery", group: "adaptive", x: 1400, y: 1330, w: 360, h: 160, root: true,
+      { id: "learner_learning_plans", group: "adaptive", x: 1400, y: 1300, w: 360, h: 160,
+        purpose: "跨会话持续的学员级完整学习计划、版本和当前游标", keys: "PK plan_id\nFK student_id / source_session_id / last_session_id" },
+      { id: "learner_learning_plan_nodes", group: "adaptive", x: 1840, y: 1300, w: 360, h: 160,
+        purpose: "计划内完整节点顺序及 pending/current/completed 状态", keys: "PK plan_node_id\nFK plan_id" },
+      { id: "student_node_mastery", group: "adaptive", x: 1400, y: 1560, w: 360, h: 160, root: true,
         purpose: "学员在每个知识节点上的当前 BKT 掌握度", keys: "PK student_id + node_id\nFK student_id" },
-      { id: "mastery_events", group: "adaptive", x: 1840, y: 1330, w: 360, h: 160,
+      { id: "mastery_events", group: "adaptive", x: 1840, y: 1560, w: 360, h: 160,
         purpose: "每次作答引起的掌握度变化明细", keys: "PK mastery_event_id\nFK student_id / attempt_id" },
 
       { id: "artifacts", group: "artifact", x: 2380, y: 1060, w: 490, h: 160, root: true,
@@ -533,6 +537,10 @@
       ["students", "memory_items", "logical", "通过命名空间形成逻辑关联"],
       ["students", "student_node_mastery", "fk", "一个学员对应多个知识点掌握度"],
       ["students", "mastery_events", "fk", "掌握度变化归属于学员"],
+      ["students", "learner_learning_plans", "fk", "一个学员可保留多个版本的学习计划"],
+      ["sessions", "learner_learning_plans", "fk", "计划记录首次规划和最近推进游标的会话"],
+      ["learner_learning_plans", "learner_learning_plan_nodes", "fk", "一个计划保存完整节点顺序和状态"],
+      ["learner_learning_plans", "learning_paths", "logical", "活动计划投影为每次课程会话的路径快照"],
       ["sessions", "learning_paths", "fk", "一个会话可保存多个路径节点"],
       ["sessions", "session_directives", "fk", "一个会话可保存多个指令版本"],
       ["students", "onboarding_responses", "fk", "问卷回答归属于学员"],
@@ -554,6 +562,7 @@
       ["knowledge_nodes", "student_node_mastery", "logical", "通过 node_id 逻辑关联"],
       ["knowledge_nodes", "mastery_events", "logical", "通过 node_id 逻辑关联"],
       ["knowledge_nodes", "learning_paths", "logical", "通过 node_id 逻辑关联"],
+      ["knowledge_nodes", "learner_learning_plan_nodes", "logical", "通过 node_id 逻辑关联"],
       ["knowledge_nodes", "questions", "logical", "通过 kc_node_id 逻辑关联"],
       ["confusion_pairs", "knowledge_nodes", "logical", "通过 related_nodes JSON 逻辑关联"]
     ].map((r, i) => ({ id: `r${i}`, from: r[0], to: r[1], type: r[2], label: r[3] }));

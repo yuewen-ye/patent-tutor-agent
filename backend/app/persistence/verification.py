@@ -29,6 +29,8 @@ REQUIRED_TABLES = {
     "feedback_logs",
     "knowledge_nodes",
     "legal_citations",
+    "learner_learning_plan_nodes",
+    "learner_learning_plans",
     "learning_paths",
     "mastery_events",
     "memory_items",
@@ -68,6 +70,10 @@ REQUIRED_FOREIGN_KEYS = {
     "fk_feedback_session",
     "fk_feedback_student",
     "fk_learning_paths_session",
+    "fk_learner_plan_nodes_plan",
+    "fk_learner_plans_last_session",
+    "fk_learner_plans_source_session",
+    "fk_learner_plans_student",
     "fk_mastery_events_attempt",
     "fk_mastery_events_student",
     "fk_mastery_student",
@@ -336,6 +342,64 @@ def run_write_smoke_test(database: MySQLDatabase) -> list[VerificationCheck]:
             parent_session_id=course_session_id,
             state=feedback_state,
         )
+        learning_nodes = [
+            {
+                "node_id": "verification-node",
+                "node_name": "verification node",
+                "duration_min": 10,
+                "strategy": "verify",
+                "prerequisites": [],
+                "difficulty_cap": "L1",
+            },
+            {
+                "node_id": "verification-next",
+                "node_name": "verification next",
+                "duration_min": 10,
+                "strategy": "verify",
+                "prerequisites": ["verification-node"],
+                "difficulty_cap": "L1",
+            },
+        ]
+        learning_plan = store.create_learning_plan(
+            learner_id=learner_id,
+            source_session_id=course_session_id,
+            learning_goal="MySQL verification",
+            learning_goal_hash=hashlib.sha256(b"MySQL verification").hexdigest(),
+            knowledge_graph_version="verify-v1",
+            nodes=learning_nodes,
+            progress={
+                "completed_nodes": [],
+                "current_node": "verification-node",
+                "pending_nodes": ["verification-next"],
+                "overall_completion_ratio": 0.0,
+            },
+            replan_reason="verification",
+        )
+        updated_plan = store.update_learning_plan_progress(
+            learner_id=learner_id,
+            plan_id=str(learning_plan["plan_id"]),
+            source_session_id=feedback_session_id,
+            progress={
+                "completed_nodes": ["verification-node"],
+                "current_node": "verification-next",
+                "pending_nodes": [],
+                "overall_completion_ratio": 0.5,
+            },
+            decision={"advanced": True},
+        )
+        active_plan = store.active_learning_plan(learner_id)
+        checks.append(
+            _check(
+                "active_learning_plan_round_trip",
+                bool(
+                    updated_plan
+                    and active_plan
+                    and active_plan.get("current_node") == "verification-next"
+                    and active_plan.get("plan_version") == 1
+                ),
+                "learner plan and node cursor persisted",
+            )
+        )
         results = store.record_attempts(
             student_id=learner_id,
             source_session_id=course_session_id,
@@ -389,6 +453,15 @@ def run_write_smoke_test(database: MySQLDatabase) -> list[VerificationCheck]:
         try:
             with database.transaction() as connection:
                 cursor = connection.cursor()
+                cursor.execute(
+                    "DELETE FROM learner_learning_plan_nodes WHERE plan_id IN "
+                    "(SELECT plan_id FROM learner_learning_plans WHERE student_id=%s)",
+                    (learner_id,),
+                )
+                cursor.execute(
+                    "DELETE FROM learner_learning_plans WHERE student_id=%s",
+                    (learner_id,),
+                )
                 cursor.execute("DELETE FROM mastery_events WHERE student_id=%s", (learner_id,))
                 cursor.execute("DELETE FROM attempts WHERE student_id=%s", (learner_id,))
                 cursor.execute(

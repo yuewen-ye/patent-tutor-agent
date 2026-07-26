@@ -547,6 +547,25 @@ class SessionService:
             mastery_snapshot=mastery_snapshot,
             bkt_updates=bkt_updates,
         )
+        plan_id = course_decision.get("plan_id")
+        plan_version = course_decision.get("plan_version")
+        if isinstance(plan_id, str) and plan_id:
+            progress_decision = {
+                **progress_decision,
+                "plan_id": plan_id,
+                "plan_version": plan_version,
+            }
+            progress_updater = getattr(
+                self._store, "update_learning_plan_progress", None
+            )
+            if callable(progress_updater):
+                progress_updater(
+                    learner_id=learner_id,
+                    plan_id=plan_id,
+                    source_session_id=record.session_id,
+                    progress=progress_update,
+                    decision=progress_decision,
+                )
         self._save_history(
             learner_id=learner_id,
             session_id=record.session_id,

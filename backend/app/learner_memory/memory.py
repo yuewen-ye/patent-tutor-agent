@@ -277,6 +277,10 @@ def learner_memory_snapshot(
     history = list_learner_memories(store, learner_id=learner_id, kind="history", limit=limit)
     mastery_reader = getattr(store, "mastery", None)
     mastery = mastery_reader(learner_id) if callable(mastery_reader) else {}
+    active_plan_reader = getattr(store, "active_learning_plan", None)
+    active_learning_plan = (
+        active_plan_reader(learner_id) if callable(active_plan_reader) else None
+    )
     return {
         "learner_id": learner_id,
         "latest_profile": profiles[0] if profiles else None,
@@ -284,6 +288,7 @@ def learner_memory_snapshot(
         "profiles": profiles,
         "history": history,
         "mastery": mastery,
+        "active_learning_plan": active_learning_plan,
     }
 
 

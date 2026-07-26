@@ -151,12 +151,14 @@ LIMIT 20;
 - 单元测试、目标 Ruff 和 Pyright 检查通过。
 - 真实 MySQL 验证器返回退出码 0 和 `success=true`。
 - `001_initial`、`002_mastery_events`、`003_cat_diagnostics`、
-  `004_feedback_bkt_authority` 均出现在
+  `004_feedback_bkt_authority`、`005_active_learning_plans` 均出现在
   `schema_migrations`。
 - `student_node_mastery.inferred` 存在，CAT/DAG 推断可写入 `true`，直接课程作答更新后为
   `false`。
 - `diagnostic_sessions`、`diagnostic_attempts`、`diagnostic_mastery_events` 三张 CAT 表及其
   外键通过 schema 验证。
+- `learner_learning_plans`、`learner_learning_plan_nodes` 及其外键通过 schema 验证；
+  隔离写入测试可恢复活动计划并推进游标。
 - 隔离写入测试的服务端判题、BKT 更新、审计事件和会话回读全部通过。
 - Artifact 检查不存在非法路径、缺失文件或哈希不一致。
 - 验证结束后没有残留 `verify-*` 测试学员或会话。
@@ -246,6 +248,21 @@ FROM learning_paths AS lp
 JOIN sessions AS s ON s.session_id = lp.session_id
 WHERE s.student_id = @learner_id
 ORDER BY lp.session_id, lp.path_version, lp.order_idx;
+
+-- 4.1 学员级活动计划及节点游标（跨课程/反馈会话）
+SELECT plan_id, plan_version, status, learning_goal,
+       knowledge_graph_version, current_node_id, current_order_idx,
+       source_session_id, last_session_id, JSON_PRETTY(progress_json) AS progress
+FROM learner_learning_plans
+WHERE student_id = @learner_id
+ORDER BY plan_version;
+
+SELECT p.plan_version, n.order_idx, n.node_id, n.node_name, n.node_status,
+       n.completed_at
+FROM learner_learning_plan_nodes AS n
+JOIN learner_learning_plans AS p ON p.plan_id = n.plan_id
+WHERE p.student_id = @learner_id
+ORDER BY p.plan_version, n.order_idx;
 
 -- 5. 课程题目和服务端答案
 SELECT q.session_id, q.qid, q.kind, q.kc_node_id,

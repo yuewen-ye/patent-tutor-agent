@@ -158,6 +158,7 @@ def test_versioned_migrations_include_mastery_audit() -> None:
         "002_mastery_events",
         "003_cat_diagnostics",
         "004_feedback_bkt_authority",
+        "005_active_learning_plans",
     ]
 
     audit_migration = Path(
@@ -180,6 +181,11 @@ def test_versioned_migrations_include_mastery_audit() -> None:
         "backend/app/persistence/migrations/004_feedback_bkt_authority.sql"
     ).read_text(encoding="utf-8")
     assert "ADD COLUMN inferred" in feedback_migration
+    plan_migration = Path(
+        "backend/app/persistence/migrations/005_active_learning_plans.sql"
+    ).read_text(encoding="utf-8")
+    assert "CREATE TABLE IF NOT EXISTS learner_learning_plans" in plan_migration
+    assert "CREATE TABLE IF NOT EXISTS learner_learning_plan_nodes" in plan_migration
 
 
 @pytest.mark.unit

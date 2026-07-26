@@ -1,4 +1,5 @@
 import pytest
+from langgraph.runtime import Runtime
 
 from backend.app.agents.planner.node import (
     _knowledge_pl_map,
@@ -6,6 +7,9 @@ from backend.app.agents.planner.node import (
     build_planner_node,
 )
 from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinition
+from backend.app.curriculum.learning_plan import learning_goal_hash
+from backend.app.curriculum.learning_path import load_knowledge_dag
+from backend.app.schemas.context import WorkflowContext
 from backend.app.schemas.state import PlannerAgentResult, StateDict
 
 pytestmark = pytest.mark.unit
@@ -84,6 +88,23 @@ class FailingPlannerLLMClient:
         agent: str | None = None,
     ) -> LLMResponseWithTools:
         return LLMResponseWithTools(content=None, tool_calls=[])
+
+
+class PersistedPlanStore:
+    def __init__(self, plan: dict[str, object]) -> None:
+        self.plan = plan
+
+    def active_learning_plan(self, learner_id: str) -> dict[str, object]:
+        return self.plan
+
+    def search(self, namespace: object, *, limit: int = 10) -> list[object]:
+        return []
+
+    def mastery(self, learner_id: str) -> dict[str, float]:
+        return {}
+
+    def save_profile(self, **kwargs: object) -> None:
+        return None
 
 
 def test_current_mastery_overrides_stale_profile_snapshot() -> None:
@@ -250,3 +271,65 @@ def test_planner_falls_back_to_deterministic_on_llm_failure() -> None:
     qs = result["path_decision"]["question_scope"]
     assert qs.get("backward_review") or qs.get("forward_probe") or qs.get("weakness_probe")
     assert all(it.get("difficulty_cap") for it in result["learning_path"])
+
+
+def test_planner_reuses_persisted_active_plan_without_calling_llm() -> None:
+    learning_goal = "学习专利制度"
+    nodes = [
+        {
+            "node_id": "patent-law-foundation",
+            "node_name": "专利法律制度基础",
+            "duration_min": 20,
+            "strategy": "概念讲解",
+            "prerequisites": [],
+            "difficulty_cap": "L1",
+        },
+        {
+            "node_id": "patent-system-overview",
+            "node_name": "专利制度概论",
+            "duration_min": 30,
+            "strategy": "框架讲解",
+            "prerequisites": ["patent-law-foundation"],
+            "difficulty_cap": "L2",
+        },
+    ]
+    graph_version = str(load_knowledge_dag().get("version") or "unknown")
+    plan: dict[str, object] = {
+        "plan_id": "persisted-plan-1",
+        "plan_version": 1,
+        "status": "active",
+        "learning_goal_hash": learning_goal_hash(learning_goal),
+        "knowledge_graph_version": graph_version,
+        "nodes": nodes,
+        "progress": {
+            "completed_nodes": ["patent-law-foundation"],
+            "current_node": "patent-system-overview",
+            "pending_nodes": [],
+            "overall_completion_ratio": 0.5,
+        },
+    }
+    store = PersistedPlanStore(plan)
+    runtime = Runtime(
+        context=WorkflowContext(learner_id="learner-persisted"),
+        store=store,  # type: ignore[arg-type]
+    )
+    node = build_planner_node(FailingPlannerLLMClient())
+    state: StateDict = {
+        "session_id": "course-2",
+        "user_input": "继续学习",
+        "events": [],
+        "learner_profile": {
+            "learning_goal": learning_goal,
+            "five_dimensions": {"knowledge": {}},
+        },
+    }
+
+    result = node(state, runtime)
+
+    assert result["path_decision"]["algorithm"] == "persisted_plan"
+    assert result["path_decision"]["plan_reused"] is True
+    assert result["path_decision"]["plan_id"] == "persisted-plan-1"
+    assert result["path_decision"]["current_node_id"] == "patent-system-overview"
+    assert result["teaching_context"]["current_node"]["node_id"] == (
+        "patent-system-overview"
+    )

@@ -50,6 +50,7 @@ class LearnerMemoryResponse(FrozenApiModel):
     profiles: list[dict[str, Any]]
     history: list[dict[str, Any]]
     mastery: dict[str, float] = Field(default_factory=dict)
+    active_learning_plan: dict[str, Any] | None = None
 
 
 class LearnerProfilesResponse(FrozenApiModel):

@@ -94,6 +94,9 @@ Planner 生成完整 `learning_path` 后，后端把首个尚未掌握的拓扑�
 充分观测且 `P(L) >= 0.8` 的节点进入 `completed_nodes`。`path_decision.current_node_id`
 必须与画像游标一致。Expert A/B 不消费整条详细路线，只消费后端生成的
 `teaching_context`：一个主教学节点、少量向后复习节点和至多一个 L1 向前探测节点。
+完整路线同时保存为学员级活动计划。`path_decision` 返回 `plan_id`、`plan_version`、
+`plan_reused` 和 `knowledge_graph_version`。目标和图版本相同时，后续 teach 会话读取活动
+计划并跳过 Planner LLM；会话级 `learning_paths` 仍保存本次运行的路径快照。
 
 兼容问卷入口中，原始 `input_payload.questionnaire_responses` 保留用于审计；服务层根据版本化问卷
 定义生成 `input_payload.questionnaire_context`，为每条回答补充题目正文、选项和已选选项正文。
@@ -114,6 +117,8 @@ Planner 生成完整 `learning_path` 后，后端把首个尚未掌握的拓扑�
 `P(L) >= 0.8`、累计直接观测数不少于 2，后端才把它移入 `completed_nodes` 并将游标推进到
 下一个待学节点。向前探测题可以更新下一节点的 BKT，但不能完成当前节点或提前完成下一节点。
 判定结果写入 `FeedbackResult.learning_progress`，并覆盖模型建议的最终 `next_action`。
+当课程带有 `plan_id` 时，判定结果还包含 `plan_id`、`plan_version`，并同步持久化计划头的
+游标、完整 `progress` 与每个节点的 `pending/current/completed` 状态。
 
 历史画像只用于沿用非知识维度；其 `five_dimensions.knowledge` 不作为掌握度来源，避免旧版本
 由 LLM 生成的知识值继续传播。
@@ -124,6 +129,7 @@ Planner 必须：
 2. 在 Store 支持 `mastery(learner_id)` 时读取 BKT 掌握度。
 3. 用静态知识 DAG 与静态混淆对生成双轴快照。
 4. 校验 Planner 的完整路线提案；提案失败时使用确定性 A* 路线，并由后端确定当前课程游标。
+5. 优先复用目标和知识 DAG 版本均匹配的学员级活动计划；复用时不得调用 LLM。
 
 ## 5. Agent 输出校验
 

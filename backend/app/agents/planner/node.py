@@ -5,13 +5,17 @@ from __future__ import annotations
 import json
 import logging
 from copy import deepcopy
-from typing import Any
+from typing import Any, cast
 
 from langgraph.runtime import Runtime
 
 from backend.app.agents.common import Node, generate_validated_json, load_prompt
 from backend.app.core.agent_runtime_config import agent_temperature
 from backend.app.core.llm import LLMClient, LLMMessage
+from backend.app.curriculum.learning_plan import (
+    learning_goal_hash,
+    reusable_active_plan,
+)
 from backend.app.curriculum.learning_path import (
     build_dual_axis_snapshot,
     compute_learning_path,
@@ -122,6 +126,114 @@ def _planner_fallback_reason(exc: Exception) -> str:
     return f"{type(exc).__name__}: {detail}" if detail else type(exc).__name__
 
 
+def _runtime_learner_id(runtime: Runtime[WorkflowContext] | None) -> str | None:
+    if runtime is None:
+        return None
+    context = runtime.context
+    value = context.get("learner_id") if isinstance(context, dict) else context.learner_id
+    return str(value) if value else None
+
+
+def _replan_reason(
+    active_plan: object,
+    *,
+    learning_goal: str,
+    knowledge_graph_version: str,
+) -> str:
+    if not isinstance(active_plan, dict):
+        return "initial_plan"
+    if str(active_plan.get("learning_goal_hash") or "") != learning_goal_hash(learning_goal):
+        return "learning_goal_changed"
+    if str(active_plan.get("knowledge_graph_version") or "") != knowledge_graph_version:
+        return "knowledge_graph_version_changed"
+    return "active_plan_invalid"
+
+
+def _reuse_persisted_plan(
+    *,
+    state: StateDict,
+    runtime: Runtime[WorkflowContext] | None,
+    profile: dict[str, Any],
+    active_plan: dict[str, Any],
+    knowledge_graph_version: str,
+) -> dict[str, Any]:
+    path = [
+        LearningPathItem.model_validate(item)
+        for item in active_plan["nodes"]
+        if isinstance(item, dict)
+    ]
+    progress = dict(active_plan["progress"])
+    pl_map = _knowledge_pl_map(profile)
+    weak_texts = profile.get("weak_points") or []
+    weak_node_ids = {
+        item.node_id
+        for item in path
+        if any(weak in item.node_id or weak in item.node_name for weak in weak_texts)
+    }
+    path = [
+        item.model_copy(
+            update={
+                "difficulty_cap": _difficulty_cap_for(
+                    item.node_id, pl_map, weak_node_ids
+                )
+            }
+        )
+        for item in path
+    ]
+    serialized_path = [item.model_dump() for item in path]
+    question_scope = normalize_question_scope(
+        learning_path=serialized_path,
+        progress=progress,
+        proposed_scope={},
+    )
+    teaching_context = build_teaching_context(
+        learning_path=serialized_path,
+        progress=progress,
+        question_scope=question_scope,
+    )
+    dual_axis = build_dual_axis_snapshot(
+        profile=profile,
+        session_id=state["session_id"],
+    )
+    updated_profile = deepcopy(profile)
+    updated_dimensions = dict(updated_profile.get("five_dimensions") or {})
+    updated_dimensions["progress"] = progress
+    updated_profile["five_dimensions"] = updated_dimensions
+    save_profile_snapshot(runtime, state, updated_profile, source="planner")
+    selected = progress.get("current_node")
+    return {
+        "learner_profile": updated_profile,
+        "learning_path": serialized_path,
+        "dual_axis_snapshot": dual_axis,
+        "teaching_context": teaching_context,
+        "path_decision": {
+            "current_node_id": selected,
+            "algorithm": "persisted_plan",
+            "question_scope": question_scope,
+            "iteration_directive": _default_iteration_directive(),
+            "completed_node_ids": progress["completed_nodes"],
+            "pending_node_ids": progress["pending_nodes"],
+            "roadmap_node_ids": [item["node_id"] for item in serialized_path],
+            "knowledge_graph_version": knowledge_graph_version,
+            "plan_id": active_plan["plan_id"],
+            "plan_version": active_plan["plan_version"],
+            "plan_reused": True,
+            "lesson_scope": {
+                "primary_teaching_node_id": selected,
+                "review_node_ids": [
+                    item["node_id"]
+                    for item in question_scope["backward_review"]
+                    if item["node_id"] != selected
+                ],
+                "forward_probe_node_ids": [
+                    item["node_id"] for item in question_scope["forward_probe"]
+                ],
+            },
+        },
+        "events": [completed_event("planner", "resumed persisted learning plan")],
+    }
+
+
 def _parse_planner_plan(
     raw: object,
     *,
@@ -184,6 +296,35 @@ def build_planner_node(llm_client: LLMClient) -> Node:
         learning_goal = str(profile.get("learning_goal") or state["user_input"])
 
         knowledge = load_knowledge_dag()
+        knowledge_graph_version = str(knowledge.get("version") or "unknown")
+        store = getattr(runtime, "store", None) if runtime is not None else None
+        learner_id = _runtime_learner_id(runtime)
+        active_plan_reader = getattr(store, "active_learning_plan", None)
+        active_plan = (
+            active_plan_reader(learner_id)
+            if learner_id and callable(active_plan_reader)
+            else None
+        )
+        if reusable_active_plan(
+            active_plan,
+            learning_goal=learning_goal,
+            knowledge_graph_version=knowledge_graph_version,
+        ):
+            assert isinstance(active_plan, dict)
+            try:
+                return _reuse_persisted_plan(
+                    state=state,
+                    runtime=runtime,
+                    profile=profile,
+                    active_plan=active_plan,
+                    knowledge_graph_version=knowledge_graph_version,
+                )
+            except (KeyError, TypeError, ValueError) as exc:
+                _LOGGER.warning(
+                    "Persisted learning plan is invalid; replanning: %s",
+                    _planner_fallback_reason(exc),
+                )
+        plan_metadata: dict[str, Any] = {}
         confusion = load_confusion_pairs()
         planner_graph = {
             "knowledge_graph": knowledge,
@@ -287,6 +428,32 @@ def build_planner_node(llm_client: LLMClient) -> Node:
             learning_path=serialized_path,
             mastery_snapshot=pl_map,
         )
+        plan_creator = getattr(store, "create_learning_plan", None)
+        reason = _replan_reason(
+            active_plan,
+            learning_goal=learning_goal,
+            knowledge_graph_version=knowledge_graph_version,
+        )
+        if learner_id and callable(plan_creator):
+            persisted_plan = cast(
+                dict[str, Any],
+                plan_creator(
+                    learner_id=learner_id,
+                    source_session_id=state["session_id"],
+                    learning_goal=learning_goal,
+                    learning_goal_hash=learning_goal_hash(learning_goal),
+                    knowledge_graph_version=knowledge_graph_version,
+                    nodes=serialized_path,
+                    progress=progress,
+                    replan_reason=reason,
+                ),
+            )
+            plan_metadata = {
+                "plan_id": persisted_plan["plan_id"],
+                "plan_version": persisted_plan["plan_version"],
+                "plan_reused": False,
+                "replan_reason": reason,
+            }
         question_scope = normalize_question_scope(
             learning_path=serialized_path,
             progress=progress,
@@ -322,6 +489,7 @@ def build_planner_node(llm_client: LLMClient) -> Node:
                 "completed_node_ids": progress["completed_nodes"],
                 "pending_node_ids": progress["pending_nodes"],
                 "roadmap_node_ids": [item["node_id"] for item in serialized_path],
+                "knowledge_graph_version": knowledge_graph_version,
                 "lesson_scope": {
                     "primary_teaching_node_id": selected,
                     "review_node_ids": [
@@ -332,6 +500,7 @@ def build_planner_node(llm_client: LLMClient) -> Node:
                         item["node_id"] for item in question_scope["forward_probe"]
                     ],
                 },
+                **plan_metadata,
                 **({"fallback_reason": fallback_reason} if fallback_reason else {}),
             },
             "events": [completed_event("planner", f"planned learning path ({algorithm})")],

@@ -1,6 +1,6 @@
 # 专利导学系统关系型数据库设计说明
 
-> 版本：v6（2026-07-25）
+> 版本：v7（2026-07-26）
 > 数据库：MySQL 8.0+
 > 范围：当前业务数据库设计、实际持久化行为与后续演进边界
 > 说明：本文只描述设计，不包含建表 SQL、迁移代码或 Repository 实现代码。可执行结构以
@@ -153,7 +153,7 @@
 | 学员身份 | `students`、`auth_sessions` | 学员身份和预留认证会话 |
 | 会话运行 | `sessions`、`session_states`、`session_events`、`session_checkpoints`、`rounds` | 工作流会话、状态、事件、checkpoint 和专家轮次 |
 | 学员画像 | `student_profiles`、`profile_history`、`student_weak_points` | 当前画像、历史画像和薄弱点投影 |
-| 自适应学习 | `student_node_mastery`、`mastery_events`、`diagnostic_sessions`、`diagnostic_attempts`、`diagnostic_mastery_events`、`learning_paths`、`session_directives` | CAT 会话、BKT 当前值、直接观测与推断审计、路径和教学指令 |
+| 自适应学习 | `student_node_mastery`、`mastery_events`、`diagnostic_sessions`、`diagnostic_attempts`、`diagnostic_mastery_events`、`learning_paths`、`learner_learning_plans`、`learner_learning_plan_nodes`、`session_directives` | CAT 会话、BKT 当前值、直接观测与推断审计、会话路径快照、学员级活动计划和教学指令 |
 | 教学闭环 | `onboarding_responses`、`questions`、`attempts`、`feedback_logs` | 问卷、模型生成题目、作答和反馈 |
 | 产物审计 | `artifacts`、`legal_citations`、`artifact_citations` | 文件索引、法条引用和引用关系 |
 | 静态目录预留 | `knowledge_nodes`、`confusion_pairs` | 带版本的知识目录只读投影，当前尚未启用 |
@@ -407,6 +407,45 @@ Planner 读取这里的当前值。数据库中存在该节点时，它覆盖画
 | `created_at` | 创建时间 |
 
 同一会话和路径版本中，节点和顺序都必须唯一。重新规划时新增 `path_version`，不覆盖旧路径。
+
+### 6.15A `learner_learning_plans`
+
+用途：保存跨课程会话和反馈会话延续的学员级学习计划头、版本及权威游标。
+
+| 字段 | 含义 |
+|---|---|
+| `plan_id` | 计划主键 |
+| `student_id` | 所属学员 |
+| `source_session_id`、`last_session_id` | 首次规划会话和最近推进游标的会话 |
+| `learning_goal`、`learning_goal_hash` | 规范化前的目标及匹配哈希 |
+| `knowledge_graph_version` | 规划时使用的知识 DAG 版本 |
+| `plan_version` | 学员内单调递增版本 |
+| `status` | `active`、`completed` 或 `superseded` |
+| `current_node_id`、`current_order_idx` | 当前教学游标 |
+| `progress_json` | 完整的完成、当前、待学节点状态 |
+| `replan_reason` | 首次规划或重新规划原因 |
+| `last_progress_decision` | 最近一次反馈推进判定 |
+
+同一学员正常只有一条 `active` 计划。目标或知识图版本变化时创建新版本并把旧活动计划标记为
+`superseded`；路线全部完成时标记为 `completed`。
+
+### 6.15B `learner_learning_plan_nodes`
+
+用途：保存活动计划的完整节点清单及每个节点的持久状态。
+
+| 字段 | 含义 |
+|---|---|
+| `plan_node_id` | 自增主键 |
+| `plan_id` | 所属学员级计划 |
+| `node_id`、`node_name` | 知识节点标识和名称 |
+| `prerequisites` | 前置节点 JSON |
+| `difficulty_cap`、`strategy` | 规划时的难度上限和策略 |
+| `node_json` | 完整 `LearningPathItem` 快照 |
+| `order_idx` | 完整路线中的顺序 |
+| `node_status` | `pending`、`current` 或 `completed` |
+| `completed_at` | 节点通过时间 |
+
+`learning_paths` 是会话级审计快照；这两张表才是跨会话恢复完整路线和游标的业务事实源。
 
 ### 6.16 `session_directives`
 
@@ -903,7 +942,7 @@ Agent 不应直接持有数据库连接，也不应直接写 Markdown。标准�
 | 当前画像、画像历史和薄弱点 | 已实现 | 当前投影与历史快照分离 |
 | BKT 当前值和状态转移审计 | 已实现 | `attempts`、mastery 和事件同事务 |
 | CAT 初始诊断与 DAG 推断审计 | 已实现 | 固定题库、可恢复会话、逐题作答和直接/推断事件 |
-| 学习路径和教学指令 | 已实现 | 按会话和版本保存 |
+| 学习路径和教学指令 | 已实现 | 会话路径按会话保存；学员级活动计划按版本保存并随反馈推进 |
 | 专家轮次、模型生成题目和作答 | 已实现 | 课程练习题不是固定题库 |
 | 固定答案服务端判题 | 已实现 | 当前使用规范化精确比较 |
 | 主观题 LLM 语义评分 | 未实现 | 尚无评分量表、评分合同和审计记录 |

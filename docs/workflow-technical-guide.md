@@ -70,14 +70,19 @@ LLM 输出合同均不含知识掌握度：诊断阶段由后端用 CAT/BKT 快�
   降级原因写入 `path_decision.fallback_reason` 并记录 warning，不能静默吞掉。难度上限、
   双轴快照和最终状态写入仍由后端负责。Planner 同时接收本地 A* 候选路线，Agent 可结合
   画像删减或局部调整，但不得因单节课长度截断完整路线；节点真实性、重复项和先修顺序由后端校验。
+- 首次规划的完整路线会以学员级计划写入 `learner_learning_plans` 和
+  `learner_learning_plan_nodes`。后续 teach 会话若学习目标和知识 DAG 版本未变化，
+  Planner 节点直接恢复该计划，`path_decision.algorithm=persisted_plan`，不再调用 Planner
+  模型。只有首次学习、学习目标变化、知识 DAG 版本变化或计划损坏时才重新规划并新增
+  `plan_version`；旧计划保留为 `superseded` 审计记录。
 - 后端以 `five_dimensions.progress` 维护权威课程游标。完整 `learning_path` 用于导航；
   `teaching_context` 只向 Expert A/B 暴露一个主教学节点、少量复习节点和至多一个前探节点。
   两位专家每次协作生成一节单节点课程，不一次性讲完整条路线。
 - 学员提交练习后，服务层先更新 BKT，再执行确定性通关判定：本轮必须有当前节点的直接
   BKT 更新，且 `P(L) >= 0.8`、累计观测数至少为 2。满足时把当前节点加入
   `completed_nodes` 并推进 `current_node`；否则保留当前节点用于下一节补强课程。
-  前探题只提供后续规划数据，不直接推进游标。下一节课通过新的 teach 会话生成，Planner
-  会从最新画像继续当前游标或对剩余路线重规划。
+  前探题只提供后续规划数据，不直接推进游标。反馈服务会同步更新活动计划的节点状态和
+  `current_node`；下一节课通过新的 teach 会话恢复同一计划与最新游标。
 - 任一 Agent 首次结构化输出校验失败并进入修复重试时，服务端 warning 会记录 Agent、
   Contract、重试序号和 Pydantic 字段错误；即使第二次修复成功，也能解释额外耗时。
 - 混淆风险同时考虑画像中的 `weak_points` 和相关概念的 BKT 掌握度；低掌握度会提高 `learner_risk` 并记录 `adjustment_reason`。
