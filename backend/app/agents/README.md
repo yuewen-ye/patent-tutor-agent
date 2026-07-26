@@ -8,7 +8,7 @@
 | --- | --- | --- | --- | --- |
 | `route.py` | `route` | LLM | 意图路由，分类 teach/chat/diagnose | `intent` |
 | `diagnosis/` | `diagnosis_feedback` | LLM + Store | 学情诊断/反馈两阶段 Agent | `learner_profile` / `feedback_result` |
-| `planner/` | `planner` | 确定性 + Store | 从画像、BKT 和双轴计算路径 | `learning_path` |
+| `planner/` | `planner` | LLM 提案 + 确定性校正/降级 + Store | 从画像、BKT 和双轴计算路径 | `learning_path` |
 | `retrieve_context` | `retrieve_context` | 无 LLM | chat 路径固定 RAG 检索 | `retrieval_context` |
 | `expert_a/` | `expert_a` | LLM + Tool | 领域专家 A，保守严谨；自行决定是否检索；辩论草稿与最终整合 | `expert_a_draft` / `retrieval_context` |
 | `expert_b/` | `expert_b` | LLM + Tool | 领域专家 B，生动灵活；自行决定是否检索 | `expert_b_draft` / `retrieval_context` |
@@ -28,10 +28,12 @@
 ## 共同约束
 
 - 每个 Agent 只读取自己需要的 `StateDict` 字段，只写自己负责的输出字段。
-- 输出必须是 JSON-serializable，并能通过 `backend/app/schemas/state.py` 中的 Pydantic 模型校验。
+- 输出必须使用 Provider 的严格 JSON Schema 模式，并通过 `backend/app/schemas/state.py` 中的
+  Pydantic 模型二次校验；首次失败会带校验错误自动修复一次。
 - 长篇正文、教案、裁判报告等可以落盘为 Markdown，但 JSON 中必须返回 `markdown_artifact` 或 `artifacts` 引用。
 - 模型 provider/model/temperature/top_k 不在 Agent 节点中写死，运行时优先由 `config/agents.yaml` 和 `AgentLLMRouter` 决定；`.env` 只放 API key 和本机路径，旧 `*_PROVIDER` 等环境变量仅作兼容回退。
 - 详细 JSON Schema、错误对象和降级策略以 `docs/agent-interface-spec.md` 为准。
-- teach 主工作流由 `expert_a` / `expert_b` 使用 `generate_with_tools()` 按需检索；其他 LLM 节点仍使用 `generate_json()`。
+- teach 主工作流由 `expert_a` / `expert_b` 使用 `generate_with_tools()` 按需检索；所有最终
+  Agent JSON 结果统一通过严格结构化输出方法生成。
 - `diagnosis_feedback` 的诊断阶段读取 Store。Judge 不通过时当前会话回到 Expert A integration，持续整合并复审直到通过；审核通过后，学员提交练习才创建独立 feedback 会话并写入反馈结果。
 - 多阶段 Agent 必须为每个阶段提供独立提示词文件，命名为 `<阶段名>_system.md`。当前 `diagnosis/` 使用 `diagnosis_system.md` / `feedback_system.md`，`expert_a/` 使用 `debate_system.md` / `integration_system.md`。

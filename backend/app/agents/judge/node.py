@@ -7,7 +7,13 @@ from typing import Any, assert_never
 from langchain_core.prompts import ChatPromptTemplate
 
 from backend.app.core.agent_runtime_config import agent_temperature
-from backend.app.agents.common import Node, load_prompt, messages_from_prompt, schema_note
+from backend.app.agents.common import (
+    Node,
+    generate_validated_json,
+    load_prompt,
+    messages_from_prompt,
+    schema_note,
+)
 from backend.app.core.llm import LLMClient
 from backend.app.schemas.state import JudgeReport, StateDict, completed_event
 
@@ -110,8 +116,9 @@ def build_judge_node(llm_client: LLMClient) -> Node:
     )
 
     def judge_node(state: StateDict) -> dict[str, Any]:
-        raw = llm_client.generate_json(
-            messages_from_prompt(
+        report = generate_validated_json(
+            llm_client,
+            messages=messages_from_prompt(
                 prompt,
                 expert_a_draft=state.get("expert_a_draft", {}),
                 teach_phase=state.get("teach_phase", "debate"),
@@ -122,8 +129,9 @@ def build_judge_node(llm_client: LLMClient) -> Node:
             ),
             temperature=agent_temperature("judge", 0.0),
             agent="judge",
+            output_model=JudgeReport,
+            normalize=_normalize_judge_report,
         )
-        report = JudgeReport.model_validate(_normalize_judge_report(raw))
         # adaptation_rate 由代码根据已校验的 adaptation_score 确定性计算，
         # 覆盖 LLM 可能算错/漏填的值，保证 rate == round(score/5.0, 2)。
         report_dict = report.model_dump()

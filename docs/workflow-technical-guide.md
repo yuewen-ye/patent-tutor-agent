@@ -22,9 +22,9 @@
 没有直接观测且没有被剪枝的节点不能只凭先验落入阈值区间而被视为“已分类”。
 
 完成后的权威快照写入课程会话 `input_payload.diagnostic_snapshot`。诊断 Agent 只输出认知、
-风格、进度、情感和错误模式等非知识维度，输出合同中不存在 `knowledge`。后端根据 BKT 快照生成
-完整知识维度、总体水平和薄弱点。原有直接提交问卷并创建课程的接口继续保留为兼容入口；没有 CAT
-快照时也由后端初始化冷启动掌握度，而不是让 LLM 猜测。
+风格、情感和错误模式等非知识维度，输出合同中不存在 `knowledge` 或 `progress`。后端根据 BKT
+快照生成完整知识维度、总体水平和薄弱点，并负责课程进度。原有直接提交问卷并创建课程的接口继续
+保留为兼容入口；没有 CAT 快照时也由后端初始化冷启动掌握度，而不是让 LLM 猜测。
 
 ## 1. 当前工作流
 
@@ -64,7 +64,9 @@ LLM 输出合同均不含知识掌握度：诊断阶段由后端用 CAT/BKT 快�
 
 - 知识轴来自 `backend/app/curriculum/data/knowledge-dag.json`。
 - 混淆对定义来自 `backend/app/curriculum/data/confusion-pairs.json`，运行时不改写静态定义。
-- `planner` 不调用 LLM。它读取数据库中该学员的最新画像和 BKT 掌握度，再由 `backend/app/curriculum/learning_path.py` 确定性计算路径。
+- `planner` 读取数据库中该学员的最新画像和 BKT 掌握度，要求 LLM 以 `PlannerAgentResult`
+  严格 Schema 给出路径提案；提案不可用时由 `backend/app/curriculum/learning_path.py`
+  确定性降级。难度上限、双轴快照和最终状态写入仍由后端负责。
 - 混淆风险同时考虑画像中的 `weak_points` 和相关概念的 BKT 掌握度；低掌握度会提高 `learner_risk` 并记录 `adjustment_reason`。
 - FastAPI 默认使用 MySQL 保存画像、历史、BKT 及其状态转移审计、CAT 诊断会话、诊断作答、
   DAG 传播审计、课程会话状态、事件、题目和作答。通过 `PATENT_TUTOR_MYSQL_URL` 配置连接；

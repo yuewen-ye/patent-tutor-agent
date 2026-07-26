@@ -131,6 +131,39 @@ def test_call_llm_json_adds_json_mode_and_parses_response(monkeypatch) -> None:
     assert cast(dict[str, Any], captured["body"])["response_format"] == {"type": "json_object"}
 
 
+def test_call_llm_json_sends_strict_json_schema(monkeypatch) -> None:
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "deepseek-key")
+    captured: dict[str, object] = {}
+    schema: dict[str, object] = {
+        "type": "object",
+        "properties": {"ok": {"type": "boolean"}},
+        "required": ["ok"],
+        "additionalProperties": False,
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = json.loads(request.content.decode("utf-8"))
+        return _json_response('{"ok": true}')
+
+    result = call_llm_json(
+        provider="deepseek",
+        messages=[LLMMessage(role="system", content="return structured output")],
+        schema_name="StrictProbe",
+        json_schema=schema,
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    assert result == {"ok": True}
+    assert cast(dict[str, Any], captured["body"])["response_format"] == {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "StrictProbe",
+            "strict": True,
+            "schema": schema,
+        },
+    }
+
+
 def test_call_llm_uses_explicit_model_name_override(monkeypatch) -> None:
     monkeypatch.setenv("QWEN_API_KEY", "qwen-key")
     captured: dict[str, object] = {}

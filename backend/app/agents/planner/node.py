@@ -7,7 +7,7 @@ from typing import Any
 
 from langgraph.runtime import Runtime
 
-from backend.app.agents.common import Node, load_prompt
+from backend.app.agents.common import Node, generate_validated_json, load_prompt
 from backend.app.core.agent_runtime_config import agent_temperature
 from backend.app.core.llm import LLMClient, LLMMessage
 from backend.app.curriculum.learning_path import (
@@ -18,7 +18,12 @@ from backend.app.curriculum.learning_path import (
 )
 from backend.app.learner_memory.memory import load_profile_memories
 from backend.app.schemas.context import WorkflowContext
-from backend.app.schemas.state import LearningPathItem, StateDict, completed_event
+from backend.app.schemas.state import (
+    LearningPathItem,
+    PlannerAgentResult,
+    StateDict,
+    completed_event,
+)
 
 _PLANNER_SYSTEM_PROMPT = load_prompt(__file__, "system.md")
 
@@ -144,15 +149,17 @@ def build_planner_node(llm_client: LLMClient) -> Node:
         )
 
         try:
-            raw = llm_client.generate_json(
+            proposal = generate_validated_json(
+                llm_client,
                 messages=[
                     LLMMessage(role="system", content=_PLANNER_SYSTEM_PROMPT),
                     LLMMessage(role="user", content=user_text),
                 ],
                 temperature=agent_temperature("planner", 0.3),
                 agent="planner",
+                output_model=PlannerAgentResult,
             )
-            plan = _parse_planner_plan(raw)
+            plan = _parse_planner_plan(proposal.model_dump())
         except Exception:  # noqa: BLE001 - LLM failure → deterministic fallback
             plan = None
 

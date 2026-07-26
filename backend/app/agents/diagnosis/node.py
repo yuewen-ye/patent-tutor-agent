@@ -10,6 +10,7 @@ from langgraph.runtime import Runtime
 from backend.app.core.agent_runtime_config import agent_temperature
 from backend.app.agents.common import (
     Node,
+    generate_validated_json,
     load_prompt,
     messages_from_prompt,
     normalize_key_aliases,
@@ -139,6 +140,7 @@ def _dimensions_without_knowledge(raw: object) -> object:
         return raw
     dimensions = dict(raw)
     dimensions.pop("knowledge", None)
+    dimensions.pop("progress", None)
     return dimensions
 
 
@@ -209,49 +211,49 @@ def _build_five_dimensions(
     *,
     base_dimensions: object = None,
 ) -> FiveDimensions:
-    dimensions: dict[str, Any] = (
+    agent_values: dict[str, Any] = (
         agent_dimensions.model_dump()
         if isinstance(agent_dimensions, NonKnowledgeDimensions)
         else dict(agent_dimensions)
         if isinstance(agent_dimensions, dict)
         else {}
     )
-    if not dimensions and isinstance(base_dimensions, dict):
-        dimensions = {
-            key: value
-            for key, value in base_dimensions.items()
-            if key in {"cognition", "style", "progress", "affect"}
-        }
-    if not dimensions:
-        dimensions = {
-            "cognition": {
-                "remember": 0.0,
-                "understand": 0.0,
-                "apply": 0.0,
-                "analyze": 0.0,
-                "evaluate": 0.0,
-                "create": 0.0,
-                "method": "insufficient_evidence",
-            },
-            "style": {
-                "perception": {"chosen": "unknown", "strength": 0.0},
-                "input": {"chosen": "unknown", "strength": 0.0},
-                "processing": {"chosen": "unknown", "strength": 0.0},
-                "understanding": {"chosen": "unknown", "strength": 0.0},
-            },
-            "progress": {
-                "completed_nodes": [],
-                "current_node": None,
-                "pending_nodes": [],
-                "avg_time_per_node_min": None,
-                "overall_completion_ratio": 0.0,
-            },
-            "affect": {
-                "primary_state": "focused",
-                "confidence": 0.0,
-                "signals": ["insufficient_evidence"],
-            },
-        }
+    dimensions: dict[str, Any] = {
+        "cognition": {
+            "remember": 0.0,
+            "understand": 0.0,
+            "apply": 0.0,
+            "analyze": 0.0,
+            "evaluate": 0.0,
+            "create": 0.0,
+            "method": "insufficient_evidence",
+        },
+        "style": {
+            "perception": {"chosen": "unknown", "strength": 0.0},
+            "input": {"chosen": "unknown", "strength": 0.0},
+            "processing": {"chosen": "unknown", "strength": 0.0},
+            "understanding": {"chosen": "unknown", "strength": 0.0},
+        },
+        "progress": {
+            "completed_nodes": [],
+            "current_node": None,
+            "pending_nodes": [],
+            "avg_time_per_node_min": None,
+            "overall_completion_ratio": 0.0,
+        },
+        "affect": {
+            "primary_state": "focused",
+            "confidence": 0.0,
+            "signals": ["insufficient_evidence"],
+        },
+    }
+    if isinstance(base_dimensions, dict):
+        for key in {"cognition", "style", "progress", "affect"}:
+            if key in base_dimensions:
+                dimensions[key] = base_dimensions[key]
+    for key in {"cognition", "style", "affect"}:
+        if key in agent_values:
+            dimensions[key] = agent_values[key]
     return FiveDimensions.model_validate({"knowledge": knowledge, **dimensions})
 
 
@@ -266,7 +268,6 @@ def build_diagnosis_phase_node(llm_client: LLMClient) -> Node:
                     '"confidence":0.5,"learner_dimensions":{'
                     '"cognition":{"remember":0.8,"understand":0.6,"apply":0.3,"analyze":0.2,"evaluate":0.1,"create":0.05},'
                     '"style":{"perception":{"chosen":"sensing","strength":0.7},"input":{"chosen":"visual","strength":0.6},"processing":{"chosen":"active","strength":0.55},"understanding":{"chosen":"sequential","strength":0.65}},'
-                    '"progress":{"completed_nodes":["patent-law-basic"],"current_node":"novelty-basic","pending_nodes":["inventiveness"],"avg_time_per_node_min":25,"overall_completion_ratio":0.15},'
                     '"affect":{"primary_state":"confused","confidence":0.5,"signals":["同节点停留超均值2倍"]}}}',
                 )
                 + _DIAGNOSIS_PROMPT,
@@ -296,8 +297,9 @@ def build_diagnosis_phase_node(llm_client: LLMClient) -> Node:
             "questionnaire_responses", []
         )
         diagnostic_snapshot = input_payload.get("diagnostic_snapshot") or {}
-        raw = llm_client.generate_json(
-            messages_from_prompt(
+        agent_result = generate_validated_json(
+            llm_client,
+            messages=messages_from_prompt(
                 prompt,
                 user_input=state["user_input"],
                 questionnaire_context=json.dumps(questionnaire_context, ensure_ascii=False),
@@ -312,9 +314,9 @@ def build_diagnosis_phase_node(llm_client: LLMClient) -> Node:
             ),
             temperature=agent_temperature("diagnosis_feedback", 0.5),
             agent="diagnosis_feedback",
-        )
-        agent_result = DiagnosisAgentResult.model_validate(
-            _normalize_diagnosis_agent_payload(raw)
+            output_model=DiagnosisAgentResult,
+            normalize=_normalize_diagnosis_agent_payload,
+            schema_name="DiagnosisAgentResult",
         )
         previous_profile = dict(memories[0]) if memories else {}
         diagnostic_knowledge = (
@@ -373,7 +375,6 @@ def build_feedback_phase_node(llm_client: LLMClient) -> Node:
                     '"error_pattern":"application_gap","confidence":0.7,"learner_dimensions":{'
                     '"cognition":{"remember":0.85,"understand":0.7,"apply":0.5,"analyze":0.4,"evaluate":0.3,"create":0.2},'
                     '"style":{"perception":{"chosen":"sensing","strength":0.7},"input":{"chosen":"visual","strength":0.6},"processing":{"chosen":"active","strength":0.55},"understanding":{"chosen":"sequential","strength":0.65}},'
-                    '"progress":{"completed_nodes":["patent-law-basic","novelty-basic"],"current_node":"novelty-3step","pending_nodes":["inventiveness"],"avg_time_per_node_min":22,"overall_completion_ratio":0.4},'
                     '"affect":{"primary_state":"interested","confidence":0.6,"signals":["主动提问"]}}}',
                 )
                 + _FEEDBACK_PHASE_PROMPT,
@@ -403,8 +404,9 @@ def build_feedback_phase_node(llm_client: LLMClient) -> Node:
         responses = input_payload.get("exercise_responses", [])
         bkt_updates = input_payload.get("bkt_updates", [])
         mastery_snapshot = input_payload.get("mastery_snapshot", {})
-        raw = llm_client.generate_json(
-            messages_from_prompt(
+        agent_result = generate_validated_json(
+            llm_client,
+            messages=messages_from_prompt(
                 prompt,
                 user_input=state["user_input"],
                 learner_profile=current_profile,
@@ -415,9 +417,9 @@ def build_feedback_phase_node(llm_client: LLMClient) -> Node:
             ),
             temperature=agent_temperature("diagnosis_feedback", 0.5),
             agent="diagnosis_feedback",
-        )
-        agent_result = FeedbackAgentResult.model_validate(
-            _normalize_feedback_agent_payload(raw)
+            output_model=FeedbackAgentResult,
+            normalize=_normalize_feedback_agent_payload,
+            schema_name="FeedbackAgentResult",
         )
         persisted_mastery = load_mastery_snapshot(runtime)
         knowledge = _authoritative_knowledge(

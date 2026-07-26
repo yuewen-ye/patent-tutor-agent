@@ -10,6 +10,7 @@ from backend.app.core.agent_runtime_config import agent_temperature
 from backend.app.agents.common import (
     Node,
     extract_planning_directive,
+    generate_validated_json,
     load_prompt,
     messages_from_prompt,
     normalize_cross_review_payload,
@@ -61,7 +62,8 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
     def expert_b_node(state: StateDict) -> dict[str, Any]:
         phase = state.get("expert_phase", "draft")
         if phase == "cross_review":
-            raw = llm_client.generate_json(
+            review = generate_validated_json(
+                llm_client,
                 messages=[
                     LLMMessage(
                         role="system",
@@ -82,14 +84,17 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
                 ],
                 temperature=agent_temperature("expert_b", 0.3),
                 agent="expert_b",
+                output_model=CrossReview,
+                normalize=normalize_cross_review_payload,
+                schema_name="ExpertBCrossReview",
             )
-            review = CrossReview.model_validate(normalize_cross_review_payload(raw))
             return {
                 "expert_b_cross_review": review.model_dump(),
                 "events": [completed_event("expert_b", "reviewed expert A draft")],
             }
         if phase == "revision":
-            raw = llm_client.generate_json(
+            draft = generate_validated_json(
+                llm_client,
                 messages=[
                     LLMMessage(
                         role="system",
@@ -111,8 +116,10 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
                 ],
                 temperature=agent_temperature("expert_b", 0.4),
                 agent="expert_b",
+                output_model=ExpertDraft,
+                normalize=normalize_expert_draft_payload,
+                schema_name="ExpertBRevision",
             )
-            draft = ExpertDraft.model_validate(normalize_expert_draft_payload(raw))
             revised = draft.model_dump()
             revised["draft_stage"] = "debate"
             return {
@@ -161,8 +168,9 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
             agent="expert_b",
         )
         retrieval_context = list(state.get("retrieval_context", []) or []) + retrieved_context
-        raw = llm_client.generate_json(
-            messages_from_prompt(
+        draft = generate_validated_json(
+            llm_client,
+            messages=messages_from_prompt(
                 prompt,
                 user_input=state["user_input"],
                 learner_profile=state.get("learner_profile", {}),
@@ -175,8 +183,10 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
             ),
             temperature=agent_temperature("expert_b", 0.7),
             agent="expert_b",
+            output_model=ExpertDraft,
+            normalize=normalize_expert_draft_payload,
+            schema_name="ExpertBDraft",
         )
-        draft = ExpertDraft.model_validate(normalize_expert_draft_payload(raw))
         draft_dict = draft.model_dump()
         draft_dict["draft_stage"] = "debate"
         return {

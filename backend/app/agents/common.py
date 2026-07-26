@@ -6,13 +6,15 @@ import json
 import re
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar, cast
 
 from langchain_core.prompts import ChatPromptTemplate
+from pydantic import BaseModel, ValidationError
 
-from backend.app.core.llm import LLMMessage, LLMRole
+from backend.app.core.llm import AgentName, LLMClient, LLMMessage, LLMRole
 
 Node = Callable[..., dict[str, Any]]
+ContractT = TypeVar("ContractT", bound=BaseModel)
 
 
 # ── 题型口径归一化（spec 规范枚举，兼容 LLM 偶发中文/旧值）──
@@ -108,6 +110,93 @@ def schema_note(schema_name: str, example: str) -> str:
         "字段名必须与示例完全一致，必须使用 snake_case，不要改成 camelCase。"
         f"示例 json：{example.replace(chr(123), chr(123) * 2).replace(chr(125), chr(125) * 2)}"
     )
+
+
+def generate_validated_json(
+    llm_client: LLMClient,
+    *,
+    messages: list[LLMMessage],
+    temperature: float,
+    agent: AgentName,
+    output_model: type[ContractT],
+    normalize: Callable[[object], object] | None = None,
+    schema_name: str | None = None,
+) -> ContractT:
+    """Generate an Agent result with provider-side schema constraints and local validation.
+
+    Production clients expose ``generate_structured_json`` and therefore receive the complete
+    Pydantic JSON Schema with ``strict=true``. Lightweight test clients and third-party adapters
+    that only implement the legacy ``generate_json`` protocol remain supported.
+
+    A structured production response that still fails normalization/Pydantic validation receives
+    one repair attempt containing the exact validation errors. Pydantic remains the final trust
+    boundary regardless of provider behavior.
+    """
+
+    structured_generate = getattr(llm_client, "generate_structured_json", None)
+    supports_structured_output = callable(structured_generate)
+    attempts = 2 if supports_structured_output else 1
+    current_messages = list(messages)
+    contract_name = schema_name or output_model.__name__
+    json_schema = cast(
+        dict[str, object],
+        output_model.model_json_schema(mode="validation"),
+    )
+    if supports_structured_output:
+        schema_instruction = LLMMessage(
+            role="system",
+            content=(
+                f"以下是 {contract_name} 的完整 JSON Schema。即使上游兼容接口没有强制执行"
+                " response_format，你也必须逐字段遵守；required 中的字段不得省略，"
+                "additionalProperties=false 的对象不得增加字段。只返回 JSON："
+                f"{json.dumps(json_schema, ensure_ascii=False, separators=(',', ':'))}"
+            ),
+        )
+        if current_messages and current_messages[0].role == "system":
+            current_messages.insert(1, schema_instruction)
+        else:
+            current_messages.insert(0, schema_instruction)
+
+    for attempt in range(attempts):
+        if supports_structured_output:
+            assert callable(structured_generate)
+            raw = structured_generate(
+                current_messages,
+                temperature,
+                schema_name=contract_name,
+                json_schema=json_schema,
+                agent=agent,
+            )
+        else:
+            raw = llm_client.generate_json(
+                messages=current_messages,
+                temperature=temperature,
+                agent=agent,
+            )
+
+        normalized = normalize(raw) if normalize is not None else raw
+        try:
+            return output_model.model_validate(normalized)
+        except ValidationError as exc:
+            if attempt + 1 >= attempts:
+                raise
+            current_messages = [
+                *current_messages,
+                LLMMessage(
+                    role="assistant",
+                    content=json.dumps(raw, ensure_ascii=False, default=str),
+                ),
+                LLMMessage(
+                    role="user",
+                    content=(
+                        f"上一份 JSON 未通过 {contract_name} 校验。"
+                        "请修复后返回完整 JSON，不要解释，也不要省略必填字段。"
+                        f"校验错误：{json.dumps(exc.errors(include_url=False), ensure_ascii=False)}"
+                    ),
+                ),
+            ]
+
+    raise RuntimeError("structured output validation loop exited unexpectedly")
 
 
 def normalize_key_aliases(raw: object, aliases: dict[str, str]) -> object:
@@ -343,6 +432,14 @@ def normalize_expert_draft_payload(raw: object) -> object:
     # （revision 阶段 LLM 可能把 coverage 写成 ["kp-01","kp-02",...] 而非 [{...}]，触发 dict_type 校验失败）
     ks = normalized.get("knowledge_synthesis")
     if isinstance(ks, dict):
+        # Some compatible models repeatedly add narrative helper fields such as framework,
+        # key_relations and must_know even after a schema-repair prompt. They are not consumed
+        # downstream; retain only the explicit contract fields before strict local validation.
+        ks = {
+            key: value
+            for key, value in ks.items()
+            if key in {"node", "coverage", "confusable_pairs"}
+        }
         cov = ks.get("coverage")
         if cov is None:
             ks["coverage"] = []

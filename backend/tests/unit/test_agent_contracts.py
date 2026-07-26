@@ -13,10 +13,16 @@ def test_agent_output_json_schemas_follow_interface_spec() -> None:
 
     assert set(schemas) == {
         "diagnosis_feedback_diagnosis",
-        "expert_a",
-        "expert_b",
-        "judge",
         "diagnosis_feedback_feedback",
+        "planner",
+        "expert_a_draft",
+        "expert_a_cross_review",
+        "expert_a_revision",
+        "expert_a_integration",
+        "expert_b_draft",
+        "expert_b_cross_review",
+        "expert_b_revision",
+        "judge",
         "route",
         "chat_answer",
     }
@@ -24,14 +30,26 @@ def test_agent_output_json_schemas_follow_interface_spec() -> None:
     diagnosis_properties = schemas["diagnosis_feedback_diagnosis"]["properties"]
     assert "learner_dimensions" in diagnosis_properties
     assert "knowledge_level" not in diagnosis_properties
+    non_knowledge = schemas["diagnosis_feedback_diagnosis"]["$defs"]["NonKnowledgeDimensions"]
+    assert "progress" not in non_knowledge["properties"]
+    assert set(non_knowledge["required"]) == {"cognition", "style", "affect"}
     assert '"knowledge"' not in json.dumps(
         schemas["diagnosis_feedback_diagnosis"],
         ensure_ascii=False,
     )
-    assert "planner" not in schemas
+    planner_schema = schemas["planner"]
+    assert planner_schema["additionalProperties"] is False
+    assert set(planner_schema["required"]) == {
+        "nodes",
+        "question_scope",
+        "iteration_directive",
+    }
 
-    expert_schema = schemas["expert_a"]
-    assert expert_schema == schemas["expert_b"]
+    expert_schema = schemas["expert_a_draft"]
+    assert expert_schema == schemas["expert_a_revision"]
+    assert expert_schema == schemas["expert_a_integration"]
+    assert expert_schema == schemas["expert_b_draft"]
+    assert expert_schema == schemas["expert_b_revision"]
     assert expert_schema["additionalProperties"] is False
     assert expert_schema["properties"]["style"]["enum"] == [
         "conservative",
@@ -40,6 +58,7 @@ def test_agent_output_json_schemas_follow_interface_spec() -> None:
     ]
     assert "irac" in expert_schema["properties"]
     assert "interactive_questions" in expert_schema["properties"]
+    assert schemas["expert_a_cross_review"] == schemas["expert_b_cross_review"]
 
     judge_schema = schemas["judge"]
     assert judge_schema["additionalProperties"] is False
@@ -206,3 +225,24 @@ def test_expert_draft_normalization_drops_block_plan_legal_anchor_flag() -> None
     from backend.app.schemas.state import ExpertDraft
 
     ExpertDraft.model_validate(normalized)
+
+
+def test_expert_draft_normalization_drops_uncontracted_knowledge_synthesis_fields() -> None:
+    normalized = normalize_expert_draft_payload(
+        {
+            "knowledge_synthesis": {
+                "node": "direct-infringement",
+                "coverage": [{"node_id": "direct-infringement"}],
+                "confusable_pairs": [],
+                "framework": ["Schema 外叙事字段"],
+                "key_relations": ["Schema 外关系字段"],
+                "must_know": ["Schema 外摘要字段"],
+            }
+        }
+    )
+
+    assert normalized["knowledge_synthesis"] == {
+        "node": "direct-infringement",
+        "coverage": [{"node_id": "direct-infringement"}],
+        "confusable_pairs": [],
+    }

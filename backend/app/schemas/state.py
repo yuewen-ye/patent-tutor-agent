@@ -153,11 +153,13 @@ class FiveDimensions(ContractModel):
 
 
 class NonKnowledgeDimensions(ContractModel):
-    """Dimensions inferred by the LLM; BKT knowledge is assembled by the backend."""
+    """Non-authoritative dimensions inferred by the LLM.
+
+    BKT knowledge and course progress are assembled by the backend.
+    """
 
     cognition: CognitionProfile
     style: StyleProfile
-    progress: ProgressProfile
     affect: AffectProfile
 
 
@@ -192,6 +194,32 @@ class LearningPathItem(ContractModel):
     target_ability: str | None = None
     assessment: str | None = None
     markdown_artifact: MarkdownArtifact | None = None
+
+
+class QuestionScopeItem(ContractModel):
+    node_id: str = Field(pattern="^[a-z0-9][a-z0-9-]*$")
+    difficulty: str
+    goal: str
+
+
+class QuestionScope(ContractModel):
+    backward_review: list[QuestionScopeItem]
+    forward_probe: list[QuestionScopeItem]
+    weakness_probe: list[QuestionScopeItem]
+
+
+class IterationDirective(ContractModel):
+    type: Literal["降维", "进阶", "薄弱点跟进", "无"]
+    trigger: str
+    action: str
+
+
+class PlannerAgentResult(ContractModel):
+    """Validated planner proposal; deterministic code still owns the final path decision."""
+
+    nodes: list[LearningPathItem] = Field(min_length=1)
+    question_scope: QuestionScope
+    iteration_directive: IterationDirective
 
 
 class RetrievalMetadata(ContractModel):
@@ -524,10 +552,16 @@ def agent_output_json_schemas() -> dict[str, dict[str, Any]]:
     expert_schema = ExpertDraft.model_json_schema(mode="validation")
     return {
         "diagnosis_feedback_diagnosis": DiagnosisAgentResult.model_json_schema(mode="validation"),
-        "expert_a": expert_schema,
-        "expert_b": expert_schema,
-        "judge": JudgeReport.model_json_schema(mode="validation"),
         "diagnosis_feedback_feedback": FeedbackAgentResult.model_json_schema(mode="validation"),
+        "planner": PlannerAgentResult.model_json_schema(mode="validation"),
+        "expert_a_draft": expert_schema,
+        "expert_a_cross_review": CrossReview.model_json_schema(mode="validation"),
+        "expert_a_revision": expert_schema,
+        "expert_a_integration": expert_schema,
+        "expert_b_draft": expert_schema,
+        "expert_b_cross_review": CrossReview.model_json_schema(mode="validation"),
+        "expert_b_revision": expert_schema,
+        "judge": JudgeReport.model_json_schema(mode="validation"),
         "route": IntentResult.model_json_schema(mode="validation"),
         "chat_answer": ChatAnswer.model_json_schema(mode="validation"),
     }

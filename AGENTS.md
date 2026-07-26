@@ -50,7 +50,7 @@ uv export --format requirements-txt --output-file requirements.txt
 .
 ├── backend/
 │   ├── app/
-│   │   ├── agents/              # five LLM Agents plus deterministic planner
+│   │   ├── agents/              # LLM-backed Agents plus deterministic guards
 │   │   ├── api/                 # REST, SSE, WebSocket, learner flow
 │   │   ├── builder/             # LangGraph Studio entry point
 │   │   ├── core/                # provider clients, runtime config and AgentLLMRouter
@@ -119,7 +119,7 @@ later, which creates a separate feedback session. The graph has no interrupt-bas
 |---|---|---|---|
 | `route` | LLM | classify `teach/chat/diagnose` | `intent` |
 | `diagnosis_feedback` | LLM + Store | diagnosis or feedback selected by phase | `learner_profile`, `feedback_result` |
-| `planner` | deterministic + Store | read profile/BKT and compute dual-axis path | `dual_axis_snapshot`, `learning_path`, `path_decision` |
+| `planner` | LLM proposal + deterministic guard + Store | read profile/BKT and compute dual-axis path | `dual_axis_snapshot`, `learning_path`, `path_decision` |
 | `retrieve_context` | deterministic retrieval | fixed chat-path RAG call | `retrieval_context` |
 | `expert_a` | LLM + tool calling | draft, review B, revise, integrate course | A draft/review/revision, `course_package` |
 | `expert_b` | LLM + tool calling | draft, review A, revise | B draft/review/revision |
@@ -139,17 +139,23 @@ def build_<name>_node(llm_client: LLMClient) -> Node:
         state: StateDict,
         runtime: Runtime[WorkflowContext] | None = None,
     ) -> dict[str, Any]:
-        raw = llm_client.generate_json(..., agent="<name>")
-        validated = OutputContract.model_validate(raw)
+        validated = generate_validated_json(
+            llm_client,
+            ...,
+            agent="<name>",
+            output_model=OutputContract,
+        )
         return {"output_field": validated.model_dump(), "events": [completed_event(...)]}
 
     return node
 ```
 
 - Agent factories receive `LLMClient`; never import provider state inside a node.
-- `route`, `diagnosis_feedback`, `judge`, and `chat_answer` use `generate_json()`.
+- Every final Agent JSON result uses strict JSON Schema output through
+  `generate_validated_json()`, followed by Pydantic validation and one repair attempt.
 - Expert A/B use `generate_with_tools()` when deciding whether to call RAG, then validate final JSON.
-- Planner and `retrieve_context` do not call an LLM.
+- Planner uses a strict `PlannerAgentResult` proposal with deterministic fallback;
+  `retrieve_context` does not call an LLM.
 - Multi-phase prompts live beside the node as `<phase>_system.md`; do not inline phase prompts.
 - Normalize provider-specific aliases before Pydantic validation.
 - Every LLM output must pass a `ContractModel` with `extra="forbid"` before entering state.
@@ -164,7 +170,7 @@ def build_<name>_node(llm_client: LLMClient) -> Node:
 
 API keys and machine-local paths belong in `.env`. Supported providers are `deepseek`, `qwen`, and
 `glm`. `AgentLLMRouter` supports explicit `{AGENT}_PROVIDER` environment overrides for incident
-recovery. Planner is not an LLM routing target.
+recovery. Planner uses the default provider unless a dedicated runtime setting is added.
 
 ## State And Contracts
 

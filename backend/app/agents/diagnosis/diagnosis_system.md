@@ -23,8 +23,9 @@
 - `learner_dimensions`：可选，包含且只包含：
   - `cognition`：remember、understand、apply、analyze、evaluate、create。
   - `style`：Felder-Silverman 四个维度。
-  - `progress`：学习进度。
   - `affect`：情感和参与状态。
+
+学习进度 `progress` 由后端根据课程状态生成，你不得输出或推断该字段。
 
 数据不足时要保守，允许省略 `learner_dimensions`，不得为了填满字段而虚构事实。
 

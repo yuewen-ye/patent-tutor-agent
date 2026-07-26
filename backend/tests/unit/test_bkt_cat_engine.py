@@ -4,6 +4,7 @@ import pytest
 
 from backend.app.agents.diagnosis.node import (
     _authoritative_knowledge,
+    _build_five_dimensions,
     _normalize_diagnosis_agent_payload,
 )
 from backend.app.learner_memory.bkt import (
@@ -13,6 +14,7 @@ from backend.app.learner_memory.bkt import (
     load_knowledge_graph,
     parameters_for_background,
 )
+from backend.app.schemas.state import DiagnosisAgentResult
 
 pytestmark = pytest.mark.unit
 
@@ -173,3 +175,38 @@ def test_diagnostic_agent_knowledge_is_discarded_and_backend_snapshot_is_authori
     assert knowledge["novelty"]["observations"] == 2
     assert knowledge["novelty"]["inferred"] is False
     assert knowledge["inventive-step"]["pl"] == pytest.approx(0.15)
+
+
+def test_diagnosis_progress_is_backend_owned_and_not_required_from_llm() -> None:
+    raw = {
+        "learning_style": "sequential",
+        "learner_dimensions": {
+            "cognition": {
+                "remember": 0.8,
+                "understand": 0.7,
+                "apply": 0.5,
+                "analyze": 0.4,
+                "evaluate": 0.3,
+                "create": 0.2,
+            },
+            "style": {
+                "perception": {"chosen": "sensing", "strength": 0.7},
+                "input": {"chosen": "visual", "strength": 0.6},
+                "processing": {"chosen": "active", "strength": 0.5},
+                "understanding": {"chosen": "sequential", "strength": 0.8},
+            },
+            "affect": {
+                "primary_state": "focused",
+                "confidence": 0.7,
+                "signals": [],
+            },
+        },
+    }
+
+    normalized = _normalize_diagnosis_agent_payload(raw)
+    agent_result = DiagnosisAgentResult.model_validate(normalized)
+    dimensions = _build_five_dimensions(agent_result.learner_dimensions, {})
+
+    assert dimensions.progress.completed_nodes == []
+    assert dimensions.progress.current_node is None
+    assert dimensions.progress.overall_completion_ratio == pytest.approx(0.0)

@@ -145,6 +145,22 @@ class LLMClient(Protocol):
         ...
 
 
+class StructuredOutputLLMClient(Protocol):
+    """Optional capability for providers that support strict JSON Schema output."""
+
+    def generate_structured_json(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        *,
+        schema_name: str,
+        json_schema: dict[str, object],
+        agent: AgentName | None = None,
+    ) -> object:
+        """Generate and parse a response constrained by a JSON Schema."""
+        ...
+
+
 class LLMConfigurationError(RuntimeError):
     """Raised when model provider configuration is incomplete."""
 
@@ -224,6 +240,9 @@ def _build_chat_body(
     temperature: float,
     json_mode: bool,
     stream: bool,
+    *,
+    schema_name: str | None = None,
+    json_schema: dict[str, object] | None = None,
 ) -> dict[str, object]:
     body: dict[str, object] = {
         "model": config.model,
@@ -231,7 +250,18 @@ def _build_chat_body(
         "temperature": temperature,
         "stream": stream,
     }
-    if json_mode:
+    if json_schema is not None:
+        if not schema_name:
+            raise ValueError("schema_name is required when json_schema is provided")
+        body["response_format"] = {
+            "type": "json_schema",
+            "json_schema": {
+                "name": schema_name,
+                "strict": True,
+                "schema": json_schema,
+            },
+        }
+    elif json_mode:
         body["response_format"] = {"type": "json_object"}
     return body
 
@@ -279,6 +309,8 @@ def _post_chat_completion(
     temperature: float,
     json_mode: bool,
     http_client: httpx.Client | None,
+    schema_name: str | None = None,
+    json_schema: dict[str, object] | None = None,
 ) -> str:
     client = http_client or httpx.Client(timeout=config.timeout_seconds)
     close_client = http_client is None
@@ -289,6 +321,8 @@ def _post_chat_completion(
         temperature=temperature,
         json_mode=json_mode,
         stream=False,
+        schema_name=schema_name,
+        json_schema=json_schema,
     )
 
     try:
@@ -328,6 +362,8 @@ def call_llm(
     json_mode: bool = False,
     http_client: httpx.Client | None = None,
     model_name: str | None = None,
+    schema_name: str | None = None,
+    json_schema: dict[str, object] | None = None,
 ) -> str:
     config = load_provider_config(provider, model_name=model_name)
     retrying = retry(
@@ -336,7 +372,15 @@ def call_llm(
         retry=retry_if_exception(_is_retryable_error),
         reraise=True,
     )(_post_chat_completion)
-    return retrying(config, messages, temperature, json_mode, http_client)
+    return retrying(
+        config,
+        messages,
+        temperature,
+        json_mode,
+        http_client,
+        schema_name,
+        json_schema,
+    )
 
 
 def _strip_json_fence(content: str) -> str:
@@ -357,6 +401,8 @@ def call_llm_json(
     temperature: float = 0.5,
     http_client: httpx.Client | None = None,
     model_name: str | None = None,
+    schema_name: str | None = None,
+    json_schema: dict[str, object] | None = None,
 ) -> object:
     content = call_llm(
         provider=provider,
@@ -365,6 +411,8 @@ def call_llm_json(
         json_mode=True,
         http_client=http_client,
         model_name=model_name,
+        schema_name=schema_name,
+        json_schema=json_schema,
     )
     cleaned = _strip_json_fence(content)
     try:
@@ -494,6 +542,24 @@ class DefaultLLMClient:
             model_name=self.model_name,
         )
 
+    def generate_structured_json(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        *,
+        schema_name: str,
+        json_schema: dict[str, object],
+        agent: AgentName | None = None,
+    ) -> object:
+        return call_llm_json(
+            provider=self.provider,
+            messages=messages,
+            temperature=temperature,
+            model_name=self.model_name,
+            schema_name=schema_name,
+            json_schema=json_schema,
+        )
+
     def generate_with_tools(
         self,
         messages: list[LLMMessage],
@@ -572,6 +638,24 @@ class AgentLLMRouter:
             messages=messages,
             temperature=temperature,
             model_name=self.model_for(agent),
+        )
+
+    def generate_structured_json(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        *,
+        schema_name: str,
+        json_schema: dict[str, object],
+        agent: AgentName | None = None,
+    ) -> object:
+        return call_llm_json(
+            provider=self.provider_for(agent),
+            messages=messages,
+            temperature=temperature,
+            model_name=self.model_for(agent),
+            schema_name=schema_name,
+            json_schema=json_schema,
         )
 
     def generate_with_tools(

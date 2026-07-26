@@ -6,7 +6,7 @@ from typing import Any, Literal
 
 
 from backend.app.core.agent_runtime_config import agent_temperature
-from backend.app.agents.common import Node, load_prompt
+from backend.app.agents.common import Node, generate_validated_json, load_prompt
 from backend.app.core.llm import LLMClient, LLMProviderError
 from backend.app.schemas.state import IntentResult, completed_event
 
@@ -78,10 +78,12 @@ def build_route_node(llm_client: LLMClient) -> Node:
             ),
         ]
         try:
-            raw = llm_client.generate_json(
+            validated = generate_validated_json(
+                llm_client,
                 messages=messages,
                 temperature=agent_temperature("route", 0.0),
                 agent="route",
+                output_model=IntentResult,
             )
         except LLMProviderError:
             if local_hint is None:
@@ -89,7 +91,6 @@ def build_route_node(llm_client: LLMClient) -> Node:
             intent, reason = local_hint
             validated = IntentResult(intent=intent, confidence=1.0, reason=reason)
         else:
-            validated = IntentResult.model_validate(raw)
             if local_hint is not None and validated.intent != local_hint[0]:
                 intent, reason = local_hint
                 validated = IntentResult(intent=intent, confidence=1.0, reason=reason)
