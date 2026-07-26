@@ -60,6 +60,37 @@ _NO_ERROR_PATTERN_ALIASES = {
     "不适用",
 }
 
+_AFFECT_STATE_ALIASES = {
+    "focused": "focused",
+    "focus": "focused",
+    "attentive": "focused",
+    "calm": "focused",
+    "concentrated": "focused",
+    "专注": "focused",
+    "平静": "focused",
+    "confused": "confused",
+    "puzzled": "confused",
+    "uncertain": "confused",
+    "unsure": "confused",
+    "迷惑": "confused",
+    "困惑": "confused",
+    "anxious": "anxious",
+    "nervous": "anxious",
+    "worried": "anxious",
+    "stressed": "anxious",
+    "焦虑": "anxious",
+    "紧张": "anxious",
+    "担忧": "anxious",
+    "interested": "interested",
+    "curious": "interested",
+    "engaged": "interested",
+    "motivated": "interested",
+    "enthusiastic": "interested",
+    "好奇": "interested",
+    "感兴趣": "interested",
+    "积极": "interested",
+}
+
 
 def _kc_node_ids() -> list[str]:
     """Return every valid KC node id from the static knowledge graph."""
@@ -143,6 +174,17 @@ def _dimensions_without_knowledge(raw: object) -> object:
     dimensions = dict(raw)
     dimensions.pop("knowledge", None)
     dimensions.pop("progress", None)
+    affect = dimensions.get("affect")
+    if isinstance(affect, dict):
+        normalized_affect = dict(affect)
+        primary_state = normalized_affect.get("primary_state")
+        if isinstance(primary_state, str):
+            alias_key = primary_state.strip().casefold().replace("-", "_").replace(" ", "_")
+            normalized_affect["primary_state"] = _AFFECT_STATE_ALIASES.get(
+                alias_key,
+                primary_state,
+            )
+        dimensions["affect"] = normalized_affect
     return dimensions
 
 

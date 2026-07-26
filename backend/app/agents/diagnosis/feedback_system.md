@@ -24,7 +24,9 @@
 - `error_pattern`：可选，只能是 `unknown`、`no_prior_knowledge`、
   `concept_confusion`、`application_gap`、`careless`、`overconfidence`。
 - `confidence`：可选，范围 0 到 1。
-- `learner_dimensions`：可选，只能包含 `cognition`、`style`、`affect`。
+- `learner_dimensions`：可选，只能包含 `cognition`、`style`、`affect`；其中
+  `affect.primary_state` 只能是 `focused`、`confused`、`anxious`、`interested` 之一。
+  好奇、投入或有学习动机统一使用 `interested`。
 - `progress` 由后端沿用并更新，你不得输出或推断该字段。
 
 没有足够证据时沿用历史非知识维度，或省略 `learner_dimensions`。不要伪造观测。

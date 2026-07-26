@@ -196,7 +196,7 @@ def test_diagnosis_progress_is_backend_owned_and_not_required_from_llm() -> None
                 "understanding": {"chosen": "sequential", "strength": 0.8},
             },
             "affect": {
-                "primary_state": "focused",
+                "primary_state": "curious",
                 "confidence": 0.7,
                 "signals": [],
             },
@@ -207,6 +207,7 @@ def test_diagnosis_progress_is_backend_owned_and_not_required_from_llm() -> None
     agent_result = DiagnosisAgentResult.model_validate(normalized)
     dimensions = _build_five_dimensions(agent_result.learner_dimensions, {})
 
+    assert dimensions.affect.primary_state == "interested"
     assert dimensions.progress.completed_nodes == []
     assert dimensions.progress.current_node is None
     assert dimensions.progress.overall_completion_ratio == pytest.approx(0.0)

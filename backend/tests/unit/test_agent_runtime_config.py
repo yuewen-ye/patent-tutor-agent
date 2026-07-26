@@ -28,15 +28,28 @@ class PlannerTemperatureLLMClient:
         self, messages: list[LLMMessage], temperature: float, agent: str | None = None
     ) -> object:
         self.temperatures.append(temperature)
-        return [
-            {
-                "node_id": "novelty",
-                "node_name": "新颖性",
-                "duration_min": 20,
-                "strategy": "先看法条",
-                "prerequisites": [],
-            }
-        ]
+        return {
+            "nodes": [
+                {
+                    "node_id": "novelty",
+                    "node_name": "新颖性",
+                    "duration_min": 20,
+                    "strategy": "先看法条",
+                    "prerequisites": [],
+                    "difficulty_cap": "L2",
+                }
+            ],
+            "question_scope": {
+                "backward_review": [],
+                "forward_probe": [],
+                "weakness_probe": [],
+            },
+            "iteration_directive": {
+                "type": "无",
+                "trigger": "首次规划",
+                "action": "按计划教学",
+            },
+        }
 
     def generate_with_tools(
         self,

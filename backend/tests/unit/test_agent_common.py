@@ -2,7 +2,12 @@ import pytest
 from langchain_core.prompts import ChatPromptTemplate
 
 from backend.app.agents.common import generate_validated_json, messages_from_prompt
-from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinition
+from backend.app.core.llm import (
+    LLMMessage,
+    LLMProviderError,
+    LLMResponseWithTools,
+    ToolDefinition,
+)
 from backend.app.schemas.state import IntentResult
 
 pytestmark = pytest.mark.unit
@@ -75,6 +80,56 @@ class RepairingStructuredClient:
         raise AssertionError("tool calling is not used by this test")
 
 
+class RepairingLegacyClient:
+    def __init__(self) -> None:
+        self.calls: list[list[LLMMessage]] = []
+        self.responses = iter(
+            [
+                {"intent": "teach", "confidence": 0.9},
+                {"intent": "teach", "confidence": 0.9, "reason": "已修复"},
+            ]
+        )
+
+    def generate_json(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        agent: str | None = None,
+    ) -> object:
+        self.calls.append(messages)
+        return next(self.responses)
+
+    def generate_with_tools(
+        self,
+        messages: list[LLMMessage],
+        tools: list[ToolDefinition],
+        temperature: float,
+        agent: str | None = None,
+    ) -> LLMResponseWithTools:
+        raise AssertionError("tool calling is not used by this test")
+
+
+class SchemaRejectingClient(RepairingLegacyClient):
+    def __init__(self) -> None:
+        super().__init__()
+        self.responses = iter(
+            [{"intent": "teach", "confidence": 0.9, "reason": "兼容模式"}]
+        )
+        self.structured_calls = 0
+
+    def generate_structured_json(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        *,
+        schema_name: str,
+        json_schema: dict[str, object],
+        agent: str | None = None,
+    ) -> object:
+        self.structured_calls += 1
+        raise LLMProviderError("json_schema is unsupported", status_code=400)
+
+
 def test_generate_validated_json_repairs_invalid_structured_response_once(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
@@ -103,3 +158,39 @@ def test_generate_validated_json_repairs_invalid_structured_response_once(
     assert "agent=route" in caplog.text
     assert "contract=IntentResult" in caplog.text
     assert "Field required" in caplog.text
+
+
+def test_generate_validated_json_repairs_legacy_json_response_once() -> None:
+    client = RepairingLegacyClient()
+
+    result = generate_validated_json(
+        client,
+        messages=[LLMMessage(role="user", content="请分类")],
+        temperature=0.0,
+        agent="route",
+        output_model=IntentResult,
+    )
+
+    assert result.reason == "已修复"
+    assert len(client.calls) == 2
+    assert "完整 JSON Schema" in client.calls[0][0].content
+    assert "校验错误" in client.calls[1][-1].content
+
+
+def test_generate_validated_json_falls_back_when_provider_rejects_schema(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    client = SchemaRejectingClient()
+
+    result = generate_validated_json(
+        client,
+        messages=[LLMMessage(role="user", content="请分类")],
+        temperature=0.0,
+        agent="route",
+        output_model=IntentResult,
+    )
+
+    assert result.reason == "兼容模式"
+    assert client.structured_calls == 1
+    assert len(client.calls) == 1
+    assert "falling back to JSON-object mode" in caplog.text

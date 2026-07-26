@@ -23,7 +23,8 @@
 - `learner_dimensions`：可选，包含且只包含：
   - `cognition`：remember、understand、apply、analyze、evaluate、create。
   - `style`：Felder-Silverman 四个维度。
-  - `affect`：情感和参与状态。
+  - `affect`：情感和参与状态；`primary_state` 只能是 `focused`、`confused`、
+    `anxious`、`interested` 之一。好奇、投入或有学习动机统一使用 `interested`。
 
 学习进度 `progress` 由后端根据课程状态生成，你不得输出或推断该字段。
 

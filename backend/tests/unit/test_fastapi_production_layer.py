@@ -9,6 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinition
+from backend.app.services.cancellation import CancelAwareLLMClient
 from backend.app.services.session_service import SessionService
 from backend.main import create_app
 from backend.tests.unit.test_fastapi_sessions import QueueLLMClient
@@ -39,6 +40,48 @@ class BlockingLLMClient:
         agent: str | None = None,
     ) -> LLMResponseWithTools:
         raise AssertionError("tool calls are not expected in cancellation test")
+
+
+class StructuredProbeClient(BlockingLLMClient):
+    def __init__(self) -> None:
+        super().__init__()
+        self.structured_call: dict[str, object] | None = None
+
+    def generate_structured_json(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        *,
+        schema_name: str,
+        json_schema: dict[str, object],
+        agent: str | None = None,
+    ) -> object:
+        self.structured_call = {
+            "messages": messages,
+            "temperature": temperature,
+            "schema_name": schema_name,
+            "json_schema": json_schema,
+            "agent": agent,
+        }
+        return {"intent": "teach", "confidence": 0.9, "reason": "结构化输出"}
+
+
+def test_cancel_aware_client_preserves_structured_output_capability() -> None:
+    inner = StructuredProbeClient()
+    client = CancelAwareLLMClient(inner, is_cancelled=lambda: False)
+
+    result = client.generate_structured_json(
+        [LLMMessage(role="user", content="请分类")],
+        0.0,
+        schema_name="IntentResult",
+        json_schema={"type": "object"},
+        agent="route",
+    )
+
+    assert result == {"intent": "teach", "confidence": 0.9, "reason": "结构化输出"}
+    assert inner.structured_call is not None
+    assert inner.structured_call["schema_name"] == "IntentResult"
+    assert inner.structured_call["agent"] == "route"
 
 
 def make_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[TestClient, SessionService]:

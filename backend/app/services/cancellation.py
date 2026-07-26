@@ -24,6 +24,27 @@ class CancelAwareLLMClient:
         self._raise_if_cancelled()
         return self._inner.generate_json(messages, temperature, agent)
 
+    def generate_structured_json(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        *,
+        schema_name: str,
+        json_schema: dict[str, object],
+        agent: AgentName | None = None,
+    ) -> Any:
+        self._raise_if_cancelled()
+        structured_generate = getattr(self._inner, "generate_structured_json", None)
+        if callable(structured_generate):
+            return structured_generate(
+                messages,
+                temperature,
+                schema_name=schema_name,
+                json_schema=json_schema,
+                agent=agent,
+            )
+        return self._inner.generate_json(messages, temperature, agent)
+
     def generate_with_tools(
         self,
         messages: list[LLMMessage],

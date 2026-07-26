@@ -12,7 +12,7 @@ from typing import Any, TypeVar, cast
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, ValidationError
 
-from backend.app.core.llm import AgentName, LLMClient, LLMMessage, LLMRole
+from backend.app.core.llm import AgentName, LLMClient, LLMMessage, LLMProviderError, LLMRole
 
 Node = Callable[..., dict[str, Any]]
 ContractT = TypeVar("ContractT", bound=BaseModel)
@@ -130,45 +130,64 @@ def generate_validated_json(
     Pydantic JSON Schema with ``strict=true``. Lightweight test clients and third-party adapters
     that only implement the legacy ``generate_json`` protocol remain supported.
 
-    A structured production response that still fails normalization/Pydantic validation receives
-    one repair attempt containing the exact validation errors. Pydantic remains the final trust
-    boundary regardless of provider behavior.
+    Every response that fails normalization/Pydantic validation receives one repair attempt
+    containing the exact validation errors. Providers with strict JSON Schema support receive the
+    schema through ``response_format``; compatible endpoints that reject that feature fall back to
+    JSON-object mode while keeping the same schema instruction and repair loop. Pydantic remains the
+    final trust boundary regardless of provider behavior.
     """
 
     structured_generate = getattr(llm_client, "generate_structured_json", None)
-    supports_structured_output = callable(structured_generate)
-    attempts = 2 if supports_structured_output else 1
+    use_structured_output = callable(structured_generate)
+    attempts = 2
     current_messages = list(messages)
     contract_name = schema_name or output_model.__name__
     json_schema = cast(
         dict[str, object],
         output_model.model_json_schema(mode="validation"),
     )
-    if supports_structured_output:
-        schema_instruction = LLMMessage(
-            role="system",
-            content=(
-                f"以下是 {contract_name} 的完整 JSON Schema。即使上游兼容接口没有强制执行"
-                " response_format，你也必须逐字段遵守；required 中的字段不得省略，"
-                "additionalProperties=false 的对象不得增加字段。只返回 JSON："
-                f"{json.dumps(json_schema, ensure_ascii=False, separators=(',', ':'))}"
-            ),
-        )
-        if current_messages and current_messages[0].role == "system":
-            current_messages.insert(1, schema_instruction)
-        else:
-            current_messages.insert(0, schema_instruction)
+    schema_instruction = LLMMessage(
+        role="system",
+        content=(
+            f"以下是 {contract_name} 的完整 JSON Schema。即使上游兼容接口没有强制执行"
+            " response_format，你也必须逐字段遵守；required 中的字段不得省略，"
+            "enum/const 只能使用列出的值，additionalProperties=false 的对象不得增加字段。"
+            "只返回 JSON："
+            f"{json.dumps(json_schema, ensure_ascii=False, separators=(',', ':'))}"
+        ),
+    )
+    if current_messages and current_messages[0].role == "system":
+        current_messages.insert(1, schema_instruction)
+    else:
+        current_messages.insert(0, schema_instruction)
 
     for attempt in range(attempts):
-        if supports_structured_output:
+        if use_structured_output:
             assert callable(structured_generate)
-            raw = structured_generate(
-                current_messages,
-                temperature,
-                schema_name=contract_name,
-                json_schema=json_schema,
-                agent=agent,
-            )
+            try:
+                raw = structured_generate(
+                    current_messages,
+                    temperature,
+                    schema_name=contract_name,
+                    json_schema=json_schema,
+                    agent=agent,
+                )
+            except LLMProviderError as exc:
+                if exc.status_code not in {400, 404, 415, 422}:
+                    raise
+                _LOGGER.warning(
+                    "Provider rejected strict JSON Schema for agent=%s contract=%s "
+                    "status=%s; falling back to JSON-object mode",
+                    agent,
+                    contract_name,
+                    exc.status_code,
+                )
+                use_structured_output = False
+                raw = llm_client.generate_json(
+                    messages=current_messages,
+                    temperature=temperature,
+                    agent=agent,
+                )
         else:
             raw = llm_client.generate_json(
                 messages=current_messages,
@@ -710,21 +729,24 @@ def normalize_cross_review_payload(raw: object) -> object:
 def _normalize_review_opinion(op: object) -> object:
     if not isinstance(op, dict):
         return op
-    normalized = normalize_key_aliases(
-        op,
-        {
-            # camelCase variants
-            "targetWrote": "target_wrote",
-            "legalBasis": "legal_basis",
-            # Chinese variants — LLM often outputs Chinese keys
-            "问题": "problem",
-            "建议": "suggestion",
-            "位置": "location",
-            "原文": "target_wrote",
-            "依据": "basis",
-            "法条依据": "legal_basis",
-            "类别": "category",
-        },
+    normalized = cast(
+        dict[str, Any],
+        normalize_key_aliases(
+            op,
+            {
+                # camelCase variants
+                "targetWrote": "target_wrote",
+                "legalBasis": "legal_basis",
+                # Chinese variants — LLM often outputs Chinese keys
+                "问题": "problem",
+                "建议": "suggestion",
+                "位置": "location",
+                "原文": "target_wrote",
+                "依据": "basis",
+                "法条依据": "legal_basis",
+                "类别": "category",
+            },
+        ),
     )
     # ── category: 中文/英文 → emoji Literal（ReviewOpinion.category 严格 5 值）──
     _CAT_MAP = {
