@@ -359,6 +359,7 @@
 | `node_id` | 知识节点 ID |
 | `pl` | 当前掌握概率 P(L)，范围为 0 到 1 |
 | `observations` | 已计入的观测次数 |
+| `inferred` | 是否来自知识 DAG 推断；直接作答更新后为 `false` |
 | `correct_count`、`incorrect_count` | 正确和错误次数 |
 | `last_attempt_id` | 最近一次影响该节点的作答 ID |
 | `model_version` | BKT 参数或算法版本 |
@@ -714,9 +715,16 @@ Judge 通过后，课程会话更新为 `completed`。Judge 要求修改时，�
 4. 写入 `attempts`；
 5. 对已经得到二值正误的作答更新 `student_node_mastery`；
 6. 同时写入 `mastery_events`；
-7. 创建独立的 `feedback` 会话，并通过 `parent_session_id` 指向课程会话。
+7. 读取更新后的 `mastery_snapshot`；
+8. 创建独立的 `feedback` 会话，通过 `parent_session_id` 指向课程会话，并注入本轮
+   `bkt_updates` 和 `mastery_snapshot`。
 
 作答、当前 mastery 和 mastery 审计必须在同一事务中完成。
+
+反馈阶段沿用与初始诊断相同的教育背景 BKT 参数。前 10 次直接作答对 `P(T)` 使用 1.5 倍
+临时加速，第 11 次起恢复背景基准值；作答计数包含 CAT 诊断直接作答和历史练习作答。
+`student_node_mastery.inferred` 区分知识 DAG 推断状态与直接观测状态：课程作答直接更新后重置为
+`false`。
 
 ### 7.8 反馈阶段
 
@@ -724,10 +732,13 @@ Judge 通过后，课程会话更新为 `completed`。Judge 要求修改时，�
 
 - 原始题目 ID和学员回答；
 - 后端已经计算出的 `observed_correct`；
+- 后端已经计算出的 `bkt_updates` 和更新后 `mastery_snapshot`；
 - 当前画像；
 - Judge 报告和课程上下文。
 
-反馈 Agent 当前不独立判断答案正误，它根据已有判题结果生成反馈建议和画像更新。完成后写入：
+反馈 Agent 不独立判断答案正误，也不生成、修正或回传 BKT 数值。它只生成反馈建议、错误模式和
+认知、风格、进度、情感等非知识维度；后端把权威 mastery 快照组装进 `FeedbackResult` 和新画像。
+完成后写入：
 
 - `feedback_logs`；
 - `profile_history`；
@@ -765,7 +776,7 @@ Judge 通过后，课程会话更新为 `completed`。Judge 要求修改时，�
 - 学员原始答案保存到 `attempts`；
 - 固定答案由后端确定性比较；
 - 已确认的二值结果更新 BKT；
-- 反馈 Agent 根据题目、回答、正误和画像生成反馈。
+- 反馈 Agent 根据题目、回答、正误和权威 BKT 上下文生成非知识反馈；后端生成完整反馈画像。
 
 ### 9.2 当前不足
 

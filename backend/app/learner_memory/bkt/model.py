@@ -93,6 +93,39 @@ def compute_bkt_step(
     return predicted, min(1.0, max(0.0, posterior))
 
 
+def knowledge_node_snapshot(
+    probability: float,
+    observations: int,
+    *,
+    inferred: bool = False,
+) -> dict[str, Any]:
+    """Render a persisted BKT projection into the learner-profile knowledge contract."""
+
+    probability = min(1.0, max(0.0, probability))
+    if observations <= 0 and inferred:
+        ci_low = max(0.0, probability - 0.3)
+        ci_high = min(1.0, probability + 0.3)
+        low_confidence = True
+    elif observations <= 0:
+        probability = UNOBSERVED_PL
+        ci_low, ci_high = UNOBSERVED_CI
+        low_confidence = True
+    else:
+        alpha = probability * observations + 1.0
+        beta_value = (1.0 - probability) * observations + 1.0
+        ci_low = max(0.0, float(beta.ppf(0.025, alpha, beta_value)))
+        ci_high = min(1.0, float(beta.ppf(0.975, alpha, beta_value)))
+        low_confidence = ci_high - ci_low > 0.30
+    return {
+        "pl": round(probability, 4),
+        "ci_low": round(ci_low, 4),
+        "ci_high": round(ci_high, 4),
+        "observations": max(0, observations),
+        "low_confidence": low_confidence,
+        "inferred": inferred,
+    }
+
+
 class BKTTracker:
     """Stateful BKT tracker with background priors and uncertainty output."""
 
@@ -172,35 +205,13 @@ class BKTTracker:
         for node_id in all_node_ids:
             state = self.nodes.get(node_id)
             if state is None:
-                knowledge[node_id] = {
-                    "pl": UNOBSERVED_PL,
-                    "ci_low": UNOBSERVED_CI[0],
-                    "ci_high": UNOBSERVED_CI[1],
-                    "observations": 0,
-                    "low_confidence": True,
-                    "inferred": False,
-                }
+                knowledge[node_id] = knowledge_node_snapshot(UNOBSERVED_PL, 0)
                 continue
-            probability = state.pl
-            if state.total_count == 0 and state.inferred:
-                ci_low = max(0.0, probability - 0.3)
-                ci_high = min(1.0, probability + 0.3)
-                low_confidence = True
-            elif state.total_count == 0:
-                probability = UNOBSERVED_PL
-                ci_low, ci_high = UNOBSERVED_CI
-                low_confidence = True
-            else:
-                ci_low, ci_high = self._credible_interval(probability, state.total_count)
-                low_confidence = ci_high - ci_low > 0.30
-            knowledge[node_id] = {
-                "pl": round(probability, 4),
-                "ci_low": round(ci_low, 4),
-                "ci_high": round(ci_high, 4),
-                "observations": state.total_count,
-                "low_confidence": low_confidence,
-                "inferred": state.inferred,
-            }
+            knowledge[node_id] = knowledge_node_snapshot(
+                state.pl,
+                state.total_count,
+                inferred=state.inferred,
+            )
         return knowledge
 
     def state_dict(self) -> dict[str, Any]:
@@ -249,12 +260,3 @@ class BKTTracker:
         if self.global_answer_count <= 10:
             return min(1.0, state.p_transit_base * 1.5)
         return state.p_transit_base
-
-    @staticmethod
-    def _credible_interval(probability: float, observations: int) -> tuple[float, float]:
-        alpha = probability * observations + 1.0
-        beta_value = (1.0 - probability) * observations + 1.0
-        return (
-            max(0.0, float(beta.ppf(0.025, alpha, beta_value))),
-            min(1.0, float(beta.ppf(0.975, alpha, beta_value))),
-        )

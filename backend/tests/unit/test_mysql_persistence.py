@@ -157,6 +157,7 @@ def test_versioned_migrations_include_mastery_audit() -> None:
         "001_initial",
         "002_mastery_events",
         "003_cat_diagnostics",
+        "004_feedback_bkt_authority",
     ]
 
     audit_migration = Path(
@@ -175,6 +176,10 @@ def test_versioned_migrations_include_mastery_audit() -> None:
     assert "CREATE TABLE IF NOT EXISTS diagnostic_mastery_events" in cat_migration
     assert "uq_mastery_event_attempt_node" in cat_migration
     assert "skills_json JSON" in cat_migration
+    feedback_migration = Path(
+        "backend/app/persistence/migrations/004_feedback_bkt_authority.sql"
+    ).read_text(encoding="utf-8")
+    assert "ADD COLUMN inferred" in feedback_migration
 
 
 @pytest.mark.unit
@@ -296,7 +301,7 @@ def test_diagnostic_repository_sql_bindings_without_live_mysql() -> None:
         for sql, params in database.connection.recording_cursor.executions
         if sql.startswith("INSERT INTO student_node_mastery")
     )
-    assert mastery_write[4:6] == (1, 0)
+    assert mastery_write[5:7] == (1, 0)
 
 
 @pytest.mark.unit

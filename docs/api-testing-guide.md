@@ -334,6 +334,7 @@ POST /sessions/{course_session_id}/exercise-responses
 课程会话必须已经是 `completed`，且请求中的 `learner_id` 必须与课程会话一致；否则分别返回
 `404`（课程会话不存在）、`403`（学员不匹配）或 `409`（课程尚未完成）。通过校验后，后端保存练习、
 更新掌握度并创建 feedback 会话。前端把返回的 `session_id` 保存为 `feedback_session_id`。
+生产 MySQL 路径以服务端题目元数据和答案判定为准，不信任客户端提交的技能或正误字段。
 
 ### 步骤 6：等待并读取反馈
 
@@ -345,7 +346,19 @@ GET /sessions/{feedback_session_id}/events/stream
 WS  /sessions/{feedback_session_id}/events
 ```
 
-完成后读取 `state.feedback_result` 和反馈类型的 Markdown artifact。
+完成后读取 `state.feedback_result` 和反馈类型的 Markdown artifact。完整会话状态还应满足：
+
+- `state.input_payload.bkt_updates` 是本轮后端 BKT 状态转移；
+- `state.input_payload.mastery_snapshot` 是更新后的权威掌握度快照；
+- `state.feedback_result.five_dimensions.knowledge` 与
+  `state.learner_profile_update.five_dimensions.knowledge` 都来自该快照；
+- Agent 原始输出不包含 `knowledge` 或 BKT 数值。
+
+可用以下命令验证完整闭环和三处掌握度一致性：
+
+```bash
+uv run pytest backend/tests/unit/test_learning_flow_api.py::test_reproducible_questionnaire_teach_exercise_feedback_journey -m unit -q
+```
 
 ### 步骤 7：刷新学员数据
 

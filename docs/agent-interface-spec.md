@@ -7,7 +7,7 @@
 | 节点 | 调用方式 | 主要输出 |
 |---|---|---|
 | `route` | `generate_json` | `IntentResult` → `intent` |
-| `diagnosis_feedback` | `generate_json` + Store | diagnosis: `LearnerProfile`；feedback: `FeedbackResult` |
+| `diagnosis_feedback` | `generate_json` + Store | LLM：`DiagnosisAgentResult` / `FeedbackAgentResult`；后端：`LearnerProfile` / `FeedbackResult` |
 | `planner` | 确定性算法 + Store | `LearningPathItem[]`、双轴快照、路径决策 |
 | `expert_a` | `generate_json` / `generate_with_tools` | 草稿、互评、修订、整合课程包 |
 | `expert_b` | `generate_json` / `generate_with_tools` | 草稿、互评、修订 |
@@ -76,18 +76,28 @@ Judge 的 `decision` 是图分支条件。`accept` 和 `accept_with_minor_revisi
 ## 4. 画像与路径合同
 
 推荐入口完成 CAT/BKT 后，将完整结果保存在 `input_payload.diagnostic_snapshot`。其中每个知识节点
-包含 `pl`、置信区间、观测数、低置信度标记和 `inferred`；`diagnosis_feedback[diagnosis]` 可把
-快照提供给模型作为语境，但进入 `LearnerProfile` 前必须由后端用该快照覆盖模型返回的知识节点。
-教育背景同样以诊断会话记录为准。
+包含 `pl`、置信区间、观测数、低置信度标记和 `inferred`。诊断 LLM 的
+`DiagnosisAgentResult` 不含 `knowledge`、`knowledge_level` 或 `weak_points`；后端以诊断快照
+确定性生成这三个字段，再与 LLM 返回的认知、风格、进度、情感等非知识维度组装成
+`LearnerProfile`。教育背景同样以诊断会话记录为准。
 
 兼容问卷入口中，原始 `input_payload.questionnaire_responses` 保留用于审计；服务层根据版本化问卷
 定义生成 `input_payload.questionnaire_context`，为每条回答补充题目正文、选项和已选选项正文。
 旧会话缺少上下文时才回退到原始回答。
 
-没有诊断快照时，模型只返回有问卷或历史证据的 `five_dimensions.knowledge` 节点。诊断节点按静态
-知识 DAG 将未返回节点确定性补为冷启动先验 `P(L₀)=0.15`、区间 `[0.02, 0.40]`、
-`observations=0`、`low_confidence=true`、`inferred=false`，再校验并保存完整画像快照。
-反馈阶段只让模型返回本轮变化节点，后端沿用旧值并补齐完整快照。
+没有诊断快照时，后端按静态知识 DAG 将全部节点确定性初始化为冷启动先验
+`P(L₀)=0.15`、区间 `[0.02, 0.40]`、`observations=0`、
+`low_confidence=true`、`inferred=false`；模型仍不生成知识节点。
+
+练习反馈入口先完成服务端判题和 BKT 更新，再把 `input_payload.bkt_updates` 与
+`input_payload.mastery_snapshot` 注入独立 feedback 会话。反馈 LLM 的
+`FeedbackAgentResult` 不含 `bkt_update` 或 `five_dimensions.knowledge`；后端以
+`mastery_snapshot` 覆盖最新知识状态，确定性生成 `FeedbackResult.bkt_update`、
+`knowledge_level` 和 `weak_points`，并保存完整的新画像。因此反馈结果、画像和持久化 mastery
+使用同一个权威快照。
+
+历史画像只用于沿用非知识维度；其 `five_dimensions.knowledge` 不作为掌握度来源，避免旧版本
+由 LLM 生成的知识值继续传播。
 
 Planner 必须：
 
@@ -102,10 +112,12 @@ Planner 必须：
 - `agent_output_json_schemas()` 只导出实际使用 JSON 模式的合同：诊断、反馈、专家 A/B、Judge、Route、ChatAnswer。
 - Planner 没有 LLM JSON Schema；检索服务返回 `RetrievalChunk`。
 - Provider 字段别名必须先规范化再校验。
-- `FeedbackResult.bkt_update.error_pattern` 只接受 `unknown`、`no_prior_knowledge`、
+- `FeedbackAgentResult.error_pattern` 只接受 `unknown`、`no_prior_knowledge`、
   `concept_confusion`、`application_gap`、`careless`、`overconfidence` 或 JSON `null`。
   反馈边界会将模型常见的 `"none"`、`"no_error"` 等“无错误”别名规范化为 `null`，
   其他未知值仍然校验失败。
+- `DiagnosisAgentResult` 和 `FeedbackAgentResult` 的 JSON Schema 均不包含知识掌握度；
+  即使兼容旧模型响应中出现相关字段，节点也会在校验和组装前丢弃。
 - Judge 只评估，不生成教学正文。
 
 ## 6. MarkdownArtifact

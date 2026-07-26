@@ -119,6 +119,26 @@ def load_profile_memories(
     return list_learner_memories(store, learner_id=learner_id, kind="profile", limit=limit)
 
 
+def load_mastery_snapshot(
+    runtime: Runtime[WorkflowContext] | None,
+) -> dict[str, dict[str, Any]]:
+    """Load the backend-computed mastery projection without reading profile knowledge."""
+
+    learner_id = _learner_id(runtime)
+    store = getattr(runtime, "store", None) if runtime is not None else None
+    reader = getattr(store, "mastery_snapshot", None)
+    if not learner_id or not callable(reader):
+        return {}
+    snapshot = reader(learner_id)
+    if not isinstance(snapshot, dict):
+        return {}
+    return {
+        str(skill_id): dict(state)
+        for skill_id, state in snapshot.items()
+        if isinstance(state, dict)
+    }
+
+
 def save_learner_memories(
     runtime: Runtime[WorkflowContext] | None,
     state: StateDict,

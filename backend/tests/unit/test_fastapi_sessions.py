@@ -341,9 +341,9 @@ def test_learner_api_returns_memory_and_session_history(
     assert learner.status_code == 200
     learner_body = learner.json()
     assert learner_body["learner_id"] == "learner-api"
-    assert learner_body["latest_profile"]["learning_goal"] == "学习专利新颖性"
+    assert learner_body["latest_profile"]["learning_goal"] == "我想学习专利新颖性"
     assert learner_body["history"] == []
-    assert learner_profiles.json()["profiles"][0]["learning_goal"] == "学习专利新颖性"
+    assert learner_profiles.json()["profiles"][0]["learning_goal"] == "我想学习专利新颖性"
     history = learner_history.json()["history"]
     assert history == []
     assert learner_sessions.status_code == 200

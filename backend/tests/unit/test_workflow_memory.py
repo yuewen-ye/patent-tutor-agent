@@ -171,7 +171,8 @@ def test_workflow_uses_checkpointer_and_store_for_learner_memory(
     history_items = store.search(("learners", "learner-alice", "history"), limit=5)
     assert profile_items
     assert history_items == []
-    assert profile_items[-1].value["weak_points"] == ["现有技术概念薄弱"]
+    # Without CAT/BKT observations the backend must not accept LLM-generated weak points.
+    assert profile_items[-1].value["weak_points"] == []
     assert "workflow_status" in first_state
     assert first_state["workflow_status"] == "completed"
 
@@ -187,4 +188,5 @@ def test_workflow_uses_checkpointer_and_store_for_learner_memory(
 
     diagnosis_prompt = second_llm.messages_by_agent["diagnosis_feedback"][0]
     assert "历史学习者画像" in diagnosis_prompt
-    assert "现有技术概念薄弱" in diagnosis_prompt
+    assert "memory-session-1" in diagnosis_prompt
+    assert "现有技术概念薄弱" not in diagnosis_prompt

@@ -8,6 +8,7 @@ from backend.app.learner_memory.bkt.model import (
     BKTParameters,
     BKTStep,
     BKTTracker,
+    knowledge_node_snapshot,
     parameters_for_background,
 )
 from backend.app.learner_memory.bkt.question_bank import load_diagnostic_questions
@@ -22,5 +23,6 @@ __all__ = [
     "KnowledgeGraph",
     "load_knowledge_graph",
     "load_diagnostic_questions",
+    "knowledge_node_snapshot",
     "parameters_for_background",
 ]

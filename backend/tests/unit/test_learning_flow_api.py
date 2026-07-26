@@ -256,7 +256,7 @@ def test_reproducible_questionnaire_teach_exercise_feedback_journey(
                     "question_id": "novelty-basic-q1",
                     "answer": "申请日前已有公开文献披露该方案，因此不具备新颖性。",
                     "observed_correct": True,
-                    "skill_id": "novelty-basic",
+                        "skill_id": "novelty",
                 }
             ],
         },
@@ -275,6 +275,16 @@ def test_reproducible_questionnaire_teach_exercise_feedback_journey(
     assert feedback_body["state"]["learner_profile_update"]["profile_update_hint"] == (
         "新颖性判断步骤掌握度已更新"
     )
+    feedback_knowledge = feedback_body["state"]["feedback_result"]["five_dimensions"]["knowledge"]
+    updated_knowledge = feedback_body["state"]["learner_profile_update"]["five_dimensions"][
+        "knowledge"
+    ]
+    mastery_snapshot = feedback_body["state"]["input_payload"]["mastery_snapshot"]
+    bkt_updates = feedback_body["state"]["input_payload"]["bkt_updates"]
+    assert feedback_knowledge["novelty"] == mastery_snapshot["novelty"]
+    assert updated_knowledge["novelty"] == mastery_snapshot["novelty"]
+    assert bkt_updates[0]["p_init"] == pytest.approx(0.10)
+    assert bkt_updates[0]["p_transit"] == pytest.approx(0.225)
     assert "feedback_result" in feedback_state
 
     learner = client.get(f"/learners/{learner_id}")
@@ -282,7 +292,11 @@ def test_reproducible_questionnaire_teach_exercise_feedback_journey(
     learner_body = learner.json()
     assert len(learner_body["profiles"]) == 2
     assert learner_body["latest_profile"]["profile_update_hint"] == "新颖性判断步骤掌握度已更新"
-    assert learner_body["mastery"]["novelty-basic"] > 0.15
+    assert learner_body["mastery"]["novelty"] > 0.15
+    assert (
+        learner_body["latest_profile"]["five_dimensions"]["knowledge"]["novelty"]["pl"]
+        == pytest.approx(learner_body["mastery"]["novelty"], abs=1e-4)
+    )
     history_types = {item["event_type"] for item in learner_body["history"]}
     assert {"questionnaire_submitted", "exercise_submitted"}.issubset(history_types)
     assert len(learner_body["history"]) >= 3

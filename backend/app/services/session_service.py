@@ -26,6 +26,13 @@ from backend.app.core.llm import (
 )
 from backend.app.runtime_outputs.artifacts import write_manifest, write_process_markdown
 from backend.app.graph.workflow import arun_workflow
+from backend.app.learner_memory.bkt.model import (
+    DEFAULT_P_G,
+    DEFAULT_P_S,
+    compute_bkt_step,
+    knowledge_node_snapshot,
+    parameters_for_background,
+)
 from backend.app.learner_memory.diagnostic_sessions import DiagnosticSessionManager
 from backend.app.learner_memory.memory import learner_memory_snapshot
 from backend.app.onboarding.questionnaire import (
@@ -327,27 +334,74 @@ class SessionService:
         if course_record.status != "completed":
             raise RuntimeError("Course session must be completed before exercise submission.")
         submission_id = uuid.uuid4().hex
+        memory_before = learner_memory_snapshot(
+            self._store,
+            learner_id=learner_id,
+            limit=10_000,
+        )
+        latest_profile_raw = memory_before.get("latest_profile")
+        latest_profile: dict[str, Any] = (
+            dict(latest_profile_raw) if isinstance(latest_profile_raw, dict) else {}
+        )
+        existing_dimensions = latest_profile.get("five_dimensions", {})
+        existing_knowledge = (
+            dict(existing_dimensions.get("knowledge", {}))
+            if isinstance(existing_dimensions, dict)
+            and isinstance(existing_dimensions.get("knowledge"), dict)
+            else {}
+        )
+        course_state = getattr(course_record, "state", {})
+        course_input = (
+            course_state.get("input_payload", {}) if isinstance(course_state, dict) else {}
+        )
+        diagnostic_snapshot = (
+            course_input.get("diagnostic_snapshot", {})
+            if isinstance(course_input, dict)
+            else {}
+        )
+        prior_answer_count = (
+            int(diagnostic_snapshot.get("answered_questions", 0))
+            if isinstance(diagnostic_snapshot, dict)
+            else 0
+        )
+        for history in memory_before.get("history", []):
+            if not isinstance(history, dict) or history.get("event_type") != "exercise_submitted":
+                continue
+            historical_responses = history.get("responses", [])
+            if isinstance(historical_responses, list):
+                prior_answer_count += len(historical_responses)
         self._save_history(
             learner_id=learner_id,
             session_id=submission_id,
             event_type="exercise_submitted",
             payload={"course_session_id": course_session_id, "responses": responses},
         )
+        feedback_input_payload: dict[str, Any] = {
+            "course_session_id": course_session_id,
+            "exercise_responses": responses,
+        }
         record = self.create_session(
             user_input=json.dumps(responses, ensure_ascii=False),
             learner_id=learner_id,
             workflow_mode="feedback",
-            input_payload={
-                "course_session_id": course_session_id,
-                "exercise_responses": responses,
-            },
+            input_payload=feedback_input_payload,
             parent_session_id=course_session_id,
             start_immediately=False,
         )
         register_questions = getattr(self._store, "register_questions_from_state", None)
         if callable(register_questions):
-            register_questions(session_id=course_session_id, state=course_record.state)
+            register_questions(
+                session_id=course_session_id,
+                state=course_state if isinstance(course_state, dict) else {},
+            )
         record_attempts = getattr(self._store, "record_attempts", None)
+        bkt_updates: list[dict[str, Any]] = []
+        mastery_snapshot: dict[str, dict[str, Any]] = {}
+        mastery_reader = getattr(self._store, "mastery_snapshot", None)
+        if callable(mastery_reader):
+            persisted_before = mastery_reader(learner_id)
+            if isinstance(persisted_before, dict):
+                mastery_snapshot = persisted_before
         if callable(record_attempts):
             attempt_results = cast(
                 list[dict[str, Any]],
@@ -369,32 +423,113 @@ class SessionService:
                     "observed_correct": result_by_question[response["question_id"]].get(
                         "is_correct"
                     ),
+                    "skill_id": result_by_question[response["question_id"]].get("skill_id"),
+                    "skill_ids": result_by_question[response["question_id"]].get(
+                        "skill_ids", []
+                    ),
                 }
                 if response.get("question_id") in result_by_question
                 else response
                 for response in responses
             ]
-            record.state["input_payload"] = {
-                "course_session_id": course_session_id,
-                "exercise_responses": responses,
-            }
+            bkt_updates = [
+                update
+                for result in attempt_results
+                for update in result.get("bkt_updates", [])
+                if isinstance(update, dict)
+            ]
         else:
             update_mastery = getattr(self._store, "update_mastery", None)
-            if callable(update_mastery):
-                for response in responses:
-                    observed = response.get("observed_correct")
-                    if isinstance(observed, bool):
-                        skill_ids = response.get("skill_ids")
-                        if not isinstance(skill_ids, list) or not skill_ids:
-                            skill_ids = [
-                                str(response.get("skill_id") or response["question_id"])
-                            ]
-                        for skill_id in skill_ids:
-                            update_mastery(
-                                learner_id,
-                                str(skill_id),
-                                observed_correct=observed,
+            parameters = parameters_for_background(
+                str(latest_profile.get("education_background") or "其他")
+            )
+            local_snapshot = dict(mastery_snapshot or existing_knowledge)
+            answer_count = prior_answer_count
+            for response in responses:
+                observed = response.get("observed_correct")
+                if not isinstance(observed, bool):
+                    continue
+                answer_count += 1
+                effective_transit = (
+                    min(1.0, parameters.p_transit * 1.5)
+                    if answer_count <= 10
+                    else parameters.p_transit
+                )
+                skill_ids = response.get("skill_ids")
+                if not isinstance(skill_ids, list) or not skill_ids:
+                    skill_ids = [str(response.get("skill_id") or response["question_id"])]
+                for skill_id in skill_ids:
+                    normalized_skill_id = str(skill_id)
+                    current_state = local_snapshot.get(normalized_skill_id, {})
+                    current = (
+                        float(current_state.get("pl", parameters.p_init))
+                        if isinstance(current_state, dict)
+                        else parameters.p_init
+                    )
+                    observations = (
+                        int(current_state.get("observations", 0))
+                        if isinstance(current_state, dict)
+                        else 0
+                    )
+                    predicted, updated = compute_bkt_step(
+                        current,
+                        observed_correct=observed,
+                        p_transit=effective_transit,
+                        p_guess=DEFAULT_P_G,
+                        p_slip=DEFAULT_P_S,
+                    )
+                    if callable(update_mastery):
+                        updated = float(
+                            cast(
+                                Any,
+                                update_mastery(
+                                    learner_id,
+                                    normalized_skill_id,
+                                    observed_correct=observed,
+                                    p_init=parameters.p_init,
+                                    p_transit=effective_transit,
+                                    p_guess=DEFAULT_P_G,
+                                    p_slip=DEFAULT_P_S,
+                                ),
                             )
+                        )
+                    knowledge_state = knowledge_node_snapshot(updated, observations + 1)
+                    local_snapshot[normalized_skill_id] = knowledge_state
+                    bkt_updates.append(
+                        {
+                            "skill_id": normalized_skill_id,
+                            "observed_correct": observed,
+                            "prior_pl": current,
+                            "predicted_pl": predicted,
+                            "posterior_pl": updated,
+                            "updated_pl": updated,
+                            "observations": observations + 1,
+                            "p_init": parameters.p_init,
+                            "p_transit": effective_transit,
+                            "p_guess": DEFAULT_P_G,
+                            "p_slip": DEFAULT_P_S,
+                            "knowledge_state": knowledge_state,
+                        }
+                    )
+            mastery_snapshot = {
+                skill_id: state
+                for skill_id, state in local_snapshot.items()
+                if isinstance(state, dict)
+            }
+        if callable(mastery_reader):
+            persisted_snapshot = mastery_reader(learner_id)
+            if isinstance(persisted_snapshot, dict):
+                mastery_snapshot = persisted_snapshot
+        # create_session passes this object to the worker thread. Mutate it in place so the
+        # delayed workflow observes the authoritative BKT result computed above.
+        feedback_input_payload.update(
+            {
+                "exercise_responses": responses,
+                "bkt_updates": bkt_updates,
+                "mastery_snapshot": mastery_snapshot,
+            }
+        )
+        record.state["input_payload"] = feedback_input_payload
         submission_markdown = (
             "# 练习提交\n\n"
             f"- 原课程会话：{course_session_id}\n"
@@ -456,9 +591,10 @@ class SessionService:
         load_persisted = getattr(self._store, "load_session", None)
         if not callable(load_persisted):
             return None
-        persisted = load_persisted(session_id)
-        if not persisted:
+        persisted_raw = load_persisted(session_id)
+        if not isinstance(persisted_raw, dict):
             return None
+        persisted = cast(dict[str, Any], persisted_raw)
         record = SessionRecord(
             session_id=str(persisted["session_id"]),
             user_input=str(persisted.get("state", {}).get("user_input", "")),
@@ -487,7 +623,8 @@ class SessionService:
             current = dict(self._sessions)
         list_persisted = getattr(self._store, "list_sessions", None)
         if callable(list_persisted):
-            for item in list_persisted():
+            persisted_items = cast(list[dict[str, Any]], list_persisted())
+            for item in persisted_items:
                 session_id = str(item["session_id"])
                 if session_id in current:
                     continue
@@ -594,7 +731,7 @@ class SessionService:
     def readiness(self) -> ReadinessStatus:
         store_readiness = getattr(self._store, "readiness", None)
         if callable(store_readiness):
-            result = store_readiness()
+            result = cast(dict[str, Any], store_readiness())
             if not result.get("ready"):
                 return {
                     "ready": False,

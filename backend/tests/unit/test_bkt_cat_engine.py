@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import pytest
 
-from backend.app.agents.diagnosis.node import _apply_diagnostic_snapshot
+from backend.app.agents.diagnosis.node import (
+    _authoritative_knowledge,
+    _normalize_diagnosis_agent_payload,
+)
 from backend.app.learner_memory.bkt import (
     BKTTracker,
     CATEngine,
@@ -130,7 +133,7 @@ def test_cat_does_not_classify_unobserved_prior_as_unmastered() -> None:
     assert reason == "继续诊断"
 
 
-def test_diagnostic_knowledge_overrides_llm_estimates() -> None:
+def test_diagnostic_agent_knowledge_is_discarded_and_backend_snapshot_is_authoritative() -> None:
     llm_payload = {
         "education_background": "LLM guess",
         "weak_points": [],
@@ -160,9 +163,13 @@ def test_diagnostic_knowledge_overrides_llm_estimates() -> None:
         },
     }
 
-    merged = _apply_diagnostic_snapshot(llm_payload, diagnostic)
+    normalized = _normalize_diagnosis_agent_payload(llm_payload)
+    knowledge = _authoritative_knowledge(diagnostic["knowledge"])
 
-    assert isinstance(merged, dict)
-    assert merged["education_background"] == "理工背景+有研发经验"
-    assert merged["five_dimensions"]["knowledge"] == diagnostic["knowledge"]
-    assert "新颖性" in merged["weak_points"]
+    assert isinstance(normalized, dict)
+    assert normalized["learner_dimensions"] == {}
+    assert "knowledge" not in normalized
+    assert knowledge["novelty"]["pl"] == pytest.approx(0.2)
+    assert knowledge["novelty"]["observations"] == 2
+    assert knowledge["novelty"]["inferred"] is False
+    assert knowledge["inventive-step"]["pl"] == pytest.approx(0.15)

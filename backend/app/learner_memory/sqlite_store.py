@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from backend.app.learner_memory.memory import JsonValue, StoredMemoryItem
-from backend.app.learner_memory.bkt.model import compute_bkt_step
+from backend.app.learner_memory.bkt.model import compute_bkt_step, knowledge_node_snapshot
 
 P_L0 = 0.15
 P_T = 0.25
@@ -128,11 +128,21 @@ class SQLiteLearnerStore:
         skill_id: str,
         *,
         observed_correct: bool,
+        p_init: float = P_L0,
         p_transit: float = P_T,
         p_guess: float = P_G,
         p_slip: float = P_S,
     ) -> float:
-        current = self.mastery(learner_id).get(skill_id, P_L0)
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT probability, observations, correct_count, incorrect_count "
+                "FROM skill_mastery WHERE learner_id=? AND skill_id=?",
+                (learner_id, skill_id),
+            ).fetchone()
+        current = float(row["probability"]) if row else p_init
+        observations = int(row["observations"]) if row else 0
+        correct_count = int(row["correct_count"]) if row else 0
+        incorrect_count = int(row["incorrect_count"]) if row else 0
         _, updated = compute_bkt_step(
             current,
             observed_correct=observed_correct,
@@ -142,10 +152,23 @@ class SQLiteLearnerStore:
         )
         with self._connect() as connection:
             connection.execute(
-                "INSERT INTO skill_mastery(learner_id, skill_id, probability, updated_at) "
-                "VALUES (?, ?, ?, ?) ON CONFLICT(learner_id, skill_id) DO UPDATE SET "
-                "probability = excluded.probability, updated_at = excluded.updated_at",
-                (learner_id, skill_id, updated, datetime.now(UTC).isoformat()),
+                "INSERT INTO skill_mastery(learner_id, skill_id, probability, observations, "
+                "inferred, correct_count, incorrect_count, updated_at) "
+                "VALUES (?, ?, ?, ?, 0, ?, ?, ?) "
+                "ON CONFLICT(learner_id, skill_id) DO UPDATE SET "
+                "probability=excluded.probability, observations=excluded.observations, "
+                "inferred=0, "
+                "correct_count=excluded.correct_count, incorrect_count=excluded.incorrect_count, "
+                "updated_at=excluded.updated_at",
+                (
+                    learner_id,
+                    skill_id,
+                    updated,
+                    observations + 1,
+                    correct_count + int(observed_correct),
+                    incorrect_count + int(not observed_correct),
+                    datetime.now(UTC).isoformat(),
+                ),
             )
         return updated
 
@@ -156,6 +179,22 @@ class SQLiteLearnerStore:
                 (learner_id,),
             ).fetchall()
         return {str(row["skill_id"]): float(row["probability"]) for row in rows}
+
+    def mastery_snapshot(self, learner_id: str) -> dict[str, dict[str, Any]]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT skill_id, probability, observations, inferred FROM skill_mastery "
+                "WHERE learner_id=?",
+                (learner_id,),
+            ).fetchall()
+        return {
+            str(row["skill_id"]): knowledge_node_snapshot(
+                float(row["probability"]),
+                int(row["observations"]),
+                inferred=bool(row["inferred"]),
+            )
+            for row in rows
+        }
 
     def save_diagnostic_session(self, *, payload: dict[str, Any]) -> None:
         now = datetime.now(UTC).isoformat()
@@ -219,17 +258,43 @@ class SQLiteLearnerStore:
     ) -> None:
         now = datetime.now(UTC).isoformat()
         knowledge = diagnostic_payload.get("knowledge") or {}
+        counts: dict[str, list[int]] = {}
+        for answer in diagnostic_payload.get("answer_log") or []:
+            if not isinstance(answer, dict):
+                continue
+            for step in answer.get("direct_steps") or []:
+                if not isinstance(step, dict) or not step.get("skill_id"):
+                    continue
+                values = counts.setdefault(str(step["skill_id"]), [0, 0])
+                values[0 if bool(step.get("observed_correct")) else 1] += 1
         with self._connect() as connection:
             for skill_id, state in knowledge.items():
                 if not isinstance(state, dict):
                     continue
                 if int(state.get("observations", 0)) <= 0 and not state.get("inferred"):
                     continue
+                observations = int(state.get("observations", 0))
+                inferred = int(bool(state.get("inferred")))
+                correct_count, incorrect_count = counts.get(str(skill_id), [0, 0])
                 connection.execute(
-                    "INSERT INTO skill_mastery(learner_id, skill_id, probability, updated_at) "
-                    "VALUES (?, ?, ?, ?) ON CONFLICT(learner_id, skill_id) DO UPDATE SET "
-                    "probability=excluded.probability, updated_at=excluded.updated_at",
-                    (learner_id, str(skill_id), float(state["pl"]), now),
+                    "INSERT INTO skill_mastery(learner_id, skill_id, probability, observations, "
+                    "inferred, correct_count, incorrect_count, updated_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+                    "ON CONFLICT(learner_id, skill_id) DO UPDATE SET "
+                    "probability=excluded.probability, observations=excluded.observations, "
+                    "inferred=excluded.inferred, "
+                    "correct_count=excluded.correct_count, incorrect_count=excluded.incorrect_count, "
+                    "updated_at=excluded.updated_at",
+                    (
+                        learner_id,
+                        str(skill_id),
+                        float(state["pl"]),
+                        observations,
+                        inferred,
+                        correct_count,
+                        incorrect_count,
+                        now,
+                    ),
                 )
 
     def _diagnostic_attempts(self, diagnostic_session_id: str) -> list[sqlite3.Row]:
@@ -256,7 +321,11 @@ class SQLiteLearnerStore:
                 "PRIMARY KEY(namespace, item_key));"
                 "CREATE TABLE IF NOT EXISTS skill_mastery ("
                 "learner_id TEXT NOT NULL, skill_id TEXT NOT NULL, probability REAL NOT NULL "
-                "CHECK(probability >= 0 AND probability <= 1), updated_at TEXT NOT NULL, "
+                "CHECK(probability >= 0 AND probability <= 1), "
+                "observations INTEGER NOT NULL DEFAULT 0, "
+                "inferred INTEGER NOT NULL DEFAULT 0, "
+                "correct_count INTEGER NOT NULL DEFAULT 0, "
+                "incorrect_count INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL, "
                 "PRIMARY KEY(learner_id, skill_id));"
                 "CREATE TABLE IF NOT EXISTS diagnostic_sessions ("
                 "diagnostic_session_id TEXT PRIMARY KEY, learner_id TEXT NOT NULL, "
@@ -270,6 +339,20 @@ class SQLiteLearnerStore:
                 "UNIQUE(diagnostic_session_id, idempotency_key), "
                 "FOREIGN KEY(diagnostic_session_id) REFERENCES diagnostic_sessions(diagnostic_session_id));"
             )
+            columns = {
+                str(row["name"])
+                for row in connection.execute("PRAGMA table_info(skill_mastery)").fetchall()
+            }
+            for column, definition in (
+                ("observations", "INTEGER NOT NULL DEFAULT 0"),
+                ("inferred", "INTEGER NOT NULL DEFAULT 0"),
+                ("correct_count", "INTEGER NOT NULL DEFAULT 0"),
+                ("incorrect_count", "INTEGER NOT NULL DEFAULT 0"),
+            ):
+                if column not in columns:
+                    connection.execute(
+                        f"ALTER TABLE skill_mastery ADD COLUMN {column} {definition}"
+                    )
 
 
 def migrate_json_memory(source: str | Path, store: SQLiteLearnerStore) -> int:

@@ -104,3 +104,36 @@ def test_diagnostic_session_and_snapshot_are_durable(tmp_path) -> None:
 
     assert SQLiteLearnerStore(database).load_diagnostic_session("diagnostic-1") == payload
     assert SQLiteLearnerStore(database).mastery("learner-1")["novelty"] == pytest.approx(0.72)
+
+
+@pytest.mark.unit
+def test_direct_feedback_observation_replaces_inferred_mastery_state(tmp_path) -> None:
+    store = SQLiteLearnerStore(tmp_path / "learners.sqlite3")
+    store.complete_diagnostic_session(
+        diagnostic_session_id="diagnostic-1",
+        learner_id="learner-1",
+        diagnostic_payload={
+            "knowledge": {
+                "novelty": {
+                    "pl": 0.35,
+                    "observations": 0,
+                    "inferred": True,
+                }
+            }
+        },
+    )
+
+    assert store.mastery_snapshot("learner-1")["novelty"]["inferred"] is True
+
+    store.update_mastery(
+        "learner-1",
+        "novelty",
+        observed_correct=True,
+        p_init=0.15,
+        p_transit=0.30,
+    )
+    updated = store.mastery_snapshot("learner-1")["novelty"]
+
+    assert updated["observations"] == 1
+    assert updated["inferred"] is False
+    assert updated["pl"] > 0.35

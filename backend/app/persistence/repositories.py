@@ -9,7 +9,13 @@ from typing import Any, Iterable
 import uuid
 
 from backend.app.learner_memory.memory import JsonValue, StoredMemoryItem
-from backend.app.learner_memory.bkt.model import BKT_MODEL_VERSION, compute_bkt_step
+from backend.app.learner_memory.bkt.model import (
+    BKT_MODEL_VERSION,
+    BKTParameters,
+    compute_bkt_step,
+    knowledge_node_snapshot,
+    parameters_for_background,
+)
 from backend.app.learner_memory.sqlite_store import P_L0, P_G, P_S, P_T
 from backend.app.persistence.db import MySQLDatabase
 
@@ -232,6 +238,10 @@ class MySQLLearnerStore:
         with self.database.transaction() as connection:
             return self._mastery_on_connection(connection, learner_id)
 
+    def mastery_snapshot(self, learner_id: str) -> dict[str, dict[str, Any]]:
+        with self.database.transaction() as connection:
+            return self._mastery_snapshot_on_connection(connection, learner_id)
+
     def readiness(self) -> dict[str, Any]:
         try:
             if self.database.auto_migrate:
@@ -262,6 +272,7 @@ class MySQLLearnerStore:
         skill_id: str,
         *,
         observed_correct: bool,
+        p_init: float = P_L0,
         p_transit: float = P_T,
         p_guess: float = P_G,
         p_slip: float = P_S,
@@ -269,17 +280,19 @@ class MySQLLearnerStore:
         now = _db_now()
         with self.database.transaction() as connection:
             self._ensure_student(connection, learner_id, now)
-            return self._update_mastery_connection(
+            update = self._update_mastery_connection(
                 connection,
                 learner_id,
                 skill_id,
                 observed_correct,
                 attempt_id=None,
                 now=now,
+                p_init=p_init,
                 p_transit=p_transit,
                 p_guess=p_guess,
                 p_slip=p_slip,
             )
+            return float(update["updated_pl"])
 
     def save_diagnostic_session(self, *, payload: dict[str, Any]) -> None:
         now = _db_now()
@@ -419,27 +432,30 @@ class MySQLLearnerStore:
                 if not isinstance(state, dict):
                     continue
                 observations = int(state.get("observations", 0))
-                if observations <= 0 and not state.get("inferred"):
+                inferred = int(bool(state.get("inferred")))
+                if observations <= 0 and not inferred:
                     continue
                 correct_count, incorrect_count = observation_counts.get(str(node_id), (0, 0))
                 cursor.execute(
                     "INSERT INTO student_node_mastery("
-                    "student_id, node_id, pl, observations, correct_count, incorrect_count, "
-                    "model_version, updated_at"
-                    ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s) "
-                    "ON DUPLICATE KEY UPDATE pl=%s, observations=%s, correct_count=%s, "
-                    "incorrect_count=%s, model_version=%s, updated_at=%s",
+                    "student_id, node_id, pl, observations, inferred, correct_count, "
+                    "incorrect_count, model_version, updated_at"
+                    ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) "
+                    "ON DUPLICATE KEY UPDATE pl=%s, observations=%s, inferred=%s, "
+                    "correct_count=%s, incorrect_count=%s, model_version=%s, updated_at=%s",
                     (
                         learner_id,
                         node_id,
                         float(state["pl"]),
                         observations,
+                        inferred,
                         correct_count,
                         incorrect_count,
                         BKT_MODEL_VERSION,
                         now,
                         float(state["pl"]),
                         observations,
+                        inferred,
                         correct_count,
                         incorrect_count,
                         BKT_MODEL_VERSION,
@@ -607,6 +623,10 @@ class MySQLLearnerStore:
         results: list[dict[str, Any]] = []
         with self.database.transaction() as connection:
             self._ensure_student(connection, student_id, now)
+            bkt_parameters, answered_questions = self._feedback_bkt_context(
+                connection,
+                student_id,
+            )
             self._register_questions(connection, source_session_id, {}, None, now)
             for response in responses:
                 if not isinstance(response, dict):
@@ -697,15 +717,28 @@ class MySQLLearnerStore:
                     skill_ids = [
                         str(question.get("kc_node_id") or response.get("skill_id") or qid)
                     ]
+                bkt_updates: list[dict[str, Any]] = []
                 if is_correct is not None:
+                    answered_questions += 1
+                    effective_transit = (
+                        min(1.0, bkt_parameters.p_transit * 1.5)
+                        if answered_questions <= 10
+                        else bkt_parameters.p_transit
+                    )
                     for skill_id in skill_ids:
-                        self._update_mastery_connection(
-                            connection,
-                            student_id,
-                            skill_id,
-                            is_correct,
-                            attempt_id=attempt_id,
-                            now=now,
+                        bkt_updates.append(
+                            self._update_mastery_connection(
+                                connection,
+                                student_id,
+                                skill_id,
+                                is_correct,
+                                attempt_id=attempt_id,
+                                now=now,
+                                p_init=bkt_parameters.p_init,
+                                p_transit=effective_transit,
+                                p_guess=bkt_parameters.p_guess,
+                                p_slip=bkt_parameters.p_slip,
+                            )
                         )
                 results.append(
                     {
@@ -715,6 +748,7 @@ class MySQLLearnerStore:
                         "grading_status": grading_status,
                         "skill_id": skill_ids[0],
                         "skill_ids": skill_ids,
+                        "bkt_updates": bkt_updates,
                     }
                 )
         return results
@@ -818,6 +852,53 @@ class MySQLLearnerStore:
         )
         return {str(row["node_id"]): float(row["pl"]) for row in cursor.fetchall()}
 
+    def _mastery_snapshot_on_connection(
+        self,
+        connection: Any,
+        learner_id: str,
+    ) -> dict[str, dict[str, Any]]:
+        cursor = connection.cursor()
+        cursor.execute(
+            "SELECT node_id, pl, observations, inferred FROM student_node_mastery "
+            "WHERE student_id=%s",
+            (learner_id,),
+        )
+        return {
+            str(row["node_id"]): knowledge_node_snapshot(
+                float(row["pl"]),
+                int(row["observations"]),
+                inferred=bool(row["inferred"]),
+            )
+            for row in cursor.fetchall()
+        }
+
+    def _feedback_bkt_context(
+        self,
+        connection: Any,
+        learner_id: str,
+    ) -> tuple[BKTParameters, int]:
+        cursor = connection.cursor()
+        cursor.execute(
+            "SELECT profile_json FROM student_profiles WHERE student_id=%s",
+            (learner_id,),
+        )
+        row = cursor.fetchone()
+        profile = _json_load(row.get("profile_json"), {}) if row else {}
+        education_background = (
+            str(profile.get("education_background") or "其他")
+            if isinstance(profile, dict)
+            else "其他"
+        )
+        cursor.execute(
+            "SELECT "
+            "(SELECT COUNT(*) FROM attempts WHERE student_id=%s AND is_correct IS NOT NULL) + "
+            "(SELECT COUNT(*) FROM diagnostic_attempts WHERE student_id=%s) AS answer_count",
+            (learner_id, learner_id),
+        )
+        count_row = cursor.fetchone()
+        answered_questions = int(count_row.get("answer_count") or 0) if count_row else 0
+        return parameters_for_background(education_background), answered_questions
+
     def _update_mastery_connection(
         self,
         connection: Any,
@@ -827,10 +908,11 @@ class MySQLLearnerStore:
         *,
         attempt_id: str | None,
         now: datetime,
+        p_init: float = P_L0,
         p_transit: float = P_T,
         p_guess: float = P_G,
         p_slip: float = P_S,
-    ) -> float:
+    ) -> dict[str, Any]:
         cursor = connection.cursor()
         cursor.execute(
             "SELECT pl, observations, correct_count, incorrect_count "
@@ -838,7 +920,7 @@ class MySQLLearnerStore:
             (learner_id, skill_id),
         )
         row = cursor.fetchone()
-        current = float(row["pl"]) if row else P_L0
+        current = float(row["pl"]) if row else p_init
         predicted, updated = compute_bkt_step(
             current,
             observed_correct=observed_correct,
@@ -851,9 +933,10 @@ class MySQLLearnerStore:
         incorrect_count = int(row["incorrect_count"]) if row else 0
         cursor.execute(
             "INSERT INTO student_node_mastery(student_id, node_id, pl, observations, "
-            "correct_count, incorrect_count, last_attempt_id, updated_at) "
-            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE pl=%s, "
-            "observations=%s, correct_count=%s, incorrect_count=%s, last_attempt_id=%s, updated_at=%s",
+            "inferred, correct_count, incorrect_count, last_attempt_id, model_version, updated_at) "
+            "VALUES (%s,%s,%s,%s,0,%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE pl=%s, "
+            "observations=%s, inferred=0, correct_count=%s, incorrect_count=%s, "
+            "last_attempt_id=%s, model_version=%s, updated_at=%s",
             (
                 learner_id,
                 skill_id,
@@ -862,12 +945,14 @@ class MySQLLearnerStore:
                 correct_count + int(observed_correct),
                 incorrect_count + int(not observed_correct),
                 attempt_id,
+                BKT_MODEL_VERSION,
                 now,
                 updated,
                 observations + 1,
                 correct_count + int(observed_correct),
                 incorrect_count + int(not observed_correct),
                 attempt_id,
+                BKT_MODEL_VERSION,
                 now,
             ),
         )
@@ -886,7 +971,7 @@ class MySQLLearnerStore:
                 predicted,
                 updated,
                 updated,
-                P_L0,
+                p_init,
                 p_transit,
                 p_guess,
                 p_slip,
@@ -894,7 +979,23 @@ class MySQLLearnerStore:
                 now,
             ),
         )
-        return updated
+        return {
+            "skill_id": skill_id,
+            "observed_correct": observed_correct,
+            "prior_pl": current,
+            "predicted_pl": predicted,
+            "posterior_pl": updated,
+            "updated_pl": updated,
+            "observations": observations + 1,
+            "correct_count": correct_count + int(observed_correct),
+            "incorrect_count": incorrect_count + int(not observed_correct),
+            "p_init": p_init,
+            "p_transit": p_transit,
+            "p_guess": p_guess,
+            "p_slip": p_slip,
+            "model_version": BKT_MODEL_VERSION,
+            "knowledge_state": knowledge_node_snapshot(updated, observations + 1),
+        }
 
     def _write_state(self, connection: Any, session_id: str, state: dict[str, Any], now: datetime) -> None:
         cursor = connection.cursor()

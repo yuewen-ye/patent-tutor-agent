@@ -237,7 +237,7 @@ def test_diagnosis_receives_questionnaire_responses() -> None:
     assert "零基础" in prompt_text
 
 
-def test_diagnosis_normalizes_unknown_level_to_beginner() -> None:
+def test_diagnosis_derives_cold_start_level_instead_of_using_llm_level() -> None:
     class UnknownLevelLLM(PhaseLLMClient):
         def generate_json(
             self, messages: list[LLMMessage], temperature: float, agent: str | None = None
@@ -263,10 +263,10 @@ def test_diagnosis_normalizes_unknown_level_to_beginner() -> None:
     )
 
     assert result["learner_profile"]["knowledge_level"] == "beginner"
-    assert result["learner_profile"]["weak_points"] == ["新颖性"]
+    assert result["learner_profile"]["weak_points"] == []
 
 
-def test_diagnosis_completes_unobserved_knowledge_nodes_with_cold_start_prior() -> None:
+def test_diagnosis_discards_llm_knowledge_and_uses_cold_start_without_cat() -> None:
     class PartialKnowledgeLLM(PhaseLLMClient):
         def generate_json(
             self, messages: list[LLMMessage], temperature: float, agent: str | None = None
@@ -331,7 +331,8 @@ def test_diagnosis_completes_unobserved_knowledge_nodes_with_cold_start_prior() 
 
     knowledge = result["learner_profile"]["five_dimensions"]["knowledge"]
     assert len(knowledge) == 69
-    assert knowledge["inventive-step"]["pl"] == 0.2
+    assert knowledge["inventive-step"]["pl"] == 0.15
+    assert knowledge["inventive-step"]["observations"] == 0
     assert knowledge["novelty"] == {
         "pl": 0.15,
         "ci_low": 0.02,
@@ -443,6 +444,23 @@ def test_feedback_mode_reuses_diagnosis_feedback_and_skips_course_agents(
         input_payload={
             "course_session_id": "course-1",
             "exercise_responses": [{"question_id": "q1", "answer": "A", "observed_correct": True}],
+            "bkt_updates": [
+                {
+                    "skill_id": "novelty",
+                    "observed_correct": True,
+                    "posterior_pl": 0.72,
+                }
+            ],
+            "mastery_snapshot": {
+                "novelty": {
+                    "pl": 0.72,
+                    "ci_low": 0.4,
+                    "ci_high": 0.9,
+                    "observations": 4,
+                    "low_confidence": False,
+                    "inferred": False,
+                }
+            },
         },
     )
 
@@ -452,6 +470,10 @@ def test_feedback_mode_reuses_diagnosis_feedback_and_skips_course_agents(
     assert state["workflow_status"] == "completed"
     assert state["grading_report"][0]["question_id"] == "q1"
     assert state["feedback_result"]["bkt_update"]["error_pattern"] is None
+    assert state["feedback_result"]["five_dimensions"]["knowledge"]["novelty"]["pl"] == 0.72
+    assert state["learner_profile_update"]["five_dimensions"]["knowledge"]["novelty"] == (
+        state["feedback_result"]["five_dimensions"]["knowledge"]["novelty"]
+    )
     root = artifact_root / "sessions" / "feedback-1" / "feedback"
     assert (root / "feedback_report.md").is_file()
     assert (root / "grading_report.md").is_file()

@@ -21,9 +21,10 @@
 `p_guess/p_slip`。CAT 使用期望信息增益选题，并结合先修关系、叶节点优先、父节点传播和确定性剪枝。
 没有直接观测且没有被剪枝的节点不能只凭先验落入阈值区间而被视为“已分类”。
 
-完成后的权威快照写入课程会话 `input_payload.diagnostic_snapshot`。诊断 Agent 仍负责学习动机、
-认知、元认知和行为等维度，但知识节点必须使用该快照，不得由 LLM 重算。原有直接提交问卷并创建
-课程的接口继续保留为兼容入口。
+完成后的权威快照写入课程会话 `input_payload.diagnostic_snapshot`。诊断 Agent 只输出认知、
+风格、进度、情感和错误模式等非知识维度，输出合同中不存在 `knowledge`。后端根据 BKT 快照生成
+完整知识维度、总体水平和薄弱点。原有直接提交问卷并创建课程的接口继续保留为兼容入口；没有 CAT
+快照时也由后端初始化冷启动掌握度，而不是让 LLM 猜测。
 
 ## 1. 当前工作流
 
@@ -45,16 +46,19 @@ START → _init → route ──┬── diagnose → diagnosis_feedback[diagno
 
 审核通过后的独立练习反馈请求：
 POST /sessions/{course_session_id}/exercise-responses
+  → 服务端判题
+  → BKT 更新并持久化 mastery
+  → 注入 bkt_updates + mastery_snapshot
   → 新 feedback 会话
   → _init → diagnosis_feedback[feedback] → END
 ```
 
 `diagnosis_feedback` 是一个多阶段 Agent 节点，通过 `diagnosis_feedback_phase` 在诊断和反馈阶段重入。专家 A、B 也各自只有一个 Agent，通过 `expert_phase` 在草稿、互评和修订阶段重入；三个阶段都并行执行，由 `_experts_barrier` 等待双方完成并推进阶段。整合阶段只运行专家 A。Judge 通过时课程会话结束，等待学员提交练习；Judge 不通过时回到 Expert A integration 重新整合并再次审核，直到通过。学员反馈只在提交练习后创建的独立 feedback 会话中生成。
 
-推荐流程中，服务层把已完成 CAT/BKT 诊断的 69 节点快照注入课程会话，诊断 Agent 不能覆盖这些
-知识掌握度。兼容流程仍会把新学员问卷解析为题目正文、选项、学员答案和已选选项正文，再让诊断
-Agent 估计有证据的知识节点；后端依据静态知识 DAG 确定性补齐其余冷启动节点。反馈 Agent 只返回
-本轮变化节点，后端沿用未变化节点，最终状态始终是完整知识快照。
+推荐流程中，服务层把已完成 CAT/BKT 诊断的 69 节点快照注入课程会话。诊断和反馈 Agent 的
+LLM 输出合同均不含知识掌握度：诊断阶段由后端用 CAT/BKT 快照构造完整知识维度；反馈阶段先由
+后端判题和更新 BKT，再把持久化后的 mastery 快照投影到 `FeedbackResult` 和新画像。模型只能
+解释表现、更新非知识维度并提出下一步动作，不能生成或覆盖 P(L)。
 
 ## 2. 路径与混淆轴
 

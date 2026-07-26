@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from backend.app.agents.common import normalize_expert_draft_payload
@@ -19,12 +21,13 @@ def test_agent_output_json_schemas_follow_interface_spec() -> None:
         "chat_answer",
     }
     assert schemas["diagnosis_feedback_diagnosis"]["additionalProperties"] is False
-    assert schemas["diagnosis_feedback_diagnosis"]["properties"]["knowledge_level"]["enum"] == [
-        "beginner",
-        "intermediate",
-        "advanced",
-    ]
-    assert "markdown_artifact" in schemas["diagnosis_feedback_diagnosis"]["properties"]
+    diagnosis_properties = schemas["diagnosis_feedback_diagnosis"]["properties"]
+    assert "learner_dimensions" in diagnosis_properties
+    assert "knowledge_level" not in diagnosis_properties
+    assert '"knowledge"' not in json.dumps(
+        schemas["diagnosis_feedback_diagnosis"],
+        ensure_ascii=False,
+    )
     assert "planner" not in schemas
 
     expert_schema = schemas["expert_a"]
@@ -45,7 +48,9 @@ def test_agent_output_json_schemas_follow_interface_spec() -> None:
 
     feedback_schema = schemas["diagnosis_feedback_feedback"]
     assert feedback_schema["additionalProperties"] is False
-    assert "bkt_update" in feedback_schema["properties"]
+    assert "learner_dimensions" in feedback_schema["properties"]
+    assert "bkt_update" not in feedback_schema["properties"]
+    assert '"knowledge"' not in json.dumps(feedback_schema, ensure_ascii=False)
 
 
 def test_expert_draft_normalization_wraps_scalar_list_fields() -> None:

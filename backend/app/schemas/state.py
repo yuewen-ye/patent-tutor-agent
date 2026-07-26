@@ -152,6 +152,24 @@ class FiveDimensions(ContractModel):
     affect: AffectProfile
 
 
+class NonKnowledgeDimensions(ContractModel):
+    """Dimensions inferred by the LLM; BKT knowledge is assembled by the backend."""
+
+    cognition: CognitionProfile
+    style: StyleProfile
+    progress: ProgressProfile
+    affect: AffectProfile
+
+
+class DiagnosisAgentResult(ContractModel):
+    """Diagnosis LLM output. It deliberately has no knowledge/mastery field."""
+
+    learning_style: str
+    error_pattern: ErrorPattern | None = None
+    confidence: float | None = Field(default=None, ge=0, le=1)
+    learner_dimensions: NonKnowledgeDimensions | None = None
+
+
 class LearnerProfile(ContractModel):
     education_background: str
     knowledge_level: Literal["beginner", "intermediate", "advanced"]
@@ -373,6 +391,18 @@ class FeedbackResult(ContractModel):
     markdown_artifact: MarkdownArtifact | None = None
 
 
+class FeedbackAgentResult(ContractModel):
+    """Feedback LLM output. BKT facts are injected and merged after validation."""
+
+    questionnaire: list[str] = Field(min_length=1)
+    teaching_evaluation: TeachingEvaluation | None = None
+    next_action: str
+    profile_update_hint: str
+    error_pattern: ErrorPattern | None = None
+    confidence: float | None = Field(default=None, ge=0, le=1)
+    learner_dimensions: NonKnowledgeDimensions | None = None
+
+
 class IntentResult(ContractModel):
     intent: Literal["teach", "chat", "diagnose"]
     confidence: float = Field(ge=0.0, le=1.0)
@@ -493,11 +523,11 @@ class StateDict(TypedDict):
 def agent_output_json_schemas() -> dict[str, dict[str, Any]]:
     expert_schema = ExpertDraft.model_json_schema(mode="validation")
     return {
-        "diagnosis_feedback_diagnosis": LearnerProfile.model_json_schema(mode="validation"),
+        "diagnosis_feedback_diagnosis": DiagnosisAgentResult.model_json_schema(mode="validation"),
         "expert_a": expert_schema,
         "expert_b": expert_schema,
         "judge": JudgeReport.model_json_schema(mode="validation"),
-        "diagnosis_feedback_feedback": FeedbackResult.model_json_schema(mode="validation"),
+        "diagnosis_feedback_feedback": FeedbackAgentResult.model_json_schema(mode="validation"),
         "route": IntentResult.model_json_schema(mode="validation"),
         "chat_answer": ChatAnswer.model_json_schema(mode="validation"),
     }
