@@ -1,7 +1,7 @@
 ﻿[CmdletBinding()]
 param(
     [string]$BaseUrl = "http://127.0.0.1:8000",
-    [string]$LearnerId = "yuewen-ye99",
+    [string]$LearnerId = "yueye003",
     [ValidateSet("correct", "incorrect")]
     [string]$AnswerMode = "correct",
     [ValidateRange(1, 20)]
@@ -10,7 +10,7 @@ param(
     [string]$CatMode = "interactive",
     [string]$EducationBackground = "其他",
     [ValidateRange(0, 40)]
-    [int]$CatMaxAnswers = 0,
+    [int]$CatMaxAnswers = 5,
     [ValidateRange(1, 86400)]
     [int]$WorkflowTimeout = 3600
 )

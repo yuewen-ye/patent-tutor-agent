@@ -22,7 +22,7 @@ providers:
     model_name: yangmao-main
     base_url: https://ai.gz404.com:54002/v1
   qwen:
-    model_name: qwen3.7-plus
+    model_name: qwen3.7-flash
     base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
   glm:
     model_name: glm-5.2
