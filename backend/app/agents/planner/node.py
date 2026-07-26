@@ -29,25 +29,6 @@ from backend.app.schemas.state import (
 _PLANNER_SYSTEM_PROMPT = load_prompt(__file__, "system.md")
 _LOGGER = logging.getLogger(__name__)
 
-_PLANNER_NODE_FIELDS = (
-    "node_id",
-    "node_name",
-    "level",
-    "category",
-    "difficulty",
-    "estimated_hours",
-    "predecessors",
-    "exam_weight",
-)
-_PLANNER_CONFUSION_FIELDS = (
-    "pair_id",
-    "node_a",
-    "node_b",
-    "title",
-    "difficulty",
-    "related_nodes",
-)
-
 
 def _knowledge_pl_map(profile: dict[str, Any]) -> dict[str, Any]:
     """提取每个知识节点的 BKT 掌握概率，数据库当前值覆盖旧画像快照。"""
@@ -122,45 +103,6 @@ def _build_profile(state: StateDict, runtime: Runtime[WorkflowContext] | None) -
     return profile
 
 
-def _compact_planner_graph(
-    knowledge: dict[str, Any],
-    confusion: dict[str, Any],
-) -> dict[str, Any]:
-    """Keep only graph fields required for path planning.
-
-    Full legal descriptions, tags, typical mistakes and distinction prose belong to
-    downstream teaching/RAG. Sending them to Planner added tens of thousands of
-    characters without changing graph topology.
-    """
-
-    nodes = knowledge.get("nodes")
-    edges = knowledge.get("edges")
-    pairs = confusion.get("confusion_pairs")
-    return {
-        "knowledge_graph": {
-            "version": knowledge.get("version"),
-            "nodes": [
-                {key: node[key] for key in _PLANNER_NODE_FIELDS if key in node}
-                for node in nodes
-                if isinstance(node, dict)
-            ]
-            if isinstance(nodes, list)
-            else [],
-            "edges": edges if isinstance(edges, list) else [],
-        },
-        "confusion_graph": {
-            "version": confusion.get("version"),
-            "pairs": [
-                {key: pair[key] for key in _PLANNER_CONFUSION_FIELDS if key in pair}
-                for pair in pairs
-                if isinstance(pair, dict)
-            ]
-            if isinstance(pairs, list)
-            else [],
-        },
-    }
-
-
 def _planner_fallback_reason(exc: Exception) -> str:
     detail = " ".join(str(exc).split())
     if len(detail) > 800:
@@ -231,7 +173,10 @@ def build_planner_node(llm_client: LLMClient) -> Node:
 
         knowledge = load_knowledge_dag()
         confusion = load_confusion_pairs()
-        planner_graph = _compact_planner_graph(knowledge, confusion)
+        planner_graph = {
+            "knowledge_graph": knowledge,
+            "confusion_graph": confusion,
+        }
         deterministic_path = [
             LearningPathItem.model_validate(it)
             for it in compute_learning_path(profile=profile, learning_goal=learning_goal)

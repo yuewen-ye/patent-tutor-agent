@@ -8,7 +8,7 @@
 |---|---|---|
 | `route` | 严格 JSON Schema | `IntentResult` → `intent` |
 | `diagnosis_feedback` | 严格 JSON Schema + Store | LLM：`DiagnosisAgentResult` / `FeedbackAgentResult`；后端：`LearnerProfile` / `FeedbackResult` |
-| `planner` | 紧凑双图输入 + 严格 JSON Schema + 确定性校正/降级 + Store | `PlannerAgentResult` 提案、`LearningPathItem[]`、双轴快照、路径决策；降级时包含 `fallback_reason` |
+| `planner` | 完整双图输入 + 严格 JSON Schema + 确定性校正/降级 + Store | `PlannerAgentResult` 提案、`LearningPathItem[]`、双轴快照、路径决策；降级时包含 `fallback_reason` |
 | `expert_a` | 严格 JSON Schema / `generate_with_tools` | 草稿、互评、修订、整合课程包 |
 | `expert_b` | 严格 JSON Schema / `generate_with_tools` | 草稿、互评、修订 |
 | `judge` | 严格 JSON Schema | `JudgeReport` |
@@ -16,9 +16,9 @@
 | `retrieve_context` | 检索服务 | `RetrievalChunk[]` |
 | `chat_answer` | 严格 JSON Schema | `ChatAnswer` |
 
-Provider 只能经 `AgentLLMRouter` 注入。Planner 使用默认 Provider，并接收只保留拓扑、
-节点体量和混淆关系的紧凑图输入及本地 A* 候选路径；其 LLM 提案最多包含 16 个节点，
-且必须通过真实节点、去重和先修顺序校验。校验失败时回退到确定性路径算法，
+Provider 只能经 `AgentLLMRouter` 注入。Planner 使用默认 Provider，并接收完整知识 DAG、
+完整易混淆图及本地 A* 候选路径；其 LLM 提案最多包含 16 个节点，且必须通过真实节点、
+去重和先修顺序校验。校验失败时回退到确定性路径算法，
 `path_decision.fallback_reason` 保存降级原因，最终路径仍由后端校正并负责。
 
 CAT/BKT 诊断引擎也不是 LLM Agent 或 LangGraph 节点。它位于 FastAPI 服务层，负责多轮选题、

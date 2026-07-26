@@ -154,7 +154,8 @@ def build_<name>_node(llm_client: LLMClient) -> Node:
 - Every final Agent JSON result uses strict JSON Schema output through
   `generate_validated_json()`, followed by Pydantic validation and one repair attempt.
 - Expert A/B use `generate_with_tools()` when deciding whether to call RAG, then validate final JSON.
-- Planner uses a compact topology-only graph payload and strict `PlannerAgentResult` proposal;
+- Planner receives the complete runtime knowledge/confusion graphs and an A* candidate, then uses
+  a strict `PlannerAgentResult` proposal;
   deterministic fallback must preserve and log `path_decision.fallback_reason`;
   `retrieve_context` does not call an LLM.
 - Multi-phase prompts live beside the node as `<phase>_system.md`; do not inline phase prompts.

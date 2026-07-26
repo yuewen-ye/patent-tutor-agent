@@ -1,9 +1,6 @@
-import json
-
 import pytest
 
 from backend.app.agents.planner.node import (
-    _compact_planner_graph,
     _knowledge_pl_map,
     _parse_planner_plan,
     build_planner_node,
@@ -101,50 +98,6 @@ def test_current_mastery_overrides_stale_profile_snapshot() -> None:
     assert mastery["inventive-step"]["pl"] == 0.4
 
 
-def test_planner_graph_compaction_keeps_topology_and_drops_teaching_prose() -> None:
-    compact = _compact_planner_graph(
-        {
-            "version": "1",
-            "nodes": [
-                {
-                    "node_id": "novelty",
-                    "node_name": "新颖性",
-                    "level": 2,
-                    "category": "授权条件",
-                    "difficulty": 0.5,
-                    "estimated_hours": 1.0,
-                    "predecessors": ["patentability"],
-                    "exam_weight": "高",
-                    "description": "很长的教学说明",
-                    "tags": ["不应注入"],
-                }
-            ],
-            "edges": [{"from": "patentability", "to": "novelty"}],
-        },
-        {
-            "version": "1",
-            "confusion_pairs": [
-                {
-                    "pair_id": "cp-1",
-                    "node_a": "novelty",
-                    "node_b": "inventive-step",
-                    "title": "新颖性 vs 创造性",
-                    "difficulty": 0.8,
-                    "related_nodes": ["prior-art"],
-                    "typical_mistake": "很长的案例解释",
-                }
-            ],
-        },
-    )
-
-    rendered = json.dumps(compact, ensure_ascii=False)
-    assert compact["knowledge_graph"]["edges"]
-    assert compact["confusion_graph"]["pairs"]
-    assert "description" not in rendered
-    assert "tags" not in rendered
-    assert "typical_mistake" not in rendered
-
-
 def test_planner_semantic_guard_rejects_unknown_or_topologically_invalid_nodes() -> None:
     base = {
         "nodes": [
@@ -202,6 +155,11 @@ def test_planner_uses_llm_with_prompt() -> None:
     assert len(client.calls) == 1
     assert client.agents == ["planner"]
     assert "路径规划" in client.calls[0][0].content
+    planner_input = client.calls[0][-1].content
+    assert '"description"' in planner_input
+    assert '"tags"' in planner_input
+    assert '"typical_mistake"' in planner_input
+    assert '"distinction"' in planner_input
 
     # learning_path built from the LLM nodes, carrying difficulty_cap
     assert result["learning_path"]

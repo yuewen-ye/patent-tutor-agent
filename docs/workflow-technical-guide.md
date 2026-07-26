@@ -64,9 +64,9 @@ LLM 输出合同均不含知识掌握度：诊断阶段由后端用 CAT/BKT 快�
 
 - 知识轴来自 `backend/app/curriculum/data/knowledge-dag.json`。
 - 混淆对定义来自 `backend/app/curriculum/data/confusion-pairs.json`，运行时不改写静态定义。
-- `planner` 读取数据库中该学员的最新画像和 BKT 掌握度，将知识 DAG 和易混淆图裁剪为
-  只含拓扑、节点体量与混淆关系的紧凑输入，要求 LLM 以 `PlannerAgentResult` 严格 Schema
-  给出路径提案；提案不可用时由 `backend/app/curriculum/learning_path.py` 确定性降级。
+- `planner` 读取数据库中该学员的最新画像和 BKT 掌握度，将完整知识 DAG、完整易混淆图
+  及本地 A* 候选路径交给 LLM，要求它以 `PlannerAgentResult` 严格 Schema 给出路径提案；
+  提案不可用时由 `backend/app/curriculum/learning_path.py` 确定性降级。
   降级原因写入 `path_decision.fallback_reason` 并记录 warning，不能静默吞掉。难度上限、
   双轴快照和最终状态写入仍由后端负责。Planner 同时接收本地 A* 候选路径，Agent 可结合
   画像删减或局部调整，但输出不得超过 16 个节点；节点真实性、重复项和先修顺序由后端校验。
