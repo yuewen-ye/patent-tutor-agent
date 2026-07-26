@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 from langgraph.runtime import Runtime
@@ -26,6 +27,26 @@ from backend.app.schemas.state import (
 )
 
 _PLANNER_SYSTEM_PROMPT = load_prompt(__file__, "system.md")
+_LOGGER = logging.getLogger(__name__)
+
+_PLANNER_NODE_FIELDS = (
+    "node_id",
+    "node_name",
+    "level",
+    "category",
+    "difficulty",
+    "estimated_hours",
+    "predecessors",
+    "exam_weight",
+)
+_PLANNER_CONFUSION_FIELDS = (
+    "pair_id",
+    "node_a",
+    "node_b",
+    "title",
+    "difficulty",
+    "related_nodes",
+)
 
 
 def _knowledge_pl_map(profile: dict[str, Any]) -> dict[str, Any]:
@@ -101,31 +122,102 @@ def _build_profile(state: StateDict, runtime: Runtime[WorkflowContext] | None) -
     return profile
 
 
-def _parse_planner_plan(raw: object) -> dict[str, Any] | None:
-    """Parse the LLM planner output into a validated path + directive fields.
+def _compact_planner_graph(
+    knowledge: dict[str, Any],
+    confusion: dict[str, Any],
+) -> dict[str, Any]:
+    """Keep only graph fields required for path planning.
 
-    Returns ``None`` when the output cannot be trusted so the caller can fall
-    back to the deterministic planner. Extra fields on each node are ignored.
+    Full legal descriptions, tags, typical mistakes and distinction prose belong to
+    downstream teaching/RAG. Sending them to Planner added tens of thousands of
+    characters without changing graph topology.
     """
+
+    nodes = knowledge.get("nodes")
+    edges = knowledge.get("edges")
+    pairs = confusion.get("confusion_pairs")
+    return {
+        "knowledge_graph": {
+            "version": knowledge.get("version"),
+            "nodes": [
+                {key: node[key] for key in _PLANNER_NODE_FIELDS if key in node}
+                for node in nodes
+                if isinstance(node, dict)
+            ]
+            if isinstance(nodes, list)
+            else [],
+            "edges": edges if isinstance(edges, list) else [],
+        },
+        "confusion_graph": {
+            "version": confusion.get("version"),
+            "pairs": [
+                {key: pair[key] for key in _PLANNER_CONFUSION_FIELDS if key in pair}
+                for pair in pairs
+                if isinstance(pair, dict)
+            ]
+            if isinstance(pairs, list)
+            else [],
+        },
+    }
+
+
+def _planner_fallback_reason(exc: Exception) -> str:
+    detail = " ".join(str(exc).split())
+    if len(detail) > 800:
+        detail = f"{detail[:797]}..."
+    return f"{type(exc).__name__}: {detail}" if detail else type(exc).__name__
+
+
+def _parse_planner_plan(
+    raw: object,
+    *,
+    known_node_ids: set[str],
+) -> dict[str, Any]:
+    """Parse and deterministically guard the schema-valid Planner proposal."""
+
     if not isinstance(raw, dict):
-        return None
+        raise ValueError("Planner proposal is not an object")
     nodes = raw.get("nodes")
     if not isinstance(nodes, list) or not nodes:
-        return None
+        raise ValueError("Planner proposal has no path nodes")
     parsed: list[LearningPathItem] = []
+    seen_node_ids: set[str] = set()
     for node in nodes:
         if not isinstance(node, dict):
-            return None
-        try:
-            item = LearningPathItem.model_validate(
-                {k: v for k, v in node.items() if k in LearningPathItem.model_fields}
+            raise ValueError("Planner path contains a non-object node")
+        item = LearningPathItem.model_validate(
+            {k: v for k, v in node.items() if k in LearningPathItem.model_fields}
+        )
+        if item.node_id not in known_node_ids:
+            raise ValueError(f"Planner invented unknown node_id: {item.node_id}")
+        if item.node_id in seen_node_ids:
+            raise ValueError(f"Planner repeated node_id: {item.node_id}")
+        missing_prerequisites = [
+            prerequisite
+            for prerequisite in item.prerequisites
+            if prerequisite not in seen_node_ids
+        ]
+        if missing_prerequisites:
+            raise ValueError(
+                f"Planner node {item.node_id} has prerequisites that do not appear earlier: "
+                f"{missing_prerequisites}"
             )
-        except Exception:  # noqa: BLE001 - any validation failure → fallback
-            return None
         parsed.append(item)
+        seen_node_ids.add(item.node_id)
+
+    question_scope = raw.get("question_scope") or {}
+    if isinstance(question_scope, dict):
+        for items in question_scope.values():
+            if not isinstance(items, list):
+                continue
+            for item in items:
+                node_id = item.get("node_id") if isinstance(item, dict) else None
+                if node_id not in known_node_ids:
+                    raise ValueError(f"Planner question scope uses unknown node_id: {node_id}")
+
     return {
         "learning_path": parsed,
-        "question_scope": raw.get("question_scope") or {},
+        "question_scope": question_scope,
         "iteration_directive": raw.get("iteration_directive") or {},
     }
 
@@ -139,15 +231,33 @@ def build_planner_node(llm_client: LLMClient) -> Node:
 
         knowledge = load_knowledge_dag()
         confusion = load_confusion_pairs()
+        planner_graph = _compact_planner_graph(knowledge, confusion)
+        deterministic_path = [
+            LearningPathItem.model_validate(it)
+            for it in compute_learning_path(profile=profile, learning_goal=learning_goal)
+        ]
+        deterministic_candidate = [
+            {
+                "node_id": item.node_id,
+                "node_name": item.node_name,
+                "duration_min": item.duration_min,
+                "strategy": item.strategy,
+                "prerequisites": item.prerequisites,
+                "difficulty_cap": item.difficulty_cap,
+            }
+            for item in deterministic_path
+        ]
         user_text = (
             "# 双知识图（编排层注入，只读不改）\n"
-            f"## 知识点 DAG\n{json.dumps(knowledge, ensure_ascii=False, indent=2)}\n"
-            f"## 易混淆对\n{json.dumps(confusion, ensure_ascii=False, indent=2)}\n\n"
+            f"{json.dumps(planner_graph, ensure_ascii=False, separators=(',', ':'))}\n\n"
+            "# 确定性 A* 候选路径（可优化，但不得照抄错误或扩展到 16 个以上节点）\n"
+            f"{json.dumps(deterministic_candidate, ensure_ascii=False, separators=(',', ':'))}\n\n"
             "# 学习者画像\n"
-            f"{json.dumps(profile, ensure_ascii=False, indent=2)}\n\n"
+            f"{json.dumps(profile, ensure_ascii=False, separators=(',', ':'))}\n\n"
             f"# 学习目标\n{learning_goal}"
         )
 
+        fallback_reason: str | None = None
         try:
             proposal = generate_validated_json(
                 llm_client,
@@ -155,22 +265,33 @@ def build_planner_node(llm_client: LLMClient) -> Node:
                     LLMMessage(role="system", content=_PLANNER_SYSTEM_PROMPT),
                     LLMMessage(role="user", content=user_text),
                 ],
-                temperature=agent_temperature("planner", 0.3),
+                temperature=agent_temperature("planner", 0.0),
                 agent="planner",
                 output_model=PlannerAgentResult,
             )
-            plan = _parse_planner_plan(proposal.model_dump())
-        except Exception:  # noqa: BLE001 - LLM failure → deterministic fallback
+            known_node_ids = {
+                str(node.get("node_id"))
+                for node in knowledge.get("nodes", [])
+                if isinstance(node, dict) and node.get("node_id")
+            }
+            plan = _parse_planner_plan(
+                proposal.model_dump(),
+                known_node_ids=known_node_ids,
+            )
+        except Exception as exc:  # noqa: BLE001 - LLM failure → deterministic fallback
+            fallback_reason = _planner_fallback_reason(exc)
+            _LOGGER.warning(
+                "Planner Agent proposal failed; using deterministic A* fallback: %s",
+                fallback_reason,
+                exc_info=True,
+            )
             plan = None
 
         # 难度上限按 P(L) 分阶确定性推导，保证 artifact 始终带『资源难度匹配曲线』数据
         pl_map = _knowledge_pl_map(profile)
 
         if plan is None:
-            path = [
-                LearningPathItem.model_validate(it)
-                for it in compute_learning_path(profile=profile, learning_goal=learning_goal)
-            ]
+            path = deterministic_path
             question_scope = _default_question_scope(path, profile)
             iteration_directive = _default_iteration_directive()
             algorithm = "deterministic_astar"
@@ -202,6 +323,7 @@ def build_planner_node(llm_client: LLMClient) -> Node:
                 "algorithm": algorithm,
                 "question_scope": question_scope,
                 "iteration_directive": iteration_directive,
+                **({"fallback_reason": fallback_reason} if fallback_reason else {}),
             },
             "events": [completed_event("planner", f"planned learning path ({algorithm})")],
         }

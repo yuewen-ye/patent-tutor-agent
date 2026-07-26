@@ -107,6 +107,31 @@ def test_workflow_progress_reports_parallel_expert_stage_and_missing_expert() ->
     )
 
 
+def test_planner_progress_exposes_agent_fallback_reason() -> None:
+    snapshot = {
+        "status": "running",
+        "state": {
+            "workflow_mode": "teach",
+            "path_decision": {
+                "algorithm": "deterministic_astar",
+                "fallback_reason": "ValidationError: nodes field required",
+            },
+            "events": [
+                {
+                    "node": "planner",
+                    "message": "planned learning path (deterministic_astar)",
+                    "duration_ms": 12_000,
+                }
+            ],
+        },
+    }
+
+    assert _completed_event_summary(snapshot["state"]["events"][0], snapshot) == (
+        "Planner 学习路径规划完成（耗时 12秒）；使用 deterministic_astar；"
+        "Agent 降级原因：ValidationError: nodes field required"
+    )
+
+
 def test_workflow_progress_advances_through_review_revision_integration_and_judge() -> None:
     events: list[dict[str, Any]] = [
         {"node": "route", "message": "used explicit mode teach"},

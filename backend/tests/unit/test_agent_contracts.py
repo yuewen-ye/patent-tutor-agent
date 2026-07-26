@@ -44,6 +44,18 @@ def test_agent_output_json_schemas_follow_interface_spec() -> None:
         "question_scope",
         "iteration_directive",
     }
+    assert planner_schema["properties"]["nodes"]["maxItems"] == 16
+    planner_node = planner_schema["$defs"]["PlannerPathNode"]
+    assert set(planner_node["required"]) == {
+        "node_id",
+        "node_name",
+        "duration_min",
+        "strategy",
+        "prerequisites",
+        "difficulty_cap",
+    }
+    assert "markdown_artifact" not in planner_node["properties"]
+    assert planner_node["properties"]["difficulty_cap"]["enum"] == ["L1", "L2", "L3"]
 
     expert_schema = schemas["expert_a_draft"]
     assert expert_schema == schemas["expert_a_revision"]

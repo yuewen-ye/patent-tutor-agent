@@ -75,7 +75,9 @@ class RepairingStructuredClient:
         raise AssertionError("tool calling is not used by this test")
 
 
-def test_generate_validated_json_repairs_invalid_structured_response_once() -> None:
+def test_generate_validated_json_repairs_invalid_structured_response_once(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     client = RepairingStructuredClient()
 
     result = generate_validated_json(
@@ -98,3 +100,6 @@ def test_generate_validated_json_repairs_invalid_structured_response_once() -> N
     repair_messages = client.calls[1]["messages"]
     assert isinstance(repair_messages, list)
     assert "reason" in repair_messages[-1].content
+    assert "agent=route" in caplog.text
+    assert "contract=IntentResult" in caplog.text
+    assert "Field required" in caplog.text

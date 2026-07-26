@@ -98,7 +98,7 @@ def test_planner_calls_llm_with_configured_temperature() -> None:
         }
     )
 
-    assert client.temperatures == [0.3]
+    assert client.temperatures == [0.0]
 
 
 def test_yaml_config_controls_expert_tool_temperature_and_default_top_k(

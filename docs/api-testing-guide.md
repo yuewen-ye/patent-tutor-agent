@@ -123,6 +123,10 @@ a1e0163813e14415ade8247f4af50524: running（已等待 0秒）
   ▶ 当前：专家初稿（并行；等待 Expert A）
 ```
 
+如果 Planner Agent 输出或接口调用失败，确定性 A* 会继续保障流程可用，同时该行会追加
+`Agent 降级原因`；完整原因也保存在 `state.path_decision.fallback_reason`，用于区分
+Provider 超时、非 JSON、Schema 校验失败等情况。
+
 脚本对每个工作流会话的默认总等待上限为 3600 秒。模型服务较慢时可以显式调大：
 
 ```powershell

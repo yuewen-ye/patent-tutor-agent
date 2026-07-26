@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from collections.abc import Callable
 from pathlib import Path
@@ -15,6 +16,7 @@ from backend.app.core.llm import AgentName, LLMClient, LLMMessage, LLMRole
 
 Node = Callable[..., dict[str, Any]]
 ContractT = TypeVar("ContractT", bound=BaseModel)
+_LOGGER = logging.getLogger(__name__)
 
 
 # ── 题型口径归一化（spec 规范枚举，兼容 LLM 偶发中文/旧值）──
@@ -178,6 +180,15 @@ def generate_validated_json(
         try:
             return output_model.model_validate(normalized)
         except ValidationError as exc:
+            _LOGGER.warning(
+                "Structured JSON validation failed for agent=%s contract=%s "
+                "attempt=%s/%s errors=%s",
+                agent,
+                contract_name,
+                attempt + 1,
+                attempts,
+                json.dumps(exc.errors(include_url=False), ensure_ascii=False),
+            )
             if attempt + 1 >= attempts:
                 raise
             current_messages = [

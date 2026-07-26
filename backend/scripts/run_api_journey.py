@@ -269,6 +269,15 @@ def _completed_event_summary(
     algorithm_suffix = ""
     if label == "Planner 学习路径规划" and "deterministic_astar" in message:
         algorithm_suffix = "；使用 deterministic_astar"
+        state = snapshot.get("state")
+        path_decision = state.get("path_decision") if isinstance(state, dict) else None
+        fallback_reason = (
+            path_decision.get("fallback_reason")
+            if isinstance(path_decision, dict)
+            else None
+        )
+        if fallback_reason:
+            algorithm_suffix += f"；Agent 降级原因：{fallback_reason}"
     return f"{label}完成{duration_suffix}{algorithm_suffix}"
 
 
