@@ -117,7 +117,7 @@
     #world {
       position: absolute;
       width: 3000px;
-      height: 1800px;
+      height: 1660px;
       transform-origin: 0 0;
       user-select: none;
     }
@@ -126,7 +126,7 @@
       position: absolute;
       inset: 0;
       width: 3000px;
-      height: 1800px;
+      height: 1660px;
       overflow: visible;
       pointer-events: none;
       z-index: 3;
@@ -397,7 +397,7 @@
   <header>
     <div class="title">
       <h1>专利导学系统数据库关系图</h1>
-      <p>30 张表 · MySQL · 点击表可查看与它直接相关的实体</p>
+      <p>27 张表 · MySQL · 点击表可查看与它直接相关的实体</p>
     </div>
     <div class="controls">
       <button id="main-mode" class="active" type="button">业务主链</button>
@@ -411,7 +411,7 @@
 
   <main id="viewport" aria-label="可缩放和拖动的数据库关系图">
     <div id="world">
-      <svg id="connections" viewBox="0 0 3000 1800" aria-hidden="true">
+      <svg id="connections" viewBox="0 0 3000 1660" aria-hidden="true">
         <defs>
           <marker id="arrow-main" markerWidth="10" markerHeight="10" refX="8" refY="5"
                   orient="auto" markerUnits="strokeWidth">
@@ -420,7 +420,7 @@
         </defs>
       </svg>
       <div id="flow-summary" class="flow-summary">
-        主链：问卷 → CAT/BKT → 画像 → 活动计划 → 单节点课程 → 作答 → BKT → 推进计划
+        主链：问卷 → 会话 → 画像 → 学习路径 → 题目 → 作答 → 掌握度 → 反馈 → 更新画像
       </div>
     </div>
   </main>
@@ -451,8 +451,8 @@
         x: 700, y: 50, w: 1100, h: 810, border: "#66a88b", bg: "rgba(225,245,237,.72)" },
       { id: "profile", title: "学员画像与记忆", note: "当前画像、历史和薄弱点",
         x: 1850, y: 50, w: 1100, h: 810, border: "#9a83c9", bg: "rgba(240,234,252,.72)" },
-      { id: "loop", title: "诊断与教学闭环", note: "问卷、CAT、动态题目、作答和反馈",
-        x: 50, y: 920, w: 1250, h: 800, border: "#dd9867", bg: "rgba(254,239,226,.78)" },
+      { id: "loop", title: "教学闭环", note: "问卷、动态题目、作答和反馈",
+        x: 50, y: 920, w: 1250, h: 650, border: "#dd9867", bg: "rgba(254,239,226,.78)" },
       { id: "adaptive", title: "自适应学习", note: "路径、教学指令和 BKT",
         x: 1350, y: 920, w: 900, h: 880, border: "#cf7f93", bg: "rgba(252,232,238,.72)" },
       { id: "artifact", title: "课程产物与法律引用", note: "文件索引和引用追踪",
@@ -500,12 +500,6 @@
         purpose: "学员提交的答案、判题状态和结果", keys: "PK attempt_id\nFK student_id / question_id / session_id" },
       { id: "feedback_logs", group: "loop", x: 990, y: 1080, w: 270, h: 160,
         purpose: "反馈阶段的结构化评价与 BKT 摘要", keys: "PK feedback_id\nFK student_id / session_id / profile_history_id" },
-      { id: "diagnostic_sessions", group: "loop", x: 90, y: 1370, w: 350, h: 175,
-        purpose: "可恢复的 CAT 初始诊断会话和算法状态", keys: "PK diagnostic_session_id\nFK student_id" },
-      { id: "diagnostic_attempts", group: "loop", x: 475, y: 1370, w: 350, h: 175,
-        purpose: "CAT 动态选题后的答案、正误和幂等记录", keys: "PK diagnostic_attempt_id\nFK diagnostic_session_id / student_id" },
-      { id: "diagnostic_mastery_events", group: "loop", x: 860, y: 1370, w: 350, h: 175,
-        purpose: "诊断直接 BKT 更新及知识 DAG 推断审计", keys: "PK diagnostic_mastery_event_id\nFK diagnostic_attempt_id / student_id" },
 
       { id: "learning_paths", group: "adaptive", x: 1400, y: 1070, w: 360, h: 150,
         purpose: "一次规划产生的知识节点顺序", keys: "PK path_item_id\nFK session_id" },
@@ -543,11 +537,6 @@
       ["students", "memory_items", "logical", "通过命名空间形成逻辑关联"],
       ["students", "student_node_mastery", "fk", "一个学员对应多个知识点掌握度"],
       ["students", "mastery_events", "fk", "掌握度变化归属于学员"],
-      ["students", "diagnostic_sessions", "fk", "一个学员可进行多次 CAT 诊断"],
-      ["diagnostic_sessions", "diagnostic_attempts", "fk", "一次诊断包含多次动态选题作答"],
-      ["students", "diagnostic_attempts", "fk", "诊断作答归属于学员"],
-      ["diagnostic_attempts", "diagnostic_mastery_events", "fk", "一次诊断作答产生直接或推断事件"],
-      ["students", "diagnostic_mastery_events", "fk", "诊断掌握度事件归属于学员"],
       ["students", "learner_learning_plans", "fk", "一个学员可保留多个版本的学习计划"],
       ["sessions", "learner_learning_plans", "fk", "计划记录首次规划和最近推进游标的会话"],
       ["learner_learning_plans", "learner_learning_plan_nodes", "fk", "一个计划保存完整节点顺序和状态"],
@@ -572,7 +561,6 @@
       ["knowledge_nodes", "student_weak_points", "logical", "通过 matched_node_id 逻辑关联"],
       ["knowledge_nodes", "student_node_mastery", "logical", "通过 node_id 逻辑关联"],
       ["knowledge_nodes", "mastery_events", "logical", "通过 node_id 逻辑关联"],
-      ["knowledge_nodes", "diagnostic_mastery_events", "logical", "通过 node_id 逻辑关联"],
       ["knowledge_nodes", "learning_paths", "logical", "通过 node_id 逻辑关联"],
       ["knowledge_nodes", "learner_learning_plan_nodes", "logical", "通过 node_id 逻辑关联"],
       ["knowledge_nodes", "questions", "logical", "通过 kc_node_id 逻辑关联"],
@@ -581,20 +569,14 @@
 
     const mainFlow = [
       ["students", "onboarding_responses", "学员提交问卷"],
-      ["students", "diagnostic_sessions", "创建 CAT 诊断"],
-      ["diagnostic_sessions", "diagnostic_attempts", "动态选题作答"],
-      ["diagnostic_attempts", "diagnostic_mastery_events", "BKT 与 DAG 推断"],
-      ["diagnostic_mastery_events", "student_node_mastery", "更新掌握度"],
       ["onboarding_responses", "sessions", "创建课程会话"],
-      ["student_node_mastery", "student_profiles", "组装初始画像"],
-      ["student_profiles", "learner_learning_plans", "创建或恢复活动计划"],
-      ["learner_learning_plans", "learning_paths", "生成会话路径快照"],
+      ["sessions", "student_profiles", "初始诊断"],
+      ["student_profiles", "learning_paths", "规划路径"],
       ["learning_paths", "questions", "生成课程题目"],
       ["questions", "attempts", "学员作答"],
       ["attempts", "mastery_events", "BKT 更新事件"],
       ["mastery_events", "student_node_mastery", "更新当前掌握度"],
       ["attempts", "feedback_logs", "生成反馈"],
-      ["feedback_logs", "learner_learning_plans", "推进或保留计划游标"],
       ["feedback_logs", "profile_history", "形成画像历史"],
       ["profile_history", "student_profiles", "更新当前画像"]
     ].map((r, i) => ({ id: `m${i}`, from: r[0], to: r[1], type: "main", label: r[2] }));
@@ -701,10 +683,10 @@
 
     function fitWorld() {
       const rect = viewport.getBoundingClientRect();
-      scale = Math.min((rect.width - 40) / 3000, (rect.height - 40) / 1800);
+      scale = Math.min((rect.width - 40) / 3000, (rect.height - 40) / 1660);
       scale = Math.max(0.22, Math.min(scale, 1));
       translateX = (rect.width - 3000 * scale) / 2;
-      translateY = (rect.height - 1800 * scale) / 2;
+      translateY = (rect.height - 1660 * scale) / 2;
       applyTransform();
     }
 
