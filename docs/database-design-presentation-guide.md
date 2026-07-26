@@ -7,7 +7,8 @@
 - 学员身份；
 - 课程和反馈会话；
 - 当前画像和历史画像；
-- 学习路径；
+- 跨会话活动学习计划和会话路径快照；
+- CAT 诊断会话、作答和 BKT 推断事件；
 - 模型生成的题目；
 - 学员作答；
 - 知识点掌握度；
@@ -39,7 +40,7 @@ MySQL 可以理解为系统的业务账本。它记录发生了什么、数据�
 
 ## 3. 数据库总体划分
 
-当前数据库共有 25 张表，可以按照八个业务区域理解。
+当前数据库共有 30 张表，可以按照八个业务区域理解。
 
 | 业务区域 | 表 |
 |---|---|
@@ -47,7 +48,7 @@ MySQL 可以理解为系统的业务账本。它记录发生了什么、数据�
 | 学员身份 | `students`、`auth_sessions` |
 | 会话运行 | `sessions`、`session_states`、`session_events`、`session_checkpoints`、`rounds` |
 | 学员画像 | `student_profiles`、`profile_history`、`student_weak_points`、`memory_items` |
-| 自适应学习 | `student_node_mastery`、`mastery_events`、`learning_paths`、`session_directives` |
+| 自适应学习 | `student_node_mastery`、`mastery_events`、`diagnostic_sessions`、`diagnostic_attempts`、`diagnostic_mastery_events`、`learning_paths`、`learner_learning_plans`、`learner_learning_plan_nodes`、`session_directives` |
 | 教学闭环 | `onboarding_responses`、`questions`、`attempts`、`feedback_logs` |
 | 产物和引用 | `artifacts`、`legal_citations`、`artifact_citations` |
 | 静态课程目录 | `knowledge_nodes`、`confusion_pairs` |
@@ -272,7 +273,18 @@ Planner 使用这里的当前值调整学习路径和题目难度。
 
 `student_node_mastery` 保存当前结果，`mastery_events` 解释当前结果是怎样得到的。
 
-### 7.3 `learning_paths`
+### 7.3 CAT 诊断三表
+
+CAT 初始诊断使用三张独立表：
+
+- `diagnostic_sessions`：保存可恢复的诊断会话、学习目标、教育背景和算法状态；
+- `diagnostic_attempts`：保存每次动态选题后的学员选项、正误、耗时和幂等键；
+- `diagnostic_mastery_events`：按知识节点保存直接 BKT 更新和知识 DAG 推断事件。
+
+这三张表与课程阶段的 `questions/attempts/mastery_events` 分开，因为 CAT 使用固定诊断题库，
+课程练习题则由模型动态生成。两条链路最终都投影到 `student_node_mastery`。
+
+### 7.4 `learning_paths`
 
 `learning_paths` 保存一次课程规划得到的知识节点顺序。
 
@@ -287,9 +299,21 @@ Planner 使用这里的当前值调整学习路径和题目难度。
 - 教学策略；
 - 路径顺序。
 
-重新规划时增加新的路径版本，不覆盖旧路径。
+重新规划时增加新的路径版本，不覆盖旧路径。它是某次课程会话使用的路线审计快照，不是跨会话
+恢复的权威来源。
 
-### 7.4 `session_directives`
+### 7.5 `learner_learning_plans` 与 `learner_learning_plan_nodes`
+
+这两张表保存学员跨课程和反馈会话持续使用的完整活动计划：
+
+- 计划头保存学习目标哈希、知识图版本、计划版本、状态和当前游标；
+- 节点表保存完整路线顺序，以及每个节点的 `pending/current/completed` 状态；
+- 相同目标和知识图版本时直接恢复活动计划，不再次调用 Planner LLM；
+- 反馈达到通关条件后更新游标和节点状态；目标或知识图版本变化时创建新版本。
+
+`learning_paths` 回答“某次会话用了什么路线”，活动计划表回答“这名学员接下来学到哪里”。
+
+### 7.6 `session_directives`
 
 `session_directives` 保存 Planner 下发给课程生成阶段的教学指令。
 
@@ -301,6 +325,10 @@ Planner 使用这里的当前值调整学习路径和题目难度。
 - 薄弱点探测范围；
 - 降维、进阶或薄弱点跟进指令；
 - 指令版本。
+
+完整路线可以跨会话复用，但教学指令每节课都会重新计算。历史复习节点为 0～2 个，由后端综合
+直接先修关系、BKT 掌握度、观测次数、薄弱点和当前概念混淆风险选择；路径顺序只在风险相同时
+打破平局。当前主教学节点单独保存，至多再加入一个下一节点前探。
 
 ---
 
@@ -488,6 +516,8 @@ Planner 使用这里的当前值调整学习路径和题目难度。
 - 一个反馈会话通过父会话 ID 指向原课程会话；
 - 一个会话对应一条当前状态；
 - 一个会话对应多个事件和多个专家轮次。
+- 一个学员可保留多个计划版本，但通常只有一个活动计划；
+- 一个活动计划拥有完整节点顺序和唯一当前游标，并可被多个课程会话复用。
 
 ### 11.3 课程、题目和作答
 
@@ -507,12 +537,14 @@ Planner 使用这里的当前值调整学习路径和题目难度。
 
 ## 12. 完整业务流程中的数据库读写
 
-### 12.1 问卷提交
+### 12.1 CAT 初始诊断与问卷提交
 
 写入：
 
 - 学员身份；
-- 课程会话；
+- 可恢复的 CAT 诊断会话；
+- 每次动态选题作答和 BKT/DAG 推断事件；
+- 诊断结束后的课程会话；
 - 原始问卷回答；
 - 初始会话状态；
 - 问卷相关 Artifact 索引。
@@ -538,12 +570,14 @@ Planner 使用这里的当前值调整学习路径和题目难度。
 
 - 当前画像；
 - 当前 mastery；
-- 静态知识 DAG 和易混淆对。
+- 静态知识 DAG 和易混淆对；
+- 当前活动计划。
 
 写入：
 
-- 学习路径；
-- 教学指令；
+- 新目标或新知识图版本时写入新的活动计划及完整节点；相同版本则恢复现有计划；
+- 本次会话的学习路径快照；
+- 基于最新风险重新计算的活动窗口和教学指令；
 - 会话状态和事件；
 - 路径 Artifact 索引。
 
@@ -591,6 +625,7 @@ Planner 使用这里的当前值调整学习路径和题目难度。
 - 新画像历史；
 - 最新画像；
 - 最新薄弱点；
+- 活动计划游标和节点状态；
 - 反馈会话状态和事件；
 - 反馈 Artifact 索引。
 
@@ -643,14 +678,20 @@ MySQL 保存结构化状态、关系和索引；文件系统保存完整 Markdow
 
 使用独立关联表能够正确表达多对多关系，并通过外键保证 Artifact 和引用真实存在。
 
+### 13.8 完整路线和活动窗口分开
+
+`learner_learning_plans` 保存稳定、可跨会话恢复的完整路线；`session_directives` 保存一节课临时
+使用的当前节点、0～2 个风险复习节点和至多一个前探节点。这样既不会因为每节课窗口变化而重写
+完整路线，也能让 BKT 和薄弱点变化立即影响下一节课。
+
 ---
 
 ## 14. 总结
 
 这套数据库围绕一条完整的学习闭环设计：
 
-> 学员提交问卷 → 建立画像 → 生成学习路径 → 生成课程和题目 → 学员作答 → 更新 BKT →
-> 生成反馈 → 更新画像。
+> 学员提交问卷 → CAT/BKT 诊断 → 建立画像 → 创建或恢复活动计划 → 生成单节点课程和题目 →
+> 学员作答 → 更新 BKT → 推进计划游标 → 生成反馈 → 更新画像。
 
 MySQL 保存闭环中的结构化业务事实和关系；`artifacts/` 保存完整 Markdown；Milvus 保存法律资料
 向量；后端静态 JSON 保存课程知识结构；`StateDict` 负责工作流运行时的数据传递。

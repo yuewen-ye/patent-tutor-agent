@@ -9,6 +9,7 @@ Read [`docs/README.md`](docs/README.md) before changing architecture or contract
 - Runtime state contracts: `backend/app/schemas/state.py`
 - Agent and frontend contract: `docs/agent-interface-spec.md`
 - Current workflow behavior: `docs/workflow-technical-guide.md`
+- MySQL schema and persistence boundaries: `docs/patent-tutor-rdb-design.md`
 - FastAPI call order: `docs/api-testing-guide.md`
 - Roadmap only: `docs/implementation-plan.md`
 
@@ -81,9 +82,10 @@ uv export --format requirements-txt --output-file requirements.txt
 
 ## Current Architecture
 
-This repository implements a multi-Agent patent tutoring workflow with deterministic planning and
-retrieval nodes. `diagnosis_feedback`, `expert_a`, and `expert_b` are multi-phase Agents; a phase is
-not a separate Agent.
+This repository implements a multi-Agent patent tutoring workflow with an LLM Planner proposal,
+deterministic planning guards/activity-window scheduling, and deterministic retrieval nodes.
+`diagnosis_feedback`, `expert_a`, and `expert_b` are multi-phase Agents; a phase is not a separate
+Agent.
 
 ```text
 START -> _init -> route
@@ -196,8 +198,9 @@ Schema changes must update, in order:
 
 FastAPI and the CLI use `MySQLLearnerStore` by default, configured by `PATENT_TUTOR_MYSQL_URL`. It
 stores profile snapshots, learning history, BKT mastery and audit events, workflow state, events,
-questions, attempts and Artifact indexes. SQLite stores are unit-test substitutes only; there is no
-SQLite-to-MySQL production data migration because the former database contains no business data.
+questions, attempts, learner-level versioned learning plans and Artifact indexes. SQLite stores are
+unit-test substitutes only; there is no SQLite-to-MySQL production data migration because the former
+database contains no business data.
 
 The default graph checkpointer is in-memory. LangGraph Studio uses the Store/checkpointing managed by
 LangGraph Dev and does not automatically read FastAPI's MySQL learner store. Product workflows that
@@ -209,9 +212,23 @@ Planner reads these backend runtime assets directly:
 - `backend/app/curriculum/data/confusion-pairs.json`
 
 The knowledge axis is static. Runtime confusion risk is derived from the latest learner profile and
-BKT mastery. Do not let an LLM overwrite the final path or mutate the static confusion definitions.
-Production code must not read `docs/`; runtime assets belong to the backend domain package that owns
-their schema and behavior.
+BKT mastery. Planner LLM proposes a complete route only when no reusable learner plan matches the
+normalized learning goal and knowledge-graph version. A matching active plan restores its complete
+node list and cursor without another Planner LLM call. Every teach session still recomputes the
+session activity window from the latest cursor, BKT evidence, weak points and current-node confusion
+risk.
+
+The backend owns the final topological validation, cursor and activity window. Historical review is
+zero to two completed nodes selected by deterministic risk; at-risk direct prerequisites can reserve
+at most one slot, while remaining candidates compete using BKT mastery, observation confidence, weak
+points and confusion risk. Completion order is only a stable tie-break. Experts generate content for
+the selected window and must not add nodes outside it. Do not let an LLM bypass these guards or mutate
+the static confusion definitions. Production code must not read `docs/`; runtime assets belong to the
+backend domain package that owns their schema and behavior.
+
+`learning_paths` is a session-level audit snapshot. `learner_learning_plans` and
+`learner_learning_plan_nodes` are the cross-session source of truth for the full route and cursor;
+`session_directives` stores the per-session derived question/activity window.
 
 ## Module Placement
 
@@ -277,6 +294,8 @@ Tests live in `backend/tests/` and use `@pytest.mark.unit` or `@pytest.mark.inte
 - HTTP request-shape tests use `httpx.MockTransport`; they do not send real provider requests.
 - Integration tests require configured API keys and may skip on missing credentials or provider limits.
 - Workflow changes need route, state-contract, artifact and externally observable behavior coverage.
+- Learning-plan changes must cover new-plan creation, same-goal/version reuse, cursor advancement and
+  activity-window recomputation; review scheduling tests must include zero, one and two-node cases.
 - Concurrency changes must prove A/B phase ordering and parallel fan-out, not only final state equality.
 
 Use focused unit tests during development. Do not run real-provider integration tests unless the task

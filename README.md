@@ -4,8 +4,9 @@
 
 当前已完成：三路由工作流（teach/chat/diagnose）、服务端 CAT 自适应初始诊断、统一 BKT
 掌握度更新与知识 DAG 传播、同一 `diagnosis_feedback` Agent 的诊断/反馈两阶段、MySQL 学员画像与
-BKT、双知识轴和确定性路径、专家 A/B 三阶段并行协作与 A 整合、Judge 条件审核、规范化
-Markdown 过程产物、独立练习反馈会话，以及 FastAPI/SSE/WebSocket/Studio/CLI 运行入口。
+BKT、双知识轴、Planner 完整路线提案与确定性校正、跨会话活动计划和动态单节课窗口、专家 A/B
+三阶段并行协作与 A 整合、Judge 条件审核、规范化 Markdown 过程产物、独立练习反馈会话，以及
+FastAPI/SSE/WebSocket/Studio/CLI 运行入口。
 详见 `docs/workflow-technical-guide.md`。
 
 ## 从零到 LangGraph Studio
@@ -295,7 +296,7 @@ START → _init → route ──┬── diagnose: diagnosis_feedback[diagnosis
 |------|------|------|-----------------|
 | `route` | LLM 调用 + 本地兜底 | 分类用户意图 teach/chat/diagnose；明显学习/诊断请求会覆盖误路由 | `agents.route` |
 | `diagnosis_feedback` | LLM 调用 + Store | diagnosis 阶段读取问卷/历史画像；feedback 阶段生成问卷、下一步动作和画像更新 | `agents.diagnosis_feedback` |
-| `planner` | LLM + 确定性校正/降级 + Store | 从完整双图、画像和 BKT 规划完整路线；后端确定本节唯一当前节点 | `llm.default_provider` |
+| `planner` | LLM + 确定性校正/降级 + Store | 新目标下从完整双图、画像和 BKT 提出完整路线；相同目标/图版本恢复活动计划；后端确定游标和本节活动窗口 | `llm.default_provider` |
 | `retrieve_context` | 无 LLM | chat 路径固定检索法条上下文 | — |
 | `expert_a` | LLM + Tool 调用 | 保守严谨、法条优先；承担草稿、互评、修订和整合阶段 | `agents.expert_a` |
 | `expert_b` | LLM + Tool 调用 | 生动灵活、面向案例；承担草稿、互评和修订阶段 | `agents.expert_b` |
@@ -310,18 +311,27 @@ Planner 计算路径时组合两类数据：
 
 - `backend/app/curriculum/data/knowledge-dag.json`：所有学员共享的知识点、前置关系、难度和考试权重。
 - `backend/app/curriculum/data/confusion-pairs.json`：所有学员共享的易混淆概念对和基础风险。
-- MySQL：每名学员自己的问卷、CAT 诊断会话与作答、画像、历史、BKT 掌握度、会话状态、
-  课程题目和作答记录。
+- MySQL：每名学员自己的问卷、CAT 诊断会话与作答、画像、历史、BKT 掌握度、跨会话活动计划、
+  会话路径快照、课程题目和作答记录。
 
 前两项是版本化的静态课程地图，不会在会话中被 LLM 改写；MySQL 数据是学员在地图上的当前位置。
 例如静态图规定“专利授权实质条件”是“新颖性”的前置知识，而某学员的新颖性掌握度只有
 `0.30`，Planner 就会保留必要前置节点并提高相关混淆对的个人风险。静态 JSON 在进程内缓存，
 修改后需要重启 FastAPI、CLI 或 LangGraph Dev 进程。
 
-完整 `learning_path` 只用于导航。后端在画像 `five_dimensions.progress` 中持久化
-`completed_nodes/current_node/pending_nodes`，Expert A/B 每次只消费一个主教学节点及少量
-复习/前探上下文。练习反馈达到 `P(L) >= 0.8`、至少 2 次累计观测且本轮存在当前节点直接证据后，
-后端才推进到下一节点；否则下一节继续强化当前节点。
+完整 `learning_path` 作为学员级活动计划保存在
+`learner_learning_plans/learner_learning_plan_nodes`，`learning_paths` 保存每次课程会话使用的
+审计快照。学习目标和知识图版本不变时，后续课程恢复完整路线和
+`completed_nodes/current_node/pending_nodes`，不再次调用 Planner LLM；目标或图版本变化才新建
+计划版本。
+
+完整路线复用不等于复用旧活动窗口。后端每节课都会根据最新 BKT、观测次数、薄弱点、直接先修和
+当前概念混淆风险，确定 0～2 个历史复习节点、一个主教学节点和至多一个前探节点。Expert A/B
+只消费这个窗口。练习反馈达到 `P(L) >= 0.8`、至少 2 次累计观测且本轮存在当前节点直接证据后，
+后端才推进计划游标；否则下一节继续强化当前节点。
+
+MySQL 当前共 30 张表。完整数据边界、活动计划表和会话级教学指令的区别见
+`docs/patent-tutor-rdb-design.md`，交互关系图见 `docs/database-relationship-diagram.html`。
 
 ## 快速命令
 
@@ -530,7 +540,8 @@ PY
 
 服务层配置：
 
-- 默认 learner memory、BKT、会话和题目作答写入 MySQL；通过 `PATENT_TUTOR_MYSQL_URL` 配置连接
+- 默认 learner memory、BKT、学员级活动计划、会话和题目作答写入 MySQL；通过
+  `PATENT_TUTOR_MYSQL_URL` 配置连接
 - 演示环境可在首次数据库操作时自动执行 `backend/app/persistence/migrations/`；生产环境应关闭自动迁移并在发布阶段显式执行
 - SQLite 没有业务数据，不执行 SQLite 到 MySQL 的生产数据迁移；SQLite Store 只作为单元测试替身
 - 使用 `uv run python backend/scripts/verify_mysql.py --apply-migrations --smoke-write` 完成真实 MySQL 验收

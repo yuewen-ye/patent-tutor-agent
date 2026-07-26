@@ -1,6 +1,6 @@
 # 专利导学系统关系型数据库设计说明
 
-> 版本：v7（2026-07-26）
+> 版本：v8（2026-07-26）
 > 数据库：MySQL 8.0+
 > 范围：当前业务数据库设计、实际持久化行为与后续演进边界
 > 说明：本文只描述设计，不包含建表 SQL、迁移代码或 Repository 实现代码。可执行结构以
@@ -16,7 +16,7 @@
 
 - 保存学员、问卷、课程会话、反馈会话和完整工作流状态；
 - 保存当前画像、历史画像、薄弱点和知识点掌握度；
-- 保存学习路径、专家协作轮次、模型生成的题目和学员作答；
+- 保存跨会话活动学习计划、会话路径快照、专家协作轮次、模型生成的题目和学员作答；
 - 保存 CAT 诊断会话、服务端判题、BKT 更新、知识 DAG 推断和反馈记录；
 - 保存 Markdown 产物的路径、哈希、类型、来源和归属；
 - 为前端查询、服务重启后的历史读取、问题排查和审计提供数据。
@@ -63,6 +63,7 @@
 | `student_profiles` | `profile_history` |
 | `student_node_mastery` | `attempts`、`mastery_events`、`diagnostic_mastery_events` |
 | `session_states` | `session_events`、`rounds` |
+| `learner_learning_plans` 当前活动版本和游标 | 同表的 `completed`、`superseded` 历史版本及 `learner_learning_plan_nodes` |
 
 ### 2.4 一致性
 
@@ -78,6 +79,9 @@
 
 - 当前学员画像以 `student_profiles` 为准；
 - 当前 BKT 掌握度以 `student_node_mastery` 为准；
+- 当前完整学习路线和课程游标以最新 `active` 的 `learner_learning_plans` 及
+  `learner_learning_plan_nodes` 为准；
+- `learning_paths` 只保存某次课程会话使用的路线审计快照，不能反向覆盖学员级活动计划；
 - 学习过程历史以 `attempts`、`mastery_events`、`diagnostic_attempts`、
   `diagnostic_mastery_events` 和 `profile_history` 为准；
 - 课程知识 DAG 和易混淆对当前以后端 JSON 为准；
@@ -116,6 +120,8 @@
 - 一个学员在每个知识点上只有一条当前掌握度记录；
 - 一个学员可以提交多次作答；多技能题会为每个受影响节点分别生成 BKT 审计事件；
 - 一个学员可以有多个薄弱点和多条问卷提交历史。
+- 一个学员可以保留多个学习计划版本，但正常情况下只有一个 `active` 版本；每个计划拥有一组
+  有序节点和唯一的 `current` 游标。
 
 ### 4.2 以会话为中心
 
@@ -145,6 +151,9 @@
 ---
 
 ## 5. 表分组总览
+
+当前实现共有 30 张表：迁移 SQL 创建 29 张业务表，迁移器另外创建
+`schema_migrations`。
 
 | 分组 | 表 | 用途 |
 |---|---|---|
@@ -314,6 +323,8 @@
 
 `profile_json` 可以包含完整 69 节点知识快照，包括未观测节点的冷启动先验。未观测节点不一定
 逐条写入 `student_node_mastery`；后者主要保存已经有业务观测或更新的当前掌握度。
+画像中的 `five_dimensions.progress` 是供 Agent 和前端使用的同步投影；跨会话恢复和并发更新时，
+以活动计划头及节点表中的游标和节点状态为准。
 
 ### 6.11 `profile_history`
 
@@ -407,6 +418,7 @@ Planner 读取这里的当前值。数据库中存在该节点时，它覆盖画
 | `created_at` | 创建时间 |
 
 同一会话和路径版本中，节点和顺序都必须唯一。重新规划时新增 `path_version`，不覆盖旧路径。
+该表不负责跨会话恢复；每次新课程即使复用了活动计划，也会写入本次会话使用的路径快照。
 
 ### 6.15A `learner_learning_plans`
 
@@ -427,7 +439,9 @@ Planner 读取这里的当前值。数据库中存在该节点时，它覆盖画
 | `last_progress_decision` | 最近一次反馈推进判定 |
 
 同一学员正常只有一条 `active` 计划。目标或知识图版本变化时创建新版本并把旧活动计划标记为
-`superseded`；路线全部完成时标记为 `completed`。
+`superseded`；路线全部完成时标记为 `completed`。MySQL 没有使用部分唯一索引约束
+“每个学员最多一个 active”，Repository 通过锁定 `students` 行、停用旧版本和创建新版本的
+同一事务维护该不变量。
 
 ### 6.15B `learner_learning_plan_nodes`
 
@@ -446,21 +460,27 @@ Planner 读取这里的当前值。数据库中存在该节点时，它覆盖画
 | `completed_at` | 节点通过时间 |
 
 `learning_paths` 是会话级审计快照；这两张表才是跨会话恢复完整路线和游标的业务事实源。
+节点表保存完整路线和稳定状态，不保存某一节课临时选中的复习/前探窗口。
 
 ### 6.16 `session_directives`
 
-用途：保存 Planner 下发给专家的出题范围和迭代教学指令。
+用途：保存本次课程会话最终下发给专家的出题范围和迭代教学指令。
 
 | 字段 | 含义 |
 |---|---|
 | `directive_id` | 指令主键 |
 | `session_id` | 所属会话 |
 | `directive_version` | 指令版本 |
-| `question_scope` | 向后复习、向前探测和薄弱点探测范围 |
+| `question_scope` | 当前节点验证、0～2 个历史复习节点、至多一个前探节点及薄弱点探测范围 |
 | `iteration_directive` | 降维、进阶或薄弱点跟进指令 |
 | `created_at` | 创建时间 |
 
 同一会话内 `directive_version` 唯一。
+
+Planner LLM 可以提出范围建议，但后端会在写入前重新计算活动窗口。复习节点只从已完成节点中
+选择，综合直接先修关系、BKT 掌握度、有效观测数、当前薄弱点和与当前节点的混淆风险；路径顺序
+只在综合风险相同时用于稳定排序。活动窗口是会话级派生数据，因此写入 `session_directives` 和
+`session_states`，不会修改 `learner_learning_plan_nodes` 中的完整路线。
 
 ### 6.17 `artifacts`
 
@@ -703,18 +723,28 @@ Artifact 读取必须同时校验会话归属、路径范围和 Markdown 后缀�
 
 ### 7.4 路径规划阶段
 
-Planner 读取：
+系统首先读取：
 
 - 当前画像；
 - `student_node_mastery` 中已经有观测的最新 P(L)；
 - 静态知识 DAG 和易混淆对。
+- 学员最新的 `active` 活动计划。
 
-Planner 结果写入：
+当学习目标哈希和知识图版本均与活动计划一致时，系统恢复
+`learner_learning_plans + learner_learning_plan_nodes`，不再次调用 Planner LLM。否则 Planner
+LLM 基于完整知识图提出完整路线，后端完成拓扑、节点和难度约束校验，必要时使用确定性路线降级，
+然后创建新的学员级计划版本并把旧活动版本标记为 `superseded`。
 
-- `learning_paths`；
-- `session_directives`；
+无论路线是新建还是复用，本次课程都会根据最新 BKT、薄弱点和混淆风险重新计算当前活动窗口，
+并写入：
+
+- `learning_paths`：本会话使用的完整路线快照；
+- `session_directives`：本会话的动态活动窗口和教学指令；
 - `session_states` 和 `session_events`；
 - 路径与双轴快照 Artifact 索引。
+
+活动计划的完整节点顺序通常保持不变；变化的是 `current_node_id`、节点状态和本次
+`question_scope`。目标或知识图版本变化才触发新计划和 Planner LLM。
 
 ### 7.5 专家协作和 Judge 阶段
 
@@ -783,6 +813,8 @@ Judge 通过后，课程会话更新为 `completed`。Judge 要求修改时，�
 - `profile_history`；
 - `student_profiles`；
 - `student_weak_points`；
+- `learner_learning_plans` 和 `learner_learning_plan_nodes`：根据后端通关判定推进或保留
+  当前游标；
 - 反馈会话的 `session_states`、`session_events`；
 - 反馈报告、画像更新和判题报告的 `artifacts` 索引。
 
@@ -942,7 +974,7 @@ Agent 不应直接持有数据库连接，也不应直接写 Markdown。标准�
 | 当前画像、画像历史和薄弱点 | 已实现 | 当前投影与历史快照分离 |
 | BKT 当前值和状态转移审计 | 已实现 | `attempts`、mastery 和事件同事务 |
 | CAT 初始诊断与 DAG 推断审计 | 已实现 | 固定题库、可恢复会话、逐题作答和直接/推断事件 |
-| 学习路径和教学指令 | 已实现 | 会话路径按会话保存；学员级活动计划按版本保存并随反馈推进 |
+| 学习路径和教学指令 | 已实现 | 会话路径按会话保存；学员级活动计划按版本保存并随反馈推进；每节课重算 0～2 个风险复习节点 |
 | 专家轮次、模型生成题目和作答 | 已实现 | 课程练习题不是固定题库 |
 | 固定答案服务端判题 | 已实现 | 当前使用规范化精确比较 |
 | 主观题 LLM 语义评分 | 未实现 | 尚无评分量表、评分合同和审计记录 |
@@ -970,6 +1002,9 @@ Agent 不应直接持有数据库连接，也不应直接写 Markdown。标准�
 8. Artifact 路径合法、文件存在且 SHA-256 一致；
 9. 明确区分已经实现的能力和预留能力；
 10. 自动化脚本只能被描述为技术验证，不能被描述为真实学员完成了答题。
+11. 相同学习目标和知识图版本能够恢复活动计划并跳过 Planner LLM，同时仍按最新 BKT 和薄弱点
+    重算本次活动窗口；
+12. 反馈通关后，计划头游标与节点表中的 `completed/current/pending` 状态保持一致。
 
 具体启动、自动验证和 DBeaver 查看方式见 `docs/mysql-verification-guide.md`。
 
@@ -981,11 +1016,11 @@ Agent 不应直接持有数据库连接，也不应直接写 Markdown。标准�
 查询和解释的业务事实结构化保存：
 
 - `StateDict` 负责一次工作流内部协作；
-- MySQL 负责学员、会话、画像、题目、作答、掌握度和审计；
+- MySQL 负责学员、会话、画像、跨会话活动计划、题目、作答、掌握度和审计；
 - Artifact 文件负责保存适合人阅读的 Markdown 正文；
 - Milvus 负责法律资料向量检索；
 - 后端静态 JSON 负责当前课程知识目录。
 
-当前主链路已经能够保存模型生成题目、学员作答、确定性判题、BKT 更新和反馈画像。下一阶段最
-重要的数据库演进不是增加更多重复状态表，而是建立学员安全题目视图，以及为开放题增加可审计的
-大模型评分合同、评分量表和人工复核边界。
+当前主链路已经能够保存并恢复完整学习计划，在每节课重算小型活动窗口，同时保存模型生成题目、
+学员作答、确定性判题、BKT 更新和反馈画像。下一阶段最重要的数据库演进不是增加更多重复状态表，
+而是建立学员安全题目视图，以及为开放题增加可审计的大模型评分合同、评分量表和人工复核边界。
