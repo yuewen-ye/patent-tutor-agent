@@ -73,6 +73,37 @@ def _difficulty_cap_for(node_id: str, pl_map: dict[str, Any], weak_node_ids: set
     return "L3"
 
 
+def _confusion_review_risk(
+    dual_axis: dict[str, Any],
+    current_node_id: str | None,
+) -> dict[str, float]:
+    current = str(current_node_id or "")
+    if not current:
+        return {}
+    risks: dict[str, float] = {}
+    for pair in dual_axis.get("confusion_axis", []):
+        if not isinstance(pair, dict) or not pair.get("is_active"):
+            continue
+        node_ids = {
+            str(node_id)
+            for node_id in (
+                pair.get("node_a"),
+                pair.get("node_b"),
+                *(pair.get("related_nodes") or []),
+            )
+            if node_id
+        }
+        if current not in node_ids:
+            continue
+        try:
+            risk = max(0.0, min(1.0, float(pair.get("learner_risk") or 0.0)))
+        except (TypeError, ValueError):
+            risk = 0.0
+        for node_id in node_ids - {current}:
+            risks[node_id] = max(risks.get(node_id, 0.0), risk)
+    return risks
+
+
 def _default_question_scope(path: list[Any], profile: dict[str, Any]) -> dict[str, Any]:
     """首轮无作答数据时，按路径与画像生成三类出题范围默认值。"""
     if not path:
@@ -181,19 +212,24 @@ def _reuse_persisted_plan(
         for item in path
     ]
     serialized_path = [item.model_dump() for item in path]
+    dual_axis = build_dual_axis_snapshot(
+        profile=profile,
+        session_id=state["session_id"],
+    )
     question_scope = normalize_question_scope(
         learning_path=serialized_path,
         progress=progress,
         proposed_scope={},
+        mastery_snapshot=pl_map,
+        weak_node_ids=weak_node_ids,
+        confusion_risk=_confusion_review_risk(
+            dual_axis, progress.get("current_node")
+        ),
     )
     teaching_context = build_teaching_context(
         learning_path=serialized_path,
         progress=progress,
         question_scope=question_scope,
-    )
-    dual_axis = build_dual_axis_snapshot(
-        profile=profile,
-        session_id=state["session_id"],
     )
     updated_profile = deepcopy(profile)
     updated_dimensions = dict(updated_profile.get("five_dimensions") or {})
@@ -458,6 +494,11 @@ def build_planner_node(llm_client: LLMClient) -> Node:
             learning_path=serialized_path,
             progress=progress,
             proposed_scope=question_scope,
+            mastery_snapshot=pl_map,
+            weak_node_ids=weak_node_ids,
+            confusion_risk=_confusion_review_risk(
+                dual_axis, progress.get("current_node")
+            ),
         )
         teaching_context = build_teaching_context(
             learning_path=serialized_path,

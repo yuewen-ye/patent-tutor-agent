@@ -6,6 +6,7 @@ from typing import Any, Iterable
 
 DEFAULT_MASTERY_THRESHOLD = 0.80
 DEFAULT_MIN_OBSERVATIONS = 2
+DEFAULT_MAX_REVIEW_NODES = 2
 
 
 def _node_ids(path: Iterable[dict[str, Any]]) -> list[str]:
@@ -57,6 +58,136 @@ def _unique(values: Iterable[object]) -> list[str]:
         normalized = str(value or "")
         if normalized and normalized not in result:
             result.append(normalized)
+    return result
+
+
+def _review_difficulty(
+    *,
+    node: dict[str, Any],
+    probability: float | None,
+    proposed: dict[str, Any] | None,
+) -> str:
+    proposed_difficulty = str((proposed or {}).get("difficulty") or "")
+    difficulty = (
+        proposed_difficulty
+        if proposed_difficulty in {"L1", "L2", "L3"}
+        else "L1"
+        if probability is not None and probability < 0.65
+        else "L2"
+    )
+    cap = str(node.get("difficulty_cap") or "L3")
+    cap_rank = {"L1": 1, "L2": 2, "L3": 3}.get(cap, 3)
+    difficulty_rank = {"L1": 1, "L2": 2, "L3": 3}[difficulty]
+    return f"L{min(cap_rank, difficulty_rank)}"
+
+
+def _select_review_nodes(
+    *,
+    path_by_id: dict[str, dict[str, Any]],
+    current: str,
+    completed: list[str],
+    mastery_snapshot: object,
+    weak_node_ids: Iterable[str],
+    confusion_risk: object,
+    proposed_items: list[dict[str, Any]],
+    max_review_nodes: int,
+) -> list[dict[str, Any]]:
+    if max_review_nodes <= 0:
+        return []
+    mastery = mastery_snapshot if isinstance(mastery_snapshot, dict) else {}
+    weak = {str(node_id) for node_id in weak_node_ids if node_id}
+    confusion = confusion_risk if isinstance(confusion_risk, dict) else {}
+    proposed_by_id = {
+        str(item.get("node_id")): item
+        for item in proposed_items
+        if item.get("node_id")
+    }
+    current_node = path_by_id.get(current, {})
+    prerequisites = {
+        str(node_id)
+        for node_id in current_node.get("prerequisites", [])
+        if node_id
+    }
+    completion_order = {
+        node_id: index for index, node_id in enumerate(completed)
+    }
+    candidates: list[tuple[bool, float, int, str, float | None, list[str]]] = []
+    for node_id in completed:
+        if node_id == current or node_id not in path_by_id:
+            continue
+        probability, observations = _mastery_value(mastery, node_id)
+        score = 0.0
+        reasons: list[str] = []
+        if node_id in prerequisites:
+            score += 1.25
+            reasons.append("当前节点的直接先修知识")
+        if node_id in weak:
+            score += 3.0
+            reasons.append("画像或BKT标记的薄弱节点")
+        try:
+            node_confusion_risk = max(
+                0.0, min(1.0, float(confusion.get(node_id, 0.0)))
+            )
+        except (TypeError, ValueError):
+            node_confusion_risk = 0.0
+        if node_confusion_risk > 0:
+            score += 3.0 * node_confusion_risk
+            reasons.append(f"与当前节点的混淆风险={node_confusion_risk:.2f}")
+        if probability is not None:
+            mastery_risk = max(0.0, 0.85 - probability)
+            if mastery_risk > 0:
+                score += 6.0 * mastery_risk
+                reasons.append(f"BKT掌握度偏低={probability:.2f}")
+        confidence_risk = max(0, 3 - observations) * 0.35
+        if confidence_risk > 0:
+            score += confidence_risk
+            reasons.append(f"有效观测仅{observations}次")
+        if score < 1.5:
+            continue
+        candidates.append(
+            (
+                node_id in prerequisites,
+                round(score, 4),
+                completion_order.get(node_id, -1),
+                node_id,
+                probability,
+                reasons,
+            )
+        )
+
+    def candidate_rank(
+        item: tuple[bool, float, int, str, float | None, list[str]],
+    ) -> tuple[float, int, str]:
+        # 风险相同才用完成顺序打破平局；越早完成越值得先做间隔复习。
+        return (-item[1], item[2], item[3])
+
+    candidates.sort(key=candidate_rank)
+    selected: list[tuple[bool, float, int, str, float | None, list[str]]] = []
+    prerequisite_candidates = [item for item in candidates if item[0]]
+    if prerequisite_candidates and max_review_nodes >= 2:
+        # 最多只为直接先修保留一个席位，避免多个中等风险先修挤掉严重薄弱/混淆节点。
+        selected.append(prerequisite_candidates[0])
+    selected.extend(
+        item
+        for item in candidates
+        if item not in selected
+    )
+    selected = selected[:max_review_nodes]
+
+    result: list[dict[str, Any]] = []
+    for _, _, _, node_id, probability, reasons in selected:
+        proposed = proposed_by_id.get(node_id)
+        result.append(
+            {
+                "node_id": node_id,
+                "difficulty": _review_difficulty(
+                    node=path_by_id[node_id],
+                    probability=probability,
+                    proposed=proposed,
+                ),
+                "goal": "；".join(reasons),
+            }
+        )
     return result
 
 
@@ -198,6 +329,10 @@ def normalize_question_scope(
     learning_path: list[dict[str, Any]],
     progress: dict[str, Any],
     proposed_scope: object,
+    mastery_snapshot: object = None,
+    weak_node_ids: Iterable[str] = (),
+    confusion_risk: object = None,
+    max_review_nodes: int = DEFAULT_MAX_REVIEW_NODES,
 ) -> dict[str, list[dict[str, Any]]]:
     """Constrain questions to current/review/next-probe nodes for one lesson."""
 
@@ -215,13 +350,17 @@ def normalize_question_scope(
         items = proposed.get(key)
         return [dict(item) for item in items if isinstance(item, dict)] if isinstance(items, list) else []
 
-    backward: list[dict[str, Any]] = []
-    allowed_backward = set(completed) | ({current} if current else set())
-    for item in proposed_items("backward_review"):
-        node_id = str(item.get("node_id") or "")
-        if node_id in allowed_backward and node_id in path_by_id and node_id != current:
-            backward.append(item)
-            break
+    weak = {str(node_id) for node_id in weak_node_ids if node_id}
+    backward = _select_review_nodes(
+        path_by_id=path_by_id,
+        current=current,
+        completed=completed,
+        mastery_snapshot=mastery_snapshot,
+        weak_node_ids=weak,
+        confusion_risk=confusion_risk,
+        proposed_items=proposed_items("backward_review"),
+        max_review_nodes=max_review_nodes,
+    )
     if current:
         backward.append(
             {
@@ -263,11 +402,19 @@ def normalize_question_scope(
             ]
             break
     if not weakness and current:
+        weak_target = next(
+            (
+                item["node_id"]
+                for item in backward + forward
+                if item["node_id"] in weak
+            ),
+            current,
+        )
         weakness = [
             {
-                "node_id": current,
+                "node_id": weak_target,
                 "difficulty": "L3",
-                "goal": "挑战当前教学节点的易错或易混淆知识",
+                "goal": "挑战活动窗口中的易错、易混淆或低掌握知识",
             }
         ]
 
@@ -297,7 +444,9 @@ def build_teaching_context(
         result: list[dict[str, Any]] = []
         for scope in question_scope.get(key, []):
             node_id = str(scope.get("node_id") or "")
-            if node_id in path_by_id:
+            if node_id in path_by_id and not (
+                key == "backward_review" and node_id == current_id
+            ):
                 result.append({**path_by_id[node_id], "question_scope": dict(scope)})
         return result
 

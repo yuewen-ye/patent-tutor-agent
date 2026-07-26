@@ -2,6 +2,7 @@ import pytest
 from langgraph.runtime import Runtime
 
 from backend.app.agents.planner.node import (
+    _confusion_review_risk,
     _knowledge_pl_map,
     _parse_planner_plan,
     build_planner_node,
@@ -117,6 +118,35 @@ def test_current_mastery_overrides_stale_profile_snapshot() -> None:
 
     assert mastery["novelty"]["pl"] == 0.85
     assert mastery["inventive-step"]["pl"] == 0.4
+
+
+def test_confusion_review_risk_only_uses_pairs_connected_to_current_node() -> None:
+    risks = _confusion_review_risk(
+        {
+            "confusion_axis": [
+                {
+                    "node_a": "novelty",
+                    "node_b": "inventive-step",
+                    "related_nodes": ["three-step-method"],
+                    "is_active": True,
+                    "learner_risk": 0.82,
+                },
+                {
+                    "node_a": "priority",
+                    "node_b": "filing-date",
+                    "related_nodes": [],
+                    "is_active": True,
+                    "learner_risk": 0.95,
+                },
+            ]
+        },
+        "novelty",
+    )
+
+    assert risks == {
+        "inventive-step": pytest.approx(0.82),
+        "three-step-method": pytest.approx(0.82),
+    }
 
 
 def test_planner_semantic_guard_rejects_unknown_or_topologically_invalid_nodes() -> None:
@@ -330,6 +360,9 @@ def test_planner_reuses_persisted_active_plan_without_calling_llm() -> None:
     assert result["path_decision"]["plan_reused"] is True
     assert result["path_decision"]["plan_id"] == "persisted-plan-1"
     assert result["path_decision"]["current_node_id"] == "patent-system-overview"
+    assert result["path_decision"]["lesson_scope"]["review_node_ids"] == [
+        "patent-law-foundation"
+    ]
     assert result["teaching_context"]["current_node"]["node_id"] == (
         "patent-system-overview"
     )
