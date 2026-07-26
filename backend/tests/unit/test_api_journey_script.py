@@ -13,7 +13,9 @@ from backend.scripts.run_api_journey import (
     JourneyError,
     _artifact_api_path,
     _build_exercise_responses,
+    _completed_event_summary,
     _validate_questionnaire_responses,
+    _workflow_progress,
 )
 
 
@@ -61,6 +63,115 @@ def test_artifact_api_path_removes_storage_prefix() -> None:
     assert _artifact_api_path("feedback/feedback_report.md", "feedback-1") == (
         "feedback/feedback_report.md"
     )
+
+
+def test_workflow_progress_reports_parallel_expert_stage_and_missing_expert() -> None:
+    snapshot = {
+        "status": "running",
+        "state": {
+            "workflow_mode": "teach",
+            "events": [
+                {
+                    "node": "route",
+                    "message": "used explicit mode teach",
+                    "duration_ms": 3,
+                },
+                {
+                    "node": "diagnosis_feedback",
+                    "message": "assembled learner profile",
+                    "duration_ms": 29_489,
+                },
+                {
+                    "node": "planner",
+                    "message": "planned learning path (deterministic_astar)",
+                    "duration_ms": 314_036,
+                },
+                {
+                    "node": "expert_b",
+                    "message": "generated expert B draft with LLM",
+                    "duration_ms": 267_892,
+                },
+            ],
+        },
+    }
+
+    progress = _workflow_progress(snapshot)
+
+    assert progress.current_stage == "专家初稿（并行；等待 Expert A）"
+    assert len(progress.completed_events) == 4
+    assert _completed_event_summary(progress.completed_events[2], snapshot) == (
+        "Planner 学习路径规划完成（耗时 5分14秒）；使用 deterministic_astar"
+    )
+    assert _completed_event_summary(progress.completed_events[3], snapshot) == (
+        "Expert B 初稿完成（耗时 4分28秒）"
+    )
+
+
+def test_workflow_progress_advances_through_review_revision_integration_and_judge() -> None:
+    events: list[dict[str, Any]] = [
+        {"node": "route", "message": "used explicit mode teach"},
+        {"node": "diagnosis_feedback", "message": "assembled learner profile"},
+        {"node": "planner", "message": "planned learning path"},
+        {"node": "expert_a", "message": "generated expert A draft with LLM"},
+        {"node": "expert_b", "message": "generated expert B draft with LLM"},
+        {"node": "expert_a", "message": "reviewed expert B draft"},
+    ]
+    snapshot = {
+        "status": "running",
+        "state": {"workflow_mode": "teach", "events": events},
+    }
+    assert _workflow_progress(snapshot).current_stage == (
+        "交叉评审（并行；等待 Expert B）"
+    )
+
+    events.extend(
+        [
+            {"node": "expert_b", "message": "reviewed expert A draft"},
+            {"node": "expert_b", "message": "revised expert B draft"},
+        ]
+    )
+    assert _workflow_progress(snapshot).current_stage == (
+        "专家修订（并行；等待 Expert A）"
+    )
+
+    events.append({"node": "expert_a", "message": "revised expert A draft"})
+    assert _workflow_progress(snapshot).current_stage == "Expert A 整合课程"
+
+    events.append(
+        {"node": "expert_a", "message": "integrated expert debate result with LLM"}
+    )
+    assert _workflow_progress(snapshot).current_stage == "Judge 课程审核"
+
+    events.append({"node": "judge", "message": "reviewed integration draft"})
+    snapshot["state"]["judge_report"] = {"decision": "accept"}
+    assert _workflow_progress(snapshot).current_stage == "课程结果持久化"
+
+
+def test_workflow_progress_handles_judge_revision_loop() -> None:
+    events = [
+        {
+            "node": "expert_a",
+            "message": "integrated expert debate result with LLM",
+        },
+        {"node": "judge", "message": "reviewed integration draft"},
+    ]
+    snapshot = {
+        "status": "running",
+        "state": {
+            "workflow_mode": "teach",
+            "events": events,
+            "judge_report": {"decision": "revise"},
+        },
+    }
+
+    assert _workflow_progress(snapshot).current_stage == (
+        "Expert A 按 Judge 意见重新整合"
+    )
+
+    events.append(
+        {"node": "expert_a", "message": "integrated expert debate result with LLM"}
+    )
+    assert _workflow_progress(snapshot).current_stage == "Judge 课程审核"
 
 
 def test_exercise_builder_uses_answer_key_without_client_grading() -> None:

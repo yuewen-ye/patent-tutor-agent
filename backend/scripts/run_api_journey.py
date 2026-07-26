@@ -20,6 +20,7 @@ import httpx
 
 
 TERMINAL_STATUSES = {"completed", "failed", "canceled"}
+PROGRESS_HEARTBEAT_SECONDS = 30.0
 DEFAULT_QUESTIONNAIRE_RESPONSES: list[dict[str, Any]] = [
     {"question_id": "Q1", "answer": "B"},
     {"question_id": "Q2", "answer": "C"},
@@ -66,17 +67,209 @@ class JourneyError(RuntimeError):
 
 
 @dataclass(frozen=True, slots=True)
+class WorkflowProgress:
+    """Human-readable progress derived from append-only completed Agent events."""
+
+    current_stage: str
+    completed_events: tuple[dict[str, Any], ...]
+
+
+@dataclass(frozen=True, slots=True)
 class JourneyConfig:
     learner_id: str
     learning_goal: str
     questionnaire_responses: list[dict[str, Any]]
-    workflow_timeout: float = 900.0
+    workflow_timeout: float = 3600.0
     poll_interval: float = 2.0
     max_exercises: int = 1
     answer_mode: str = "correct"
     education_background: str = "其他"
     cat_mode: Literal["interactive", "off"] = "off"
     cat_max_answers: int = 0
+
+
+def _workflow_events(snapshot: dict[str, Any]) -> tuple[dict[str, Any], ...]:
+    state = snapshot.get("state")
+    if not isinstance(state, dict):
+        return ()
+    raw_events = state.get("events")
+    if not isinstance(raw_events, list):
+        return ()
+    return tuple(event for event in raw_events if isinstance(event, dict))
+
+
+def _expert_event_step(event: dict[str, Any]) -> str | None:
+    node = str(event.get("node") or "")
+    message = str(event.get("message") or "").lower()
+    if node not in {"expert_a", "expert_b"}:
+        return None
+    suffix = "a" if node == "expert_a" else "b"
+    if "generated" in message and "draft" in message:
+        return f"draft_{suffix}"
+    if "reviewed" in message:
+        return f"review_{suffix}"
+    if "revised" in message:
+        return f"revision_{suffix}"
+    if node == "expert_a" and "integrated" in message:
+        return "integration"
+    return None
+
+
+def _workflow_progress(snapshot: dict[str, Any]) -> WorkflowProgress:
+    """Infer the active workflow stage from completed events in a session snapshot."""
+
+    state = snapshot.get("state")
+    typed_state = state if isinstance(state, dict) else {}
+    events = _workflow_events(snapshot)
+    nodes = {str(event.get("node") or "") for event in events}
+    expert_steps = {
+        step for event in events if (step := _expert_event_step(event)) is not None
+    }
+    workflow_mode = str(typed_state.get("workflow_mode") or "")
+    diagnosis_phase = str(typed_state.get("diagnosis_feedback_phase") or "")
+
+    if workflow_mode == "feedback" or diagnosis_phase == "feedback":
+        current = (
+            "反馈结果持久化"
+            if "diagnosis_feedback" in nodes
+            else "反馈分析（判题、BKT 更新与画像刷新）"
+        )
+        return WorkflowProgress(current_stage=current, completed_events=events)
+
+    if workflow_mode == "chat":
+        if "chat_answer" in nodes:
+            current = "问答结果持久化"
+        elif "retrieve_context" in nodes:
+            current = "生成问答"
+        elif "route" in nodes:
+            current = "检索上下文"
+        else:
+            current = "意图路由"
+        return WorkflowProgress(current_stage=current, completed_events=events)
+
+    latest_judge = max(
+        (index for index, event in enumerate(events) if event.get("node") == "judge"),
+        default=-1,
+    )
+    latest_integration = max(
+        (
+            index
+            for index, event in enumerate(events)
+            if _expert_event_step(event) == "integration"
+        ),
+        default=-1,
+    )
+
+    if latest_judge > latest_integration:
+        judge_report = typed_state.get("judge_report")
+        decision = (
+            str(judge_report.get("decision") or "")
+            if isinstance(judge_report, dict)
+            else ""
+        )
+        current = (
+            "Expert A 按 Judge 意见重新整合"
+            if decision == "revise"
+            else "课程结果持久化"
+        )
+    elif latest_integration >= 0:
+        current = "Judge 课程审核"
+    elif {"revision_a", "revision_b"}.issubset(expert_steps):
+        current = "Expert A 整合课程"
+    elif expert_steps & {"revision_a", "revision_b"}:
+        missing = _missing_experts(expert_steps, "revision")
+        current = f"专家修订（并行；等待 {missing}）"
+    elif {"review_a", "review_b"}.issubset(expert_steps):
+        current = "专家修订（并行；等待 Expert A、Expert B）"
+    elif expert_steps & {"review_a", "review_b"}:
+        missing = _missing_experts(expert_steps, "review")
+        current = f"交叉评审（并行；等待 {missing}）"
+    elif {"draft_a", "draft_b"}.issubset(expert_steps):
+        current = "交叉评审（并行；等待 Expert A、Expert B）"
+    elif expert_steps & {"draft_a", "draft_b"}:
+        missing = _missing_experts(expert_steps, "draft")
+        current = f"专家初稿（并行；等待 {missing}）"
+    elif "planner" in nodes:
+        current = "专家初稿（并行；等待 Expert A、Expert B）"
+    elif "diagnosis_feedback" in nodes:
+        current = "Planner 学习路径规划"
+    elif "route" in nodes:
+        current = "学情诊断与初始画像"
+    else:
+        current = "意图路由"
+    return WorkflowProgress(current_stage=current, completed_events=events)
+
+
+def _missing_experts(completed_steps: set[str], phase: str) -> str:
+    missing: list[str] = []
+    if f"{phase}_a" not in completed_steps:
+        missing.append("Expert A")
+    if f"{phase}_b" not in completed_steps:
+        missing.append("Expert B")
+    return "、".join(missing)
+
+
+def _format_elapsed(seconds: float) -> str:
+    total_seconds = max(0, round(seconds))
+    minutes, second = divmod(total_seconds, 60)
+    hours, minute = divmod(minutes, 60)
+    if hours:
+        return f"{hours}小时{minute:02d}分{second:02d}秒"
+    if minute:
+        return f"{minute}分{second:02d}秒"
+    return f"{second}秒"
+
+
+def _event_label(event: dict[str, Any], snapshot: dict[str, Any]) -> str:
+    node = str(event.get("node") or "unknown")
+    message = str(event.get("message") or "").lower()
+    state = snapshot.get("state")
+    typed_state = state if isinstance(state, dict) else {}
+    labels = {
+        "route": "意图路由",
+        "planner": "Planner 学习路径规划",
+        "retrieve_context": "上下文检索",
+        "chat_answer": "问答生成",
+        "judge": "Judge 课程审核",
+    }
+    if node == "diagnosis_feedback":
+        if (
+            typed_state.get("workflow_mode") == "feedback"
+            or typed_state.get("diagnosis_feedback_phase") == "feedback"
+        ):
+            return "反馈分析与画像更新"
+        return "学情诊断与初始画像"
+    if node == "expert_a":
+        if "reviewed" in message:
+            return "Expert A 交叉评审"
+        if "revised" in message:
+            return "Expert A 修订"
+        if "integrated" in message:
+            return "Expert A 课程整合"
+        return "Expert A 初稿"
+    if node == "expert_b":
+        if "reviewed" in message:
+            return "Expert B 交叉评审"
+        if "revised" in message:
+            return "Expert B 修订"
+        return "Expert B 初稿"
+    return labels.get(node, node)
+
+
+def _completed_event_summary(
+    event: dict[str, Any],
+    snapshot: dict[str, Any],
+) -> str:
+    label = _event_label(event, snapshot)
+    duration = event.get("duration_ms")
+    duration_suffix = ""
+    if isinstance(duration, int | float):
+        duration_suffix = f"（耗时 {_format_elapsed(float(duration) / 1000)}）"
+    message = str(event.get("message") or "")
+    algorithm_suffix = ""
+    if label == "Planner 学习路径规划" and "deterministic_astar" in message:
+        algorithm_suffix = "；使用 deterministic_astar"
+    return f"{label}完成{duration_suffix}{algorithm_suffix}"
 
 
 class ApiJourney:
@@ -402,25 +595,66 @@ class ApiJourney:
             print(f"    解析：{result['explanation']}")
 
     def _wait_for_session(self, session_id: str) -> dict[str, Any]:
-        deadline = time.monotonic() + self.config.workflow_timeout
+        wait_started_at = time.monotonic()
+        deadline = wait_started_at + self.config.workflow_timeout
+        last_reported_at = wait_started_at
+        last_progress_at = wait_started_at
+        reported_event_count = 0
+        previous_stage: str | None = None
         previous_status: str | None = None
         path = f"/sessions/{quote(session_id, safe='')}"
         while True:
             snapshot = self._request_json("GET", path, announce=False)
+            now = time.monotonic()
             status = str(snapshot.get("status") or "unknown")
+            progress = _workflow_progress(snapshot)
+            events = progress.completed_events
+            if len(events) < reported_event_count:
+                reported_event_count = 0
+            new_events = events[reported_event_count:]
+
             if status != previous_status:
-                print(f"    {session_id}: {status}")
+                print(
+                    f"    {session_id}: {status}"
+                    f"（已等待 {_format_elapsed(now - wait_started_at)}）"
+                )
                 previous_status = status
+            for event in new_events:
+                print(f"      ✓ {_completed_event_summary(event, snapshot)}")
+            if new_events:
+                reported_event_count = len(events)
+                last_progress_at = now
+
+            should_report_stage = (
+                progress.current_stage != previous_stage
+                or bool(new_events)
+                or now - last_reported_at >= PROGRESS_HEARTBEAT_SECONDS
+            )
+            if status not in TERMINAL_STATUSES and should_report_stage:
+                print(
+                    f"      ▶ 当前：{progress.current_stage}；"
+                    f"总等待 {_format_elapsed(now - wait_started_at)}；"
+                    f"距上次节点完成 {_format_elapsed(now - last_progress_at)}"
+                )
+                previous_stage = progress.current_stage
+                last_reported_at = now
+
             if status in TERMINAL_STATUSES:
                 if status != "completed":
                     raise JourneyError(
                         f"会话 {session_id} 以 {status} 结束："
                         f"{snapshot.get('error') or '无错误详情'}"
                     )
+                print(
+                    f"      ✓ 会话完成；总等待 "
+                    f"{_format_elapsed(now - wait_started_at)}"
+                )
                 return snapshot
-            if time.monotonic() >= deadline:
+            if now >= deadline:
                 raise JourneyError(
-                    f"等待会话 {session_id} 超过 {self.config.workflow_timeout:.0f} 秒。"
+                    f"等待会话 {session_id} 超过 {self.config.workflow_timeout:.0f} 秒；"
+                    f"最后阶段：{progress.current_stage}；"
+                    f"已完成 {len(events)} 个节点事件。"
                 )
             time.sleep(self.config.poll_interval)
 
@@ -675,7 +909,12 @@ def _parser() -> argparse.ArgumentParser:
         default=0,
         help="Automatically complete CAT after N answers; 0 waits for natural termination.",
     )
-    parser.add_argument("--workflow-timeout", type=float, default=900.0)
+    parser.add_argument(
+        "--workflow-timeout",
+        type=float,
+        default=3600.0,
+        help="Maximum total wait for each workflow session; progress is printed every 30 seconds.",
+    )
     parser.add_argument("--poll-interval", type=float, default=2.0)
     parser.add_argument("--request-timeout", type=float, default=30.0)
     parser.add_argument("--max-exercises", type=int, default=1)

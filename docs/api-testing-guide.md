@@ -108,6 +108,27 @@ uv run python backend/main.py
 .\scripts\run-api-journey.ps1
 ```
 
+课程与反馈会话轮询会根据 `GET /sessions/{session_id}` 中的 append-only
+`state.events` 显示详细进度：每个已完成节点、单节点耗时、当前推断阶段、总等待时间，
+以及距上一个节点完成的时间。Expert A/B 并行阶段会分别显示仍在等待的专家；没有新节点
+完成时每 30 秒输出一次心跳。例如：
+
+```text
+a1e0163813e14415ade8247f4af50524: running（已等待 0秒）
+  ✓ 学情诊断与初始画像完成（耗时 29秒）
+  ▶ 当前：Planner 学习路径规划；总等待 29秒；距上次节点完成 0秒
+  ✓ Planner 学习路径规划完成（耗时 5分14秒）；使用 deterministic_astar
+  ▶ 当前：专家初稿（并行；等待 Expert A、Expert B）
+  ✓ Expert B 初稿完成（耗时 4分28秒）
+  ▶ 当前：专家初稿（并行；等待 Expert A）
+```
+
+脚本对每个工作流会话的默认总等待上限为 3600 秒。模型服务较慢时可以显式调大：
+
+```powershell
+.\scripts\run-api-journey.ps1 -WorkflowTimeout 7200
+```
+
 指定学员、答错分支或提交题目数量：
 
 ```powershell

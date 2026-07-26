@@ -12,7 +12,7 @@ param(
     [ValidateRange(0, 40)]
     [int]$CatMaxAnswers = 0,
     [ValidateRange(1, 86400)]
-    [int]$WorkflowTimeout = 1500
+    [int]$WorkflowTimeout = 3600
 )
 
 $ErrorActionPreference = "Stop"
