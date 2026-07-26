@@ -1,8 +1,9 @@
-"""Run one complete questionnaire -> course -> exercise -> feedback API journey."""
+"""Run one questionnaire -> interactive CAT -> course -> exercise -> feedback API journey."""
 
 from __future__ import annotations
 
 import argparse
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 import hashlib
@@ -11,7 +12,7 @@ from pathlib import Path
 import re
 import sys
 import time
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import quote, urlencode
 import uuid
 
@@ -73,12 +74,22 @@ class JourneyConfig:
     poll_interval: float = 2.0
     max_exercises: int = 1
     answer_mode: str = "correct"
+    education_background: str = "其他"
+    cat_mode: Literal["interactive", "off"] = "off"
+    cat_max_answers: int = 0
 
 
 class ApiJourney:
-    def __init__(self, client: httpx.Client, config: JourneyConfig) -> None:
+    def __init__(
+        self,
+        client: httpx.Client,
+        config: JourneyConfig,
+        *,
+        answer_reader: Callable[[str], str] | None = None,
+    ) -> None:
         self.client = client
         self.config = config
+        self._answer_reader = answer_reader or input
 
     def run(self) -> dict[str, Any]:
         self._step("1", "检查 FastAPI 存活状态")
@@ -103,21 +114,37 @@ class ApiJourney:
         )
 
         learner_path = quote(self.config.learner_id, safe="")
-        self._step("4", "提交问卷并创建课程会话")
-        course_created = self._request_json(
-            "POST",
-            f"/learners/{learner_path}/questionnaire-responses",
-            json_body={
-                "learning_goal": self.config.learning_goal,
-                "responses": self.config.questionnaire_responses,
-            },
-        )
-        course_session_id = self._required_string(course_created, "session_id")
+        diagnostic_summary: dict[str, Any] | None = None
+        cat_knowledge_snapshot: dict[str, Any] | None = None
+        if self.config.cat_mode == "interactive":
+            self._step("4", "创建 CAT 诊断会话并在终端逐题作答")
+            (
+                course_session_id,
+                diagnostic_summary,
+                cat_knowledge_snapshot,
+            ) = self._run_interactive_cat(learner_path=learner_path)
+        else:
+            self._step("4", "提交问卷并创建课程会话（跳过 CAT）")
+            course_created = self._request_json(
+                "POST",
+                f"/learners/{learner_path}/questionnaire-responses",
+                json_body={
+                    "learning_goal": self.config.learning_goal,
+                    "education_background": self.config.education_background,
+                    "responses": self.config.questionnaire_responses,
+                },
+            )
+            course_session_id = self._required_string(course_created, "session_id")
         print(f"    course_session_id={course_session_id}")
 
         self._step("5", "轮询课程会话，等待专家协作和 Judge 完成")
         course = self._wait_for_session(course_session_id)
         course_state = self._required_mapping(course, "state")
+        if cat_knowledge_snapshot is not None:
+            self._validate_cat_course_handoff(
+                course_state,
+                cat_knowledge_snapshot=cat_knowledge_snapshot,
+            )
 
         self._step("6", "查询会话列表，确认课程会话可被持久化查询")
         query = urlencode(
@@ -201,10 +228,178 @@ class ApiJourney:
             "learner_session_count": len(learner_sessions.get("sessions", [])),
             "filtered_session_total": session_list.get("total", 0),
             "health": health,
+            "cat": diagnostic_summary,
         }
         print("\n完整业务流程执行成功：")
         print(json.dumps(summary, ensure_ascii=False, indent=2))
         return summary
+
+    def _run_interactive_cat(
+        self,
+        *,
+        learner_path: str,
+    ) -> tuple[str, dict[str, Any], dict[str, Any]]:
+        progress = self._request_json(
+            "POST",
+            f"/learners/{learner_path}/diagnostic-sessions",
+            json_body={
+                "learning_goal": self.config.learning_goal,
+                "education_background": self.config.education_background,
+                "responses": self.config.questionnaire_responses,
+            },
+        )
+        diagnostic_session_id = self._required_string(
+            progress, "diagnostic_session_id"
+        )
+        print(f"    diagnostic_session_id={diagnostic_session_id}")
+        print("    输入选项字母作答；输入 done 可提前结束诊断并继续生成课程。")
+
+        while progress.get("status") == "running":
+            question = self._required_mapping(progress, "current_question")
+            question_id = self._required_string(question, "question_id")
+            options = self._required_mapping(question, "options")
+            self._print_cat_question(progress, question)
+            answer, response_ms = self._read_cat_answer(options)
+            if answer == "DONE":
+                progress = self._request_json(
+                    "POST",
+                    f"/learners/{learner_path}/diagnostic-sessions/"
+                    f"{quote(diagnostic_session_id, safe='')}/complete",
+                )
+                break
+            progress = self._request_json(
+                "POST",
+                f"/learners/{learner_path}/diagnostic-sessions/"
+                f"{quote(diagnostic_session_id, safe='')}/responses",
+                json_body={
+                    "question_id": question_id,
+                    "answer": answer,
+                    "response_ms": response_ms,
+                    "idempotency_key": (
+                        f"api-journey-cat:{diagnostic_session_id}:{question_id}"
+                    )[:255],
+                },
+            )
+            self._print_cat_result(progress)
+            if (
+                self.config.cat_max_answers > 0
+                and int(progress.get("answered_questions") or 0)
+                >= self.config.cat_max_answers
+                and progress.get("status") == "running"
+            ):
+                print(
+                    f"    已达到 --cat-max-answers={self.config.cat_max_answers}，"
+                    "提前固化诊断快照。"
+                )
+                progress = self._request_json(
+                    "POST",
+                    f"/learners/{learner_path}/diagnostic-sessions/"
+                    f"{quote(diagnostic_session_id, safe='')}/complete",
+                )
+
+        if progress.get("status") != "completed":
+            raise JourneyError(f"CAT 诊断未完成：{progress}")
+        course_session_id = self._required_string(progress, "course_session_id")
+        knowledge_snapshot = progress.get("knowledge_snapshot")
+        if not isinstance(knowledge_snapshot, dict) or not knowledge_snapshot:
+            raise JourneyError("CAT 已完成，但响应缺少 knowledge_snapshot。")
+        summary = {
+            "diagnostic_session_id": diagnostic_session_id,
+            "answered_questions": int(progress.get("answered_questions") or 0),
+            "termination_reason": progress.get("termination_reason"),
+            "knowledge_node_count": len(knowledge_snapshot),
+            "course_session_id": course_session_id,
+        }
+        print(
+            "    CAT 完成："
+            f"{summary['answered_questions']} 题，"
+            f"{summary['knowledge_node_count']} 个知识节点，"
+            f"原因={summary['termination_reason']}"
+        )
+        return course_session_id, summary, knowledge_snapshot
+
+    @staticmethod
+    def _validate_cat_course_handoff(
+        course_state: dict[str, Any],
+        *,
+        cat_knowledge_snapshot: dict[str, Any],
+    ) -> None:
+        input_payload = course_state.get("input_payload")
+        diagnostic_snapshot = (
+            input_payload.get("diagnostic_snapshot")
+            if isinstance(input_payload, dict)
+            else None
+        )
+        injected_knowledge = (
+            diagnostic_snapshot.get("knowledge")
+            if isinstance(diagnostic_snapshot, dict)
+            else None
+        )
+        learner_profile = course_state.get("learner_profile")
+        dimensions = (
+            learner_profile.get("five_dimensions")
+            if isinstance(learner_profile, dict)
+            else None
+        )
+        profile_knowledge = (
+            dimensions.get("knowledge") if isinstance(dimensions, dict) else None
+        )
+        if injected_knowledge != cat_knowledge_snapshot:
+            raise JourneyError(
+                "课程 input_payload.diagnostic_snapshot.knowledge 与 CAT 快照不一致。"
+            )
+        if profile_knowledge != cat_knowledge_snapshot:
+            raise JourneyError(
+                "课程 learner_profile.five_dimensions.knowledge 与 CAT 快照不一致。"
+            )
+        print("    CAT 快照、课程输入和初始学习者画像的知识维度一致。")
+
+    def _read_cat_answer(self, options: dict[str, Any]) -> tuple[str, int]:
+        allowed = {str(key).strip().upper() for key in options}
+        while True:
+            started_at = time.monotonic()
+            try:
+                answer = self._answer_reader("    你的答案：").strip().upper()
+            except EOFError as exc:
+                raise JourneyError(
+                    "终端输入已关闭；请使用交互式终端，或传入 --cat-mode off。"
+                ) from exc
+            response_ms = max(0, int((time.monotonic() - started_at) * 1000))
+            if answer == "DONE":
+                return answer, response_ms
+            if answer in allowed:
+                return answer, response_ms
+            print(f"    无效选项，请输入 {'/'.join(sorted(allowed))}，或输入 done。")
+
+    @staticmethod
+    def _print_cat_question(
+        progress: dict[str, Any],
+        question: dict[str, Any],
+    ) -> None:
+        answered = int(progress.get("answered_questions") or 0)
+        maximum = int(progress.get("max_questions") or 40)
+        print(f"\n    CAT 第 {answered + 1}/{maximum} 题")
+        print(f"    question_id={question.get('question_id')}")
+        skills = question.get("skills")
+        if isinstance(skills, list):
+            print(f"    skills={', '.join(str(skill) for skill in skills)}")
+        print(f"    {question.get('question_text')}")
+        options = question.get("options")
+        if isinstance(options, dict):
+            for key, value in options.items():
+                print(f"      {key}. {value}")
+
+    @staticmethod
+    def _print_cat_result(progress: dict[str, Any]) -> None:
+        result = progress.get("answer_result")
+        if not isinstance(result, dict):
+            return
+        correctness = "正确" if result.get("is_correct") is True else "错误"
+        print(
+            f"    判定：{correctness}；正确答案：{result.get('correct_answer')}"
+        )
+        if result.get("explanation"):
+            print(f"    解析：{result['explanation']}")
 
     def _wait_for_session(self, session_id: str) -> dict[str, Any]:
         deadline = time.monotonic() + self.config.workflow_timeout
@@ -463,6 +658,23 @@ def _parser() -> argparse.ArgumentParser:
         type=Path,
         help="Optional UTF-8 JSON file containing a response array.",
     )
+    parser.add_argument(
+        "--education-background",
+        default="其他",
+        help="Education background used to select CAT/BKT cold-start parameters.",
+    )
+    parser.add_argument(
+        "--cat-mode",
+        choices=("interactive", "off"),
+        default="interactive",
+        help="Run terminal-interactive CAT before course generation, or skip CAT.",
+    )
+    parser.add_argument(
+        "--cat-max-answers",
+        type=int,
+        default=0,
+        help="Automatically complete CAT after N answers; 0 waits for natural termination.",
+    )
     parser.add_argument("--workflow-timeout", type=float, default=900.0)
     parser.add_argument("--poll-interval", type=float, default=2.0)
     parser.add_argument("--request-timeout", type=float, default=30.0)
@@ -485,6 +697,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.max_exercises < 1:
         print("错误：--max-exercises 必须至少为 1。", file=sys.stderr)
         return 2
+    if args.cat_max_answers < 0 or args.cat_max_answers > 40:
+        print("错误：--cat-max-answers 必须在 0 到 40 之间。", file=sys.stderr)
+        return 2
 
     learner_id = args.learner_id or (
         f"{datetime.now(UTC).strftime('api-demo-%Y%m%dT%H%M%SZ')}-"
@@ -501,6 +716,9 @@ def main(argv: list[str] | None = None) -> int:
             poll_interval=args.poll_interval,
             max_exercises=args.max_exercises,
             answer_mode=args.answer_mode,
+            education_background=args.education_background,
+            cat_mode=args.cat_mode,
+            cat_max_answers=args.cat_max_answers,
         )
         with httpx.Client(
             base_url=args.base_url.rstrip("/"), timeout=args.request_timeout

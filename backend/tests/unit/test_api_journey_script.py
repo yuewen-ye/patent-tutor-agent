@@ -99,6 +99,140 @@ def test_exercise_builder_rejects_course_without_scorable_questions() -> None:
         )
 
 
+def test_interactive_cat_submits_each_dynamic_question_and_returns_course() -> None:
+    submitted: list[tuple[str, str]] = []
+
+    def response(request: httpx.Request, payload: dict[str, Any]) -> httpx.Response:
+        return httpx.Response(200, json=payload, request=request)
+
+    def question(question_id: str, skill_id: str) -> dict[str, Any]:
+        return {
+            "question_id": question_id,
+            "skills": [skill_id],
+            "question_text": f"题目 {question_id}",
+            "options": {"A": "选项 A", "B": "选项 B"},
+        }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if request.method == "POST" and path.endswith("/diagnostic-sessions"):
+            return response(
+                request,
+                {
+                    "diagnostic_session_id": "diagnostic-1",
+                    "learner_id": "learner-demo",
+                    "status": "running",
+                    "answered_questions": 0,
+                    "max_questions": 40,
+                    "current_question": question("cat-q1", "novelty"),
+                },
+            )
+        if request.method == "POST" and path.endswith("/responses"):
+            payload = json.loads(request.content)
+            submitted.append((payload["question_id"], payload["answer"]))
+            if payload["question_id"] == "cat-q1":
+                return response(
+                    request,
+                    {
+                        "diagnostic_session_id": "diagnostic-1",
+                        "learner_id": "learner-demo",
+                        "status": "running",
+                        "answered_questions": 1,
+                        "max_questions": 40,
+                        "current_question": question("cat-q2", "inventive-step"),
+                        "answer_result": {
+                            "question_id": "cat-q1",
+                            "is_correct": True,
+                            "correct_answer": "B",
+                            "explanation": "第一题解析",
+                        },
+                    },
+                )
+            return response(
+                request,
+                {
+                    "diagnostic_session_id": "diagnostic-1",
+                    "learner_id": "learner-demo",
+                    "status": "completed",
+                    "answered_questions": 2,
+                    "max_questions": 40,
+                    "termination_reason": "所有高权重知识点状态已明确",
+                    "current_question": None,
+                    "course_session_id": "course-after-cat",
+                    "knowledge_snapshot": {
+                        "novelty": {
+                            "pl": 0.8,
+                            "ci_low": 0.5,
+                            "ci_high": 0.95,
+                            "observations": 1,
+                            "low_confidence": True,
+                            "inferred": False,
+                        }
+                    },
+                    "answer_result": {
+                        "question_id": "cat-q2",
+                        "is_correct": False,
+                        "correct_answer": "B",
+                        "explanation": "第二题解析",
+                    },
+                },
+            )
+        return httpx.Response(404, json={"detail": "not found"}, request=request)
+
+    answers = iter(["invalid", "b", "a"])
+    config = JourneyConfig(
+        learner_id="learner-demo",
+        learning_goal="learn novelty",
+        questionnaire_responses=[{"question_id": "Q1", "answer": "B"}],
+        cat_mode="interactive",
+    )
+    with httpx.Client(
+        transport=httpx.MockTransport(handler), base_url="http://testserver"
+    ) as client:
+        journey = ApiJourney(client, config, answer_reader=lambda _: next(answers))
+        course_session_id, summary, knowledge_snapshot = journey._run_interactive_cat(
+            learner_path="learner-demo"
+        )
+
+    assert course_session_id == "course-after-cat"
+    assert submitted == [("cat-q1", "B"), ("cat-q2", "A")]
+    assert summary["diagnostic_session_id"] == "diagnostic-1"
+    assert summary["answered_questions"] == 2
+    assert summary["knowledge_node_count"] == 1
+    assert knowledge_snapshot["novelty"]["pl"] == 0.8
+
+
+def test_cat_course_handoff_requires_the_authoritative_snapshot() -> None:
+    snapshot = {
+        "novelty": {
+            "pl": 0.8,
+            "ci_low": 0.5,
+            "ci_high": 0.95,
+            "observations": 1,
+            "low_confidence": True,
+            "inferred": False,
+        }
+    }
+    course_state = {
+        "input_payload": {"diagnostic_snapshot": {"knowledge": snapshot}},
+        "learner_profile": {"five_dimensions": {"knowledge": snapshot}},
+    }
+
+    ApiJourney._validate_cat_course_handoff(
+        course_state,
+        cat_knowledge_snapshot=snapshot,
+    )
+
+    course_state["learner_profile"]["five_dimensions"]["knowledge"] = {
+        "novelty": {**snapshot["novelty"], "pl": 0.3}
+    }
+    with pytest.raises(JourneyError, match="learner_profile"):
+        ApiJourney._validate_cat_course_handoff(
+            course_state,
+            cat_knowledge_snapshot=snapshot,
+        )
+
+
 def test_api_journey_calls_complete_rest_flow() -> None:
     calls: list[tuple[str, str]] = []
 

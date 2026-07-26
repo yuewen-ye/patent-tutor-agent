@@ -6,6 +6,11 @@ param(
     [string]$AnswerMode = "correct",
     [ValidateRange(1, 20)]
     [int]$MaxExercises = 3,
+    [ValidateSet("interactive", "off")]
+    [string]$CatMode = "interactive",
+    [string]$EducationBackground = "其他",
+    [ValidateRange(0, 40)]
+    [int]$CatMaxAnswers = 0,
     [ValidateRange(1, 86400)]
     [int]$WorkflowTimeout = 1500
 )
@@ -29,6 +34,9 @@ $journeyArgs = @(
     "--learner-id", $LearnerId,
     "--answer-mode", $AnswerMode,
     "--max-exercises", $MaxExercises,
+    "--cat-mode", $CatMode,
+    "--education-background", $EducationBackground,
+    "--cat-max-answers", $CatMaxAnswers,
     "--workflow-timeout", $WorkflowTimeout,
     "--output-json", $outputPath
 )
@@ -36,6 +44,7 @@ $journeyArgs = @(
 Write-Host "[api-journey] FastAPI: $BaseUrl"
 Write-Host "[api-journey] learner_id: $LearnerId"
 Write-Host "[api-journey] answer_mode: $AnswerMode"
+Write-Host "[api-journey] cat_mode: $CatMode"
 
 & uv @journeyArgs
 $journeyExitCode = $LASTEXITCODE

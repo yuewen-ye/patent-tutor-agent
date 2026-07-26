@@ -41,7 +41,8 @@ POST /learners/{learner_id}/diagnostic-sessions
 GET /learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}
 ```
 
-原有问卷提交后直接创建课程的接口仍可使用，用于兼容旧客户端和现有链路脚本。
+原有问卷提交后直接创建课程的接口仍可使用，用于兼容旧客户端；完整链路脚本默认先运行交互式
+CAT，也可以通过 `--cat-mode off` 显式跳过。
 
 ## 0. 可复现的完整链路测试
 
@@ -116,6 +117,25 @@ uv run python backend/main.py
   -MaxExercises 2
 ```
 
+脚本默认进入交互式 CAT。终端会显示服务端当前选择的题目、知识点和选项，输入 `A/B/C/D`
+作答；每次服务端完成判题和 BKT 更新后，脚本显示解析并读取下一道动态选择的题目。输入 `done`
+可以提前固化诊断快照并继续课程流程。
+
+冒烟验证时可以限制 CAT 作答数量：
+
+```powershell
+.\scripts\run-api-journey.ps1 `
+  -LearnerId cat-smoke-001 `
+  -EducationBackground "理工背景+有研发经验" `
+  -CatMaxAnswers 5
+```
+
+`CatMaxAnswers=0` 表示等待 CAT 自然终止，最多 40 题。兼容旧的问卷直达流程：
+
+```powershell
+.\scripts\run-api-journey.ps1 -CatMode off
+```
+
 如果 PowerShell 执行策略阻止本地脚本，可以只对本次进程使用：
 
 ```powershell
@@ -128,6 +148,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\run-api-journey.ps1
 uv run python backend/scripts/run_api_journey.py `
   --base-url http://127.0.0.1:8000 `
   --learner-id dbeaver-demo-001 `
+  --cat-mode interactive `
+  --education-background "理工背景+有研发经验" `
   --output-json artifacts/api-journey-dbeaver-demo-001.json
 ```
 
@@ -137,7 +159,9 @@ uv run python backend/scripts/run_api_journey.py `
 GET  /health
 GET  /health/ready
 GET  /questionnaires/onboarding
-POST /learners/{learner_id}/questionnaire-responses
+POST /learners/{learner_id}/diagnostic-sessions
+POST /learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}/responses（逐题）
+POST /learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}/complete（可选）
 GET  /sessions/{course_session_id}（轮询）
 GET  /sessions（验证持久化列表查询）
 GET  /sessions/{course_session_id}/artifacts/{artifact_path}
@@ -154,6 +178,12 @@ GET  /learners/{learner_id}/sessions
 `observed_correct`，因此会真实经过服务端判题、`attempts` 幂等写入和 BKT 更新。默认提交正确答案；
 可使用 `--answer-mode incorrect` 验证答错分支。使用 `--help` 查看超时、轮询间隔、题目数量和自定义
 问卷 JSON 等全部参数。
+
+`--answer-mode` 只控制课程生成后的练习提交，不控制 CAT；CAT 的答案始终从当前终端读取。
+脚本输出 JSON 的 `cat` 字段记录诊断会话 ID、作答数、停止原因、知识节点数量及由诊断自动创建的
+课程会话 ID。课程生成完成后，脚本还会强制校验 CAT `knowledge_snapshot`、课程
+`input_payload.diagnostic_snapshot.knowledge` 和初始画像
+`learner_profile.five_dimensions.knowledge` 完全一致；任一处不一致都会终止并返回失败。
 
 默认问卷回答为 Q1-Q22、Q47 和 Q48。脚本会读取问卷接口返回的完整 Markdown，从中提取
 `**Q数字**` 格式的题号，并在提交前确认 24 条回答都能匹配当前问卷；它不会根据题目内容自动猜答案，
