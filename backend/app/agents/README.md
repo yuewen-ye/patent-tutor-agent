@@ -19,11 +19,14 @@
 
 | 路由 | 经过的 Agent 节点 |
 |------|-------------------|
-| teach | route → diagnosis_feedback(diagnosis) → planner → expert_a/expert_b 三阶段并行 → A 整合 → judge → END 或 feedback |
+| teach | route → diagnosis_feedback(diagnosis) → planner → expert_a/expert_b 三阶段并行 → A 整合 → judge → END |
 | chat | route → retrieve_context → chat_answer |
 | diagnose | route → diagnosis |
 
 `retrieve_context` 是 chat 路径的流程节点，不是 Agent。teach 路径中，`expert_a` / `expert_b` 通过 `generate_with_tools()` 自行决定是否调用 `rag_retrieve`。
+Planner 保存完整路线和后端权威课程游标，并生成单节课 `teaching_context`；Expert A/B
+只围绕其中的 `current_node` 生成课程，向后节点只复习、向前节点只做 L1 探测。学员提交练习后，
+独立 feedback 会话由后端根据 BKT 确定是否推进游标。
 
 ## 共同约束
 

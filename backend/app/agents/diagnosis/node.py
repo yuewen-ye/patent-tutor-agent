@@ -24,6 +24,7 @@ from backend.app.learner_memory.memory import (
     save_profile_snapshot,
 )
 from backend.app.curriculum.learning_path import load_knowledge_dag
+from backend.app.curriculum.learning_progress import deterministic_next_action
 from backend.app.schemas.context import WorkflowContext
 from backend.app.schemas.state import (
     BKTUpdate,
@@ -33,6 +34,7 @@ from backend.app.schemas.state import (
     FiveDimensions,
     KnowledgeNodeState,
     LearnerProfile,
+    LearningProgressDecision,
     NonKnowledgeDimensions,
     StateDict,
     completed_event,
@@ -210,6 +212,7 @@ def _build_five_dimensions(
     knowledge: dict[str, dict[str, Any]],
     *,
     base_dimensions: object = None,
+    progress_override: object = None,
 ) -> FiveDimensions:
     agent_values: dict[str, Any] = (
         agent_dimensions.model_dump()
@@ -254,6 +257,8 @@ def _build_five_dimensions(
     for key in {"cognition", "style", "affect"}:
         if key in agent_values:
             dimensions[key] = agent_values[key]
+    if isinstance(progress_override, dict):
+        dimensions["progress"] = progress_override
     return FiveDimensions.model_validate({"knowledge": knowledge, **dimensions})
 
 
@@ -404,6 +409,8 @@ def build_feedback_phase_node(llm_client: LLMClient) -> Node:
         responses = input_payload.get("exercise_responses", [])
         bkt_updates = input_payload.get("bkt_updates", [])
         mastery_snapshot = input_payload.get("mastery_snapshot", {})
+        progress_update = input_payload.get("learning_progress_update", {})
+        progress_decision = input_payload.get("learning_progress_decision", {})
         agent_result = generate_validated_json(
             llm_client,
             messages=messages_from_prompt(
@@ -429,6 +436,7 @@ def build_feedback_phase_node(llm_client: LLMClient) -> Node:
             agent_result.learner_dimensions,
             knowledge,
             base_dimensions=current_profile.get("five_dimensions"),
+            progress_override=progress_update,
         )
         first_update = (
             bkt_updates[0]
@@ -448,10 +456,17 @@ def build_feedback_phase_node(llm_client: LLMClient) -> Node:
         feedback = FeedbackResult(
             questionnaire=agent_result.questionnaire,
             teaching_evaluation=agent_result.teaching_evaluation,
-            next_action=agent_result.next_action,
+            next_action=deterministic_next_action(
+                progress_decision if isinstance(progress_decision, dict) else {}
+            ),
             profile_update_hint=agent_result.profile_update_hint,
             five_dimensions=five_dimensions,
             bkt_update=bkt_update,
+            learning_progress=(
+                LearningProgressDecision.model_validate(progress_decision)
+                if isinstance(progress_decision, dict) and progress_decision
+                else None
+            ),
         )
         feedback_dict = feedback.model_dump()
         updated_profile = LearnerProfile(

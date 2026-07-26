@@ -346,6 +346,16 @@ def _learning_path_markdown(title: str, value: list[Any]) -> str:
 
 def _path_decision_markdown(title: str, value: dict[str, Any]) -> str:
     lines = [f"# {title}", ""]
+    lines.extend(
+        [
+            "## 本节课程游标",
+            "",
+            f"- 当前主教学节点：{value.get('current_node_id') or '无'}",
+            f"- 已完成节点：{', '.join(value.get('completed_node_ids', []) or []) or '无'}",
+            f"- 后续待学节点：{', '.join(value.get('pending_node_ids', []) or []) or '无'}",
+            "",
+        ]
+    )
     qs = value.get("question_scope") or {}
     if qs:
         lines.extend(["## 出题范围（question_scope）", ""])

@@ -336,7 +336,9 @@ GET /sessions/{course_session_id}
 重点读取 `state` 中的：
 
 - `learner_profile`：学员画像；
-- `learning_path`：学习路径；
+- `learning_path`：完整学习路线；
+- `path_decision.current_node_id`：本节课唯一主教学节点；
+- `teaching_context`：Expert A/B 实际使用的单节点活动窗口；
 - `course_package`：最终课程和习题；
 - `artifacts`：Markdown 文件列表。
 
@@ -407,7 +409,15 @@ WS  /sessions/{feedback_session_id}/events
 - `state.input_payload.mastery_snapshot` 是更新后的权威掌握度快照；
 - `state.feedback_result.five_dimensions.knowledge` 与
   `state.learner_profile_update.five_dimensions.knowledge` 都来自该快照；
+- `state.feedback_result.learning_progress` 给出 `current_node_before`、
+  `current_node_after`、`advanced`、阈值、观测数和确定性判定原因；
+- `state.learner_profile_update.five_dimensions.progress` 与上述游标判定一致；
 - Agent 原始输出不包含 `knowledge` 或 BKT 数值。
+
+默认通关条件是：本轮至少有一条当前主教学节点的直接 BKT 更新、该节点
+`P(L) >= 0.8`，并且累计直接观测数至少为 2。只回答向前探测题不会推进当前节点。
+如果未通关，后续 teach 会话继续使用同一 `current_node` 生成补强课程；通关后则从
+`current_node_after` 生成下一节课。
 
 可用以下命令验证完整闭环和三处掌握度一致性：
 

@@ -44,7 +44,7 @@ def test_agent_output_json_schemas_follow_interface_spec() -> None:
         "question_scope",
         "iteration_directive",
     }
-    assert planner_schema["properties"]["nodes"]["maxItems"] == 16
+    assert "maxItems" not in planner_schema["properties"]["nodes"]
     planner_node = planner_schema["$defs"]["PlannerPathNode"]
     assert set(planner_node["required"]) == {
         "node_id",

@@ -10,7 +10,9 @@ from langchain_core.prompts import ChatPromptTemplate
 from backend.app.core.agent_runtime_config import agent_temperature
 from backend.app.agents.common import (
     Node,
+    constrain_expert_draft_to_current_lesson,
     extract_planning_directive,
+    extract_teaching_context,
     generate_validated_json,
     load_prompt,
     messages_from_prompt,
@@ -57,8 +59,9 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
             (
                 "user",
                 "问题：{user_input}\n"
+                "学习者画像：{learner_profile}\n"
                 "路径规划指令（来自 planner）：{planning_directive}\n"
-                "学习路径（含各节点 difficulty_cap）：{learning_path}\n"
+                "本节单节点教学上下文：{teaching_context}\n"
                 "检索上下文：{retrieval_context}\n"
                 "辩论上下文：{revision_context}\n"
                 "【教学模块选择硬约束（须严格遵循，据此产出 block_plan）】{block_plan_directive}\n"
@@ -129,7 +132,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                 normalize=normalize_expert_draft_payload,
                 schema_name="ExpertARevision",
             )
-            revised = draft.model_dump()
+            revised = constrain_expert_draft_to_current_lesson(draft.model_dump(), state)
             revised["draft_stage"] = "debate"
             return {
                 "expert_a_draft": revised,
@@ -212,7 +215,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                             f"用户问题：{state['user_input']}\n"
                             f"【教学当前节点（planner 权威，硬约束）】：{current_node_id or '（未提供）'}\n"
                             f"路径规划指令（来自 planner）：{extract_planning_directive(state)}\n"
-                            f"学习路径（含各节点 difficulty_cap）：{json.dumps(state.get('learning_path', []), ensure_ascii=False)}\n"
+                            f"本节单节点教学上下文：{json.dumps(extract_teaching_context(state), ensure_ascii=False)}\n"
                             + (f"\n{block_plan_directive}\n\n" if block_plan_directive else "")
                             + f"专家A草稿：{json.dumps(state.get('expert_a_draft', {}), ensure_ascii=False)}\n"
                             f"专家B草稿：{json.dumps(state.get('expert_b_draft', {}), ensure_ascii=False)}\n"
@@ -236,7 +239,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                 normalize=normalize_expert_draft_payload,
                 schema_name="ExpertAIntegration",
             )
-            draft_dict = draft.model_dump()
+            draft_dict = constrain_expert_draft_to_current_lesson(draft.model_dump(), state)
             draft_dict["draft_stage"] = "integration"
 
             # B/C：用确定性 default 校正 LLM 的 block_plan（补漏块/删规则外块/
@@ -289,8 +292,9 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
         prompt_messages = messages_from_prompt(
             prompt,
             user_input=state["user_input"],
+            learner_profile=state.get("learner_profile", {}),
             planning_directive=extract_planning_directive(state),
-            learning_path=state.get("learning_path", []),
+            teaching_context=extract_teaching_context(state),
             retrieval_context=state.get("retrieval_context", []),
             revision_context=state.get("expert_b_draft", {}),
             block_plan_directive=_bp_dir,
@@ -308,8 +312,9 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
             messages=messages_from_prompt(
                 prompt,
                 user_input=state["user_input"],
+                learner_profile=state.get("learner_profile", {}),
                 planning_directive=extract_planning_directive(state),
-                learning_path=state.get("learning_path", []),
+                teaching_context=extract_teaching_context(state),
                 retrieval_context=retrieval_context,
                 revision_context=state.get("expert_b_draft", {}),
                 block_plan_directive=_bp_dir,
@@ -321,7 +326,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
             normalize=normalize_expert_draft_payload,
             schema_name="ExpertADraft",
         )
-        draft_dict = draft.model_dump()
+        draft_dict = constrain_expert_draft_to_current_lesson(draft.model_dump(), state)
         draft_dict["draft_stage"] = "debate"
         return {
             "expert_a_draft": draft_dict,

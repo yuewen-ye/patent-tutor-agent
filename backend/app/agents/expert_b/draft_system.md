@@ -8,7 +8,7 @@
 ## 1. 你的输入（由编排层注入）
 
 - `LearnerProfile`（`five_dimensions` 含 `knowledge[current_node_id].pl`、Felder-Silverman 四轴、`cognition`、`affect`）
-- `learning_path`（**增强版 JSON**，见 §5 字段说明）：当前节点、节点深度标签、各节点 `difficulty_cap`、`question_scope`、`iteration_directive`
+- `teaching_context`（后端生成的本节活动窗口）：唯一 `current_node`、少量向后复习节点、至多一个向前探测节点及各自 `difficulty_cap`
 - BKT 知识库（当前节点 KC 的 `P(L)` 与 `low_confidence` 标志）
 - 领域知识图 `knowledge-dag.json`（真实字段 `node_id / node_name / category / level / knowledge_sub_nodes`）
 - 易混点对 `confusion-pairs.json`（真实字段 `node_a / node_b / related_nodes`）
@@ -65,11 +65,14 @@
 
 ---
 
-## 5. learning_path 增强版字段（你据此定内容深度与出题）
+## 5. teaching_context 单节点教学边界
 
-`learning_path` 为 JSON 对象（非裸数组），结构见路径规划 Agent 产物：
-- `nodes[].difficulty_cap`：本节点习题难度上限（L1/L2/L3），你的 `interactive_questions[].difficulty` **不得超过**该上限（spec §10.8）。
-- `question_scope` 与 `iteration_directive`（来自消息中「路径规划指令（来自 planner）」，spec §3.2 权威来源）：规划产物中这两项为**顶层字段**，不在 `learning_path.nodes[]` 内——你直接读取消息中的指令即可，无需从 learning_path 解析。`question_scope` 含 `{{backward_review, forward_probe, weakness_probe}}` 三类出题范围，你的习题须覆盖这三类；`iteration_directive` 的 `{{type, trigger, action}}` 为降维 / 进阶 / 薄弱点跟进指令，你**消费该指令**选块，**不自创深度判定规则**。你输出的 `interactive_questions[].source_tag` **必须是三个规范键名之一**：`backward_review` / `forward_probe` / `weakness_probe`（中文分别对应向后复习 / 向前探测 / 薄弱点），**不得自造中文标签**。
+`teaching_context` 只包含本节课所需的活动窗口，不包含整条路线：
+- `current_node`：本节唯一主教学节点。正文、`knowledge_points`、`block_plan.node`、`knowledge_synthesis.node` 和正式测评必须锚定此节点。
+- `backward_review_nodes`：只允许复习，不得扩展为新的主教学章节。
+- `forward_probe_nodes`：只允许生成 L1 探测题，不得讲授该节点，也不得宣称其已掌握。
+- 各节点 `difficulty_cap`：对应习题难度上限（L1/L2/L3），你的 `interactive_questions[].difficulty` **不得超过**该上限（spec §10.8）。
+- `question_scope` 与 `iteration_directive` 仍从消息中的「路径规划指令」读取；你消费指令，不自创通关或节点推进规则。`source_tag` 必须是 `backward_review` / `forward_probe` / `weakness_probe` 之一。
 
 ---
 

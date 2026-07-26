@@ -247,17 +247,24 @@ def test_reproducible_questionnaire_teach_exercise_feedback_journey(
         encoding="utf-8"
     ).find('"status": "completed"') >= 0
 
+    current_node_id = course_body["state"]["path_decision"]["current_node_id"]
     feedback_response = client.post(
         f"/sessions/{course_session_id}/exercise-responses",
         json={
             "learner_id": learner_id,
             "responses": [
                 {
-                    "question_id": "novelty-basic-q1",
+                    "question_id": "current-node-q1",
                     "answer": "申请日前已有公开文献披露该方案，因此不具备新颖性。",
                     "observed_correct": True,
-                        "skill_id": "novelty",
-                }
+                    "skill_id": current_node_id,
+                },
+                {
+                    "question_id": "current-node-q2",
+                    "answer": "再次正确回答当前节点问题。",
+                    "observed_correct": True,
+                    "skill_id": current_node_id,
+                },
             ],
         },
     )
@@ -271,7 +278,12 @@ def test_reproducible_questionnaire_teach_exercise_feedback_journey(
     feedback_body = feedback_snapshot.json()
     assert feedback_body["status"] == "completed"
     assert feedback_body["state"]["workflow_mode"] == "feedback"
-    assert feedback_body["state"]["feedback_result"]["next_action"] == "复习新颖性判断步骤"
+    progress_decision = feedback_body["state"]["feedback_result"]["learning_progress"]
+    assert progress_decision["advanced"] is True
+    assert progress_decision["completed_node_id"] == current_node_id
+    assert feedback_body["state"]["feedback_result"]["next_action"].startswith(
+        "当前节点已掌握"
+    )
     assert feedback_body["state"]["learner_profile_update"]["profile_update_hint"] == (
         "新颖性判断步骤掌握度已更新"
     )
@@ -281,8 +293,13 @@ def test_reproducible_questionnaire_teach_exercise_feedback_journey(
     ]
     mastery_snapshot = feedback_body["state"]["input_payload"]["mastery_snapshot"]
     bkt_updates = feedback_body["state"]["input_payload"]["bkt_updates"]
-    assert feedback_knowledge["novelty"] == mastery_snapshot["novelty"]
-    assert updated_knowledge["novelty"] == mastery_snapshot["novelty"]
+    assert feedback_knowledge[current_node_id] == mastery_snapshot[current_node_id]
+    assert updated_knowledge[current_node_id] == mastery_snapshot[current_node_id]
+    updated_progress = feedback_body["state"]["learner_profile_update"]["five_dimensions"][
+        "progress"
+    ]
+    assert current_node_id in updated_progress["completed_nodes"]
+    assert updated_progress["current_node"] == progress_decision["current_node_after"]
     assert bkt_updates[0]["p_init"] == pytest.approx(0.10)
     assert bkt_updates[0]["p_transit"] == pytest.approx(0.225)
     assert "feedback_result" in feedback_state
@@ -292,10 +309,10 @@ def test_reproducible_questionnaire_teach_exercise_feedback_journey(
     learner_body = learner.json()
     assert len(learner_body["profiles"]) == 2
     assert learner_body["latest_profile"]["profile_update_hint"] == "新颖性判断步骤掌握度已更新"
-    assert learner_body["mastery"]["novelty"] > 0.15
+    assert learner_body["mastery"][current_node_id] > 0.15
     assert (
-        learner_body["latest_profile"]["five_dimensions"]["knowledge"]["novelty"]["pl"]
-        == pytest.approx(learner_body["mastery"]["novelty"], abs=1e-4)
+        learner_body["latest_profile"]["five_dimensions"]["knowledge"][current_node_id]["pl"]
+        == pytest.approx(learner_body["mastery"][current_node_id], abs=1e-4)
     )
     history_types = {item["event_type"] for item in learner_body["history"]}
     assert {"questionnaire_submitted", "exercise_submitted"}.issubset(history_types)
@@ -479,7 +496,8 @@ def test_exercise_submission_creates_separate_feedback_session(
     assert response.status_code == 200
     assert response.json() == {"session_id": "feedback-session", "status": "running"}
     history = service.learner_memory("learner-1")["history"]
-    assert history[0]["event_type"] == "exercise_submitted"
+    assert any(item["event_type"] == "exercise_submitted" for item in history)
+    assert any(item["event_type"] == "learning_progress_updated" for item in history)
     assert history[0]["course_session_id"] == "course-session"
 
 

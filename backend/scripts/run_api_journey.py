@@ -342,6 +342,15 @@ class ApiJourney:
         self._step("5", "轮询课程会话，等待专家协作和 Judge 完成")
         course = self._wait_for_session(course_session_id)
         course_state = self._required_mapping(course, "state")
+        path_decision = course_state.get("path_decision")
+        learning_path = course_state.get("learning_path")
+        if isinstance(path_decision, dict):
+            print(
+                "    课程路线："
+                f"共 {len(learning_path) if isinstance(learning_path, list) else 0} 个节点；"
+                f"本节={path_decision.get('current_node_id') or '无'}；"
+                f"待学={len(path_decision.get('pending_node_ids') or [])}"
+            )
         if cat_knowledge_snapshot is not None:
             self._validate_cat_course_handoff(
                 course_state,
@@ -392,6 +401,17 @@ class ApiJourney:
         feedback_state = self._required_mapping(feedback, "state")
         if "feedback_result" not in feedback_state:
             raise JourneyError("反馈会话已完成，但 state.feedback_result 不存在。")
+        feedback_result = self._required_mapping(feedback_state, "feedback_result")
+        progress_decision = feedback_result.get("learning_progress")
+        if isinstance(progress_decision, dict):
+            print(
+                "    教学游标："
+                f"{progress_decision.get('current_node_before') or '无'}"
+                f" -> {progress_decision.get('current_node_after') or '路径完成'}；"
+                f"advanced={progress_decision.get('advanced')}；"
+                f"P(L)={progress_decision.get('mastery_probability')}；"
+                f"observations={progress_decision.get('observations')}"
+            )
 
         self._step("10", "读取反馈 Markdown Artifact")
         feedback_artifact = _find_artifact(
@@ -431,6 +451,7 @@ class ApiJourney:
             "filtered_session_total": session_list.get("total", 0),
             "health": health,
             "cat": diagnostic_summary,
+            "learning_progress": progress_decision,
         }
         print("\n完整业务流程执行成功：")
         print(json.dumps(summary, ensure_ascii=False, indent=2))

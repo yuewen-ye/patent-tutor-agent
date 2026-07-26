@@ -285,7 +285,7 @@ START → _init → route ──┬── diagnose: diagnosis_feedback[diagnosis
 
 | 路由 | 触发条件 | 路径 | LLM 调用次数 | 典型耗时 |
 |------|---------|------|-------------|---------|
-| **teach** | "系统学习"、"学习路径"、"规划" | 诊断→确定性规划→专家按需RAG→A/B并行协作→A整合→Judge条件分支 | ~10 次 | 1-3 分钟 |
+| **teach** | "系统学习"、"学习路径"、"规划" | 诊断→Planner完整路线提案/确定性降级→单节点专家课程→Judge条件分支 | ~11 次 | 1-3 分钟 |
 | **chat** | 单点问答、定义、对比 | RAG→直接回答 | ~1 次 | 5-30 秒 |
 | **diagnose** | "诊断"、"薄弱点"、"评估" | 诊断→结束 | ~1 次 | 2-5 秒 |
 
@@ -295,7 +295,7 @@ START → _init → route ──┬── diagnose: diagnosis_feedback[diagnosis
 |------|------|------|-----------------|
 | `route` | LLM 调用 + 本地兜底 | 分类用户意图 teach/chat/diagnose；明显学习/诊断请求会覆盖误路由 | `agents.route` |
 | `diagnosis_feedback` | LLM 调用 + Store | diagnosis 阶段读取问卷/历史画像；feedback 阶段生成问卷、下一步动作和画像更新 | `agents.diagnosis_feedback` |
-| `planner` | 确定性算法 + Store | 从 MySQL 画像/BKT 和静态双轴计算个性化路径，不调用 LLM | — |
+| `planner` | LLM + 确定性校正/降级 + Store | 从完整双图、画像和 BKT 规划完整路线；后端确定本节唯一当前节点 | `llm.default_provider` |
 | `retrieve_context` | 无 LLM | chat 路径固定检索法条上下文 | — |
 | `expert_a` | LLM + Tool 调用 | 保守严谨、法条优先；承担草稿、互评、修订和整合阶段 | `agents.expert_a` |
 | `expert_b` | LLM + Tool 调用 | 生动灵活、面向案例；承担草稿、互评和修订阶段 | `agents.expert_b` |
@@ -317,6 +317,11 @@ Planner 计算路径时组合两类数据：
 例如静态图规定“专利授权实质条件”是“新颖性”的前置知识，而某学员的新颖性掌握度只有
 `0.30`，Planner 就会保留必要前置节点并提高相关混淆对的个人风险。静态 JSON 在进程内缓存，
 修改后需要重启 FastAPI、CLI 或 LangGraph Dev 进程。
+
+完整 `learning_path` 只用于导航。后端在画像 `five_dimensions.progress` 中持久化
+`completed_nodes/current_node/pending_nodes`，Expert A/B 每次只消费一个主教学节点及少量
+复习/前探上下文。练习反馈达到 `P(L) >= 0.8`、至少 2 次累计观测且本轮存在当前节点直接证据后，
+后端才推进到下一节点；否则下一节继续强化当前节点。
 
 ## 快速命令
 

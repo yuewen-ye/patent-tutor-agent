@@ -200,6 +200,8 @@ def save_profile_snapshot(
     runtime: Runtime[WorkflowContext] | None,
     state: StateDict,
     profile: dict[str, Any],
+    *,
+    source: str = "diagnosis",
 ) -> None:
     learner_id = _learner_id(runtime)
     store = getattr(runtime, "store", None) if runtime is not None else None
@@ -216,7 +218,7 @@ def save_profile_snapshot(
                 session_id=state["session_id"],
                 profile=payload,
                 key=state["session_id"],
-                source="diagnosis",
+                source=source,
             )
         except TypeError:
             save_profile(

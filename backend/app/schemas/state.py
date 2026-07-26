@@ -228,7 +228,7 @@ class IterationDirective(ContractModel):
 class PlannerAgentResult(ContractModel):
     """Validated planner proposal; deterministic code still owns the final path decision."""
 
-    nodes: list[PlannerPathNode] = Field(min_length=1, max_length=16)
+    nodes: list[PlannerPathNode] = Field(min_length=1)
     question_scope: QuestionScope
     iteration_directive: IterationDirective
 
@@ -420,6 +420,22 @@ class TeachingEvaluation(ContractModel):
     feeds: str | None = None
 
 
+class LearningProgressDecision(ContractModel):
+    """Backend-owned result of applying BKT evidence to the active roadmap cursor."""
+
+    current_node_before: str | None = None
+    current_node_after: str | None = None
+    completed_node_id: str | None = None
+    advanced: bool
+    path_completed: bool
+    mastery_probability: float | None = Field(default=None, ge=0.0, le=1.0)
+    observations: int = Field(ge=0)
+    mastery_threshold: float = Field(ge=0.0, le=1.0)
+    minimum_observations: int = Field(ge=1)
+    direct_evidence: bool
+    reason: str
+
+
 class FeedbackResult(ContractModel):
     questionnaire: list[str] = Field(min_length=1)
     teaching_evaluation: TeachingEvaluation | None = None
@@ -427,6 +443,7 @@ class FeedbackResult(ContractModel):
     profile_update_hint: str
     five_dimensions: FiveDimensions
     bkt_update: BKTUpdate | None = None
+    learning_progress: LearningProgressDecision | None = None
     markdown_artifact: MarkdownArtifact | None = None
 
 
@@ -551,6 +568,7 @@ class StateDict(TypedDict):
     expert_phase: NotRequired[Literal["draft", "cross_review", "revision", "integration"]]
     dual_axis_snapshot: NotRequired[dict[str, Any]]
     path_decision: NotRequired[dict[str, Any]]
+    teaching_context: NotRequired[dict[str, Any]]
     expert_a_cross_review: NotRequired[dict[str, Any]]
     expert_b_cross_review: NotRequired[dict[str, Any]]
     expert_a_revision: NotRequired[dict[str, Any]]

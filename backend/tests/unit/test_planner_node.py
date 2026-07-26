@@ -6,7 +6,7 @@ from backend.app.agents.planner.node import (
     build_planner_node,
 )
 from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinition
-from backend.app.schemas.state import StateDict
+from backend.app.schemas.state import PlannerAgentResult, StateDict
 
 pytestmark = pytest.mark.unit
 
@@ -140,6 +140,36 @@ def test_planner_semantic_guard_rejects_unknown_or_topologically_invalid_nodes()
         )
 
 
+def test_planner_contract_accepts_complete_route_longer_than_sixteen_nodes() -> None:
+    result = PlannerAgentResult.model_validate(
+        {
+            "nodes": [
+                {
+                    "node_id": f"node-{index}",
+                    "node_name": f"节点 {index}",
+                    "duration_min": 20,
+                    "strategy": "按路线学习",
+                    "prerequisites": [],
+                    "difficulty_cap": "L2",
+                }
+                for index in range(17)
+            ],
+            "question_scope": {
+                "backward_review": [],
+                "forward_probe": [],
+                "weakness_probe": [],
+            },
+            "iteration_directive": {
+                "type": "无",
+                "trigger": "首轮",
+                "action": "等待反馈",
+            },
+        }
+    )
+
+    assert len(result.nodes) == 17
+
+
 def test_planner_uses_llm_with_prompt() -> None:
     client = PlannerLLMClient()
     node = build_planner_node(client)
@@ -169,6 +199,37 @@ def test_planner_uses_llm_with_prompt() -> None:
     assert result["path_decision"]["algorithm"] == "llm_astar"
     assert result["path_decision"]["question_scope"]["backward_review"]
     assert result["path_decision"]["iteration_directive"]["type"] == "降维"
+
+
+def test_planner_uses_persisted_progress_as_the_single_lesson_cursor() -> None:
+    client = PlannerLLMClient()
+    node = build_planner_node(client)
+    state: StateDict = {
+        "session_id": "continued-course",
+        "user_input": "继续学习专利制度",
+        "events": [],
+        "learner_profile": {
+            "learning_goal": "学习专利制度",
+            "five_dimensions": {
+                "knowledge": {},
+                "progress": {
+                    "completed_nodes": ["patent-law-foundation"],
+                    "current_node": "patent-system-overview",
+                    "pending_nodes": [],
+                    "overall_completion_ratio": 0.5,
+                },
+            },
+        },
+    }
+
+    result = node(state)
+
+    assert result["path_decision"]["current_node_id"] == "patent-system-overview"
+    assert result["teaching_context"]["current_node"]["node_id"] == "patent-system-overview"
+    assert result["path_decision"]["completed_node_ids"] == ["patent-law-foundation"]
+    assert result["learner_profile"]["five_dimensions"]["progress"]["current_node"] == (
+        "patent-system-overview"
+    )
 
 
 def test_planner_falls_back_to_deterministic_on_llm_failure() -> None:

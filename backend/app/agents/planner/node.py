@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from copy import deepcopy
 from typing import Any
 
 from langgraph.runtime import Runtime
@@ -17,7 +18,15 @@ from backend.app.curriculum.learning_path import (
     load_confusion_pairs,
     load_knowledge_dag,
 )
-from backend.app.learner_memory.memory import load_profile_memories
+from backend.app.curriculum.learning_progress import (
+    build_teaching_context,
+    initialize_learning_progress,
+    normalize_question_scope,
+)
+from backend.app.learner_memory.memory import (
+    load_profile_memories,
+    save_profile_snapshot,
+)
 from backend.app.schemas.context import WorkflowContext
 from backend.app.schemas.state import (
     LearningPathItem,
@@ -38,7 +47,10 @@ def _knowledge_pl_map(profile: dict[str, Any]) -> dict[str, Any]:
     if isinstance(current_mastery, dict):
         for node_id, probability in current_mastery.items():
             if probability is not None:
-                knowledge[str(node_id)] = {"pl": float(probability)}
+                current = knowledge.get(str(node_id))
+                merged = dict(current) if isinstance(current, dict) else {}
+                merged["pl"] = float(probability)
+                knowledge[str(node_id)] = merged
     return knowledge
 
 
@@ -179,7 +191,11 @@ def build_planner_node(llm_client: LLMClient) -> Node:
         }
         deterministic_path = [
             LearningPathItem.model_validate(it)
-            for it in compute_learning_path(profile=profile, learning_goal=learning_goal)
+            for it in compute_learning_path(
+                profile=profile,
+                learning_goal=learning_goal,
+                max_nodes=max(1, len(knowledge.get("nodes", []))),
+            )
         ]
         deterministic_candidate = [
             {
@@ -195,7 +211,7 @@ def build_planner_node(llm_client: LLMClient) -> Node:
         user_text = (
             "# 双知识图（编排层注入，只读不改）\n"
             f"{json.dumps(planner_graph, ensure_ascii=False, separators=(',', ':'))}\n\n"
-            "# 确定性 A* 候选路径（可优化，但不得照抄错误或扩展到 16 个以上节点）\n"
+            "# 确定性 A* 完整候选路线（可优化，但必须保留完整、拓扑合法的学习路线）\n"
             f"{json.dumps(deterministic_candidate, ensure_ascii=False, separators=(',', ':'))}\n\n"
             "# 学习者画像\n"
             f"{json.dumps(profile, ensure_ascii=False, separators=(',', ':'))}\n\n"
@@ -259,15 +275,63 @@ def build_planner_node(llm_client: LLMClient) -> Node:
             it.model_copy(update={"difficulty_cap": _difficulty_cap_for(it.node_id, pl_map, weak_node_ids)})
             for it in path
         ]
-        selected = path[0].node_id if path else None
+        serialized_path = [it.model_dump() for it in path]
+        five_dimensions = profile.get("five_dimensions")
+        existing_progress = (
+            five_dimensions.get("progress")
+            if isinstance(five_dimensions, dict)
+            else None
+        )
+        progress = initialize_learning_progress(
+            existing_progress=existing_progress,
+            learning_path=serialized_path,
+            mastery_snapshot=pl_map,
+        )
+        question_scope = normalize_question_scope(
+            learning_path=serialized_path,
+            progress=progress,
+            proposed_scope=question_scope,
+        )
+        teaching_context = build_teaching_context(
+            learning_path=serialized_path,
+            progress=progress,
+            question_scope=question_scope,
+        )
+        selected = progress.get("current_node")
+
+        updated_profile = deepcopy(profile)
+        updated_dimensions = dict(updated_profile.get("five_dimensions") or {})
+        updated_dimensions["progress"] = progress
+        updated_profile["five_dimensions"] = updated_dimensions
+        save_profile_snapshot(
+            runtime,
+            state,
+            updated_profile,
+            source="planner",
+        )
         return {
-            "learning_path": [it.model_dump() for it in path],
+            "learner_profile": updated_profile,
+            "learning_path": serialized_path,
             "dual_axis_snapshot": dual_axis,
+            "teaching_context": teaching_context,
             "path_decision": {
                 "current_node_id": selected,
                 "algorithm": algorithm,
                 "question_scope": question_scope,
                 "iteration_directive": iteration_directive,
+                "completed_node_ids": progress["completed_nodes"],
+                "pending_node_ids": progress["pending_nodes"],
+                "roadmap_node_ids": [item["node_id"] for item in serialized_path],
+                "lesson_scope": {
+                    "primary_teaching_node_id": selected,
+                    "review_node_ids": [
+                        item["node_id"] for item in question_scope["backward_review"]
+                        if item["node_id"] != selected
+                    ],
+                    "forward_probe_node_ids": [
+                        item["node_id"] for item in question_scope["forward_probe"]
+                    ],
+                },
                 **({"fallback_reason": fallback_reason} if fallback_reason else {}),
             },
             "events": [completed_event("planner", f"planned learning path ({algorithm})")],

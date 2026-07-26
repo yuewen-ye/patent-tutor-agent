@@ -17,8 +17,8 @@
 | `chat_answer` | 严格 JSON Schema | `ChatAnswer` |
 
 Provider 只能经 `AgentLLMRouter` 注入。Planner 使用默认 Provider，并接收完整知识 DAG、
-完整易混淆图及本地 A* 候选路径；其 LLM 提案最多包含 16 个节点，且必须通过真实节点、
-去重和先修顺序校验。校验失败时回退到确定性路径算法，
+完整易混淆图及本地 A* 完整候选路线；其 LLM 提案表示完整学习路线，不再用 16 个节点截断，
+但必须通过真实节点、去重和先修顺序校验。校验失败时回退到确定性路径算法，
 `path_decision.fallback_reason` 保存降级原因，最终路径仍由后端校正并负责。
 
 CAT/BKT 诊断引擎也不是 LLM Agent 或 LangGraph 节点。它位于 FastAPI 服务层，负责多轮选题、
@@ -39,7 +39,11 @@ CAT/BKT 诊断引擎也不是 LLM Agent 或 LangGraph 节点。它位于 FastAPI
 | `workflow_status` | running/completed/failed/canceled | 会话状态 |
 | `input_payload` | object | 问卷或练习提交 |
 
-业务字段：`intent`、`learner_profile`、`learning_path`、`dual_axis_snapshot`、`path_decision`、`retrieval_context`、`expert_a_draft`、`expert_b_draft`、`expert_a_cross_review`、`expert_b_cross_review`、`expert_a_revision`、`expert_b_revision`、`course_package`、`judge_report`、`feedback_result`、`learner_profile_update`、`grading_report`、`chat_answer`。
+业务字段：`intent`、`learner_profile`、`learning_path`、`dual_axis_snapshot`、`path_decision`、
+`teaching_context`、`retrieval_context`、`expert_a_draft`、`expert_b_draft`、
+`expert_a_cross_review`、`expert_b_cross_review`、`expert_a_revision`、`expert_b_revision`、
+`course_package`、`judge_report`、`feedback_result`、`learner_profile_update`、
+`grading_report`、`chat_answer`。
 
 阶段字段：
 
@@ -85,6 +89,12 @@ Judge 的 `decision` 是图分支条件。`accept` 和 `accept_with_minor_revisi
 `LearnerProfile`。`progress` 同样由后端生成：初始诊断使用空课程进度，反馈阶段沿用后端历史
 进度，模型不得生成或覆盖。教育背景同样以诊断会话记录为准。
 
+Planner 生成完整 `learning_path` 后，后端把首个尚未掌握的拓扑节点写入
+`five_dimensions.progress.current_node`，其余未完成节点写入 `pending_nodes`；CAT/BKT 已有
+充分观测且 `P(L) >= 0.8` 的节点进入 `completed_nodes`。`path_decision.current_node_id`
+必须与画像游标一致。Expert A/B 不消费整条详细路线，只消费后端生成的
+`teaching_context`：一个主教学节点、少量向后复习节点和至多一个 L1 向前探测节点。
+
 兼容问卷入口中，原始 `input_payload.questionnaire_responses` 保留用于审计；服务层根据版本化问卷
 定义生成 `input_payload.questionnaire_context`，为每条回答补充题目正文、选项和已选选项正文。
 旧会话缺少上下文时才回退到原始回答。
@@ -100,6 +110,11 @@ Judge 的 `decision` 是图分支条件。`accept` 和 `accept_with_minor_revisi
 `knowledge_level` 和 `weak_points`，并保存完整的新画像。因此反馈结果、画像和持久化 mastery
 使用同一个权威快照。
 
+反馈入口还会确定性更新学习游标。只有本轮存在当前主教学节点的直接 BKT 更新，并且该节点
+`P(L) >= 0.8`、累计直接观测数不少于 2，后端才把它移入 `completed_nodes` 并将游标推进到
+下一个待学节点。向前探测题可以更新下一节点的 BKT，但不能完成当前节点或提前完成下一节点。
+判定结果写入 `FeedbackResult.learning_progress`，并覆盖模型建议的最终 `next_action`。
+
 历史画像只用于沿用非知识维度；其 `five_dimensions.knowledge` 不作为掌握度来源，避免旧版本
 由 LLM 生成的知识值继续传播。
 
@@ -108,7 +123,7 @@ Planner 必须：
 1. 优先读取 Store 中该学员的最新画像。
 2. 在 Store 支持 `mastery(learner_id)` 时读取 BKT 掌握度。
 3. 用静态知识 DAG 与静态混淆对生成双轴快照。
-4. 由确定性算法计算学习路径，禁止让 LLM 覆盖最终路径。
+4. 校验 Planner 的完整路线提案；提案失败时使用确定性 A* 路线，并由后端确定当前课程游标。
 
 ## 5. Agent 输出校验
 

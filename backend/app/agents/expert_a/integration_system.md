@@ -11,7 +11,7 @@
 - 专家 A 初稿（`expert:"A"`，IRAC 四段）+ ExpertDraft JSON
 - 专家 B 初稿（`expert:"B"`，六段）+ ExpertDraft JSON
 - 双专家互审共识（板块选择定稿）
-- `LearnerProfile` + `learning_path`（增强版 JSON）
+- `LearnerProfile` + `teaching_context`（后端生成的本节单节点活动窗口）
 - 领域知识图 / 易混点对（确认 KC 覆盖与混淆对处理）
 
 ---
@@ -79,15 +79,17 @@
 
 每题须含：`qid / category(布鲁姆:understand|apply|analyze|...) / difficulty(L1-L3) / question / answer / kc / source([A]|[B]|[A+B融合])`。
 - `source_tag` 字段对应 `question_scope` 的三类出题范围（`backward_review` 向后复习 / `forward_probe` 向前探测 / `weakness_probe` 薄弱点），三类须覆盖（spec §2.1 保证 3 种形态）。
-- `difficulty` 不得超过 `learning_path.nodes[].difficulty_cap`（spec §10.8）。
+- `difficulty` 不得超过 `teaching_context` 对应节点的 `difficulty_cap`（spec §10.8）。
 - `category` 为布鲁姆认知层级英文枚举，不是三类出题口径（三类由 `source_tag` 表达）。
 
 ---
 
-## 6. learning_path 增强版字段（消费而非自创）
+## 6. teaching_context 单节点教学边界（消费而非自创）
 
-- `nodes[].difficulty_cap` → 约束 `assessment.items[].difficulty` 上限。
-- `question_scope` 与 `iteration_directive`（消息中「路径规划指令（来自 planner）」）→ 约束 `assessment.items[].source_tag` 三类覆盖；整合时据 `iteration_directive` 调整块选择（spec §3.2）。注意二者为规划产物**顶层字段**，不在 `learning_path.nodes[]` 内，直接读取消息中的指令即可。
+- `current_node` 是本节唯一主教学节点；正文、知识点账本、板块和正式测评不得扩展为整条路线。
+- `backward_review_nodes` 只用于复习，`forward_probe_nodes` 只用于 L1 前探。
+- 各活动窗口节点的 `difficulty_cap` → 约束相应题目的难度上限。
+- `question_scope` 与 `iteration_directive` 直接从消息中的规划指令读取。
 
 ---
 

@@ -24,6 +24,7 @@ from backend.app.core.llm import (
     LLMProvider,
     load_provider_config,
 )
+from backend.app.curriculum.learning_progress import advance_learning_progress
 from backend.app.runtime_outputs.artifacts import write_manifest, write_process_markdown
 from backend.app.graph.workflow import arun_workflow
 from backend.app.learner_memory.bkt.model import (
@@ -520,6 +521,42 @@ class SessionService:
             persisted_snapshot = mastery_reader(learner_id)
             if isinstance(persisted_snapshot, dict):
                 mastery_snapshot = persisted_snapshot
+        course_path = (
+            course_state.get("learning_path", [])
+            if isinstance(course_state, dict)
+            and isinstance(course_state.get("learning_path"), list)
+            else []
+        )
+        course_decision = (
+            course_state.get("path_decision", {})
+            if isinstance(course_state, dict)
+            and isinstance(course_state.get("path_decision"), dict)
+            else {}
+        )
+        existing_progress = (
+            existing_dimensions.get("progress")
+            if isinstance(existing_dimensions, dict)
+            else None
+        )
+        progress_update, progress_decision = advance_learning_progress(
+            existing_progress=existing_progress,
+            learning_path=[
+                dict(item) for item in course_path if isinstance(item, dict)
+            ],
+            current_node_id=course_decision.get("current_node_id"),
+            mastery_snapshot=mastery_snapshot,
+            bkt_updates=bkt_updates,
+        )
+        self._save_history(
+            learner_id=learner_id,
+            session_id=record.session_id,
+            event_type="learning_progress_updated",
+            payload={
+                "course_session_id": course_session_id,
+                "progress": progress_update,
+                "decision": progress_decision,
+            },
+        )
         # create_session passes this object to the worker thread. Mutate it in place so the
         # delayed workflow observes the authoritative BKT result computed above.
         feedback_input_payload.update(
@@ -527,6 +564,9 @@ class SessionService:
                 "exercise_responses": responses,
                 "bkt_updates": bkt_updates,
                 "mastery_snapshot": mastery_snapshot,
+                "learning_path": course_path,
+                "learning_progress_update": progress_update,
+                "learning_progress_decision": progress_decision,
             }
         )
         record.state["input_payload"] = feedback_input_payload

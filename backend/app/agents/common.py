@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any, TypeVar, cast
 
@@ -525,7 +525,7 @@ def normalize_expert_draft_payload(raw: object) -> object:
     return normalized
 
 
-def extract_planning_directive(state: dict[str, Any]) -> str:
+def extract_planning_directive(state: Mapping[str, Any]) -> str:
     """从 path_decision 提取路径规划指令（question_scope / iteration_directive），供专家消费。
 
     提示词要求专家从 learning_path 读取这些指令，但 planner 实际写入 path_decision，
@@ -542,6 +542,123 @@ def extract_planning_directive(state: dict[str, Any]) -> str:
     if it:
         parts.append(f"iteration_directive（迭代指令）：{json.dumps(it, ensure_ascii=False)}")
     return "\n".join(parts)
+
+
+def extract_teaching_context(state: Mapping[str, Any]) -> dict[str, Any]:
+    """Return the backend-owned single-lesson window for teaching Agents."""
+
+    context = state.get("teaching_context")
+    if isinstance(context, dict) and context.get("current_node_id"):
+        return dict(context)
+    path = state.get("learning_path")
+    path_items = [dict(item) for item in path if isinstance(item, dict)] if isinstance(path, list) else []
+    decision = state.get("path_decision")
+    decision_values = dict(decision) if isinstance(decision, dict) else {}
+    current_id = str(decision_values.get("current_node_id") or "")
+    current = next(
+        (item for item in path_items if str(item.get("node_id") or "") == current_id),
+        path_items[0] if path_items else None,
+    )
+    if not current_id and current:
+        current_id = str(current.get("node_id") or "")
+    return {
+        "current_node_id": current_id or None,
+        "current_node": current,
+        "backward_review_nodes": [],
+        "forward_probe_nodes": [],
+        "weakness_probe_nodes": [],
+        "lesson_policy": {
+            "primary_teaching_nodes": [current_id] if current_id else [],
+            "review_nodes_are_not_new_teaching_targets": True,
+            "forward_probe_does_not_complete_next_node": True,
+        },
+    }
+
+
+def constrain_expert_draft_to_current_lesson(
+    draft: dict[str, Any],
+    state: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Deterministically anchor structured teaching output to one primary node."""
+
+    constrained = dict(draft)
+    context = extract_teaching_context(state)
+    current_id = str(context.get("current_node_id") or "")
+    if not current_id:
+        return constrained
+    current = context.get("current_node")
+    current_name = (
+        str(current.get("node_name") or current_id)
+        if isinstance(current, dict)
+        else current_id
+    )
+
+    knowledge_points = constrained.get("knowledge_points")
+    if isinstance(knowledge_points, list) and knowledge_points:
+        constrained["knowledge_points"] = [
+            {
+                **item,
+                "node_id": current_id,
+            }
+            for item in knowledge_points
+            if isinstance(item, dict)
+        ] or [{"node_id": current_id, "kc_name": current_name}]
+    else:
+        constrained["knowledge_points"] = [{"node_id": current_id, "kc_name": current_name}]
+
+    block_plan = constrained.get("block_plan")
+    if isinstance(block_plan, dict):
+        constrained["block_plan"] = {**block_plan, "node": current_id}
+
+    synthesis = constrained.get("knowledge_synthesis")
+    if isinstance(synthesis, dict):
+        constrained["knowledge_synthesis"] = {**synthesis, "node": current_id}
+
+    assessment = constrained.get("assessment")
+    if isinstance(assessment, dict) and isinstance(assessment.get("items"), list):
+        constrained["assessment"] = {
+            **assessment,
+            "items": [
+                {**item, "kc": current_id}
+                for item in assessment["items"]
+                if isinstance(item, dict)
+            ],
+        }
+
+    decision = state.get("path_decision")
+    scope = decision.get("question_scope") if isinstance(decision, dict) else {}
+    allowed_by_source: dict[str, list[str]] = {}
+    if isinstance(scope, dict):
+        for source_tag in ("backward_review", "forward_probe", "weakness_probe"):
+            items = scope.get(source_tag)
+            allowed_by_source[source_tag] = [
+                str(item.get("node_id"))
+                for item in items
+                if isinstance(item, dict) and item.get("node_id")
+            ] if isinstance(items, list) else []
+
+    questions = constrained.get("interactive_questions")
+    if isinstance(questions, list):
+        normalized_questions: list[dict[str, Any]] = []
+        for question in questions:
+            if not isinstance(question, dict):
+                continue
+            source_tag = str(question.get("source_tag") or "backward_review")
+            if source_tag not in allowed_by_source:
+                source_tag = "backward_review"
+            allowed = allowed_by_source.get(source_tag) or [current_id]
+            requested_node = str(question.get("kc_node_id") or "")
+            node_id = requested_node if requested_node in allowed else allowed[0]
+            normalized_questions.append(
+                {
+                    **question,
+                    "source_tag": source_tag,
+                    "kc_node_id": node_id,
+                }
+            )
+        constrained["interactive_questions"] = normalized_questions
+
+    return constrained
 
 
 def normalize_cross_review_payload(raw: object) -> object:
