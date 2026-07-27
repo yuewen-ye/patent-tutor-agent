@@ -182,9 +182,9 @@ FastAPI 自带的接口描述页：`/docs`、`/redoc`、`/openapi.json`。
 
 ### `POST /learners/{learner_id}/diagnostic-sessions`
 
-用途：创建自适应诊断会话，并用已有的初始答案作为诊断起点。适合在正式教学前评估学员对知识点的掌握情况。
+用途：创建自适应诊断会话，并保存诊断开始前已有的学员背景信息。适合在正式教学前评估学员对知识点的掌握情况。
 
-这是 CAT 动态答题流程的入口。请求中的 `responses` 是入学问卷的初始答案，不是 CAT 题目答案；诊断创建后，下一道 CAT 题由响应中的 `current_question` 给出。CAT 完成后，服务会自动创建课程会话并返回 `course_session_id`，前端不需要再次调用问卷提交接口或手动创建课程会话。
+这是 CAT 动态答题流程的入口。`education_background` 是学员在诊断前提供的自报背景，不是诊断结果；服务用它选择 BKT 初始先验。请求中的 `responses` 是已有的问卷/初始信息，也不是 CAT 题目答案。诊断创建后，第一道 CAT 题由响应中的 `current_question` 给出。CAT 完成后，服务会自动创建课程会话并返回 `course_session_id`，前端不需要再次调用问卷提交接口或手动创建课程会话。
 
 创建诊断会话。请求体：
 
@@ -193,20 +193,20 @@ FastAPI 自带的接口描述页：`/docs`、`/redoc`、`/openapi.json`。
   "learning_goal": "系统掌握专利新颖性判断",
   "education_background": "理工科，有研发经验",
   "responses": [
-    {"question_id": "Q23", "answer": "B"}
+    {"question_id": "<已有问卷题号>", "answer": "<已有问卷答案>"}
   ]
 }
 ```
 
-`responses` 至少包含一项。返回 `DiagnosticProgress`：
+当前接口合同要求 `responses` 至少包含一项；这项数据只是创建诊断时一并保存的初始信息，不计入 CAT 的 `answered_questions`，也不决定 CAT 的第一题。返回 `DiagnosticProgress`：
 
 ```json
 {
   "diagnostic_session_id": "diagnostic-id",
   "learner_id": "learner-001",
   "status": "running",
-  "answered_questions": 1,
-  "max_questions": 10,
+  "answered_questions": 0,
+  "max_questions": 40,
   "termination_reason": null,
   "current_question": {
     "question_id": "q-002",
@@ -371,7 +371,7 @@ data: {"status":"completed"}
 | 2 | `GET /health/ready` | 确认可以接受新会话；返回 `503` 时停止流程 |
 | 3 | `GET /questionnaires/onboarding` | 读取问卷版本并校验已有的初始答案；不启动“答完全部问卷”的交互 |
 
-`run_api_journey` 在这一步读取问卷定义，并使用脚本配置中的 `questionnaire_responses` 做题号校验；这些是调用 CAT 创建接口时一并传入的已有初始信息，不是让学员在 CAT 页面逐题完成的题目。问卷答案不是 CAT 题答案，例如：
+`run_api_journey` 在这一步读取问卷定义，并使用脚本配置中的 `questionnaire_responses` 做题号校验；这些是调用 CAT 创建接口时一并传入的已有初始信息，不是让学员在 CAT 页面逐题完成的题目。它们不是 CAT 题答案，例如：
 
 ```json
 {
@@ -380,7 +380,7 @@ data: {"status":"completed"}
 }
 ```
 
-如果前端没有完整的初始问卷数据，至少应按接口合同传入一项已有的初始回答；不要把整份入学问卷当成 CAT 动态答题列表，也不要用它决定 CAT 的下一题。不要假定问卷题号或题目数量永远不变。
+如果前端没有完整的初始问卷数据，当前接口仍要求至少传入一项已有的初始回答；这不是让学员先完成整份问卷。不要把入学问卷当成 CAT 动态答题列表，也不要用它决定 CAT 的下一题。不要假定问卷题号或题目数量永远不变。
 
 ### 8.2 创建 CAT 诊断会话
 
@@ -397,10 +397,12 @@ POST /learners/learner-001/diagnostic-sessions
   "learning_goal": "系统学习专利新颖性判断",
   "education_background": "理工科，有研发经验",
   "responses": [
-    {"question_id": "Q1", "answer": "B"}
+    {"question_id": "<已有问卷题号>", "answer": "<已有问卷答案>"}
   ]
 }
 ```
+
+这里的 `education_background` 来自诊断前的学员自报信息或已有学员资料；`run_api_journey` 中对应命令行参数 `--education-background`，默认值为 `其他`。它只用于选择 BKT 初始先验，不是 CAT 诊断出来的结论。
 
 这里的 `responses` 只是已有的问卷初始回答；示例只展示接口要求的最小形式。按照 `run_api_journey` 的配置，也可以传入一组已经准备好的问卷回答，但这不等于让学员先完成 CAT 题库或固定完成全部问卷题。
 
@@ -422,7 +424,7 @@ POST /learners/learner-001/diagnostic-sessions
 }
 ```
 
-此时保存 `diagnostic_session_id`。前端显示 `current_question`，而不是自己从题库选择下一题。
+此时保存 `diagnostic_session_id`。前端显示响应中的 `current_question`，这才是学员要回答的第一道 CAT 题；不能把创建请求里的初始 `responses` 当作 CAT 已答题目。
 
 ### 8.3 按 CAT 返回结果动态答题
 
@@ -436,7 +438,7 @@ POST /learners/learner-001/diagnostic-sessions
    POST /learners/learner-001/diagnostic-sessions/diagnostic-001/responses
    ```
 
-   请求体示例：
+   请求体示例。`question_id` 必须原样使用上一次响应的 `current_question.question_id`，不能写死为 `Q1`：
 
    ```json
    {
