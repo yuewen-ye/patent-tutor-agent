@@ -1,18 +1,3 @@
-# WSL2、Ubuntu 与 Docker MySQL 初始化
-
-本文使用以下安装路线：
-
-```text
-Windows
-  → WSL2
-  → Ubuntu
-  → Docker Engine + Docker CLI
-  → MySQL 容器和 patent_tutor 数据库
-```
-
-本文不安装 Docker Desktop。Docker CLI 只是客户端，不能单独运行容器，因此必须同时安装
-Docker Engine 和 containerd。本文不包含项目环境变量、应用连接或数据库迁移步骤。
-
 ## 1. 下载并安装 WSL2
 
 ### 1.1 系统要求
