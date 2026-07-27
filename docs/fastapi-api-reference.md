@@ -66,7 +66,7 @@ FastAPI 自带的接口描述页：`/docs`、`/redoc`、`/openapi.json`。
 
 ### `GET /questionnaires/onboarding`
 
-用途：获取当前版本的入学问卷内容。前端应先调用此接口，再根据返回的 Markdown 展示问题，并使用其中的题号提交答案。
+用途：获取当前版本的入学问卷定义，供前端读取题号、校验已有初始答案或展示独立的问卷入口。它不是 CAT 动态题目接口；使用 CAT 交互流程时，不要求学员先答完这里的全部题目。
 
 返回问卷 Markdown：
 
@@ -81,7 +81,7 @@ FastAPI 自带的接口描述页：`/docs`、`/redoc`、`/openapi.json`。
 
 ### `POST /learners/{learner_id}/questionnaire-responses`
 
-用途：提交学员的入学问卷，并创建一个课程生成会话。它适用于首次建立学员画像、学习目标和初始课程的场景。
+用途：提交完整入学问卷并直接创建课程生成会话。它是非 CAT 或兼容入口；如果要让 CAT 动态出题，应使用 `/diagnostic-sessions`，不要在 CAT 流程中调用本接口。
 
 提交入学问卷，返回新建课程会话。
 
@@ -361,7 +361,7 @@ data: {"status":"completed"}
 ## 8. 完整 CAT → Agent → 反馈调用流程
 
 下面是前端复现 `run_api_journey.py --cat-mode interactive` 的接口顺序。假设学员为
-`learner-001`，学习目标为“系统学习专利新颖性判断”。这里不写具体客户端代码，只说明每次调用、需要读取的字段和下一步判断。
+`learner-001`，学习目标为“系统学习专利新颖性判断”。这里不写具体客户端代码，只说明每次调用、需要读取的字段和下一步判断。重点是：学员不需要先完成整份入学问卷，CAT 也不按固定题目列表出题。
 
 ### 8.1 服务检查和问卷读取
 
@@ -369,9 +369,9 @@ data: {"status":"completed"}
 |---:|---|---|
 | 1 | `GET /health` | 确认服务进程存活；失败时停止流程 |
 | 2 | `GET /health/ready` | 确认可以接受新会话；返回 `503` 时停止流程 |
-| 3 | `GET /questionnaires/onboarding` | 读取问卷版本、题号和选项，收集学员的初始问卷答案 |
+| 3 | `GET /questionnaires/onboarding` | 读取问卷版本并校验已有的初始答案；不启动“答完全部问卷”的交互 |
 
-问卷答案不是 CAT 题答案，而是 CAT 的初始化输入。前端应根据问卷响应中的实际题号提交，例如：
+`run_api_journey` 在这一步读取问卷定义，并使用脚本配置中的 `questionnaire_responses` 做题号校验；这些是调用 CAT 创建接口时一并传入的已有初始信息，不是让学员在 CAT 页面逐题完成的题目。问卷答案不是 CAT 题答案，例如：
 
 ```json
 {
@@ -380,7 +380,7 @@ data: {"status":"completed"}
 }
 ```
 
-不要假定问卷题号或题目数量永远不变。
+如果前端没有完整的初始问卷数据，至少应按接口合同传入一项已有的初始回答；不要把整份入学问卷当成 CAT 动态答题列表，也不要用它决定 CAT 的下一题。不要假定问卷题号或题目数量永远不变。
 
 ### 8.2 创建 CAT 诊断会话
 
@@ -397,11 +397,12 @@ POST /learners/learner-001/diagnostic-sessions
   "learning_goal": "系统学习专利新颖性判断",
   "education_background": "理工科，有研发经验",
   "responses": [
-    {"question_id": "Q23", "answer": "B"},
-    {"question_id": "Q31", "answer": "A"}
+    {"question_id": "Q1", "answer": "B"}
   ]
 }
 ```
+
+这里的 `responses` 只是已有的问卷初始回答；示例只展示接口要求的最小形式。按照 `run_api_journey` 的配置，也可以传入一组已经准备好的问卷回答，但这不等于让学员先完成 CAT 题库或固定完成全部问卷题。
 
 响应中的关键字段：
 
