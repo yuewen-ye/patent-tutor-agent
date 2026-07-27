@@ -1,6 +1,10 @@
 """Regression checks for original Agent roles and current runtime contracts."""
 
+import json
+import re
 from pathlib import Path
+
+from backend.app.schemas.state import DiagnosisAgentResult, FeedbackAgentResult
 
 
 _AGENTS_DIR = Path(__file__).resolve().parents[2] / "app" / "agents"
@@ -8,6 +12,13 @@ _AGENTS_DIR = Path(__file__).resolve().parents[2] / "app" / "agents"
 
 def _prompt(*parts: str) -> str:
     return (_AGENTS_DIR.joinpath(*parts)).read_text(encoding="utf-8")
+
+
+def _json_example(content: str) -> object:
+    match = re.search(r"```json\s*(.*?)\s*```", content, flags=re.DOTALL)
+    assert match is not None
+    rendered = match.group(1).replace("{{", "{").replace("}}", "}")
+    return json.loads(rendered)
 
 
 def test_diagnosis_prompts_preserve_modeler_role_without_claiming_bkt_ownership() -> None:
@@ -18,13 +29,19 @@ def test_diagnosis_prompts_preserve_modeler_role_without_claiming_bkt_ownership(
         assert "学习者状态建模器" in content
         assert "数据驱动诊断" in content
         assert "系统思维" in content
-        assert "不得输出 `knowledge`" in content
         assert "后端" in content
 
     assert "DiagnosisAgentResult" in diagnosis
-    assert "`cognition`、`style`、`affect`" in diagnosis
+    assert "`cognition`" in diagnosis
+    assert "`style`" in diagnosis
+    assert "`affect`" in diagnosis
     assert "FeedbackAgentResult" in feedback
     assert "E2 `concept_confusion`" in feedback
+
+    diagnosis_example = DiagnosisAgentResult.model_validate(_json_example(diagnosis))
+    feedback_example = FeedbackAgentResult.model_validate(_json_example(feedback))
+    assert diagnosis_example.learner_dimensions is not None
+    assert feedback_example.learner_dimensions is not None
 
 
 def test_expert_a_prompts_preserve_conservative_irac_and_accuracy_role() -> None:
