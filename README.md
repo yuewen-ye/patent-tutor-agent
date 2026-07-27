@@ -516,7 +516,7 @@ PY
 `uv run python backend/main.py` 启动 FastAPI 应用，默认监听 `0.0.0.0:8000`：
 
 接口含义、前端调用顺序和完整学习流程见
-[`docs/api-testing-guide.md`](docs/api-testing-guide.md)。
+[`docs/fastapi-api-reference.md`](docs/fastapi-api-reference.md)。
 
 - `GET /health` — 进程存活检查，返回会话计数
 - `GET /health/ready` — 就绪检查，注入 LLM client 时直接 ready，默认环境下校验 provider 配置

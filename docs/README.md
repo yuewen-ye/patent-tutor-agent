@@ -10,7 +10,7 @@
 | `竞赛方案汇报.docx` | 产品范围、角色职责和竞赛交付依据 |
 | `agent-interface-spec.md` | Agent、StateDict、Markdown artifact 和前端数据合同 |
 | `workflow-technical-guide.md` | 当前 LangGraph 流程、双知识轴、持久化和运行入口 |
-| `api-testing-guide.md` | FastAPI 接口含义、调用顺序和请求示例 |
+| `fastapi-api-reference.md` | FastAPI REST、SSE、WebSocket 接口参考 |
 | `rag-interface-spec.md` | RAG 选择器、检索合同和真实/mock 模式 |
 | `implementation-plan.md` | 当前基线和后续实施顺序 |
 | `patent-tutor-rdb-design.md` | MySQL 关系型数据库设计、数据边界和持久化方案 |

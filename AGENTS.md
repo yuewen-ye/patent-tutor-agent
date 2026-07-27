@@ -10,7 +10,7 @@ Read [`docs/README.md`](docs/README.md) before changing architecture or contract
 - Agent and frontend contract: `docs/agent-interface-spec.md`
 - Current workflow behavior: `docs/workflow-technical-guide.md`
 - MySQL schema and persistence boundaries: `docs/patent-tutor-rdb-design.md`
-- FastAPI call order: `docs/api-testing-guide.md`
+- FastAPI interface reference: `docs/fastapi-api-reference.md`
 - Roadmap only: `docs/implementation-plan.md`
 
 Code wins when documentation and runtime behavior disagree. Fix the stale document in the same change.
