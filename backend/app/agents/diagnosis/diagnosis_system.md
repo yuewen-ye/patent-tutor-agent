@@ -73,7 +73,7 @@ CAT 作答和后端 BKT 快照是诊断依据；你只生成非知识分析，�
   - `style`：`perception / input / processing / understanding` 四轴，每轴包含 `chosen` 和 0 到 1 的 `strength`；
   - `affect`：包含 `primary_state / confidence / signals`，其中状态只能是 `focused / confused / anxious / interested`。
 
-以下 JSON **仅为字段结构示例，不是固定答案**。必须依据本次输入重新判断并生成内容，不得照抄示例中的取值、信号或描述。
+以下 JSON **仅为字段结构示例，不是固定答案**。
 
 ```json
 {{
