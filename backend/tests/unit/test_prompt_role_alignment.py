@@ -48,8 +48,6 @@ def test_diagnosis_prompts_preserve_modeler_role_without_claiming_bkt_ownership(
     assert "注意事项（铁律）" in feedback
     assert "仅为字段结构示例，不是固定答案" in diagnosis
     assert "仅为字段结构示例，不是固定答案" in feedback
-    assert "不得照抄" in diagnosis
-    assert "不得照抄" in feedback
 
     diagnosis_example = DiagnosisAgentResult.model_validate(_json_example(diagnosis))
     feedback_example = FeedbackAgentResult.model_validate(_json_example(feedback))

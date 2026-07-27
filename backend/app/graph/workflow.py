@@ -170,6 +170,14 @@ def _with_runtime_side_effects(
                 for field in _ARTIFACT_FIELDS:
                     if field not in updates:
                         continue
+                    if field == "learner_profile" and (
+                        label != "diagnosis_feedback"
+                        or state.get("diagnosis_feedback_phase") != "diagnosis"
+                    ):
+                        # Planner returns learner_profile to propagate its deterministic progress
+                        # update through State and persistence. That is not a new diagnosis report:
+                        # only the diagnosis phase owns profile/learner_profile.md.
+                        continue
                     if field == "expert_a_draft" and "course_package" in updates:
                         continue
                     if field == "expert_a_draft" and "expert_a_revision" in updates:

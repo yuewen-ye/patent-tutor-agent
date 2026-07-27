@@ -383,6 +383,10 @@ def test_accepted_teach_flow_waits_for_learner_answers_and_keeps_process_markdow
     assert state["expert_a_cross_review"]["target"] == "expert_b"
     assert state["expert_b_cross_review"]["target"] == "expert_a"
     assert (session_root / "profile/learner_profile.md").is_file()
+    assert list((session_root / "profile").glob("learner_profile*.md")) == [
+        session_root / "profile/learner_profile.md"
+    ]
+    assert state["learner_profile"]["five_dimensions"]["progress"]["current_node"]
     assert (session_root / "path/dual_axis_snapshot.md").is_file()
     assert (session_root / "round-01/expert_a_cross_review.md").is_file()
     assert (session_root / "round-01/course_package.md").is_file()
@@ -395,6 +399,13 @@ def test_accepted_teach_flow_waits_for_learner_answers_and_keeps_process_markdow
     assert not (session_root / "internal/exercise_answer_key.md").exists()
     manifest = json.loads((session_root / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["status"] == "completed"
+    profile_artifacts = [
+        artifact
+        for artifact in manifest["artifacts"]
+        if artifact["kind"] == "learner_profile_report"
+    ]
+    assert len(profile_artifacts) == 1
+    assert profile_artifacts[0]["created_by"] == "diagnosis_feedback"
 
 
 def test_feedback_mode_reuses_diagnosis_feedback_and_skips_course_agents(
