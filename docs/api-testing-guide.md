@@ -248,7 +248,7 @@ GET  /learners/{learner_id}
 1. 该流程用于兼容旧客户端；新客户端优先使用文首 CAT 诊断流程。
 2. 提交问卷接口本身就会创建课程会话，不需要随后再调用 `POST /sessions`。
 3. 提交练习接口会创建新的反馈会话，反馈会话 ID 不等于课程会话 ID。
-4. `POST /sessions` 是 chat、diagnose 或跳过问卷直接 teach 的通用入口。
+4. `POST /sessions` 是 `auto`、chat、diagnose 或跳过问卷直接 teach 的通用入口；`auto` 是默认模式。
 
 生产服务默认使用 MySQL；配置 `PATENT_TUTOR_MYSQL_URL` 后，服务会将 CAT 诊断、会话状态、事件、
 画像、BKT、题目、作答和 Artifact 索引写入数据库。正文仍通过 Artifact 接口从 `artifacts/` 读取。
@@ -262,8 +262,8 @@ GET /health
 GET /health/ready
 ```
 
-- `/health`：检查 FastAPI 进程和当前会话数量。
-- `/health/ready`：检查服务是否具备创建 Agent 会话的基本条件。
+- `/health`：检查 FastAPI 进程是否存活，并返回当前进程内缓存的会话计数；它不统计尚未加载到当前进程的历史会话。
+- `/health/ready`：检查持久化 Store（如果实现了 readiness）、LLM Provider 配置和 Agent 会话创建条件；未就绪时返回 HTTP `503`。
 
 ### 步骤 1：读取问卷
 
@@ -494,8 +494,8 @@ POST /sessions
 | 诊断 | `GET /learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}` | 读取诊断进度和当前题 |
 | 诊断 | `POST /learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}/responses` | 服务端判题、更新 BKT 并选择下一题 |
 | 诊断 | `POST /learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}/complete` | 固化快照并创建课程会话 |
-| 会话 | `POST /sessions` | 创建通用 teach/chat/diagnose 会话 |
-| 会话 | `GET /sessions` | 分页列出当前进程会话摘要 |
+| 会话 | `POST /sessions` | 创建通用 `auto`/teach/chat/diagnose 会话；显式 teach 必须提供 `learner_id` |
+| 会话 | `GET /sessions` | 分页列出当前进程会话与持久化会话摘要 |
 | 会话 | `GET /sessions/{session_id}` | 查询状态和结果 |
 | 会话 | `DELETE /sessions/{session_id}` | 取消运行中的会话 |
 | 练习 | `POST /sessions/{course_session_id}/exercise-responses` | 保存练习并创建反馈会话 |
@@ -507,7 +507,7 @@ POST /sessions
 | 事件 | `WS /sessions/{session_id}/events` | 使用 WebSocket 监听事件 |
 | 产物 | `GET /sessions/{session_id}/artifacts/{artifact_path}` | 读取 Markdown 产物 |
 
-`GET /sessions` 会合并当前 FastAPI 进程中的会话和 MySQL 持久化会话。该接口不返回工作流
+`GET /sessions` 会合并当前 FastAPI 进程中的会话和 Store 提供的持久化会话（生产环境默认是 MySQL）。该接口不返回工作流
 `state`，完整结果请使用 `GET /sessions/{session_id}`。
 
 列表接口支持以下可选查询参数：
@@ -518,6 +518,9 @@ POST /sessions
 | `learner_id` | 无 | 按学员 ID 筛选 |
 | `offset` | `0` | 跳过的会话数量，不能小于 0 |
 | `limit` | `50` | 本页最大数量，范围为 1 到 100 |
+
+学员记忆接口 `GET /learners/{learner_id}`、`/profiles`、`/history` 和 `/sessions` 也支持
+`limit` 查询参数，默认值为 `10`，范围为 1 到 50。
 
 例如：
 
