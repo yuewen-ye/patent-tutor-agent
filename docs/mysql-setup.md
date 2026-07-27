@@ -163,11 +163,11 @@ sudo apt install -y \
 ```bash
 sudo systemctl start docker
 sudo systemctl status docker --no-pager
-sudo docker run --rm hello-world
+sudo docker version
 ```
 
-`hello-world` 输出成功提示后，说明 Docker Engine 和 Docker CLI 已经可以正常工作。本文后续
-统一使用 `sudo docker`，不修改 Docker 用户组权限。
+`docker version` 同时输出 Client 和 Server 信息后，说明 Docker Engine 和 Docker CLI 已经
+可以正常工作。
 
 如果 `systemctl` 提示系统没有以 systemd 启动，先参考
 [Microsoft：在 WSL 中使用 systemd](https://learn.microsoft.com/zh-cn/windows/wsl/systemd)。
@@ -192,13 +192,48 @@ wsl --shutdown
 
 重新打开 Ubuntu，再执行本节的 Docker 启动和验证命令。
 
+### 3.4 配置 docker 用户组
+
+默认情况下，普通用户执行 Docker 命令需要添加 `sudo`。将当前 Ubuntu 用户加入 `docker`
+用户组后，后续可以直接执行 `docker`。
+
+官方参考：
+
+- [Docker：以非 root 用户管理 Docker](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user)
+
+Docker Engine 安装包通常已经创建 `docker` 用户组。以下命令会先检查用户组是否存在，再把
+当前用户加入该组：
+
+```bash
+if ! getent group docker >/dev/null; then
+  sudo groupadd docker
+fi
+sudo usermod -aG docker "$USER"
+```
+
+让新的用户组权限立即生效：
+
+```bash
+newgrp docker
+```
+
+`newgrp docker` 会打开一个使用新组权限的 shell。也可以关闭所有 Ubuntu 终端后重新打开
+Ubuntu。然后使用不带 `sudo` 的命令验证：
+
+```bash
+docker run --rm hello-world
+```
+
+`hello-world` 输出成功提示后，说明当前用户可以直接使用 Docker。`docker` 用户组拥有近似
+root 的系统权限，只应把可信用户加入该组。
+
 ## 4. 拉取 MySQL 官方镜像
 
 本项目要求 MySQL 8.0 及以上。这里固定使用 MySQL 8.4 LTS，避免 `latest` 标签将来自动切换到
 不兼容的主版本。
 
 ```bash
-sudo docker pull mysql:8.4
+docker pull mysql:8.4
 ```
 
 镜像来源：
@@ -210,7 +245,7 @@ sudo docker pull mysql:8.4
 创建项目专用 Docker 数据卷：
 
 ```bash
-sudo docker volume create patent-tutor-mysql-data
+docker volume create patent-tutor-mysql-data
 ```
 
 该数据卷保存 MySQL 数据。删除或重建容器时，只要保留数据卷，数据库数据就不会随容器一起
@@ -234,7 +269,7 @@ sudo docker volume create patent-tutor-mysql-data
 示例密码只适合本地开发。执行前可以把两个密码替换成自己的强密码。
 
 ```bash
-sudo docker run -d \
+docker run -d \
   --name patent-tutor-mysql \
   --restart unless-stopped \
   -p 3306:3306 \
@@ -261,13 +296,13 @@ sudo docker run -d \
 查看容器状态：
 
 ```bash
-sudo docker ps --filter name=patent-tutor-mysql
+docker ps --filter name=patent-tutor-mysql
 ```
 
 查看 MySQL 初始化日志：
 
 ```bash
-sudo docker logs patent-tutor-mysql
+docker logs patent-tutor-mysql
 ```
 
 日志出现 `ready for connections` 后，说明 MySQL 容器和初始化数据库已准备完成。
@@ -280,5 +315,6 @@ sudo docker logs patent-tutor-mysql
 - 不要将真实密码提交到 Git、截图、聊天记录或公开文档。
 - 不要使用空 root 密码。
 - Docker CLI 不能独立运行容器；本方案同时安装了 Docker Engine 和 containerd。
+- `docker` 用户组具有近似 root 的系统权限，不要把不可信用户加入该组。
 - 本方案不安装 Docker Desktop，Docker 服务运行在 Ubuntu/WSL2 内。
 - 本文到 MySQL 容器和 `patent_tutor` 数据库创建完成为止，不包含后续项目配置。
