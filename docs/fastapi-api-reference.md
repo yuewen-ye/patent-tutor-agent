@@ -184,6 +184,8 @@ FastAPI 自带的接口描述页：`/docs`、`/redoc`、`/openapi.json`。
 
 用途：创建自适应诊断会话，并用已有的初始答案作为诊断起点。适合在正式教学前评估学员对知识点的掌握情况。
 
+这是 CAT 动态答题流程的入口。请求中的 `responses` 是入学问卷的初始答案，不是 CAT 题目答案；诊断创建后，下一道 CAT 题由响应中的 `current_question` 给出。CAT 完成后，服务会自动创建课程会话并返回 `course_session_id`，前端不需要再次调用问卷提交接口或手动创建课程会话。
+
 创建诊断会话。请求体：
 
 ```json
@@ -218,6 +220,8 @@ FastAPI 自带的接口描述页：`/docs`、`/redoc`、`/openapi.json`。
 }
 ```
 
+前端只应使用 `current_question.question_id`、`current_question.question_text` 和 `current_question.options` 展示当前题。`max_questions` 是算法允许的上限，不是本次固定题数；本次实际题数由 CAT 的停止条件决定。
+
 ### `GET /learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}`
 
 用途：读取诊断当前进度，适合页面刷新、断线重连或客户端需要恢复当前题目时使用。
@@ -227,6 +231,8 @@ FastAPI 自带的接口描述页：`/docs`、`/redoc`、`/openapi.json`。
 ### `POST /learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}/responses`
 
 用途：提交诊断过程中的下一道题答案。服务会返回下一题或诊断完成状态；`idempotency_key` 可用于客户端重试时避免重复提交。
+
+每次只提交当前 `current_question` 的一题。提交成功后重新检查响应：若 `status=running`，读取新的 `current_question` 并继续；若 `status=completed`，停止答题并取出 `course_session_id`。不能根据 `max_questions` 预先决定循环次数，也不能提交上一题或尚未返回的题目。
 
 提交一道诊断题答案：
 
@@ -245,7 +251,7 @@ FastAPI 自带的接口描述页：`/docs`、`/redoc`、`/openapi.json`。
 
 用途：主动结束诊断并请求生成最终诊断结果；适用于前端提供“结束诊断”按钮的场景。
 
-完成诊断并返回最终 `DiagnosticProgress`。
+完成诊断并返回最终 `DiagnosticProgress`。如果 CAT 已自然达到停止条件，最后一次 `responses` 调用已经会触发完成和课程创建，不需要再调用本接口；只有学员主动提前结束时才调用它。
 
 ## 4. 练习反馈
 
@@ -352,144 +358,222 @@ data: {"status":"completed"}
 
 读取指定会话的 Markdown 产物，响应类型为 `text/markdown; charset=utf-8`。路径非法返回 `400`；会话或产物不存在返回 `404`。
 
-## 8. 完整调用流程示例
+## 8. 完整 CAT → Agent → 反馈调用流程
 
-下面示例演示一个“首次学习并提交练习”的完整接口流程。假设服务地址为 `http://127.0.0.1:8000`，学员标识为 `learner-001`。示例使用 PowerShell 的 `Invoke-RestMethod`；也可以将请求体原样转换为其他 HTTP 客户端调用。
+下面是前端复现 `run_api_journey.py --cat-mode interactive` 的接口顺序。假设学员为
+`learner-001`，学习目标为“系统学习专利新颖性判断”。这里不写具体客户端代码，只说明每次调用、需要读取的字段和下一步判断。
 
-### 8.1 检查服务并获取问卷
+### 8.1 服务检查和问卷读取
 
-先确认服务已就绪：
+| 顺序 | 调用 | 前端动作 |
+|---:|---|---|
+| 1 | `GET /health` | 确认服务进程存活；失败时停止流程 |
+| 2 | `GET /health/ready` | 确认可以接受新会话；返回 `503` 时停止流程 |
+| 3 | `GET /questionnaires/onboarding` | 读取问卷版本、题号和选项，收集学员的初始问卷答案 |
 
-```powershell
-$base = "http://127.0.0.1:8000"
-$learner = "learner-001"
+问卷答案不是 CAT 题答案，而是 CAT 的初始化输入。前端应根据问卷响应中的实际题号提交，例如：
 
-Invoke-RestMethod "$base/health/ready"
+```json
+{
+  "question_id": "Q23",
+  "answer": "B"
+}
 ```
 
-若返回 `503`，不要继续创建会话；修复服务后重新检查。就绪后获取问卷：
+不要假定问卷题号或题目数量永远不变。
 
-```powershell
-$questionnaire = Invoke-RestMethod "$base/questionnaires/onboarding"
-$questionnaire.id
-$questionnaire.version
-$questionnaire.markdown
-```
+### 8.2 创建 CAT 诊断会话
 
-客户端应从 `$questionnaire.markdown` 中读取实际题号和选项，不要假设题号永远不变。
-
-### 8.2 提交问卷并创建课程会话
-
-```powershell
-$body = @{
-  learning_goal = "系统学习专利新颖性判断"
-  education_background = "理工科，有研发经验"
-  responses = @(
-    @{ question_id = "Q1"; answer = "B" },
-    @{ question_id = "Q23"; answer = "A" }
-  )
-} | ConvertTo-Json -Depth 5
-
-$course = Invoke-RestMethod `
-  -Method Post `
-  -Uri "$base/learners/$learner/questionnaire-responses" `
-  -ContentType "application/json; charset=utf-8" `
-  -Body $body
-
-$course.session_id
-```
-
-保存返回的 `$course.session_id`，后续称为 `$courseSessionId`。此时返回的 `status` 通常是 `running`，课程内容在后台生成。
-
-### 8.3 监听课程生成进度
-
-需要实时展示进度时连接 SSE：
+调用：
 
 ```text
-GET /sessions/{courseSessionId}/events/stream
+POST /learners/learner-001/diagnostic-sessions
+```
+
+请求体：
+
+```json
+{
+  "learning_goal": "系统学习专利新颖性判断",
+  "education_background": "理工科，有研发经验",
+  "responses": [
+    {"question_id": "Q23", "answer": "B"},
+    {"question_id": "Q31", "answer": "A"}
+  ]
+}
+```
+
+响应中的关键字段：
+
+```json
+{
+  "diagnostic_session_id": "diagnostic-001",
+  "status": "running",
+  "answered_questions": 0,
+  "max_questions": 40,
+  "current_question": {
+    "question_id": "cat-q-001",
+    "skills": ["patent-novelty"],
+    "question_text": "...",
+    "options": {"A": "...", "B": "...", "C": "...", "D": "..."}
+  },
+  "course_session_id": null
+}
+```
+
+此时保存 `diagnostic_session_id`。前端显示 `current_question`，而不是自己从题库选择下一题。
+
+### 8.3 按 CAT 返回结果动态答题
+
+只要上一次响应的 `status` 是 `running`，就重复以下步骤：
+
+1. 读取 `current_question.question_id`、`question_text` 和 `options` 并展示给学员。
+2. 学员选择一个存在于 `options` 的选项。
+3. 调用：
+
+   ```text
+   POST /learners/learner-001/diagnostic-sessions/diagnostic-001/responses
+   ```
+
+   请求体示例：
+
+   ```json
+   {
+     "question_id": "cat-q-001",
+     "answer": "C",
+     "response_ms": 5200,
+     "idempotency_key": "diagnostic-001-cat-q-001"
+   }
+   ```
+
+4. 使用本次响应替换页面上的诊断进度，并重新判断 `status`。
+
+判断规则：
+
+| 响应状态 | 前端动作 |
+|---|---|
+| `running` | 读取响应中的新 `current_question`，继续下一轮；题目可能与上一题不同，不能由前端推算 |
+| `completed` | 停止出题，保存 `knowledge_snapshot`、`termination_reason` 和 `course_session_id`，进入课程会话 |
+
+CAT 的实际题目数量由算法决定。`max_questions=40` 只是本次诊断的上限，不代表前端必须提交 40 题；也不应写死“答完 N 题就结束”。自然结束时，最后一次 `responses` 调用会直接返回 `status=completed`。
+
+如果学员点击“提前结束”，调用：
+
+```text
+POST /learners/learner-001/diagnostic-sessions/diagnostic-001/complete
+```
+
+然后按同样规则读取完成响应。若页面刷新或网络断线，可调用：
+
+```text
+GET /learners/learner-001/diagnostic-sessions/diagnostic-001
+```
+
+恢复 `status` 和 `current_question` 后继续。重试同一答案时应复用相同的 `idempotency_key`。
+
+### 8.4 CAT 完成后自动进入 Agent 课程流程
+
+当 CAT 响应为 `completed` 时，关键结果类似：
+
+```json
+{
+  "diagnostic_session_id": "diagnostic-001",
+  "status": "completed",
+  "answered_questions": 7,
+  "max_questions": 40,
+  "termination_reason": "所有高权重知识点状态已明确",
+  "current_question": null,
+  "course_session_id": "course-001",
+  "knowledge_snapshot": {"...": "..."}
+}
+```
+
+`course_session_id` 是 CAT 到课程 Agent 流程的交接点。前端不需要再调用
+`POST /learners/{learner_id}/questionnaire-responses`，也不需要调用某个 Agent 私有接口；直接使用这个 ID 查询课程会话即可。课程生成会话会在后台继续执行，直到完成或失败。
+
+### 8.5 等待整个课程 Agent 流程完成
+
+前端可选择轮询：
+
+```text
+GET /sessions/course-001
+```
+
+每次读取：
+
+```json
+{
+  "session_id": "course-001",
+  "status": "running",
+  "learner_id": "learner-001",
+  "state": {"...": "..."},
+  "error": null
+}
+```
+
+继续查询直到：
+
+- `status=completed`：课程生成完成，可以读取课程产物并展示练习；
+- `status=failed`：停止流程并展示 `error`；
+- `status=canceled`：停止流程。
+
+需要实时进度时，也可以将上面的轮询替换为：
+
+```text
+GET /sessions/course-001/events/stream
 Accept: text/event-stream
 ```
 
-客户端持续读取 `agent_event`，直到收到：
+以 `session_status` 为 `completed` 作为课程会话结束信号。`GET /sessions` 可作为额外的持久化查询，用于确认：
 
 ```text
-event: session_status
-data: {"status":"completed"}
+GET /sessions?status=completed&learner_id=learner-001&offset=0&limit=20
 ```
 
-如果客户端不使用 SSE，也可以轮询会话详情：
+### 8.6 读取课程、提交练习并运行反馈流程
 
-```powershell
-$snapshot = Invoke-RestMethod "$base/sessions/$courseSessionId"
-$snapshot.status
-$snapshot.error
-```
+课程会话完成后：
 
-只有 `status` 为 `completed` 时，才进入练习提交步骤；`failed` 时查看 `error`，`canceled` 时结束本次流程。
+1. 从 `GET /sessions/course-001` 返回的 `state` 或会话产物索引中找到课程包的实际 `artifact_path`。
+2. 调用 `GET /sessions/course-001/artifacts/{artifact_path}` 读取课程 Markdown，并从课程包中展示练习题。
+3. 学员完成练习后，调用：
 
-### 8.4 读取课程产物
+   ```text
+   POST /sessions/course-001/exercise-responses
+   ```
 
-课程完成后读取课程 Markdown。`artifact_path` 应使用实际生成的会话相对路径，例如：
+   请求体示例：
 
-```powershell
-$courseMarkdown = Invoke-RestMethod `
-  "$base/sessions/$courseSessionId/artifacts/round-01/course_package.md"
-$courseMarkdown
-```
+   ```json
+   {
+     "learner_id": "learner-001",
+     "responses": [
+       {
+         "question_id": "course-q-001",
+         "answer": "该技术方案在申请日前已经公开，因此不具备新颖性。",
+         "selected_option": "B",
+         "response_ms": 8000,
+         "idempotency_key": "course-001-course-q-001",
+         "skill_id": "patent-novelty"
+       }
+     ]
+   }
+   ```
 
-课程中的练习题和题号以会话状态或课程产物为准，下面的 `novelty-q1` 仅作示例。
+4. 保存响应中的新 `session_id`，例如 `feedback-001`。它是独立的反馈会话，不是 `course-001`。
+5. 使用 `GET /sessions/feedback-001` 轮询，或连接 `GET /sessions/feedback-001/events/stream`，直到反馈会话 `status=completed`。
+6. 从反馈会话的产物索引中找到 `feedback_report.md`，再调用 `GET /sessions/feedback-001/artifacts/{artifact_path}` 读取反馈报告。
 
-### 8.5 提交练习并等待反馈
+### 8.7 查询本次流程产生的学员数据
 
-```powershell
-$exerciseBody = @{
-  learner_id = $learner
-  responses = @(
-    @{
-      question_id = "novelty-q1"
-      answer = "该技术方案在申请日前已经公开，因此不具备新颖性。"
-      selected_option = "B"
-      response_ms = 8000
-      idempotency_key = "learner-001-exercise-1"
-      skill_id = "patent-novelty"
-    }
-  )
-} | ConvertTo-Json -Depth 5
+反馈完成后，前端可以调用：
 
-$feedback = Invoke-RestMethod `
-  -Method Post `
-  -Uri "$base/sessions/$courseSessionId/exercise-responses" `
-  -ContentType "application/json; charset=utf-8" `
-  -Body $exerciseBody
-
-$feedback.session_id
-```
-
-保存返回的 `$feedback.session_id`，它是独立的反馈会话 ID。继续监听该 ID 的 SSE：
-
-```text
-GET /sessions/{feedbackSessionId}/events/stream
-Accept: text/event-stream
-```
-
-收到 `session_status` 为 `completed` 后，读取反馈报告：
-
-```powershell
-$report = Invoke-RestMethod `
-  "$base/sessions/$feedbackSessionId/artifacts/feedback/feedback_report.md"
-$report
-```
-
-### 8.6 查询学员最新数据
-
-```powershell
-$memory = Invoke-RestMethod "$base/learners/$learner?limit=10"
-$memory.latest_profile
-$memory.mastery
-$memory.active_learning_plan
-```
-
-如果只需要某一类数据，可以分别调用 `/profiles`、`/history` 或 `/sessions`。
+| 调用 | 用途 |
+|---|---|
+| `GET /learners/learner-001` | 刷新当前画像、掌握度和活动学习计划 |
+| `GET /learners/learner-001/profiles` | 查看画像历史 |
+| `GET /learners/learner-001/history` | 查看诊断、课程和反馈相关历史 |
+| `GET /learners/learner-001/sessions` | 查看该学员的课程、诊断和反馈会话 |
 
 ## 9. 常见 HTTP 状态码
 
