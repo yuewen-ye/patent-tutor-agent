@@ -19,7 +19,7 @@ data/*.sqlite3-shm
 .vscode/
 
 .langgraph_api/
-
+config/agents.yaml
 graphify-out/
 
 backend/app/rag/data/milvus_lite.db/LOCK
