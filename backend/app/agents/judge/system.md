@@ -73,6 +73,7 @@ A 主要负责事实、法条、概念边界和整合兜底；B 主要负责可�
 ## 输出合同
 
 只输出符合 `JudgeReport` 的合法 JSON，不要输出 Markdown、代码围栏或解释文字。
+调用方会在运行时注入完整 JSON Schema 和结构示例；该示例不是固定答案，分数、争议、理由和修订要求必须依据本轮整合稿生成，禁止照抄。
 
 - `decision` 只能是 `accept / accept_with_minor_revision / revise`
 - `accuracy_score`、`completeness_score`、`adaptation_score` 为 1 到 5
@@ -82,7 +83,7 @@ A 主要负责事实、法条、概念边界和整合兜底；B 主要负责可�
 - `debate` 可选
 - 字段名、枚举和嵌套结构严格遵守调用方提供的 JSON Schema，不得增加合同外字段
 
-## 铁律
+## 注意事项（铁律）
 
 - 绝不写教学正文。
 - 不因 A 严谨或 B 生动而扣分；只有事实失真、内容缺失或适配失败才扣分。

@@ -4,7 +4,12 @@ import json
 import re
 from pathlib import Path
 
+import pytest
+
+from backend.app.agents.common import schema_note
 from backend.app.schemas.state import DiagnosisAgentResult, FeedbackAgentResult
+
+pytestmark = pytest.mark.unit
 
 
 _AGENTS_DIR = Path(__file__).resolve().parents[2] / "app" / "agents"
@@ -37,6 +42,14 @@ def test_diagnosis_prompts_preserve_modeler_role_without_claiming_bkt_ownership(
     assert "`affect`" in diagnosis
     assert "FeedbackAgentResult" in feedback
     assert "E2 `concept_confusion`" in feedback
+    assert "工作模式（初始诊断阶段）" in diagnosis
+    assert "工作模式（反馈更新阶段）" in feedback
+    assert "注意事项（铁律）" in diagnosis
+    assert "注意事项（铁律）" in feedback
+    assert "仅为字段结构示例，不是固定答案" in diagnosis
+    assert "仅为字段结构示例，不是固定答案" in feedback
+    assert "不得照抄" in diagnosis
+    assert "不得照抄" in feedback
 
     diagnosis_example = DiagnosisAgentResult.model_validate(_json_example(diagnosis))
     feedback_example = FeedbackAgentResult.model_validate(_json_example(feedback))
@@ -101,3 +114,39 @@ def test_planner_preserves_full_route_role_with_backend_as_final_guard() -> None
     assert "PlannerAgentResult" in planner
     assert "后端负责拓扑校验、课程游标和最终活动窗口" in planner
     assert "`nodes` 表示完整学习路线" in planner
+    assert "仅为字段结构示例，不是固定答案" in planner
+    assert "禁止照抄" in planner
+
+
+def test_runtime_schema_examples_are_explicitly_structural_not_fixed_answers() -> None:
+    note = schema_note("ExampleContract", '{"field":"example value"}')
+
+    assert "仅为字段结构示例，不是固定答案" in note
+    assert "字段值必须依据本次输入重新生成" in note
+    assert "禁止照抄示例内容" in note
+
+
+def test_original_backed_phase_prompts_keep_output_and_attention_sections() -> None:
+    phase_prompts = [
+        ("expert_a", "debate_system.md"),
+        ("expert_a", "cross_review_system.md"),
+        ("expert_a", "revision_system.md"),
+        ("expert_a", "integration_system.md"),
+        ("expert_b", "draft_system.md"),
+        ("expert_b", "cross_review_system.md"),
+        ("expert_b", "revision_system.md"),
+        ("judge", "system.md"),
+        ("planner", "system.md"),
+    ]
+
+    for parts in phase_prompts:
+        content = _prompt(*parts)
+        assert "输出" in content
+        assert "注意事项（铁律）" in content
+
+    runtime_example_prompts = phase_prompts[:-1]
+    for parts in runtime_example_prompts:
+        content = _prompt(*parts)
+        assert "结构示例" in content
+        assert "不是固定答案" in content
+        assert "禁止照抄" in content

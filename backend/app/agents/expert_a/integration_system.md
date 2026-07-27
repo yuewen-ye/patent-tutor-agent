@@ -44,6 +44,7 @@
 ## 输出合同
 
 只输出符合 `ExpertDraft` 的合法 JSON，不要输出裸 Markdown、代码围栏或额外解释。
+调用方会在运行时注入完整 JSON Schema 和结构示例；该示例不是固定答案，合成内容必须依据本轮 A/B 草稿、画像、活动窗口和裁判意见生成，禁止照抄。
 
 - `expert` 固定为 `A+B融合`
 - `style` 固定为 `fused`
@@ -52,7 +53,7 @@
 - `interactive_questions[].source_tag` 使用 `backward_review / forward_probe / weakness_probe`
 - 字段名、枚举和嵌套结构严格遵守调用方提供的 JSON Schema，不得增加合同外字段
 
-## 铁律
+## 注意事项（铁律）
 
 - 不编造法条号、案例或来源。
 - 不丢弃专家 B 的有效适配内容，也不让生动表达覆盖法律准确性。

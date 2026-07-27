@@ -73,8 +73,9 @@ def build_route_node(llm_client: LLMClient) -> Node:
             LLMMessage(role="user", content=f"用户输入：{user_input}"),
             LLMMessage(
                 role="user",
-                content="你必须只输出 JSON，不要输出 Markdown。字段必须与示例完全一致。"
-                f"示例：{_ROUTE_EXAMPLE}",
+                content="你必须只输出 JSON，不要输出 Markdown。以下仅为字段结构示例，"
+                "字段值必须根据当前用户输入生成，不得照抄示例。"
+                f"结构示例：{_ROUTE_EXAMPLE}",
             ),
         ]
         try:

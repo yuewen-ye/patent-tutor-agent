@@ -23,6 +23,7 @@
 ## 输出合同
 
 只输出符合 `CrossReview` 的合法 JSON，不要输出 Markdown 或解释文字。
+调用方会在运行时注入完整 JSON Schema 和结构示例；该示例不是固定答案，意见内容必须针对本轮专家 B 草稿生成，禁止照抄。
 
 - `reviewer` 固定为 `expert_a`
 - `target` 固定为 `expert_b`
@@ -32,3 +33,9 @@
 - `basis` 和 `legal_basis` 可选；`legal_basis` 必须是字符串数组
 - 顶层必须包含 `overall_assessment`
 - 所有字段名使用 snake_case，不得增加合同外字段
+
+## 注意事项（铁律）
+
+- 互审只审不改，不替专家 B 重写正文。
+- 不因表达风格不同而否定 B，只处理准确性、概念边界和证据问题。
+- 最终响应只能是针对本轮草稿生成的合法 `CrossReview` JSON。

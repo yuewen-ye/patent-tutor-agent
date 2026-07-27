@@ -109,8 +109,10 @@ def messages_from_prompt(prompt: ChatPromptTemplate, **values: object) -> list[L
 def schema_note(schema_name: str, example: str) -> str:
     return (
         f"你必须只输出 json，不要输出 Markdown。输出必须符合 {schema_name}。"
-        "字段名必须与示例完全一致，必须使用 snake_case，不要改成 camelCase。"
-        f"示例 json：{example.replace(chr(123), chr(123) * 2).replace(chr(125), chr(125) * 2)}"
+        "下面的 JSON 仅为字段结构示例，不是固定答案。"
+        "字段名和嵌套结构必须与示例一致，必须使用 snake_case，不要改成 camelCase；"
+        "字段值必须依据本次输入重新生成，禁止照抄示例内容。"
+        f"结构示例：{example.replace(chr(123), chr(123) * 2).replace(chr(125), chr(125) * 2)}"
     )
 
 
