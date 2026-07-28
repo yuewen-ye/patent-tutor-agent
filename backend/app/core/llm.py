@@ -253,7 +253,14 @@ def _build_chat_body(
     if json_schema is not None:
         if not schema_name:
             raise ValueError("schema_name is required when json_schema is provided")
-        body["response_format"] = {"type": "json_object"}
+        body["response_format"] = {
+            "type": "json_schema",
+            "json_schema": {
+                "name": schema_name,
+                "strict": True,
+                "schema": json_schema,
+            },
+        }
     elif json_mode:
         body["response_format"] = {"type": "json_object"}
     return body
