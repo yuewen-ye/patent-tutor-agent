@@ -14,6 +14,7 @@
 | `rag-interface-spec.md` | RAG 选择器、检索合同和真实/mock 模式 |
 | `implementation-plan.md` | 当前基线和后续实施顺序 |
 | `patent-tutor-rdb-design.md` | MySQL 关系型数据库设计、数据边界和持久化方案 |
+| `patent-tutor-rdb-design-proposal.md` | 待审查的精简 MySQL 数据库设计草案；未改变当前实现 |
 | `mysql-verification-guide.md` | MySQL 初始化、真实写入冒烟测试和成功判定标准 |
 | `mysql-setup.md` | WSL2、Ubuntu、Docker Engine/CLI、MySQL 容器和数据库初始化指南 |
 
