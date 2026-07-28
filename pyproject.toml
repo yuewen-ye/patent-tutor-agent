@@ -26,6 +26,7 @@ dependencies = [
     "pyyaml>=6.0.2",
     "scipy>=1.14.0",
     "flagembedding>=1.4.0",
+    "modelscope>=1.39.0",
 ]
 
 [dependency-groups]
