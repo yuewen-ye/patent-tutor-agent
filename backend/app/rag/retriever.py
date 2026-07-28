@@ -8,20 +8,28 @@ from typing import Any, Final
 
 from backend.app.schemas.state import RetrievalChunk, RetrievalMetadata
 
-os.environ["HF_ENDPOINT"] = "https://huggingface.co"
+# Respect existing HF_ENDPOINT from .env, default to mirror for China users
+os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
 
 COLLECTION_NAME: Final = "law_knowledge_base"
 MODEL_NAME: Final = "BAAI/bge-m3"
+RERANKER_MODEL_NAME: Final = "BAAI/bge-reranker-v2-m3"
 EMBEDDING_MODEL_PATH_ENV: Final = "RAG_EMBEDDING_MODEL_PATH"
+RERANKER_MODEL_PATH_ENV: Final = "RAG_RERANKER_MODEL_PATH"
+RERANK_ENABLED_ENV: Final = "RAG_RERANK_ENABLED"
+RERANK_CANDIDATE_MULTIPLIER: Final = 3
 
 _milvus_client = None
 _embedding_model = None
+_reranker_model = None
 _sentence_transformers = None
 _MILVUS_CLIENT_LOCK: Final = Lock()
 _EMBEDDING_MODEL_LOCK: Final = Lock()
+_RERANKER_MODEL_LOCK: Final = Lock()
 # 串行化编码调用：bge-m3 的 FastTokenizer 非线程安全，expert_a/expert_b 在 LangGraph
 # 并发执行时会同时调用 rag_retrieve → model.encode 抢同一把 tokenizer 锁 → "Already borrowed"。
 _EMBEDDING_ENCODE_LOCK: Final = Lock()
+_RERANKER_PREDICT_LOCK: Final = Lock()
 
 
 class RAGRetrievalError(RuntimeError):
@@ -36,6 +44,24 @@ class RAGRetrievalError(RuntimeError):
 
 def _get_db_path() -> str:
     return str(Path(__file__).resolve().parent / "data" / "milvus_lite.db")
+
+
+def _cleanup_stale_lock(db_path: str) -> None:
+    """Remove stale Milvus Lite LOCK file before connecting.
+
+    Milvus Lite creates a LOCK file to prevent concurrent access.
+    If a process crashes without releasing it, the lock becomes stale
+    and the next connection fails with DataDirLockedError.
+    Removing the LOCK file before connecting is safe because:
+    - This runs inside _MILVUS_CLIENT_LOCK, so no concurrent calls within this process.
+    - The LOCK file is re-created by Milvus on connect if needed.
+    """
+    lock_path = os.path.join(db_path, "LOCK")
+    if os.path.exists(lock_path):
+        try:
+            os.remove(lock_path)
+        except OSError:
+            pass  # Best-effort; if removal fails, MilvusClient will raise the real error
 
 
 def _load_class(module_name: str, class_name: str, stage: str) -> type[Any]:
@@ -69,6 +95,11 @@ def _lazy_import() -> None:
         )
 
 
+def _reranker_enabled() -> bool:
+    val = os.getenv(RERANK_ENABLED_ENV, "true").strip().lower()
+    return val in ("", "true", "1", "yes", "on")
+
+
 def get_embedding_model() -> Any:
     global _embedding_model
     if _embedding_model is None:
@@ -95,6 +126,34 @@ def get_embedding_model() -> Any:
     return _embedding_model
 
 
+def get_reranker_model() -> Any | None:
+    """Lazy-load bge-reranker-v2-m3 as CrossEncoder. Returns None if disabled or load fails."""
+    global _reranker_model
+    if not _reranker_enabled():
+        return None
+    if _reranker_model is None:
+        with _RERANKER_MODEL_LOCK:
+            if _reranker_model is None:
+                try:
+                    _lazy_import()
+                    CrossEncoder = _load_class(
+                        "sentence_transformers", "CrossEncoder", "reranker_import"
+                    )
+                    local_model_path = os.getenv(RERANKER_MODEL_PATH_ENV, "").strip()
+                    if local_model_path:
+                        _reranker_model = CrossEncoder(local_model_path)
+                    else:
+                        _reranker_model = CrossEncoder(RERANKER_MODEL_NAME)
+                except (OSError, RuntimeError, ImportError, RAGRetrievalError) as exc:
+                    # Reranker is optional — degrade gracefully to vector-only
+                    import logging
+                    logging.getLogger(__name__).warning(
+                        "Reranker model load failed, falling back to vector-only: %s", exc
+                    )
+                    _reranker_model = None
+    return _reranker_model
+
+
 def get_milvus_client() -> Any:
     global _milvus_client
     if _milvus_client is None:
@@ -106,6 +165,7 @@ def get_milvus_client() -> Any:
                 try:
                     MilvusClient = _load_class("pymilvus", "MilvusClient", "milvus_import")
                     db_path = _get_db_path()
+                    _cleanup_stale_lock(db_path)
                     _milvus_client = MilvusClient(db_path)
                     _milvus_client.load_collection(COLLECTION_NAME)
                 except RAGRetrievalError:
@@ -138,6 +198,10 @@ def rag_retrieve(query: str = "", top_k: int = 5) -> list[RetrievalChunk]:
     except (AttributeError, IndexError, RuntimeError, ValueError) as exc:
         raise RAGRetrievalError(stage="embedding_encode", detail=str(exc)) from exc
 
+    # Over-retrieve for reranking; fall back to top_k if reranker unavailable
+    reranker = get_reranker_model()
+    search_limit = min(top_k * RERANK_CANDIDATE_MULTIPLIER, 20) if reranker else top_k
+
     milvus_error = _load_exception_class(
         "pymilvus.exceptions", "MilvusException", "milvus_import"
     )
@@ -145,7 +209,7 @@ def rag_retrieve(query: str = "", top_k: int = 5) -> list[RetrievalChunk]:
         results = client.search(
             collection_name=COLLECTION_NAME,
             data=[query_vector],
-            limit=top_k,
+            limit=search_limit,
             output_fields=["text", "source"],
         )
     except RAGRetrievalError:
@@ -175,7 +239,28 @@ def rag_retrieve(query: str = "", top_k: int = 5) -> list[RetrievalChunk]:
                     ),
                 )
             )
-
-        return chunks
     except (KeyError, TypeError, IndexError, ValueError) as exc:
         raise RAGRetrievalError(stage="result_parse", detail=str(exc)) from exc
+
+    # Rerank with cross-encoder
+    if reranker is not None and len(chunks) > 1:
+        try:
+            with _RERANKER_PREDICT_LOCK:
+                pairs = [(query, chunk.text) for chunk in chunks]
+                rerank_scores = reranker.predict(pairs)
+
+            for chunk, rs in zip(chunks, rerank_scores):
+                chunk.rerank_score = float(rs)
+                chunk.metadata = RetrievalMetadata(
+                    doc_type="law",
+                    retrieval_method="hybrid",
+                )
+            # Sort by rerank_score descending
+            chunks.sort(key=lambda c: c.rerank_score or 0, reverse=True)
+        except (AttributeError, RuntimeError, ValueError) as exc:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Rerank failed, returning vector results unsorted: %s", exc
+            )
+
+    return chunks[:top_k]
