@@ -81,7 +81,7 @@ PATENT_TUTOR_MYSQL_POOL_SIZE=5
 PATENT_TUTOR_MYSQL_AUTO_MIGRATE=true
 ```
 
-支持 `deepseek`、`qwen`、`glm` 三个 provider。每个 Agent 的 provider、model、temperature、top_k 等非密钥参数在 `config/agents.yaml` 里调整。
+支持 `deepseek`、`qwen`、`glm` 三个 provider。每个 Agent 的 provider、model、temperature、top_k 等非密钥参数在 `config/agents.yaml` 里调整。首次本地运行前执行 `Copy-Item config/agents.example.yaml config/agents.yaml`；后者是本机配置，刻意不纳入 Git。
 
 配置分两层：`providers.<name>.model_name` 是该供应商的默认模型；`agents.<agent>.model_name` 只是单个 Agent 的覆盖项，通常不用重复写：
 
