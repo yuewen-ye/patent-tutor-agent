@@ -8,8 +8,15 @@ from typing import Any, Final
 
 from backend.app.schemas.state import RetrievalChunk, RetrievalMetadata
 
-# Respect existing HF_ENDPOINT from .env, default to mirror for China users
 os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
+
+try:
+    import milvus_lite.storage.manifest as _manifest
+    if not getattr(_manifest, '_patched_rename', False):
+        setattr(_manifest.os, 'rename', _manifest.os.replace)
+        setattr(_manifest, '_patched_rename', True)
+except ImportError:
+    pass
 
 COLLECTION_NAME: Final = "law_knowledge_base"
 MODEL_NAME: Final = "BAAI/bge-m3"
@@ -26,8 +33,6 @@ _sentence_transformers = None
 _MILVUS_CLIENT_LOCK: Final = Lock()
 _EMBEDDING_MODEL_LOCK: Final = Lock()
 _RERANKER_MODEL_LOCK: Final = Lock()
-# 串行化编码调用：bge-m3 的 FastTokenizer 非线程安全，expert_a/expert_b 在 LangGraph
-# 并发执行时会同时调用 rag_retrieve → model.encode 抢同一把 tokenizer 锁 → "Already borrowed"。
 _EMBEDDING_ENCODE_LOCK: Final = Lock()
 _RERANKER_PREDICT_LOCK: Final = Lock()
 
@@ -47,21 +52,12 @@ def _get_db_path() -> str:
 
 
 def _cleanup_stale_lock(db_path: str) -> None:
-    """Remove stale Milvus Lite LOCK file before connecting.
-
-    Milvus Lite creates a LOCK file to prevent concurrent access.
-    If a process crashes without releasing it, the lock becomes stale
-    and the next connection fails with DataDirLockedError.
-    Removing the LOCK file before connecting is safe because:
-    - This runs inside _MILVUS_CLIENT_LOCK, so no concurrent calls within this process.
-    - The LOCK file is re-created by Milvus on connect if needed.
-    """
     lock_path = os.path.join(db_path, "LOCK")
     if os.path.exists(lock_path):
         try:
             os.remove(lock_path)
         except OSError:
-            pass  # Best-effort; if removal fails, MilvusClient will raise the real error
+            pass
 
 
 def _load_class(module_name: str, class_name: str, stage: str) -> type[Any]:
@@ -127,7 +123,6 @@ def get_embedding_model() -> Any:
 
 
 def get_reranker_model() -> Any | None:
-    """Lazy-load bge-reranker-v2-m3 as CrossEncoder. Returns None if disabled or load fails."""
     global _reranker_model
     if not _reranker_enabled():
         return None
@@ -145,7 +140,6 @@ def get_reranker_model() -> Any | None:
                     else:
                         _reranker_model = CrossEncoder(RERANKER_MODEL_NAME)
                 except (OSError, RuntimeError, ImportError, RAGRetrievalError) as exc:
-                    # Reranker is optional — degrade gracefully to vector-only
                     import logging
                     logging.getLogger(__name__).warning(
                         "Reranker model load failed, falling back to vector-only: %s", exc
@@ -190,7 +184,6 @@ def rag_retrieve(query: str = "", top_k: int = 5) -> list[RetrievalChunk]:
         raise RAGRetrievalError(stage="setup", detail=str(exc)) from exc
 
     try:
-        # 加锁串行化：规避并发 encode 时 bge-m3 tokenizer "Already borrowed"
         with _EMBEDDING_ENCODE_LOCK:
             query_vector = model.encode([query], normalize_embeddings=True)[0].tolist()
     except RAGRetrievalError:
@@ -198,7 +191,6 @@ def rag_retrieve(query: str = "", top_k: int = 5) -> list[RetrievalChunk]:
     except (AttributeError, IndexError, RuntimeError, ValueError) as exc:
         raise RAGRetrievalError(stage="embedding_encode", detail=str(exc)) from exc
 
-    # Over-retrieve for reranking; fall back to top_k if reranker unavailable
     reranker = get_reranker_model()
     search_limit = min(top_k * RERANK_CANDIDATE_MULTIPLIER, 20) if reranker else top_k
 
@@ -242,7 +234,6 @@ def rag_retrieve(query: str = "", top_k: int = 5) -> list[RetrievalChunk]:
     except (KeyError, TypeError, IndexError, ValueError) as exc:
         raise RAGRetrievalError(stage="result_parse", detail=str(exc)) from exc
 
-    # Rerank with cross-encoder
     if reranker is not None and len(chunks) > 1:
         try:
             with _RERANKER_PREDICT_LOCK:
@@ -255,7 +246,6 @@ def rag_retrieve(query: str = "", top_k: int = 5) -> list[RetrievalChunk]:
                     doc_type="law",
                     retrieval_method="hybrid",
                 )
-            # Sort by rerank_score descending
             chunks.sort(key=lambda c: c.rerank_score or 0, reverse=True)
         except (AttributeError, RuntimeError, ValueError) as exc:
             import logging
