@@ -1,8 +1,18 @@
-$dbPath = "T:\Study\Learn\Multi-Agent\patent-tutor-agent\backend\app\rag\data\milvus_lite.db"
+[CmdletBinding()]
+param()
+
+$ErrorActionPreference = "Stop"
+
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$dbPath = Join-Path $repoRoot "backend\app\rag\data\milvus_lite.db"
+
+if (-not (Test-Path -LiteralPath $dbPath)) {
+    throw "Milvus Lite database directory was not found: $dbPath"
+}
 
 # Only protect parquet data files (read-only), keep metadata files writable
 # Use attrib command because Set-ItemProperty cannot modify read-only files on Windows
-$files = Get-ChildItem -Path $dbPath -Recurse -File
+$files = Get-ChildItem -LiteralPath $dbPath -Recurse -File
 foreach ($f in $files) {
     if ($f.Extension -eq ".parquet") {
         attrib +r "$($f.FullName)"
@@ -25,6 +35,7 @@ Write-Host "  Other writable:    $otherRW"
 
 $lockFile = Join-Path $dbPath "LOCK"
 if (Test-Path $lockFile) {
+    attrib -r "$lockFile"
     Write-Host ""
-    Write-Host "Warning: LOCK file detected (stale from abnormal exit), recommend deleting before use"
+    Write-Host "LOCK file is writable. Stop all Milvus Lite users before deleting it manually."
 }

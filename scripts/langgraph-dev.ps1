@@ -48,14 +48,19 @@ if (-not $env:UV_PYTHON_INSTALL_DIR) {
 
 $dbPath = Join-Path $repoRoot "backend\app\rag\data\milvus_lite.db"
 if (Test-Path $dbPath) {
-    $lockFile = Join-Path $dbPath "LOCK"
-    if (Test-Path $lockFile) {
-        Remove-Item $lockFile -Force -ErrorAction SilentlyContinue
-        Write-Host "[init] 已清理残留 LOCK 文件"
+    # Milvus Lite must acquire its LOCK file and may update collection metadata while
+    # loading. Only immutable vector payloads may be protected as read-only.
+    $files = Get-ChildItem -Path $dbPath -Recurse -File
+    foreach ($file in $files) {
+        if ($file.Extension -eq ".parquet") {
+            attrib +r "$($file.FullName)"
+        } else {
+            attrib -r "$($file.FullName)"
+        }
     }
-    Get-ChildItem -Path $dbPath -Recurse -File | Set-ItemProperty -Name IsReadOnly -Value $true
-    $fileCount = (Get-ChildItem -Path $dbPath -Recurse -File).Count
-    Write-Host "[init] 数据库已设为只读（$fileCount 个文件）"
+    $parquetCount = ($files | Where-Object { $_.Extension -eq ".parquet" }).Count
+    $metadataCount = $files.Count - $parquetCount
+    Write-Host "[init] Milvus 向量数据已设为只读（$parquetCount 个 parquet）；LOCK 和元数据保持可写（$metadataCount 个文件）"
 } else {
     Write-Host "[init] 数据库目录不存在，跳过只读设置"
 }

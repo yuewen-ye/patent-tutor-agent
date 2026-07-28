@@ -1,15 +1,23 @@
-﻿$dest = "T:\Study\Learn\Multi-Agent\patent-tutor-agent\backend\app\rag\data\milvus_lite.db"
+[CmdletBinding()]
+param()
 
-Get-ChildItem -Path $dest -Recurse -File | Set-ItemProperty -Name IsReadOnly -Value $false
+$ErrorActionPreference = "Stop"
 
-$lockFile = Join-Path $dest "LOCK"
-if (Test-Path $lockFile) {
-    Remove-Item $lockFile -Force
-    Write-Host "LOCK 文件已删除"
-} else {
-    Write-Host "LOCK 文件不存在"
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$dbPath = Join-Path $repoRoot "backend\app\rag\data\milvus_lite.db"
+
+if (-not (Test-Path -LiteralPath $dbPath)) {
+    throw "Milvus Lite database directory was not found: $dbPath"
 }
 
-Get-ChildItem -Path $dest -Recurse -File | Set-ItemProperty -Name IsReadOnly -Value $true
-Write-Host "已重新设置只读"
-Write-Host "剩余文件数: $((Get-ChildItem $dest -Recurse -File).Count)"
+$files = Get-ChildItem -LiteralPath $dbPath -Recurse -File
+foreach ($file in $files) {
+    if ($file.Extension -eq ".parquet") {
+        attrib +r "$($file.FullName)"
+    } else {
+        attrib -r "$($file.FullName)"
+    }
+}
+
+Write-Host "Milvus parquet 数据已只读；LOCK 和集合元数据保持可写。"
+Write-Host "LOCK 文件不会由此脚本删除，以免影响正在运行的 Milvus Lite 实例。"
