@@ -60,6 +60,28 @@ def _cleanup_stale_lock(db_path: str) -> None:
             pass
 
 
+def _fix_manifest_paths(db_path: str) -> None:
+    import json
+    manifest_path = os.path.join(db_path, "collections", COLLECTION_NAME, "manifest.json")
+    if not os.path.exists(manifest_path):
+        return
+    try:
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            manifest = json.load(f)
+        changed = False
+        for part in manifest.get("partitions", {}).values():
+            data_files = part.get("data_files", [])
+            fixed = [p.replace("\\", "/") for p in data_files]
+            if fixed != data_files:
+                part["data_files"] = fixed
+                changed = True
+        if changed:
+            with open(manifest_path, "w", encoding="utf-8") as f:
+                json.dump(manifest, f, ensure_ascii=False, indent=2)
+    except (OSError, ValueError, KeyError):
+        pass
+
+
 def _load_class(module_name: str, class_name: str, stage: str) -> type[Any]:
     try:
         module = importlib.import_module(module_name)
@@ -160,6 +182,7 @@ def get_milvus_client() -> Any:
                     MilvusClient = _load_class("pymilvus", "MilvusClient", "milvus_import")
                     db_path = _get_db_path()
                     _cleanup_stale_lock(db_path)
+                    _fix_manifest_paths(db_path)
                     _milvus_client = MilvusClient(db_path)
                     _milvus_client.load_collection(COLLECTION_NAME)
                 except RAGRetrievalError:

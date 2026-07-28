@@ -14,8 +14,8 @@
   "partitions": {
     "_default": {
       "data_files": [
-        "data\\data_000001_010038.parquet",
-        "data\\data_010039_011107.parquet"
+        "data/data_000001_010038.parquet",
+        "data/data_010039_011107.parquet"
       ],
       "delta_files": []
     }
