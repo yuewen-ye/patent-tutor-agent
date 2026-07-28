@@ -251,6 +251,25 @@ class MySQLDatabase:
                 self._created = max(0, self._created - 1)
         self._initialized = False
 
+    def recreate_schema(self) -> None:
+        """Destructively recreate this configured database from the fresh schema.
+
+        This is intentionally explicit: the vNext schema does not migrate the
+        retired 30-table design. Callers must invoke the dedicated maintenance
+        script with its confirmation flag before using this method.
+        """
+
+        self.close()
+        admin = self._connect(with_database=False)
+        try:
+            database = self.settings.database.replace("`", "``")
+            with admin.cursor() as cursor:
+                cursor.execute(f"DROP DATABASE IF EXISTS `{database}`")
+            admin.commit()
+        finally:
+            admin.close()
+        self.ensure_initialized()
+
 
 def _split_sql(script: str) -> list[str]:
     """Split migration SQL; migration files intentionally avoid procedural SQL."""

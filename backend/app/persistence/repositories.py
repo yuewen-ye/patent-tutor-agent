@@ -490,40 +490,59 @@ class MySQLLearnerStore:
             learner_id = str(payload["learner_id"])
             self._ensure_student(connection, learner_id, now)
             completed_at = now if payload.get("status") == "completed" else None
-            connection.cursor().execute(
-                "INSERT INTO diagnostic_sessions("
-                "diagnostic_session_id, student_id, status, learning_goal, education_background, "
-                "model_version, payload_json, created_at, updated_at, completed_at"
-                ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
-                "ON DUPLICATE KEY UPDATE status=%s, payload_json=%s, updated_at=%s, "
+            session_id = str(payload["diagnostic_session_id"])
+            state: dict[str, Any] = {
+                "session_id": session_id,
+                "workflow_mode": "diagnose",
+                "workflow_status": payload.get("status") or "running",
+                "events": [],
+                "artifacts": [],
+                "diagnostic": payload,
+            }
+            cursor = connection.cursor()
+            cursor.execute(
+                "INSERT INTO sessions(session_id, student_id, workflow_mode, status, learning_goal, "
+                "input_payload, workflow_version, created_at, updated_at, completed_at) "
+                "VALUES (%s,%s,'diagnose',%s,%s,%s,'cat-v1',%s,%s,%s) "
+                "ON DUPLICATE KEY UPDATE status=%s, input_payload=%s, updated_at=%s, "
                 "completed_at=%s",
                 (
-                    payload["diagnostic_session_id"],
+                    session_id,
                     learner_id,
                     payload["status"],
                     payload["learning_goal"],
-                    payload["education_background"],
-                    payload.get("model_version") or BKT_MODEL_VERSION,
-                    _json_dump(payload),
+                    _json_dump(
+                        {
+                            "education_background": payload["education_background"],
+                            "questionnaire_responses": payload.get("questionnaire_responses") or [],
+                        }
+                    ),
                     now,
                     now,
                     completed_at,
                     payload["status"],
-                    _json_dump(payload),
+                    _json_dump(
+                        {
+                            "education_background": payload["education_background"],
+                            "questionnaire_responses": payload.get("questionnaire_responses") or [],
+                        }
+                    ),
                     now,
                     completed_at,
                 ),
             )
+            self._write_state(connection, session_id, state, now)
 
     def load_diagnostic_session(self, diagnostic_session_id: str) -> dict[str, Any] | None:
         with self.database.transaction() as connection:
             cursor = connection.cursor()
             cursor.execute(
-                "SELECT payload_json FROM diagnostic_sessions WHERE diagnostic_session_id=%s",
+                "SELECT state_json FROM session_states WHERE session_id=%s",
                 (diagnostic_session_id,),
             )
             row = cursor.fetchone()
-        return _json_load(row["payload_json"], {}) if row else None
+        state = _json_load(row["state_json"], {}) if row else None
+        return state.get("diagnostic") if isinstance(state, dict) else None
 
     def save_diagnostic_attempt(
         self,
@@ -538,23 +557,47 @@ class MySQLLearnerStore:
         with self.database.transaction() as connection:
             self._ensure_student(connection, learner_id, now)
             cursor = connection.cursor()
+            question_id = f"{diagnostic_session_id}:diagnostic:{attempt['question_id']}"[:128]
+            snapshot = attempt.get("question_snapshot")
+            snapshot = snapshot if isinstance(snapshot, dict) else {}
             cursor.execute(
-                "INSERT IGNORE INTO diagnostic_attempts("
-                "diagnostic_attempt_id, diagnostic_session_id, student_id, question_id, "
-                "skills_json, selected_option, is_correct, response_ms, attempt_json, "
-                "idempotency_key, created_at"
-                ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                "INSERT IGNORE INTO questions(question_id, session_id, origin, qid, kind, "
+                "kc_node_id, skills_json, question_text, answer_json, options_json, "
+                "question_version, status, created_at) "
+                "VALUES (%s,%s,'diagnostic_catalog',%s,'diagnostic',%s,%s,%s,%s,%s,'catalog-v1','published',%s)",
+                (
+                    question_id,
+                    diagnostic_session_id,
+                    attempt["question_id"],
+                    (attempt.get("skills") or [None])[0],
+                    _json_dump(attempt.get("skills") or []),
+                    str(snapshot.get("question_text") or attempt["question_id"]),
+                    _json_dump(snapshot.get("correct_answer"))
+                    if snapshot.get("correct_answer") is not None
+                    else None,
+                    _json_dump(snapshot.get("options")) if snapshot.get("options") is not None else None,
+                    now,
+                ),
+            )
+            idempotency = idempotency_key or hashlib.sha256(
+                _json_dump({"session": diagnostic_session_id, "attempt": attempt}).encode("utf-8")
+            ).hexdigest()
+            cursor.execute(
+                "INSERT IGNORE INTO attempts(attempt_id, student_id, question_id, session_id, "
+                "raw_answer_json, selected_option, is_correct, grading_status, grading_source, "
+                "response_ms, idempotency_key, created_at, graded_at) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,'graded','diagnostic_answer_key',%s,%s,%s,%s)",
                 (
                     attempt_id,
-                    diagnostic_session_id,
                     learner_id,
-                    attempt["question_id"],
-                    _json_dump(attempt.get("skills") or []),
+                    question_id,
+                    diagnostic_session_id,
+                    _json_dump(attempt["user_answer"]),
                     attempt["user_answer"],
                     int(bool(attempt["is_correct"])),
                     attempt.get("response_time_ms"),
-                    _json_dump(attempt),
-                    idempotency_key,
+                    idempotency,
+                    now,
                     now,
                 ),
             )
@@ -562,19 +605,19 @@ class MySQLLearnerStore:
                 return
             for step in attempt.get("direct_steps") or []:
                 cursor.execute(
-                    "INSERT INTO diagnostic_mastery_events("
-                    "diagnostic_mastery_event_id, diagnostic_attempt_id, student_id, node_id, "
-                    "event_type, observed_correct, prior_pl, predicted_pl, posterior_pl, p_init, "
-                    "p_transit, p_guess, p_slip, model_version, created_at"
-                    ") VALUES (%s,%s,%s,%s,'observed',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                    "INSERT INTO mastery_events(mastery_event_id, student_id, node_id, attempt_id, "
+                    "event_kind, observed_correct, prior_pl, predicted_pl, posterior_pl, updated_pl, "
+                    "p_init, p_transit, p_guess, p_slip, model_version, created_at) "
+                    "VALUES (%s,%s,%s,%s,'observed',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                     (
                         uuid.uuid4().hex,
-                        attempt_id,
                         learner_id,
                         step["skill_id"],
+                        attempt_id,
                         int(bool(step["observed_correct"])),
                         step["prior_pl"],
                         step["predicted_pl"],
+                        step["posterior_pl"],
                         step["posterior_pl"],
                         step["p_init"],
                         step["p_transit"],
@@ -586,17 +629,17 @@ class MySQLLearnerStore:
                 )
             for change in attempt.get("inferred_changes") or []:
                 cursor.execute(
-                    "INSERT INTO diagnostic_mastery_events("
-                    "diagnostic_mastery_event_id, diagnostic_attempt_id, student_id, node_id, "
-                    "event_type, observed_correct, prior_pl, predicted_pl, posterior_pl, "
-                    "model_version, created_at"
-                    ") VALUES (%s,%s,%s,%s,'inferred',NULL,%s,NULL,%s,%s,%s)",
+                    "INSERT INTO mastery_events(mastery_event_id, student_id, node_id, attempt_id, "
+                    "event_kind, observed_correct, prior_pl, predicted_pl, posterior_pl, updated_pl, "
+                    "model_version, created_at) "
+                    "VALUES (%s,%s,%s,%s,'inferred',NULL,%s,NULL,%s,%s,%s,%s)",
                     (
                         uuid.uuid4().hex,
-                        attempt_id,
                         learner_id,
                         change["skill_id"],
+                        attempt_id,
                         change["prior_pl"],
+                        change["posterior_pl"],
                         change["posterior_pl"],
                         BKT_MODEL_VERSION,
                         now,
@@ -653,8 +696,8 @@ class MySQLLearnerStore:
                     ),
                 )
             cursor.execute(
-                "UPDATE diagnostic_sessions SET status='completed', completed_at=%s, "
-                "updated_at=%s WHERE diagnostic_session_id=%s",
+                "UPDATE sessions SET status='completed', completed_at=%s, "
+                "updated_at=%s WHERE session_id=%s",
                 (now, now, diagnostic_session_id),
             )
 
@@ -731,11 +774,6 @@ class MySQLLearnerStore:
                 "THEN COALESCE(completed_at,%s) ELSE completed_at END WHERE session_id=%s",
                 (effective_status, error, now, effective_status, now, session_id),
             )
-            self._append_events(connection, session_id, updates.get("events", []), now)
-            if "learning_path" in updates:
-                self._write_learning_path(connection, session_id, state, now)
-            if "path_decision" in updates:
-                self._write_session_directive(connection, session_id, state, now)
             round_id = self._round_for_updates(connection, session_id, updates, now)
             artifacts = updates.get("artifacts", [])
             if isinstance(artifacts, list):
@@ -744,8 +782,6 @@ class MySQLLearnerStore:
                         self._insert_artifact(connection, session_id, round_id, artifact, now)
             self._register_questions(connection, session_id, state, round_id, now)
             self._register_citations(connection, session_id, round_id, state, artifacts, now)
-            if "feedback_result" in updates:
-                self._write_feedback_log(connection, session_id, state, now)
 
     def load_session(self, session_id: str) -> dict[str, Any] | None:
         with self.database.transaction() as connection:
@@ -862,8 +898,8 @@ class MySQLLearnerStore:
                 cursor = connection.cursor()
                 cursor.execute(
                     "SELECT attempt_id, is_correct, grading_status FROM attempts "
-                    "WHERE idempotency_key=%s",
-                    (idempotency,),
+                    "WHERE student_id=%s AND idempotency_key=%s",
+                    (student_id, idempotency),
                 )
                 existing = cursor.fetchone()
                 if existing:
@@ -1016,23 +1052,9 @@ class MySQLLearnerStore:
     def _replace_weak_points(
         self, connection: Any, learner_id: str, profile: dict[str, Any], now: datetime
     ) -> None:
-        cursor = connection.cursor()
-        cursor.execute(
-            "UPDATE student_weak_points SET status='superseded', last_seen_at=%s "
-            "WHERE student_id=%s AND status='active'",
-            (now, learner_id),
-        )
-        weak_points = profile.get("weak_points") or []
-        if isinstance(weak_points, str):
-            weak_points = [weak_points]
-        for weak_text in weak_points:
-            if not str(weak_text).strip():
-                continue
-            cursor.execute(
-                "INSERT INTO student_weak_points(weak_point_id, student_id, weak_text, "
-                "source, status, first_seen_at, last_seen_at) VALUES (%s,%s,%s,%s,'active',%s,%s)",
-                (uuid.uuid4().hex, learner_id, str(weak_text), "profile", now, now),
-            )
+        # Weak points live in the current profile JSON and its immutable history.
+        # The arguments are retained while the Store API remains backward compatible.
+        del connection, learner_id, profile, now
 
     def _active_learning_plan_on_connection(
         self,
@@ -1155,9 +1177,9 @@ class MySQLLearnerStore:
         )
         cursor.execute(
             "SELECT "
-            "(SELECT COUNT(*) FROM attempts WHERE student_id=%s AND is_correct IS NOT NULL) + "
-            "(SELECT COUNT(*) FROM diagnostic_attempts WHERE student_id=%s) AS answer_count",
-            (learner_id, learner_id),
+            "COUNT(*) AS answer_count FROM attempts "
+            "WHERE student_id=%s AND is_correct IS NOT NULL",
+            (learner_id,),
         )
         count_row = cursor.fetchone()
         answered_questions = int(count_row.get("answer_count") or 0) if count_row else 0
@@ -1222,9 +1244,9 @@ class MySQLLearnerStore:
         )
         cursor.execute(
             "INSERT INTO mastery_events(mastery_event_id, student_id, node_id, attempt_id, "
-            "observed_correct, prior_pl, predicted_pl, posterior_pl, updated_pl, p_init, "
+            "event_kind, observed_correct, prior_pl, predicted_pl, posterior_pl, updated_pl, p_init, "
             "p_transit, p_guess, p_slip, model_version, created_at) "
-            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            "VALUES (%s,%s,%s,%s,'observed',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
             (
                 uuid.uuid4().hex,
                 learner_id,
@@ -1276,122 +1298,6 @@ class MySQLLearnerStore:
                 "UPDATE session_states SET state_json=%s, revision=revision+1, updated_at=%s "
                 "WHERE session_id=%s",
                 (_json_dump(state), now, session_id),
-            )
-
-    def _write_learning_path(
-        self, connection: Any, session_id: str, state: dict[str, Any], now: datetime
-    ) -> None:
-        path = state.get("learning_path")
-        if not isinstance(path, list):
-            return
-        cursor = connection.cursor()
-        cursor.execute(
-            "SELECT COALESCE(MAX(path_version),0)+1 AS next_version "
-            "FROM learning_paths WHERE session_id=%s",
-            (session_id,),
-        )
-        version = int(cursor.fetchone()["next_version"])
-        for order_idx, item in enumerate(path):
-            if not isinstance(item, dict) or not item.get("node_id"):
-                continue
-            cursor.execute(
-                "INSERT IGNORE INTO learning_paths(session_id, path_version, node_id, node_name, "
-                "prerequisites, difficulty_cap, strategy, order_idx, created_at) "
-                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                (
-                    session_id,
-                    version,
-                    item["node_id"],
-                    item.get("node_name") or item["node_id"],
-                    _json_dump(item.get("prerequisites") or []),
-                    item.get("difficulty_cap"),
-                    item.get("strategy"),
-                    order_idx,
-                    now,
-                ),
-            )
-
-    def _write_session_directive(
-        self, connection: Any, session_id: str, state: dict[str, Any], now: datetime
-    ) -> None:
-        decision = state.get("path_decision")
-        if not isinstance(decision, dict):
-            return
-        cursor = connection.cursor()
-        cursor.execute(
-            "SELECT COALESCE(MAX(directive_version),0)+1 AS next_version "
-            "FROM session_directives WHERE session_id=%s",
-            (session_id,),
-        )
-        version = int(cursor.fetchone()["next_version"])
-        cursor.execute(
-            "INSERT IGNORE INTO session_directives(directive_id, session_id, directive_version, "
-            "question_scope, iteration_directive, created_at) VALUES (%s,%s,%s,%s,%s,%s)",
-            (
-                uuid.uuid4().hex,
-                session_id,
-                version,
-                _json_dump(decision.get("question_scope") or {}),
-                _json_dump(decision.get("iteration_directive") or {}),
-                now,
-            ),
-        )
-
-    def _write_feedback_log(
-        self, connection: Any, session_id: str, state: dict[str, Any], now: datetime
-    ) -> None:
-        cursor = connection.cursor()
-        cursor.execute("SELECT student_id FROM sessions WHERE session_id=%s", (session_id,))
-        session = cursor.fetchone()
-        if not session or not session.get("student_id"):
-            return
-        cursor.execute(
-            "SELECT feedback_id FROM feedback_logs WHERE session_id=%s LIMIT 1",
-            (session_id,),
-        )
-        if cursor.fetchone():
-            return
-        cursor.execute(
-            "SELECT profile_history_id FROM profile_history WHERE session_id=%s "
-            "ORDER BY snapshot_at DESC LIMIT 1",
-            (session_id,),
-        )
-        profile = cursor.fetchone()
-        mastery = self._mastery_on_connection(connection, str(session["student_id"]))
-        cursor.execute(
-            "INSERT INTO feedback_logs(feedback_id, student_id, session_id, profile_history_id, "
-            "evaluation_signals, bkt_update, created_at) VALUES (%s,%s,%s,%s,%s,%s,%s)",
-            (
-                uuid.uuid4().hex,
-                session["student_id"],
-                session_id,
-                profile["profile_history_id"] if profile else None,
-                _json_dump({"grading_report": state.get("grading_report", [])}),
-                _json_dump(mastery),
-                now,
-            ),
-        )
-
-    def _append_events(
-        self, connection: Any, session_id: str, events: Any, now: datetime
-    ) -> None:
-        if not isinstance(events, list):
-            return
-        cursor = connection.cursor()
-        cursor.execute(
-            "SELECT COALESCE(MAX(sequence_no),0) AS max_sequence FROM session_events "
-            "WHERE session_id=%s FOR UPDATE",
-            (session_id,),
-        )
-        sequence = int(cursor.fetchone()["max_sequence"])
-        for event in events:
-            if not isinstance(event, dict):
-                continue
-            sequence += 1
-            cursor.execute(
-                "INSERT INTO session_events(event_id, session_id, sequence_no, event_json, created_at) "
-                "VALUES (%s,%s,%s,%s,%s)",
-                (uuid.uuid4().hex, session_id, sequence, _json_dump(event), now),
             )
 
     def _round_for_updates(

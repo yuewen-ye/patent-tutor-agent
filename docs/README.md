@@ -14,7 +14,6 @@
 | `rag-interface-spec.md` | RAG 选择器、检索合同和真实/mock 模式 |
 | `implementation-plan.md` | 当前基线和后续实施顺序 |
 | `patent-tutor-rdb-design.md` | MySQL 关系型数据库设计、数据边界和持久化方案 |
-| `patent-tutor-rdb-design-proposal.md` | 待审查的精简 MySQL 数据库设计草案；未改变当前实现 |
 | `mysql-verification-guide.md` | MySQL 初始化、真实写入冒烟测试和成功判定标准 |
 | `mysql-setup.md` | WSL2、Ubuntu、Docker Engine/CLI、MySQL 容器和数据库初始化指南 |
 
@@ -25,8 +24,7 @@
 
 | 文件 | 用途 |
 |---|---|
-| `database-design-presentation-guide.md` | 面向汇报和答辩的数据库设计易懂讲解稿；技术细节仍以关系库设计文档和代码为准 |
-| `database-relationship-diagram.html` | 可搜索、缩放和按表查看关系的交互式数据库关系图，覆盖当前 27 张表 |
+| `database-relationship-diagram.html` | 当前 18 表模型的可视化关系图 |
 
 ## 架构资料
 

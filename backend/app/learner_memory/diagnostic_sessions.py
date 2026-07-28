@@ -287,10 +287,19 @@ class DiagnosticSessionManager:
     ) -> None:
         writer = getattr(self._store, "save_diagnostic_attempt", None)
         if callable(writer):
+            question = self._questions_by_id[str(attempt["question_id"])]
+            persisted_attempt = {
+                **attempt,
+                "question_snapshot": {
+                    "question_text": question.question_text,
+                    "options": dict(question.options),
+                    "correct_answer": question.correct_answer,
+                },
+            }
             writer(
                 diagnostic_session_id=session.diagnostic_session_id,
                 learner_id=session.learner_id,
-                attempt=attempt,
+                attempt=persisted_attempt,
                 idempotency_key=idempotency_key,
             )
 

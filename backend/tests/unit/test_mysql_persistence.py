@@ -132,13 +132,16 @@ def test_mysql_schema_contains_business_tables() -> None:
         "students",
         "sessions",
         "session_states",
+        "rounds",
+        "student_profiles",
         "profile_history",
         "student_node_mastery",
-        "learning_paths",
-        "session_directives",
+        "learner_learning_plans",
+        "learner_learning_plan_nodes",
+        "onboarding_responses",
         "questions",
         "attempts",
-        "feedback_logs",
+        "mastery_events",
         "artifacts",
         "legal_citations",
         "artifact_citations",
@@ -150,42 +153,20 @@ def test_mysql_schema_contains_business_tables() -> None:
 
 
 @pytest.mark.unit
-def test_versioned_migrations_include_mastery_audit() -> None:
+def test_fresh_schema_contains_unified_mastery_and_diagnostic_contract() -> None:
     database = MySQLDatabase(url="mysql://root:password@localhost/patent_tutor")
 
-    assert database.expected_migrations() == [
-        "001_initial",
-        "002_mastery_events",
-        "003_cat_diagnostics",
-        "004_feedback_bkt_authority",
-        "005_active_learning_plans",
-    ]
+    assert database.expected_migrations() == ["001_initial"]
 
-    audit_migration = Path(
-        "backend/app/persistence/migrations/002_mastery_events.sql"
-    ).read_text(encoding="utf-8")
-    assert "CREATE TABLE IF NOT EXISTS mastery_events" in audit_migration
-    assert "prior_pl DOUBLE NOT NULL" in audit_migration
-    assert "posterior_pl DOUBLE NOT NULL" in audit_migration
-    assert "updated_pl DOUBLE NOT NULL" in audit_migration
-
-    cat_migration = Path(
-        "backend/app/persistence/migrations/003_cat_diagnostics.sql"
-    ).read_text(encoding="utf-8")
-    assert "CREATE TABLE IF NOT EXISTS diagnostic_sessions" in cat_migration
-    assert "CREATE TABLE IF NOT EXISTS diagnostic_attempts" in cat_migration
-    assert "CREATE TABLE IF NOT EXISTS diagnostic_mastery_events" in cat_migration
-    assert "uq_mastery_event_attempt_node" in cat_migration
-    assert "skills_json JSON" in cat_migration
-    feedback_migration = Path(
-        "backend/app/persistence/migrations/004_feedback_bkt_authority.sql"
-    ).read_text(encoding="utf-8")
-    assert "ADD COLUMN inferred" in feedback_migration
-    plan_migration = Path(
-        "backend/app/persistence/migrations/005_active_learning_plans.sql"
-    ).read_text(encoding="utf-8")
-    assert "CREATE TABLE IF NOT EXISTS learner_learning_plans" in plan_migration
-    assert "CREATE TABLE IF NOT EXISTS learner_learning_plan_nodes" in plan_migration
+    migration = Path("backend/app/persistence/migrations/001_initial.sql").read_text(
+        encoding="utf-8"
+    )
+    assert "CREATE TABLE IF NOT EXISTS mastery_events" in migration
+    assert "event_kind VARCHAR(32) NOT NULL DEFAULT 'observed'" in migration
+    assert "origin VARCHAR(32) NOT NULL DEFAULT 'generated_course'" in migration
+    assert "CREATE TABLE IF NOT EXISTS diagnostic_sessions" not in migration
+    assert "CREATE TABLE IF NOT EXISTS diagnostic_attempts" not in migration
+    assert "CREATE TABLE IF NOT EXISTS diagnostic_mastery_events" not in migration
 
 
 @pytest.mark.unit
@@ -308,6 +289,14 @@ def test_diagnostic_repository_sql_bindings_without_live_mysql() -> None:
         if sql.startswith("INSERT INTO student_node_mastery")
     )
     assert mastery_write[5:7] == (1, 0)
+    executed_sql = "\n".join(
+        sql for sql, _params in database.connection.recording_cursor.executions
+    )
+    assert "diagnostic_sessions" not in executed_sql
+    assert "diagnostic_attempts" not in executed_sql
+    assert "diagnostic_mastery_events" not in executed_sql
+    assert "INSERT INTO sessions" in executed_sql
+    assert "INSERT IGNORE INTO attempts" in executed_sql
 
 
 @pytest.mark.unit
@@ -401,9 +390,6 @@ def test_mysql_repository_session_state_smoke_when_configured() -> None:
     finally:
         with database.transaction() as connection:
             cursor = connection.cursor()
-            cursor.execute("DELETE FROM session_directives WHERE session_id=%s", (session_id,))
-            cursor.execute("DELETE FROM learning_paths WHERE session_id=%s", (session_id,))
-            cursor.execute("DELETE FROM session_events WHERE session_id=%s", (session_id,))
             cursor.execute("DELETE FROM session_states WHERE session_id=%s", (session_id,))
             cursor.execute("DELETE FROM sessions WHERE session_id=%s", (session_id,))
             cursor.execute("DELETE FROM students WHERE student_id=%s", (learner_id,))

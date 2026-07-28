@@ -96,7 +96,7 @@ Planner 生成完整 `learning_path` 后，后端把首个尚未掌握的拓扑�
 `teaching_context`：一个主教学节点、少量向后复习节点和至多一个 L1 向前探测节点。
 完整路线同时保存为学员级活动计划。`path_decision` 返回 `plan_id`、`plan_version`、
 `plan_reused` 和 `knowledge_graph_version`。目标和图版本相同时，后续 teach 会话读取活动
-计划并跳过 Planner LLM；会话级 `learning_paths` 仍保存本次运行的路径快照。
+计划并跳过 Planner LLM；本次运行采用的路径和活动窗口随 `StateDict` 保存为会话状态快照。
 `teaching_context.backward_review_nodes` 为后端确定的 0 到 2 个风险复习节点：当存在有风险的
 直接先修节点时，两个复习席位中至多预留一个给最高风险先修节点，其余节点按 BKT、观测可信度、
 薄弱点和当前概念混淆风险综合竞争。顺序不单独触发复习；综合风险相同才优先更早完成的节点，
