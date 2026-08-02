@@ -10,8 +10,11 @@ from backend.app.api.models import (
     LearnerMemoryResponse,
     LearnerProfilesResponse,
     LearnerSessionsResponse,
+    StudentInfoResponse,
+    UpdateStudentInfoRequest,
 )
 from backend.app.learner_memory.memory import LearnerMemoryStoreError
+from backend.app.persistence.repositories import LearnerRegistrationError
 from backend.app.services.session_service import SessionService
 
 
@@ -73,6 +76,55 @@ def create_learners_router(session_service: SessionService) -> APIRouter:
         except LearnerMemoryStoreError as exc:
             raise _memory_store_exception(exc) from exc
         return LearnerSessionsResponse(learner_id=learner_id, sessions=sessions)
+
+    @router.get(
+        "/learners/{learner_id}/info",
+        response_model=StudentInfoResponse,
+        responses={404: {"model": ErrorResponse}},
+    )
+    def get_learner_info(learner_id: str) -> StudentInfoResponse:
+        info = session_service.get_learner_info(learner_id)
+        if not info:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"error": "learner_not_found", "reason": "学员不存在"},
+            )
+        return StudentInfoResponse.model_validate(info)
+
+    @router.put(
+        "/learners/{learner_id}/info",
+        response_model=StudentInfoResponse,
+        responses={
+            404: {"model": ErrorResponse},
+            400: {"model": ErrorResponse},
+        },
+    )
+    def update_learner_info(
+        learner_id: str,
+        request: UpdateStudentInfoRequest,
+    ) -> StudentInfoResponse:
+        if request.display_name is None and request.email is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": "no_fields", "reason": "未提供要更新的字段"},
+            )
+        try:
+            info = session_service.update_learner_info(
+                learner_id,
+                display_name=request.display_name,
+                email=request.email,
+            )
+        except LearnerRegistrationError as exc:
+            if exc.reason == "login_id_not_found":
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail={"error": "learner_not_found", "reason": "学员不存在"},
+                ) from exc
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": exc.reason, "reason": str(exc)},
+            ) from exc
+        return StudentInfoResponse.model_validate(info)
 
     return router
 

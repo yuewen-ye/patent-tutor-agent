@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from backend.app.api.models import (
+    CourseSummaryResponse,
     ErrorResponse,
     SessionCreatedResponse,
     SessionSummaryResponse,
@@ -95,6 +96,54 @@ def create_sessions_router(session_service: SessionService) -> APIRouter:
             Query(ge=1, le=100, description="本页最多返回的会话数量。"),
         ] = 50,
     ) -> SessionsListResponse:
+        def extract_course_info(record) -> CourseSummaryResponse | None:
+            """从会话状态中提取课程摘要信息。"""
+            state = record.state or {}
+            course_pkg = state.get("course_package") or {}
+            learning_path = state.get("learning_path") or []
+            learner_profile = state.get("learner_profile") or {}
+
+            # 只对教学模式会话提取课程信息
+            workflow_mode = state.get("workflow_mode")
+            if workflow_mode not in ("teach", "auto"):
+                return None
+
+            # 课程名称
+            title = (
+                course_pkg.get("title")
+                or learner_profile.get("learning_goal")
+                or None
+            )
+
+            # 学习时长
+            duration = course_pkg.get("duration_min") or 0
+            if not duration and learning_path:
+                duration = sum(item.get("duration_min", 0) for item in learning_path)
+            if not duration:
+                duration = 45
+
+            # 知识点
+            knowledge_points = course_pkg.get("knowledge_points") or []
+            if isinstance(knowledge_points, list):
+                knowledge_points = [str(kp) for kp in knowledge_points[:10]]
+            else:
+                knowledge_points = []
+
+            # 练习数量
+            exercises = course_pkg.get("exercises") or []
+            exercise_count = len(exercises) if isinstance(exercises, list) else 0
+
+            # 学习进度
+            progress = 100 if record.status == "completed" else (50 if record.status == "running" else 0)
+
+            return CourseSummaryResponse(
+                title=title,
+                duration_min=duration,
+                knowledge_points=knowledge_points,
+                exercise_count=exercise_count,
+                progress=progress,
+            )
+
         records = session_service.list_sessions()
         if session_status is not None:
             records = [record for record in records if record.status == session_status]
@@ -107,9 +156,11 @@ def create_sessions_router(session_service: SessionService) -> APIRouter:
                 SessionSummaryResponse(
                     session_id=record.session_id,
                     status=record.status,
+                    workflow_mode=record.state.get("workflow_mode"),
                     learner_id=record.learner_id,
                     created_at=record.created_at,
                     updated_at=record.updated_at,
+                    course=extract_course_info(record),
                 )
                 for record in records
             ],
@@ -135,11 +186,11 @@ def create_sessions_router(session_service: SessionService) -> APIRouter:
         response_model=SessionSnapshotResponse,
         responses={404: {"model": ErrorResponse}},
         status_code=status.HTTP_200_OK,
-        description="Cancel a running workflow session.",
+        description="Permanently delete a session and all related data.",
     )
-    def cancel_session(session_id: str) -> SessionSnapshotResponse:
+    def delete_session(session_id: str) -> SessionSnapshotResponse:
         try:
-            return SessionSnapshotResponse.model_validate(session_service.cancel_session(session_id))
+            return SessionSnapshotResponse.model_validate(session_service.delete_session(session_id))
         except KeyError as exc:
             raise HTTPException(status_code=404, detail="Session not found.") from exc
 

@@ -52,6 +52,7 @@
 - `teaching_content` 是完整可交付课程正文
 - 必须提供当前合同要求的 `knowledge_points`、`legal_basis`、`risks`、`block_plan`、`knowledge_synthesis`、`assessment` 和题目字段
 - `interactive_questions[].source_tag` 使用 `backward_review / forward_probe / weakness_probe`
+- `interactive_questions[].options` 必须包含 4 个选择题选项（A/B/C/D），`interactive_questions[].answer` 为正确选项字母
 - 字段名、枚举和嵌套结构严格遵守调用方提供的 JSON Schema，不得增加合同外字段
 
 ## 注意事项（铁律）

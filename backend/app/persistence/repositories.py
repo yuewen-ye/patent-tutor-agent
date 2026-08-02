@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 import hashlib
 import json
+import secrets
 from typing import Any, Iterable
 import uuid
 
@@ -78,6 +79,34 @@ def _state_status(state: dict[str, Any]) -> str:
     return "running"
 
 
+_PBKDF2_ITERATIONS = 200_000
+
+
+def _hash_password(password: str) -> str:
+    salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, _PBKDF2_ITERATIONS)
+    return f"pbkdf2_sha256${_PBKDF2_ITERATIONS}${salt.hex()}${digest.hex()}"
+
+
+def _verify_password(password: str, stored_hash: str) -> bool:
+    parts = stored_hash.split("$")
+    if len(parts) != 4 or parts[0] != "pbkdf2_sha256":
+        return False
+    iterations = int(parts[1])
+    salt = bytes.fromhex(parts[2])
+    expected = bytes.fromhex(parts[3])
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations)
+    return secrets.compare_digest(digest, expected)
+
+
+class LearnerRegistrationError(RuntimeError):
+    """Raised when a learner cannot be registered due to a conflict or invalid input."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
 class MySQLLearnerStore:
     """Compatibility Store plus normalized business persistence.
 
@@ -104,6 +133,71 @@ class MySQLLearnerStore:
             auto_migrate=auto_migrate,
         )
         self.allow_legacy_client_grading = allow_legacy_client_grading
+
+    def register_learner(
+        self,
+        *,
+        login_id: str,
+        password: str,
+        display_name: str | None = None,
+        email: str | None = None,
+    ) -> dict[str, Any]:
+        now = _db_now()
+        student_id = uuid.uuid4().hex
+        password_hash = _hash_password(password)
+        with self.database.transaction() as connection:
+            cursor = connection.cursor()
+            cursor.execute(
+                "SELECT student_id FROM students WHERE login_id=%s LIMIT 1",
+                (login_id,),
+            )
+            if cursor.fetchone():
+                raise LearnerRegistrationError("login_id_already_exists")
+            if email:
+                cursor.execute(
+                    "SELECT student_id FROM students WHERE email=%s LIMIT 1",
+                    (email,),
+                )
+                if cursor.fetchone():
+                    raise LearnerRegistrationError("email_already_exists")
+            cursor.execute(
+                "INSERT INTO students(student_id, login_id, password_hash, display_name, email, "
+                "status, created_at, updated_at) VALUES (%s,%s,%s,%s,%s,'active',%s,%s)",
+                (student_id, login_id, password_hash, display_name, email, now, now),
+            )
+        return {
+            "learner_id": student_id,
+            "login_id": login_id,
+            "display_name": display_name,
+            "email": email,
+        }
+
+    def authenticate_learner(
+        self,
+        *,
+        login_id: str,
+        password: str,
+    ) -> dict[str, Any]:
+        with self.database.transaction() as connection:
+            cursor = connection.cursor()
+            cursor.execute(
+                "SELECT student_id, login_id, password_hash, display_name, email, status "
+                "FROM students WHERE login_id=%s LIMIT 1",
+                (login_id,),
+            )
+            row = cursor.fetchone()
+        if not row:
+            raise LearnerRegistrationError("login_id_not_found")
+        if str(row["status"]) != "active":
+            raise LearnerRegistrationError("account_disabled")
+        if not _verify_password(password, str(row["password_hash"])):
+            raise LearnerRegistrationError("password_incorrect")
+        return {
+            "learner_id": str(row["student_id"]),
+            "login_id": str(row["login_id"]),
+            "display_name": row.get("display_name"),
+            "email": row.get("email"),
+        }
 
     def put(
         self,
@@ -484,6 +578,83 @@ class MySQLLearnerStore:
             )
             return float(update["updated_pl"])
 
+    def get_student_info(self, learner_id: str) -> dict[str, Any] | None:
+        with self.database.transaction() as connection:
+            cursor = connection.cursor()
+            cursor.execute(
+                "SELECT student_id, login_id, display_name, email, status, "
+                "created_at, updated_at FROM students WHERE student_id=%s LIMIT 1",
+                (learner_id,),
+            )
+            row = cursor.fetchone()
+        if not row:
+            return None
+        return {
+            "learner_id": str(row["student_id"]),
+            "login_id": str(row["login_id"]),
+            "display_name": row.get("display_name"),
+            "email": row.get("email"),
+            "status": str(row.get("status") or "active"),
+            "created_at": _iso(row.get("created_at")),
+            "updated_at": _iso(row.get("updated_at")),
+        }
+
+    def update_student_info(
+        self,
+        learner_id: str,
+        *,
+        display_name: str | None = None,
+        email: str | None = None,
+    ) -> dict[str, Any]:
+        now = _db_now()
+        with self.database.transaction() as connection:
+            cursor = connection.cursor()
+            cursor.execute(
+                "SELECT student_id FROM students WHERE student_id=%s LIMIT 1",
+                (learner_id,),
+            )
+            if not cursor.fetchone():
+                raise LearnerRegistrationError("login_id_not_found")
+            if email:
+                cursor.execute(
+                    "SELECT student_id FROM students WHERE email=%s AND student_id<>%s LIMIT 1",
+                    (email, learner_id),
+                )
+                if cursor.fetchone():
+                    raise LearnerRegistrationError("email_already_exists")
+            sets: list[str] = []
+            params: list[Any] = []
+            if display_name is not None:
+                sets.append("display_name=%s")
+                params.append(display_name)
+            if email is not None:
+                sets.append("email=%s")
+                params.append(email)
+            if not sets:
+                raise ValueError("no fields to update")
+            sets.append("updated_at=%s")
+            params.append(now)
+            params.append(learner_id)
+            cursor.execute(
+                f"UPDATE students SET {', '.join(sets)} WHERE student_id=%s",
+                tuple(params),
+            )
+            cursor.execute(
+                "SELECT student_id, login_id, display_name, email, status, "
+                "created_at, updated_at FROM students WHERE student_id=%s LIMIT 1",
+                (learner_id,),
+            )
+            row = cursor.fetchone()
+        return {
+            "learner_id": str(row["student_id"]),
+            "login_id": str(row["login_id"]),
+            "display_name": row.get("display_name"),
+            "email": row.get("email"),
+            "status": str(row.get("status") or "active"),
+            "created_at": _iso(row.get("created_at")),
+            "updated_at": _iso(row.get("updated_at")),
+        }
+
     def save_diagnostic_session(self, *, payload: dict[str, Any]) -> None:
         now = _db_now()
         with self.database.transaction() as connection:
@@ -825,6 +996,64 @@ class MySQLLearnerStore:
             }
             for row in rows
         ]
+
+    def delete_session(self, session_id: str) -> bool:
+        """Delete a session and all related data from the database.
+
+        Returns True if the session existed and was deleted.
+        Child sessions (feedback sessions) are deleted recursively first.
+        Learning plans are preserved but their session references are NULLed.
+        """
+        with self.database.transaction() as connection:
+            cursor = connection.cursor()
+            cursor.execute(
+                "SELECT session_id FROM sessions WHERE session_id=%s",
+                (session_id,),
+            )
+            if cursor.fetchone() is None:
+                return False
+            child_cursor = connection.cursor()
+            child_cursor.execute(
+                "SELECT session_id FROM sessions WHERE parent_session_id=%s",
+                (session_id,),
+            )
+            for child in child_cursor.fetchall():
+                self._delete_session_data(connection, str(child["session_id"]))
+            self._delete_session_data(connection, session_id)
+            return True
+
+    def _delete_session_data(self, connection: Any, session_id: str) -> None:
+        """Delete all rows referencing a single session, respecting FK order."""
+        cursor = connection.cursor()
+        cursor.execute(
+            "DELETE FROM mastery_events WHERE attempt_id IN "
+            "(SELECT attempt_id FROM attempts WHERE session_id=%s)",
+            (session_id,),
+        )
+        cursor.execute("DELETE FROM attempts WHERE session_id=%s", (session_id,))
+        cursor.execute(
+            "DELETE FROM artifact_citations WHERE artifact_id IN "
+            "(SELECT artifact_id FROM artifacts WHERE session_id=%s)",
+            (session_id,),
+        )
+        cursor.execute("DELETE FROM artifacts WHERE session_id=%s", (session_id,))
+        cursor.execute("DELETE FROM questions WHERE session_id=%s", (session_id,))
+        cursor.execute("DELETE FROM rounds WHERE session_id=%s", (session_id,))
+        cursor.execute("DELETE FROM profile_history WHERE session_id=%s", (session_id,))
+        cursor.execute("DELETE FROM onboarding_responses WHERE session_id=%s", (session_id,))
+        cursor.execute(
+            "UPDATE learner_learning_plans SET source_session_id=NULL "
+            "WHERE source_session_id=%s",
+            (session_id,),
+        )
+        cursor.execute(
+            "UPDATE learner_learning_plans SET last_session_id=NULL "
+            "WHERE last_session_id=%s",
+            (session_id,),
+        )
+        cursor.execute("DELETE FROM session_states WHERE session_id=%s", (session_id,))
+        cursor.execute("DELETE FROM memory_items WHERE item_key=%s", (session_id,))
+        cursor.execute("DELETE FROM sessions WHERE session_id=%s", (session_id,))
 
     def register_questions_from_state(
         self,

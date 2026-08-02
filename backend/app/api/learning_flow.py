@@ -92,6 +92,12 @@ class ExerciseSubmission(BaseModel):
     )
 
 
+class ReteachRequest(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    learner_id: str = Field(min_length=1, description="学员唯一标识。")
+
+
 class DiagnosticSessionSubmission(BaseModel):
     model_config = ConfigDict(
         frozen=True,
@@ -100,10 +106,7 @@ class DiagnosticSessionSubmission(BaseModel):
                 {
                     "learning_goal": "系统掌握专利新颖性判断",
                     "education_background": "理工背景+有研发经验",
-                    "responses": [
-                        {"question_id": "Q23", "answer": "B"},
-                        {"question_id": "Q31", "answer": "D"},
-                    ],
+                    "responses": [],
                 }
             ]
         },
@@ -111,7 +114,10 @@ class DiagnosticSessionSubmission(BaseModel):
 
     learning_goal: str = Field(min_length=1)
     education_background: str = Field(min_length=1)
-    responses: list[QuestionnaireResponseItem] = Field(min_length=1)
+    responses: list[QuestionnaireResponseItem] = Field(
+        default_factory=list,
+        description="问卷预筛回答；纯 CAT 诊断流程可留空，由 CAT 引擎自适应出题。",
+    )
 
 
 class DiagnosticResponseSubmission(BaseModel):
@@ -181,7 +187,12 @@ def create_learning_flow_router(session_service: SessionService) -> APIRouter:
         except (ValueError, RuntimeError) as exc:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail=str(exc),
+                detail={"error": "diagnostic_creation_failed", "reason": str(exc)},
+            ) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={"error": "diagnostic_creation_error", "reason": str(exc)},
             ) from exc
         return DiagnosticProgress.model_validate(progress)
 
@@ -201,12 +212,17 @@ def create_learning_flow_router(session_service: SessionService) -> APIRouter:
         except KeyError as exc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Diagnostic session not found.",
+                detail={"error": "diagnostic_session_not_found", "reason": str(exc)},
             ) from exc
         except PermissionError as exc:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Learner does not own the diagnostic session.",
+                detail={"error": "permission_denied", "reason": str(exc)},
+            ) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={"error": "diagnostic_progress_error", "reason": str(exc)},
             ) from exc
         return DiagnosticProgress.model_validate(progress)
 
@@ -231,20 +247,28 @@ def create_learning_flow_router(session_service: SessionService) -> APIRouter:
         except KeyError as exc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Diagnostic session not found.",
+                detail={"error": "diagnostic_session_not_found", "reason": str(exc)},
             ) from exc
         except PermissionError as exc:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Learner does not own the diagnostic session.",
+                detail={"error": "permission_denied", "reason": str(exc)},
             ) from exc
         except ValueError as exc:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail=str(exc),
+                detail={"error": "invalid_response", "reason": str(exc)},
             ) from exc
         except RuntimeError as exc:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={"error": "diagnostic_conflict", "reason": str(exc)},
+            ) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={"error": "diagnostic_submit_error", "reason": str(exc)},
+            ) from exc
         return DiagnosticProgress.model_validate(progress)
 
     @router.post(
@@ -263,12 +287,17 @@ def create_learning_flow_router(session_service: SessionService) -> APIRouter:
         except KeyError as exc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Diagnostic session not found.",
+                detail={"error": "diagnostic_session_not_found", "reason": str(exc)},
             ) from exc
         except PermissionError as exc:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Learner does not own the diagnostic session.",
+                detail={"error": "permission_denied", "reason": str(exc)},
+            ) from exc
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={"error": "diagnostic_complete_error", "reason": str(exc)},
             ) from exc
         return DiagnosticProgress.model_validate(progress)
 
@@ -299,6 +328,32 @@ def create_learning_flow_router(session_service: SessionService) -> APIRouter:
             ) from exc
         except RuntimeError as exc:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+        return SessionCreatedResponse(session_id=record.session_id, status=record.status)
+
+    @router.post(
+        "/sessions/{course_session_id}/reteach",
+        response_model=SessionCreatedResponse,
+        responses={
+            403: {"description": "The learner does not own the course session."},
+            404: {"description": "Course session not found."},
+        },
+    )
+    def reteach(
+        course_session_id: str, request: ReteachRequest
+    ) -> SessionCreatedResponse:
+        """Re-run the teach workflow with updated BKT mastery after exercises."""
+        try:
+            record = session_service.create_reteach_session(
+                learner_id=request.learner_id,
+                course_session_id=course_session_id,
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="Course session not found.") from exc
+        except PermissionError as exc:
+            raise HTTPException(
+                status_code=403,
+                detail="Learner does not own the course session.",
+            ) from exc
         return SessionCreatedResponse(session_id=record.session_id, status=record.status)
 
     return router

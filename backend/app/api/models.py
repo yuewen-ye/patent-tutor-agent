@@ -28,12 +28,23 @@ class SessionSnapshotResponse(FrozenApiModel):
     updated_at: str
 
 
+class CourseSummaryResponse(FrozenApiModel):
+    """课程摘要信息，用于列表展示。"""
+    title: str | None = None
+    duration_min: int = 0
+    knowledge_points: list[str] = Field(default_factory=list)
+    exercise_count: int = 0
+    progress: int = 0  # 0-100
+
+
 class SessionSummaryResponse(FrozenApiModel):
     session_id: str
     status: SessionStatusValue
+    workflow_mode: str | None = None
     learner_id: str | None
     created_at: str
     updated_at: str
+    course: CourseSummaryResponse | None = None
 
 
 class SessionsListResponse(FrozenApiModel):
@@ -51,6 +62,7 @@ class LearnerMemoryResponse(FrozenApiModel):
     history: list[dict[str, Any]]
     mastery: dict[str, float] = Field(default_factory=dict)
     active_learning_plan: dict[str, Any] | None = None
+    sessions: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class LearnerProfilesResponse(FrozenApiModel):
@@ -99,3 +111,39 @@ class ErrorResponse(FrozenApiModel):
 
 class ArtifactNotFoundResponse(FrozenApiModel):
     detail: str = Field(default="Artifact not found.")
+
+
+class RegisterRequest(BaseModel):
+    login_id: str = Field(..., min_length=3, max_length=255)
+    password: str = Field(..., min_length=6, max_length=255)
+    display_name: str | None = Field(default=None, max_length=255)
+    email: str | None = Field(default=None, max_length=320)
+
+
+class LoginRequest(BaseModel):
+    login_id: str = Field(..., min_length=3, max_length=255)
+    password: str = Field(..., min_length=1, max_length=255)
+
+
+class AuthResponse(FrozenApiModel):
+    learner_id: str
+    login_id: str
+    display_name: str | None = None
+    email: str | None = None
+
+
+class StudentInfoResponse(FrozenApiModel):
+    learner_id: str
+    login_id: str
+    display_name: str | None = None
+    email: str | None = None
+    status: str = "active"
+    created_at: str | None = None
+    updated_at: str | None = None
+
+
+class UpdateStudentInfoRequest(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    display_name: str | None = Field(default=None, max_length=255)
+    email: str | None = Field(default=None, max_length=320)

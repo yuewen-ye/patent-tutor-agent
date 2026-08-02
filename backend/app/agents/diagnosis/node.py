@@ -168,12 +168,74 @@ def _derive_weak_points(knowledge: dict[str, dict[str, Any]]) -> list[str]:
     ]
 
 
+def _parse_stringified_json(value: object) -> object:
+    """Recursively parse stringified JSON objects inside dicts/lists.
+
+    LLM sometimes returns nested objects as JSON strings, e.g.:
+      {"perception": '{"chosen": "sensing", "strength": 0.62}'}
+    """
+    if isinstance(value, str):
+        stripped = value.strip()
+        if (stripped.startswith("{") and stripped.endswith("}")) or \
+           (stripped.startswith("[") and stripped.endswith("]")):
+            try:
+                parsed = json.loads(stripped)
+                if isinstance(parsed, (dict, list)):
+                    return _parse_stringified_json(parsed)
+            except (json.JSONDecodeError, ValueError):
+                pass
+        return value
+    if isinstance(value, dict):
+        return {k: _parse_stringified_json(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_parse_stringified_json(v) for v in value]
+    return value
+
+
+_STYLE_AXES = ("perception", "input", "processing", "understanding")
+
+
+def _coerce_style_axis(value: object) -> dict[str, object]:
+    """Convert LLM output to a StyleAxis-compatible dict.
+
+    Handles: dict, JSON string, or plain string like 'sensing'.
+    """
+    if isinstance(value, dict):
+        return _parse_stringified_json(value)  # type: ignore[return-value]
+    if isinstance(value, str):
+        parsed = _parse_stringified_json(value)
+        if isinstance(parsed, dict) and "chosen" in parsed:
+            return parsed
+        return {"chosen": value.strip(), "strength": 0.5}
+    return {"chosen": str(value), "strength": 0.5}
+
+
+def _coerce_signals(value: object) -> list[str]:
+    """Ensure affect.signals is a list of strings."""
+    if isinstance(value, list):
+        return [str(s) for s in value]
+    if isinstance(value, str):
+        return [value]
+    return []
+
+
 def _dimensions_without_knowledge(raw: object) -> object:
     if not isinstance(raw, dict):
         return raw
-    dimensions = dict(raw)
+    dimensions = _parse_stringified_json(dict(raw))
     dimensions.pop("knowledge", None)
     dimensions.pop("progress", None)
+
+    # Fix style axes: LLM may return plain strings instead of {chosen, strength} dicts
+    style = dimensions.get("style")
+    if isinstance(style, dict):
+        normalized_style = dict(style)
+        for axis in _STYLE_AXES:
+            if axis in normalized_style:
+                normalized_style[axis] = _coerce_style_axis(normalized_style[axis])
+        dimensions["style"] = normalized_style
+
+    # Fix affect: LLM may return signals as a string instead of a list
     affect = dimensions.get("affect")
     if isinstance(affect, dict):
         normalized_affect = dict(affect)
@@ -184,7 +246,11 @@ def _dimensions_without_knowledge(raw: object) -> object:
                 alias_key,
                 primary_state,
             )
+        signals = normalized_affect.get("signals")
+        if signals is not None and not isinstance(signals, list):
+            normalized_affect["signals"] = _coerce_signals(signals)
         dimensions["affect"] = normalized_affect
+
     return dimensions
 
 

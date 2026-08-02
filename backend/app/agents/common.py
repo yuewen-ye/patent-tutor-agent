@@ -515,7 +515,31 @@ def normalize_expert_draft_payload(raw: object) -> object:
             "source",
         }
         cleaned_blocks = []
+        _VALID_BLOCK_TYPES = {
+            "legal_anchor", "knowledge_synthesis", "assessment",
+            "anchor_scenario", "global_framework", "worked_example",
+            "decision_flow", "verbal_explanation", "predict_activate",
+            "reflect_prompt", "mnemonic", "common_pitfall", "summary_card",
+        }
         for _blk in pkg.get("blocks", []):
+            # Skip null/None items
+            if _blk is None:
+                continue
+            # Convert string items to BlockPlan-compatible dicts
+            if isinstance(_blk, str):
+                _blk_str = _blk.strip()
+                if _blk_str in _VALID_BLOCK_TYPES:
+                    _blk = {
+                        "block_id": _blk_str,
+                        "block_type": _blk_str,
+                        "title": _blk_str.replace("_", " ").title(),
+                    }
+                else:
+                    _blk = {
+                        "block_id": _blk_str,
+                        "block_type": "verbal_explanation",
+                        "title": _blk_str,
+                    }
             if not isinstance(_blk, dict):
                 cleaned_blocks.append(_blk)
                 continue

@@ -234,6 +234,57 @@ def _is_retryable_error(exc: BaseException) -> bool:
     return False
 
 
+def _estimate_tokens(text: str) -> int:
+    """Rough token estimate: ~1 token ≈ 3 chars for mixed CJK/English text."""
+    return max(1, len(text) // 3)
+
+
+_MAX_INPUT_TOKENS = 24000
+
+
+def _truncate_messages_for_token_limit(
+    messages: list[LLMMessage],
+    max_tokens: int = _MAX_INPUT_TOKENS,
+) -> list[LLMMessage]:
+    """Truncate message contents to fit within the model's input token limit.
+
+    Strategy: keep system message intact, proportionally truncate user/assistant
+    messages from the end (least important context first). If still too large,
+    truncate from the beginning of the conversation history.
+    """
+    total_tokens = sum(_estimate_tokens(m.content) for m in messages)
+    if total_tokens <= max_tokens:
+        return messages
+
+    system_msgs = [m for m in messages if m.role == "system"]
+    non_system_msgs = [m for m in messages if m.role != "system"]
+
+    system_tokens = sum(_estimate_tokens(m.content) for m in system_msgs)
+    remaining_budget = max_tokens - system_tokens - 2000  # leave 2k buffer
+
+    if remaining_budget <= 0:
+        return messages
+
+    non_system_total = sum(_estimate_tokens(m.content) for m in non_system_msgs)
+    if non_system_total <= remaining_budget:
+        return messages
+
+    ratio = remaining_budget / non_system_total
+    truncated: list[LLMMessage] = []
+    for m in non_system_msgs:
+        original_len = len(m.content)
+        target_len = int(original_len * ratio * 0.95)
+        if target_len < 100:
+            target_len = min(100, original_len)
+        if target_len < original_len:
+            content = m.content[:target_len] + "\n...[truncated]"
+        else:
+            content = m.content
+        truncated.append(LLMMessage(role=m.role, content=content))
+
+    return system_msgs + truncated
+
+
 def _build_chat_body(
     config: LLMProviderConfig,
     messages: list[LLMMessage],
@@ -315,9 +366,11 @@ def _post_chat_completion(
     client = http_client or httpx.Client(timeout=config.timeout_seconds)
     close_client = http_client is None
 
+    truncated_messages = _truncate_messages_for_token_limit(messages)
+
     body = _build_chat_body(
         config=config,
-        messages=messages,
+        messages=truncated_messages,
         temperature=temperature,
         json_mode=json_mode,
         stream=False,

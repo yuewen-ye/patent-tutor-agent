@@ -8,6 +8,7 @@ from __future__ import annotations
 import threading
 import uuid
 import json
+import shutil
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal, Mapping, cast
@@ -352,6 +353,29 @@ class SessionService:
             else {}
         )
         course_state = getattr(course_record, "state", {})
+        course_package = {}
+        if isinstance(course_state, dict):
+            course_package = course_state.get("course_package", {}) or {}
+        interactive_questions = course_package.get("interactive_questions", []) if isinstance(course_package, dict) else []
+        question_lookup: dict[str, dict[str, Any]] = {}
+        for q in interactive_questions:
+            if isinstance(q, dict):
+                qid = q.get("qid") or q.get("question_id") or ""
+                if qid:
+                    question_lookup[qid] = q
+        enriched_responses: list[dict[str, Any]] = []
+        for resp in responses:
+            if not isinstance(resp, dict):
+                continue
+            qid = str(resp.get("question_id", ""))
+            enriched = dict(resp)
+            if qid in question_lookup:
+                qdef = question_lookup[qid]
+                enriched["question_text"] = qdef.get("question", "")
+                enriched["options"] = qdef.get("options", [])
+                enriched["correct_answer"] = qdef.get("answer", "")
+                enriched["difficulty"] = qdef.get("difficulty", "")
+            enriched_responses.append(enriched)
         course_input = (
             course_state.get("input_payload", {}) if isinstance(course_state, dict) else {}
         )
@@ -379,7 +403,7 @@ class SessionService:
         )
         feedback_input_payload: dict[str, Any] = {
             "course_session_id": course_session_id,
-            "exercise_responses": responses,
+            "exercise_responses": enriched_responses,
         }
         record = self.create_session(
             user_input=json.dumps(responses, ensure_ascii=False),
@@ -614,6 +638,31 @@ class SessionService:
             thread.start()
         return record
 
+    def create_reteach_session(
+        self,
+        *,
+        learner_id: str,
+        course_session_id: str,
+    ) -> SessionRecord:
+        """Re-run the teach workflow after exercises, using updated BKT mastery.
+
+        Reads the original course session's learning goal and creates a new
+        teach session. The Planner will read the learner's updated BKT (from
+        exercise submissions) and compute a new activity window, producing a
+        new course with new exercises.
+        """
+        course_record = self.require_session(course_session_id)
+        if course_record.learner_id != learner_id:
+            raise PermissionError("Learner does not own the course session.")
+        learning_goal = course_record.user_input or "继续学习专利知识"
+        record = self.create_session(
+            user_input=learning_goal,
+            learner_id=learner_id,
+            workflow_mode="teach",
+            parent_session_id=course_session_id,
+        )
+        return record
+
     def _save_history(
         self,
         *,
@@ -745,6 +794,29 @@ class SessionService:
             self.event_bridge.close(session_id)
         return snapshot
 
+    def delete_session(self, session_id: str) -> dict[str, Any]:
+        """Permanently delete a session and all related data.
+
+        Cancels the session if it is still running, then removes it from
+        the in-memory dict, MySQL tables and artifact files.
+        """
+        record = self.get_session(session_id)
+        if record is None:
+            raise KeyError(session_id)
+        if record.status == "running":
+            self.cancel_session(session_id)
+        snapshot = record_to_response(record)
+        delete_from_store = getattr(self._store, "delete_session", None)
+        if callable(delete_from_store):
+            delete_from_store(session_id)
+        with self._lock:
+            self._sessions.pop(session_id, None)
+        self.event_bridge.close(session_id)
+        session_artifact_dir = self.artifact_root / "sessions" / session_id
+        if session_artifact_dir.exists():
+            shutil.rmtree(session_artifact_dir, ignore_errors=True)
+        return snapshot
+
     def prune_expired_sessions(
         self,
         *,
@@ -842,7 +914,49 @@ class SessionService:
         return candidate.read_text(encoding="utf-8")
 
     def learner_memory(self, learner_id: str, *, limit: int = 10) -> dict[str, Any]:
-        return learner_memory_snapshot(self._store, learner_id=learner_id, limit=limit)
+        snapshot = learner_memory_snapshot(self._store, learner_id=learner_id, limit=limit)
+        all_sessions = self.list_sessions()
+        current_sessions = [
+            record_to_response(record)
+            for record in all_sessions
+            if record.learner_id == learner_id
+        ]
+        known_session_ids = {
+            str(s["session_id"]) for s in current_sessions if s.get("session_id")
+        }
+        historical_sessions = [
+            {
+                "session_id": h.get("session_id"),
+                "status": "historical",
+                "topic": h.get("topic"),
+                "knowledge_points": h.get("knowledge_points", []),
+                "created_at": h.get("created_at"),
+            }
+            for h in snapshot.get("history", [])
+            if h.get("session_id") and str(h["session_id"]) not in known_session_ids
+        ]
+        snapshot["sessions"] = (current_sessions + historical_sessions)[:limit]
+        return snapshot
+
+    def get_learner_info(self, learner_id: str) -> dict[str, Any] | None:
+        getter = getattr(self._store, "get_student_info", None)
+        if not callable(getter):
+            return None
+        return getter(learner_id)
+
+    def update_learner_info(
+        self,
+        learner_id: str,
+        *,
+        display_name: str | None = None,
+        email: str | None = None,
+    ) -> dict[str, Any]:
+        updater = getattr(self._store, "update_student_info", None)
+        if not callable(updater):
+            raise TypeError("update_student_info not supported by the current store")
+        return updater(
+            learner_id, display_name=display_name, email=email
+        )
 
     def learner_sessions(self, learner_id: str, *, limit: int = 10) -> list[dict[str, Any]]:
         with self._lock:
@@ -870,6 +984,38 @@ class SessionService:
             and str(history["session_id"]) not in known_session_ids
         ]
         return (current_sessions + historical_sessions)[:limit]
+
+    def register_learner(
+        self,
+        *,
+        login_id: str,
+        password: str,
+        display_name: str | None = None,
+        email: str | None = None,
+    ) -> dict[str, Any]:
+        register_fn = getattr(self._store, "register_learner", None)
+        if register_fn is None:
+            raise RuntimeError("register_learner not supported by the current store")
+        return register_fn(
+            login_id=login_id,
+            password=password,
+            display_name=display_name,
+            email=email,
+        )
+
+    def authenticate_learner(
+        self,
+        *,
+        login_id: str,
+        password: str,
+    ) -> dict[str, Any]:
+        auth_fn = getattr(self._store, "authenticate_learner", None)
+        if auth_fn is None:
+            raise RuntimeError("authenticate_learner not supported by the current store")
+        return auth_fn(
+            login_id=login_id,
+            password=password,
+        )
 
     def _resolve_llm_client(
         self, provider_overrides: Mapping[AgentName, LLMProvider] | None

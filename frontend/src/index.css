@@ -1,0 +1,207 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 30 20% 98%;
+    --foreground: 25 15% 18%;
+    --card: 0 0% 100%;
+    --card-foreground: 25 15% 18%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 25 15% 18%;
+    --primary: 160 25% 30%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 15% 94%;
+    --secondary-foreground: 25 10% 35%;
+    --muted: 30 10% 90%;
+    --muted-foreground: 25 5% 50%;
+    --accent: 160 20% 92%;
+    --accent-foreground: 160 25% 25%;
+    --destructive: 10 55% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 30 12% 86%;
+    --input: 30 12% 86%;
+    --ring: 160 25% 30%;
+    --radius: 0.75rem;
+
+    --font-sans: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1, "kern" 1, "liga" 1;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    @apply bg-primary/20 text-primary;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .glass {
+    @apply bg-card/80 backdrop-blur-sm border border-border/50;
+  }
+
+  .gradient-subtle {
+    background: linear-gradient(135deg, var(--background) 0%, var(--secondary) 100%);
+  }
+
+  .shadow-soft {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
+  }
+
+  .shadow-elevated {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05), 0 8px 24px rgba(0, 0, 0, 0.04);
+  }
+
+  .shadow-hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.06), 0 12px 32px rgba(0, 0, 0, 0.05);
+  }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(30 20% 97%);
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(30 10% 75%);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(30 10% 65%);
+}
+
+.react-flow__node {
+  @apply border border-border/60 rounded-lg shadow-soft;
+}
+
+.react-flow__attribution {
+  display: none;
+}
+
+.react-flow__edge-path {
+  stroke: hsl(30 10% 80%);
+  stroke-width: 1.5;
+}
+
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:focus .react-flow__edge-path,
+.react-flow__edge:focus-visible .react-flow__edge-path {
+  stroke: hsl(160 25% 30%);
+}
+
+.react-flow__controls-button {
+  @apply bg-card border-border/50 text-foreground rounded-sm hover:bg-secondary/50 transition-colors;
+}
+
+.react-flow__background {
+  background-color: hsl(30 20% 98%);
+}
+
+.markdown-body {
+  @apply text-foreground/85 leading-[1.85] text-[15px];
+}
+
+.markdown-body h1 {
+  @apply text-xl font-semibold mt-8 mb-4 text-foreground border-b border-border/40 pb-2;
+}
+
+.markdown-body h2 {
+  @apply text-lg font-semibold mt-7 mb-3 text-foreground flex items-center gap-2;
+}
+
+.markdown-body h2::before {
+  content: "";
+  @apply inline-block w-1 h-5 bg-primary/60 rounded-full flex-shrink-0;
+}
+
+.markdown-body h3 {
+  @apply text-base font-medium mt-5 mb-2 text-foreground/80;
+}
+
+.markdown-body p {
+  @apply mb-4 leading-[1.85];
+}
+
+.markdown-body ul {
+  @apply list-disc pl-5 mb-4 space-y-2;
+}
+
+.markdown-body ol {
+  @apply list-decimal pl-5 mb-4 space-y-2;
+}
+
+.markdown-body li {
+  @apply marker:text-primary/50 leading-relaxed;
+}
+
+.markdown-body li::marker {
+  @apply text-primary/60;
+}
+
+.markdown-body strong {
+  @apply text-foreground font-semibold;
+}
+
+.markdown-body em {
+  @apply text-foreground/75 italic;
+}
+
+.markdown-body table {
+  @apply w-full border-collapse mb-4 text-sm;
+}
+
+.markdown-body th {
+  @apply bg-secondary/60 text-left p-3 border-b border-border font-medium text-foreground/70;
+}
+
+.markdown-body td {
+  @apply p-3 border-b border-border/50;
+}
+
+.markdown-body code {
+  @apply bg-secondary/60 px-1.5 py-0.5 rounded text-xs font-mono text-foreground/75;
+}
+
+.markdown-body pre {
+  @apply bg-secondary/40 p-4 rounded-lg overflow-x-auto mb-4 border border-border/40;
+}
+
+.markdown-body pre code {
+  @apply bg-transparent p-0 text-foreground/75;
+}
+
+.markdown-body blockquote {
+  @apply border-l-2 border-primary/30 pl-4 italic text-muted-foreground mb-4 bg-secondary/30 py-2 pr-2 rounded-r;
+}
+
+.markdown-body hr {
+  @apply border-border/40 my-6;
+}
+
+.markdown-body a {
+  @apply text-primary hover:underline underline-offset-2;
+}
