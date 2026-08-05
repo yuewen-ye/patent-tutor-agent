@@ -125,6 +125,15 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
         if _should_integrate(state):
             judge_report_state = state.get("judge_report", {}) or {}
             revision_requests = judge_report_state.get("revision_requests") or []
+            _judge_decision = (judge_report_state.get("decision") or "").strip().lower()
+            _rev_round = state.get("revision_round", 0) or 0
+            _revision_directive = ""
+            if _judge_decision == "revise" and revision_requests:
+                _revision_directive = (
+                    f"\n这是第 {_rev_round} 次修订。上一轮整合稿已在专家A草稿中，"
+                    "请以它为基准，仅针对 revision_requests 逐条修改对应内容，"
+                    "保留其余部分不变，禁止重新生成全文。\n"
+                )
 
             # C：锁定 planner 权威当前节点（不让 LLM 自由跳节点）
             path_decision = state.get("path_decision", {}) or {}
@@ -197,7 +206,8 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                             f"专家B草稿：{json.dumps(state.get('expert_b_draft', {}), ensure_ascii=False)}\n"
                             f"裁判报告：{json.dumps(state.get('judge_report', {}), ensure_ascii=False)}\n"
                             f"裁判打回意见（revision_requests，你必须逐条回应每条 required_change 并在整合稿中实际修正对应内容）：{json.dumps(revision_requests, ensure_ascii=False)}\n"
-                            f"检索上下文：{json.dumps(retrieval_context, ensure_ascii=False)}\n"
+                            + (_revision_directive if _revision_directive else "")
+                            + f"检索上下文：{json.dumps(retrieval_context, ensure_ascii=False)}\n"
                             + (f"\n{block_content_directive}\n\n" if block_content_directive else "")
                             + f"教学正文必须围绕当前节点【{current_node_id or '（见路径）'}】展开，block_plan.node 必须等于该节点。\n"
                             "每个选中模块的 payload **必须按上『内容要素约束』填实**（结构化字段+最低深度），"

@@ -559,6 +559,7 @@ class StateDict(TypedDict):
     expert_a_draft: NotRequired[dict[str, Any]]
     expert_b_draft: NotRequired[dict[str, Any]]
     judge_report: NotRequired[dict[str, Any]]
+    revision_round: NotRequired[int]
     feedback_result: NotRequired[dict[str, Any]]
     intent: NotRequired[str]  # "teach" | "chat" | "diagnose"
     teach_phase: NotRequired[Literal["debate", "integration"]]

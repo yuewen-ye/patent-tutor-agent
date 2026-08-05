@@ -140,13 +140,15 @@ def build_judge_node(llm_client: LLMClient) -> Node:
             "judge_report": report_dict,
             "events": [completed_event("judge", "reviewed expert A integration draft with LLM")],
         }
-        match report.decision:
+        match report_dict["decision"]:
             case "accept" | "accept_with_minor_revision":
                 updates["workflow_status"] = "completed"
             case "revise":
-                # 课程尚未通过：workflow 路由会回到 expert_a integration，直到 Judge 通过。
-                # 学员练习反馈是独立的 feedback 会话，不在这里触发。
-                pass
+                current_round = state.get("revision_round", 0) or 0
+                new_round = current_round + 1
+                updates["revision_round"] = new_round
+                if new_round >= 3:
+                    updates["workflow_status"] = "completed"
             case unreachable:
                 assert_never(unreachable)
         return updates

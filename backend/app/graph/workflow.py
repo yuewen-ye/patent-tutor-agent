@@ -331,6 +331,10 @@ def _route_after_judge(
             print("▸ [路由] judge 通过 → 完成", file=sys.stderr)
             return "__end__"
         case "revise":
+            current_round = state.get("revision_round", 0) or 0
+            if current_round >= 3:
+                print("▸ [路由] judge 修订已达上限 3 次 → 完成（未通过）", file=sys.stderr)
+                return "__end__"
             print("▸ [路由] judge 未通过 → expert_a_integration 重新整合", file=sys.stderr)
             return "expert_a_integration"
         case unreachable:
@@ -364,6 +368,7 @@ def build_workflow(
         )
         updates["expert_phase"] = "draft"
         updates["workflow_status"] = "running"
+        updates["revision_round"] = 0
         return updates
 
     def _wrap(name: str, artifact: bool = True, node_label: str | None = None) -> Any:
