@@ -18,7 +18,7 @@ from backend.app.agents.common import (
     messages_from_prompt,
     normalize_cross_review_payload,
     normalize_expert_draft_payload,
-    schema_note,
+    _slim_draft_for_review,
 )
 from backend.app.agents.rag_tools import collect_expert_retrieval_context
 from backend.app.core.llm import LLMClient, LLMMessage
@@ -48,13 +48,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
         [
             (
                 "system",
-                schema_note(
-                    "ExpertDraft",
-                    '{"expert":"expert_a","style":"conservative",'
-                    '"knowledge_points":[{"node_id":"kp-01","kc_name":"要点"}],"legal_basis":[{"article":"《专利法》第22条"}],"irac":{"issue":"","rule":"","application":"","conclusion":""},"block_plan":{"node":"kp-01","blocks":[{"block_id":"b1","block_type":"legal_anchor","title":"法条锚定","payload":{},"chosen_by":"[A]"}],"order":["b1"],"budget":{},"debate_resolved":true},"knowledge_synthesis":{"coverage":[],"confusable_pairs":[]},"assessment":{"items":[{"qid":"q1","category":"understand","difficulty":"L1","question":"","answer":"","kc":"","source":"","evidence":""}]},"interactive_questions":[{"qid":"q1","category":"understand","difficulty":"L1","source_tag":"backward_review","kc_node_id":"kp-01","question":"","options":["选项A","选项B","选项C","选项D"],"answer":"A"}],'
-                    '"teaching_content":"正文","risks":[]}',
-                )
-                + _DEBATE_SYSTEM_PROMPT,
+                _DEBATE_SYSTEM_PROMPT,
             ),
             (
                 "user",
@@ -79,19 +73,14 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                 messages=[
                     LLMMessage(
                         role="system",
-                        content=schema_note(
-                            "CrossReview",
-                            '{"reviewer":"expert_a","target":"expert_b",'
-                            '"review_opinions":[{"category":"🟡","location":"正文",'
-                            '"target_wrote":"原文","problem":"问题","suggestion":"建议",'
-                            '"legal_basis":["《专利法》第22条"]}],'
-                            '"overall_assessment":"总体评价"}',
-                        )
-                        + _CROSS_REVIEW_SYSTEM_PROMPT,
+                        content=_CROSS_REVIEW_SYSTEM_PROMPT,
                     ),
                     LLMMessage(
                         role="user",
-                        content=json.dumps(state.get("expert_b_draft", {}), ensure_ascii=False),
+                        content=(
+                    f"学习者画像：{json.dumps(state.get('learner_profile', {}), ensure_ascii=False)}\n"
+                    f"专家B草稿：{json.dumps(_slim_draft_for_review(state.get('expert_b_draft', {})), ensure_ascii=False)}"
+                ),
                     ),
                 ],
                 temperature=agent_temperature("expert_a", 0.2),
@@ -110,13 +99,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                 messages=[
                     LLMMessage(
                         role="system",
-                        content=schema_note(
-                            "ExpertDraft",
-                            '{"expert":"expert_a","style":"conservative",'
-                            '"knowledge_points":[{"node_id":"kp-01","kc_name":"要点"}],"legal_basis":[{"article":"《专利法》第22条"}],"irac":{"issue":"","rule":"","application":"","conclusion":""},"block_plan":{"node":"kp-01","blocks":[{"block_id":"b1","block_type":"legal_anchor","title":"法条锚定","payload":{},"chosen_by":"[A]"}],"order":["b1"],"budget":{},"debate_resolved":true},"knowledge_synthesis":{"coverage":[],"confusable_pairs":[]},"assessment":{"items":[{"qid":"q1","category":"understand","difficulty":"L1","question":"","answer":"","kc":"","source":"","evidence":""}]},"interactive_questions":[{"qid":"q1","category":"understand","difficulty":"L1","source_tag":"backward_review","kc_node_id":"kp-01","question":"","options":["选项A","选项B","选项C","选项D"],"answer":"A"}],'
-                            '"teaching_content":"修订正文","risks":[]}',
-                        )
-                        + _REVISION_SYSTEM_PROMPT,
+                        content=_REVISION_SYSTEM_PROMPT,
                     ),
                     LLMMessage(
                         role="user",
@@ -166,11 +149,10 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                     block_plan_directive = format_default_block_plan_directive(
                         default_block_plan
                     )
-                    # 内容要素硬约束：每个选中块的 payload 必须按骨架填实
                     block_content_directive = format_block_content_directive(
                         default_block_plan.get("required_blocks", [])
                     )
-                except Exception:  # 编排约束失败不阻断整合，降级为无硬约束
+                except Exception:
                     default_block_plan = None
                     block_plan_directive = ""
                     block_content_directive = ""
@@ -201,13 +183,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                 messages=[
                     LLMMessage(
                         role="system",
-                        content=schema_note(
-                            "ExpertDraft",
-                            '{"expert":"expert_a","style":"conservative",'
-                            '"knowledge_points":[{"node_id":"kp-01","kc_name":"要点"}],"legal_basis":[{"article":"《专利法》第22条"}],"irac":{"issue":"","rule":"","application":"","conclusion":""},"block_plan":{"node":"kp-01","blocks":[{"block_id":"b1","block_type":"legal_anchor","title":"法条锚定","payload":{},"chosen_by":"[A]"}],"order":["b1"],"budget":{},"debate_resolved":true},"knowledge_synthesis":{"coverage":[],"confusable_pairs":[]},"assessment":{"items":[{"qid":"q1","category":"understand","difficulty":"L1","question":"","answer":"","kc":"","source":"","evidence":""}]},"interactive_questions":[{"qid":"q1","category":"understand","difficulty":"L1","source_tag":"backward_review","kc_node_id":"kp-01","question":"","options":["选项A","选项B","选项C","选项D"],"answer":"A"}],'
-                            '"teaching_content":"整合后的教学正文","risks":[]}',
-                        )
-                        + _INTEGRATION_SYSTEM_PROMPT,
+                        content=_INTEGRATION_SYSTEM_PROMPT,
                     ),
                     LLMMessage(
                         role="user",

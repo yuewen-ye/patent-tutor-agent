@@ -45,6 +45,9 @@ class WorkflowLogRecord:
     retrieval_methods: list[str] | None = None
     error_type: str | None = None
     error_message: str | None = None
+    error_status_code: int | None = None
+    error_provider: str | None = None
+    error_retryable: bool | None = None
 
     def to_json_line(self) -> str:
         return json.dumps(asdict(self), ensure_ascii=False, separators=(",", ":")) + "\n"
@@ -91,7 +94,10 @@ def write_workflow_log(
         artifact_count=_count_list(updates, "artifacts"),
         retrieval_methods=_retrieval_methods(updates),
         error_type=type(error).__name__ if error is not None else None,
-        error_message=str(error) if error is not None else None,
+        error_message=str(error)[:500] if error is not None else None,
+        error_status_code=getattr(error, "status_code", None) if error is not None else None,
+        error_provider=getattr(error, "provider", None) if error is not None else None,
+        error_retryable=getattr(error, "retryable", None) if error is not None else None,
     )
     path = workflow_log_path(log_root, session_id)
     path.parent.mkdir(parents=True, exist_ok=True)

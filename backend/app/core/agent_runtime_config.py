@@ -30,6 +30,7 @@ class ProviderRuntimeConfig(BaseModel):
 
     model_name: str | None = None
     base_url: str | None = None
+    supports_strict_schema: bool | None = None
 
 
 class AgentRuntimeSettings(BaseModel):

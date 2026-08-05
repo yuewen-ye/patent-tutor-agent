@@ -12,7 +12,14 @@ from typing import Any, TypeVar, cast
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, ValidationError
 
-from backend.app.core.llm import AgentName, LLMClient, LLMMessage, LLMProviderError, LLMRole
+from backend.app.core.llm import (
+    AgentName,
+    LLMClient,
+    LLMMessage,
+    LLMProviderError,
+    LLMRole,
+    _mark_strict_schema_rejected,
+)
 
 Node = Callable[..., dict[str, Any]]
 ContractT = TypeVar("ContractT", bound=BaseModel)
@@ -116,6 +123,16 @@ def schema_note(schema_name: str, example: str) -> str:
     )
 
 
+def _slim_draft_for_review(draft: object) -> dict:
+    if not isinstance(draft, dict):
+        return {}
+    _KEEP = {
+        "teaching_content", "block_plan", "assessment",
+        "interactive_questions", "knowledge_points", "legal_basis",
+    }
+    return {k: v for k, v in draft.items() if k in _KEEP}
+
+
 def generate_validated_json(
     llm_client: LLMClient,
     *,
@@ -175,8 +192,10 @@ def generate_validated_json(
                     agent=agent,
                 )
             except LLMProviderError as exc:
-                if exc.status_code not in {400, 404, 415, 422}:
+                if exc.status_code not in {400, 404, 415, 422} and not exc.retryable:
                     raise
+                if exc.provider:
+                    _mark_strict_schema_rejected(exc.provider)
                 _LOGGER.warning(
                     "Provider rejected strict JSON Schema for agent=%s contract=%s "
                     "status=%s; falling back to JSON-object mode",

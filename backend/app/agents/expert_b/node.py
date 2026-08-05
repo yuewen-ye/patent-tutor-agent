@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
@@ -17,7 +19,7 @@ from backend.app.agents.common import (
     messages_from_prompt,
     normalize_cross_review_payload,
     normalize_expert_draft_payload,
-    schema_note,
+    _slim_draft_for_review,
 )
 from backend.app.agents.rag_tools import collect_expert_retrieval_context
 from backend.app.core.llm import LLMClient, LLMMessage
@@ -38,13 +40,7 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
         [
             (
                 "system",
-                schema_note(
-                    "ExpertDraft",
-                    '{"expert":"expert_b","style":"accessible",'
-                    '"knowledge_points":[{"node_id":"kp-01","kc_name":"要点"}],"legal_basis":[{"article":"《专利法》第22条"}],"irac":{"issue":"","rule":"","application":"","conclusion":""},"block_plan":{"node":"kp-01","blocks":[{"block_id":"b1","block_type":"verbal_explanation","title":"人话翻译","payload":{},"chosen_by":"[B]"}],"order":["b1"],"budget":{},"debate_resolved":true},"knowledge_synthesis":{"coverage":[],"confusable_pairs":[]},"assessment":{"items":[{"qid":"q1","category":"apply","difficulty":"L2","question":"","answer":"","kc":"","source":"","evidence":""}]},"interactive_questions":[{"qid":"q1","category":"apply","difficulty":"L2","source_tag":"backward_review","kc_node_id":"kp-01","question":"","options":["选项A","选项B","选项C","选项D"],"answer":"A"}],'
-                    '"teaching_content":"正文","risks":[]}',
-                )
-                + _DRAFT_SYSTEM_PROMPT,
+                _DRAFT_SYSTEM_PROMPT,
             ),
             (
                 "user",
@@ -69,19 +65,14 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
                 messages=[
                     LLMMessage(
                         role="system",
-                        content=schema_note(
-                            "CrossReview",
-                            '{"reviewer":"expert_b","target":"expert_a",'
-                            '"review_opinions":[{"category":"🟡","location":"正文",'
-                            '"target_wrote":"原文","problem":"问题","suggestion":"建议",'
-                            '"legal_basis":["《专利法》第22条"]}],'
-                            '"overall_assessment":"总体评价"}',
-                        )
-                        + _CROSS_REVIEW_SYSTEM_PROMPT,
+                        content=_CROSS_REVIEW_SYSTEM_PROMPT,
                     ),
                     LLMMessage(
                         role="user",
-                        content=str(state.get("expert_a_draft", {})),
+                        content=(
+                    f"学习者画像：{json.dumps(state.get('learner_profile', {}), ensure_ascii=False)}\n"
+                    f"专家A草稿：{json.dumps(_slim_draft_for_review(state.get('expert_a_draft', {})), ensure_ascii=False)}"
+                ),
                     ),
                 ],
                 temperature=agent_temperature("expert_b", 0.3),
@@ -100,19 +91,13 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
                 messages=[
                     LLMMessage(
                         role="system",
-                        content=schema_note(
-                            "ExpertDraft",
-                            '{"expert":"expert_b","style":"accessible",'
-                            '"knowledge_points":[{"node_id":"kp-01","kc_name":"要点"}],"legal_basis":[{"article":"《专利法》第22条"}],"irac":{"issue":"","rule":"","application":"","conclusion":""},"block_plan":{"node":"kp-01","blocks":[{"block_id":"b1","block_type":"verbal_explanation","title":"人话翻译","payload":{},"chosen_by":"[B]"}],"order":["b1"],"budget":{},"debate_resolved":true},"knowledge_synthesis":{"coverage":[],"confusable_pairs":[]},"assessment":{"items":[{"qid":"q1","category":"apply","difficulty":"L2","question":"","answer":"","kc":"","source":"","evidence":""}]},"interactive_questions":[{"qid":"q1","category":"apply","difficulty":"L2","source_tag":"backward_review","kc_node_id":"kp-01","question":"","options":["选项A","选项B","选项C","选项D"],"answer":"A"}],'
-                            '"teaching_content":"修订正文","risks":[]}',
-                        )
-                        + _REVISION_SYSTEM_PROMPT,
+                        content=_REVISION_SYSTEM_PROMPT,
                     ),
                     LLMMessage(
                         role="user",
                         content=(
-                            f"原草稿：{state.get('expert_b_draft', {})}\n"
-                            f"专家A互评：{state.get('expert_a_cross_review', {})}"
+                            f"原草稿：{json.dumps(state.get('expert_b_draft', {}), ensure_ascii=False)}\n"
+                            f"专家A互评：{json.dumps(state.get('expert_a_cross_review', {}), ensure_ascii=False)}"
                         ),
                     ),
                 ],
@@ -129,7 +114,7 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
                 "expert_b_revision": revised,
                 "events": [completed_event("expert_b", "revised expert B draft")],
             }
-        # 双专家初稿也按确定性块大纲写作（与 integration 一致的硬约束）
+
         path_decision = state.get("path_decision", {}) or {}
         _cur = str(path_decision.get("current_node_id") or "")
         if not _cur:

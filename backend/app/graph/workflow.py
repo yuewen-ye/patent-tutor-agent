@@ -17,7 +17,7 @@ from langgraph.store.memory import InMemoryStore
 from backend.app.core.agent_runtime_config import agent_top_k
 from backend.app.agents import Node, build_agent_nodes
 from backend.app.runtime_outputs.artifacts import attach_markdown_artifact, write_field_artifact, write_manifest
-from backend.app.core.llm import AgentLLMRouter, DefaultLLMClient, LLMClient
+from backend.app.core.llm import AgentLLMRouter, DefaultLLMClient, LLMClient, set_llm_log_context
 from backend.app.retrieval.selector import retrieve_context
 from backend.app.schemas.context import WorkflowContext
 from backend.app.schemas.state import JudgeReport, StateDict, completed_event
@@ -139,6 +139,7 @@ def _with_runtime_side_effects(
         state: StateDict, runtime: Runtime[WorkflowContext] | None = None
     ) -> dict[str, Any]:
         label = node_label or "?"
+        set_llm_log_context(session_id=state.get("session_id"), log_root=workflow_log_root)
         print(f"▸ [{label}] 开始...", file=sys.stderr)
         start = time.monotonic()
         write_workflow_log(
@@ -223,6 +224,7 @@ def _with_runtime_side_effects(
             )
             if artifact_root is not None:
                 write_manifest(artifact_root=artifact_root, state=dict(state), status="failed")
+            set_llm_log_context(session_id=None, log_root=None)
             raise
 
         events = updates.get("events")
@@ -231,6 +233,7 @@ def _with_runtime_side_effects(
         if update_sink is not None:
             update_sink(updates)
 
+        set_llm_log_context(session_id=None, log_root=None)
         return updates
 
     return wrapped

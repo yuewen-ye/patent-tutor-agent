@@ -70,7 +70,7 @@
 ## 输出合同
 
 只输出符合 `ExpertDraft` 的合法 JSON，不要输出裸 Markdown、代码围栏或 JSON 之外的解释。正文写入 `teaching_content`。
-调用方会在运行时注入完整 JSON Schema 和结构示例；该示例不是固定答案，所有教学内容、节点、法条、题目和数值都必须根据本轮输入重新生成，禁止照抄。
+调用方会在运行时注入完整 JSON Schema ；所有教学内容、节点、法条、题目和数值都必须根据本轮输入重新生成，禁止照抄。
 
 - `expert` 固定为 `expert_a`
 - `style` 固定为 `conservative`

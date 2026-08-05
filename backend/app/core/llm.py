@@ -5,8 +5,11 @@ from __future__ import annotations
 import json
 import os
 import threading
+import time
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Literal, Protocol, Self, cast
 
 import httpx
@@ -19,7 +22,7 @@ from backend.app.core.agent_runtime_config import (
     provider_runtime_config,
 )
 
-LLMProvider = Literal["deepseek", "qwen", "glm"]
+LLMProvider = Literal["deepseek", "qwen", "glm", "gpt", "luna", "terra", "grok"]
 LLMRole = Literal["system", "user", "assistant", "tool"]
 AgentName = Literal[
     "diagnosis_feedback",
@@ -45,15 +48,43 @@ DEFAULT_CONFIG: dict[LLMProvider, dict[str, str]] = {
         "model_env": "QWEN_MODEL",
         "base_url_env": "QWEN_BASE_URL",
         "model": "qwen3.7-max-2026-05-17",
-        "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "base_url": "https://api-slb.krill-ai.net/codex/v1",
     },
     "glm": {
         "api_key_env": "GLM_API_KEY",
         "model_env": "GLM_MODEL",
         "base_url_env": "GLM_BASE_URL",
         "model": "glm-5.2",
-        "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "base_url": "https://api-slb.krill-ai.net/codex/v1",
     },
+    "gpt": {
+        "api_key_env": "GPT_API_KEY",
+        "model_env": "GPT_MODEL",
+        "base_url_env": "GPT_BASE_URL",
+        "model": "gpt-5.5",
+        "base_url": "https://api-slb.krill-ai.net/codex/v1",
+    },
+    "luna": {
+        "api_key_env": "LUNA_API_KEY",
+        "model_env": "LUNA_MODEL",
+        "base_url_env": "LUNA_BASE_URL",
+        "model": "gpt-5.6-luna",
+        "base_url": "https://api-slb.krill-ai.net/codex/v1",
+    },
+    "terra": {
+        "api_key_env": "TERRA_API_KEY",
+        "model_env": "TERRA_MODEL",
+        "base_url_env": "TERRA_BASE_URL",
+        "model": "gpt-5.6-terra",
+        "base_url": "https://api-slb.krill-ai.net/codex/v1",
+    },
+    "grok": {
+        "api_key_env": "GROK_API_KEY",
+        "model_env": "GROK_MODEL",
+        "base_url_env": "GROK_BASE_URL",
+        "model": "grok-4.5",
+        "base_url": "https://api-slb.krill-ai.net/codex/v1",
+    }
 }
 AGENT_PROVIDER_ENV: dict[AgentName, str] = {
     "diagnosis_feedback": "DIAGNOSIS_FEEDBACK_PROVIDER",
@@ -70,6 +101,32 @@ AGENT_PROVIDER_ENV: dict[AgentName, str] = {
 # → ReadTimeout。默认 2；若仍偶发超时可设为 1（彻底串行化该 provider）。
 _PROVIDER_SEMAPHORES: dict[str, threading.Semaphore] = {}
 _PROVIDER_SEMAPHORES_LOCK = threading.Lock()
+
+
+# -- Strict JSON Schema capability cache --
+# Records which providers rejected strict JSON Schema (400/404/415/422).
+# Subsequent calls skip strict mode to avoid wasting API calls.
+_strict_schema_rejected: dict[str, bool] = {}
+_strict_schema_lock = threading.Lock()
+
+
+def _mark_strict_schema_rejected(provider: str) -> None:
+    with _strict_schema_lock:
+        _strict_schema_rejected[provider] = True
+
+
+def provider_supports_strict_schema(provider: str) -> bool:
+    """Check if a provider is known to support strict JSON Schema output."""
+    # 1. Check static config from yaml
+    config = provider_runtime_config(provider)
+    if config.supports_strict_schema is not None:
+        return config.supports_strict_schema
+    # 2. Check dynamic cache (learned from previous 400 responses)
+    with _strict_schema_lock:
+        if _strict_schema_rejected.get(provider):
+            return False
+    # 3. Unknown - assume yes, will learn from first attempt
+    return True
 
 
 def _provider_semaphore(provider: str) -> threading.Semaphore:
@@ -168,9 +225,18 @@ class LLMConfigurationError(RuntimeError):
 class LLMProviderError(RuntimeError):
     """Raised when the model provider returns an invalid or failed response."""
 
-    def __init__(self, message: str, status_code: int | None = None) -> None:
+    def __init__(
+        self,
+        message: str,
+        status_code: int | None = None,
+        *,
+        provider: str | None = None,
+        retryable: bool = False,
+    ) -> None:
         super().__init__(message)
         self.status_code = status_code
+        self.provider = provider
+        self.retryable = retryable
 
 
 def normalize_socks_proxy_env(
@@ -187,6 +253,41 @@ def normalize_socks_proxy_env(
         value = os.environ.get(key)
         if value and value.startswith("socks://"):
             os.environ[key] = "socks5://" + value.removeprefix("socks://")
+
+
+_LLM_LOG_LOCK = threading.Lock()
+_llm_log_ctx = threading.local()
+
+
+def set_llm_log_context(
+    *, session_id: str | None = None, log_root: Path | None = None
+) -> None:
+    _llm_log_ctx.session_id = session_id
+    if log_root is not None and session_id:
+        from backend.app.runtime_outputs.artifacts import sanitize_session_id
+
+        _llm_log_ctx.log_path = (
+            log_root / "sessions" / sanitize_session_id(session_id) / "llm_calls.log.jsonl"
+        )
+    else:
+        _llm_log_ctx.log_path = None
+
+
+def _log_llm_call(**kwargs: object) -> None:
+    log_path = getattr(_llm_log_ctx, "log_path", None)
+    if log_path is None:
+        return
+    record: dict[str, object] = {
+        "timestamp": datetime.now(UTC).isoformat(),
+        "session_id": getattr(_llm_log_ctx, "session_id", ""),
+        "type": "llm_call",
+    }
+    record.update(kwargs)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    line = json.dumps(record, ensure_ascii=False, default=str, separators=(",", ":")) + chr(10)
+    with _LLM_LOG_LOCK:
+        with log_path.open("a", encoding="utf-8") as f:
+            f.write(line)
 
 
 def _validate_provider(value: str, source: str) -> LLMProvider:
@@ -227,10 +328,10 @@ def load_provider_config(provider: LLMProvider, model_name: str | None = None) -
 
 
 def _is_retryable_error(exc: BaseException) -> bool:
-    if isinstance(exc, (httpx.TimeoutException, httpx.NetworkError)):
+    if isinstance(exc, httpx.TransportError):
         return True
     if isinstance(exc, LLMProviderError):
-        return exc.status_code in {429, 500, 502, 503, 504}
+        return exc.status_code in {429, 500, 502, 503, 504} or exc.retryable
     return False
 
 
@@ -378,6 +479,18 @@ def _post_chat_completion(
         json_schema=json_schema,
     )
 
+    _call_start = time.monotonic()
+    _log_llm_call(
+        provider=config.provider,
+        model=config.model,
+        json_mode=json_mode,
+        has_schema=json_schema is not None,
+        schema_name=schema_name,
+        message_count=len(truncated_messages),
+        estimated_input_tokens=sum(_estimate_tokens(m.content) for m in truncated_messages),
+        status="attempting",
+    )
+
     try:
         with _provider_semaphore(config.provider):
             response = client.post(
@@ -391,17 +504,87 @@ def _post_chat_completion(
         try:
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
+            _log_llm_call(
+                provider=config.provider,
+                model=config.model,
+                json_mode=json_mode,
+                status="error",
+                error_type="HTTPStatusError",
+                error_message=f"{response.status_code} {response.text[:300]}",
+                status_code=response.status_code,
+                retryable=response.status_code in {429, 500, 502, 503, 504},
+                duration_ms=round((time.monotonic() - _call_start) * 1000),
+            )
             raise LLMProviderError(
                 f"{config.provider} API request failed: {response.status_code} {response.text}",
                 status_code=response.status_code,
+                provider=config.provider,
             ) from exc
         payload = response.json()
-        content = payload["choices"][0]["message"]["content"]
+        choice = payload["choices"][0]
+        message = choice.get("message", {})
+        content = message.get("content")
+        finish_reason = choice.get("finish_reason", "unknown")
         if not isinstance(content, str) or not content.strip():
-            raise LLMProviderError(f"{config.provider} returned empty content.")
+            reasoning = message.get("reasoning_content")
+            if isinstance(reasoning, str) and reasoning.strip():
+                content = reasoning
+            else:
+                _log_llm_call(
+                    provider=config.provider,
+                    model=config.model,
+                    json_mode=json_mode,
+                    status="error",
+                    error_type="LLMProviderError",
+                    error_message=f"empty content (finish_reason={finish_reason})",
+                    retryable=True,
+                    duration_ms=round((time.monotonic() - _call_start) * 1000),
+                )
+                raise LLMProviderError(
+                    f"{config.provider} returned empty content (finish_reason={finish_reason}).",
+                    provider=config.provider,
+                    retryable=True,
+                )
+        _log_llm_call(
+            provider=config.provider,
+            model=config.model,
+            json_mode=json_mode,
+            status="success",
+            finish_reason=finish_reason,
+            content_length=len(content),
+            duration_ms=round((time.monotonic() - _call_start) * 1000),
+        )
         return content
     except (KeyError, IndexError, json.JSONDecodeError) as exc:
-        raise LLMProviderError(f"{config.provider} returned an invalid chat response.") from exc
+        _log_llm_call(
+            provider=config.provider,
+            model=config.model,
+            json_mode=json_mode,
+            status="error",
+            error_type=type(exc).__name__,
+            error_message=str(exc)[:300],
+            duration_ms=round((time.monotonic() - _call_start) * 1000),
+        )
+        raise LLMProviderError(
+                f"{config.provider} returned an invalid chat response.",
+                provider=config.provider,
+            ) from exc
+    except httpx.TransportError as exc:
+        _log_llm_call(
+            provider=config.provider,
+            model=config.model,
+            json_mode=json_mode,
+            status="error",
+            error_type=type(exc).__name__,
+            error_message=str(exc)[:300],
+            retryable=True,
+            duration_ms=round((time.monotonic() - _call_start) * 1000),
+        )
+        raise LLMProviderError(
+            f"{config.provider} transport error: {exc}",
+            provider=config.provider,
+            retryable=True,
+        ) from exc
     finally:
         if close_client:
             client.close()
@@ -444,6 +627,15 @@ def _strip_json_fence(content: str) -> str:
         text = text.removeprefix("```").strip()
     if text.endswith("```"):
         text = text.removesuffix("```").strip()
+    if not text.startswith("{") and not text.startswith("["):
+        start = text.find("{")
+        if start == -1:
+            start = text.find("[")
+        end = text.rfind("}")
+        if end == -1:
+            end = text.rfind("]")
+        if start != -1 and end != -1 and end > start:
+            text = text[start:end + 1]
     return text
 
 
@@ -457,22 +649,55 @@ def call_llm_json(
     schema_name: str | None = None,
     json_schema: dict[str, object] | None = None,
 ) -> object:
-    content = call_llm(
-        provider=provider,
-        messages=messages,
-        temperature=temperature,
-        json_mode=True,
-        http_client=http_client,
-        model_name=model_name,
-        schema_name=schema_name,
-        json_schema=json_schema,
-    )
+    # Drop json_schema if provider is known to not support strict schema
+    if json_schema is not None and not provider_supports_strict_schema(provider):
+        json_schema = None
+        schema_name = None
+    try:
+        content = call_llm(
+            provider=provider,
+            messages=messages,
+            temperature=temperature,
+            json_mode=True,
+            http_client=http_client,
+            model_name=model_name,
+            schema_name=schema_name,
+            json_schema=json_schema,
+        )
+    except LLMProviderError as exc:
+        if exc.status_code in {401, 403}:
+            raise
+        _log_llm_call(
+            provider=provider,
+            status="fallback",
+            from_json_mode=True,
+            to_json_mode=False,
+            reason=str(exc)[:300],
+        )
+        content = call_llm(
+            provider=provider,
+            messages=messages,
+            temperature=temperature,
+            json_mode=False,
+            http_client=http_client,
+            model_name=model_name,
+            schema_name=None,
+            json_schema=None,
+        )
     cleaned = _strip_json_fence(content)
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError as exc:
+        _log_llm_call(
+            provider=provider,
+            status="parse_error",
+            content_preview=content[:300],
+            error_message=str(exc)[:300],
+        )
         raise LLMProviderError(
-            f"{provider} returned non-JSON content in json_mode: {content[:500]}"
+            f"{provider} returned non-JSON content: {content[:500]}",
+            provider=provider,
+            retryable=True,
         ) from exc
 
 
@@ -494,6 +719,18 @@ def _post_chat_completion_with_tools(
         stream=False,
     )
 
+    _call_start = time.monotonic()
+    _log_llm_call(
+        provider=config.provider,
+        model=config.model,
+        json_mode=False,
+        has_schema=False,
+        message_count=len(messages),
+        estimated_input_tokens=sum(_estimate_tokens(m.content) for m in messages),
+        status="attempting",
+        tool_call=True,
+    )
+
     try:
         with _provider_semaphore(config.provider):
             response = client.post(
@@ -507,9 +744,21 @@ def _post_chat_completion_with_tools(
         try:
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
+            _log_llm_call(
+                provider=config.provider,
+                model=config.model,
+                status="error",
+                error_type="HTTPStatusError",
+                error_message=f"{response.status_code} {response.text[:300]}",
+                status_code=response.status_code,
+                retryable=response.status_code in {429, 500, 502, 503, 504},
+                tool_call=True,
+                duration_ms=round((time.monotonic() - _call_start) * 1000),
+            )
             raise LLMProviderError(
                 f"{config.provider} tools API request failed: {response.status_code} {response.text}",
                 status_code=response.status_code,
+                provider=config.provider,
             ) from exc
         payload = response.json()
         choice = payload["choices"][0]
@@ -528,13 +777,49 @@ def _post_chat_completion_with_tools(
                 ToolCall(id=tc.get("id", ""), name=func.get("name", ""), arguments=args)
             )
 
+        _log_llm_call(
+            provider=config.provider,
+            model=config.model,
+            status="success",
+            finish_reason=choice.get("finish_reason", "unknown"),
+            tool_call_count=len(tool_calls),
+            content_length=len(content) if isinstance(content, str) else 0,
+            tool_call=True,
+            duration_ms=round((time.monotonic() - _call_start) * 1000),
+        )
         return LLMResponseWithTools(
             content=content if isinstance(content, str) and content.strip() else None,
             tool_calls=tool_calls,
         )
     except (KeyError, IndexError, json.JSONDecodeError) as exc:
+        _log_llm_call(
+            provider=config.provider,
+            model=config.model,
+            status="error",
+            error_type=type(exc).__name__,
+            error_message=str(exc)[:300],
+            tool_call=True,
+            duration_ms=round((time.monotonic() - _call_start) * 1000),
+        )
         raise LLMProviderError(
-            f"{config.provider} returned an invalid tools chat response."
+                f"{config.provider} returned an invalid tools chat response.",
+                provider=config.provider,
+            ) from exc
+    except httpx.TransportError as exc:
+        _log_llm_call(
+            provider=config.provider,
+            model=config.model,
+            status="error",
+            error_type=type(exc).__name__,
+            error_message=str(exc)[:300],
+            retryable=True,
+            tool_call=True,
+            duration_ms=round((time.monotonic() - _call_start) * 1000),
+        )
+        raise LLMProviderError(
+            f"{config.provider} transport error: {exc}",
+            provider=config.provider,
+            retryable=True,
         ) from exc
     finally:
         if close_client:

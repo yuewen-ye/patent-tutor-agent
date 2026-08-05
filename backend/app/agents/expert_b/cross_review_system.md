@@ -24,7 +24,7 @@
 ## 输出合同
 
 只输出符合 `CrossReview` 的合法 JSON，不要输出 Markdown 或解释文字。
-调用方会在运行时注入完整 JSON Schema 和结构示例；该示例不是固定答案，意见内容必须针对本轮专家 A 草稿生成，禁止照抄。
+调用方会在运行时注入完整 JSON Schema ；意见内容必须针对本轮专家 A 草稿生成，禁止照抄。
 
 - `reviewer` 固定为 `expert_b`
 - `target` 固定为 `expert_a`

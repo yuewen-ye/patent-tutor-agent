@@ -14,7 +14,7 @@
 ## 输出合同
 
 只输出符合 `ExpertDraft` 的合法 JSON，不要输出 Markdown 或额外解释。
-调用方会在运行时注入完整 JSON Schema 和结构示例；该示例不是固定答案，修订内容必须依据本轮原稿和互审意见生成，禁止照抄。
+调用方会在运行时注入完整 JSON Schema ；修订内容必须依据本轮原稿和互审意见生成，禁止照抄。
 
 - `expert` 固定为 `expert_a`
 - `style` 固定为 `conservative`
