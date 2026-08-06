@@ -1,0 +1,32 @@
+{
+  "profile_id": "profile_T",
+  "round": 3,
+  "learning_goal": "我想补齐专利实体法与侵权诉讼规则，从法务视角打通民法与专利",
+  "expected_course_content": {
+    "section_kcs": [
+      "patentability-substantive"
+    ],
+    "weakness_kcs": [
+      "新颖性",
+      "创造性",
+      "权利要求解释规则",
+      "审查意见答复",
+      "等同原则"
+    ],
+    "confusable_pairs": [
+      [
+        "novelty",
+        "inventive-step"
+      ],
+      [
+        "conflicting-application",
+        "prior-art-definition"
+      ],
+      [
+        "grace-period",
+        "priority-right"
+      ]
+    ]
+  },
+  "_design_notes": "DRAFT·需教师校准 | section_kcs←推测首轮章节patentability-substantive(专利授权实质条件)[节点缺失-待重跑校准]; weakness_kcs←Q47自述+偏离分析(5候选取5); confusable_pairs←按考试频率取3对 | 偏离题: Q1(学选A/标B),Q3(学选B/标D),Q6(学选C/标B),Q18(学选B/标A),Q22(学选B/标C)"
+}

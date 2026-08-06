@@ -1,0 +1,32 @@
+{
+  "profile_id": "profile_B",
+  "round": 3,
+  "learning_goal": "我想学习外观设计专利与实用新型的申请和保护，结合消费电子真实案例",
+  "expected_course_content": {
+    "section_kcs": [
+      "patentability-substantive"
+    ],
+    "weakness_kcs": [
+      "不授予专利权的主题",
+      "等同原则",
+      "专利权保护范围",
+      "行政法与行政诉讼",
+      "民法基础"
+    ],
+    "confusable_pairs": [
+      [
+        "novelty",
+        "inventive-step"
+      ],
+      [
+        "conflicting-application",
+        "prior-art-definition"
+      ],
+      [
+        "grace-period",
+        "priority-right"
+      ]
+    ]
+  },
+  "_design_notes": "DRAFT·需教师校准 | section_kcs←当前节点general-consumer的章节patentability-substantive(专利授权实质条件); weakness_kcs←Q47自述+偏离分析(7候选取5); confusable_pairs←按考试频率取3对 | 偏离题: Q1(学选D/标B),Q2(学选B/标D),Q3(学选C/标D),Q11(学选A/标C),Q12(学选A/标B),Q13(学选B/标C),Q14(学选A/标B),Q18(学选B/标A),Q20(学选B/标A)"
+}

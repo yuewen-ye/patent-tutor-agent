@@ -1,0 +1,32 @@
+{
+  "profile_id": "profile_S",
+  "round": 3,
+  "learning_goal": "我想了解算法专利性和开源协议对专利的影响，厘清软著与专利的边界",
+  "expected_course_content": {
+    "section_kcs": [
+      "patentability-substantive"
+    ],
+    "weakness_kcs": [
+      "不授予专利权的主题",
+      "新颖性",
+      "实用性",
+      "分案申请",
+      "PCT国家阶段"
+    ],
+    "confusable_pairs": [
+      [
+        "novelty",
+        "inventive-step"
+      ],
+      [
+        "conflicting-application",
+        "prior-art-definition"
+      ],
+      [
+        "grace-period",
+        "priority-right"
+      ]
+    ]
+  },
+  "_design_notes": "DRAFT·需教师校准 | section_kcs←推测首轮章节patentability-substantive(专利授权实质条件)[节点缺失-待重跑校准]; weakness_kcs←Q47自述+偏离分析(8候选取5); confusable_pairs←按考试频率取3对 | 偏离题: Q9(学选D/标A),Q10(学选B/标A),Q11(学选A/标C),Q12(学选A/标B),Q13(学选A/标C),Q14(学选A/标B),Q16(学选B/标C),Q17(学选B/标D),Q18(学选B/标A),Q22(学选B/标C)"
+}
