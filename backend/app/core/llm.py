@@ -805,12 +805,14 @@ def _post_chat_completion_with_tools(
             status="error",
             error_type=type(exc).__name__,
             error_message=str(exc)[:300],
+            retryable=True,
             tool_call=True,
             duration_ms=round((time.monotonic() - _call_start) * 1000),
         )
         raise LLMProviderError(
                 f"{config.provider} returned an invalid tools chat response.",
                 provider=config.provider,
+                retryable=True,
             ) from exc
     except httpx.TransportError as exc:
         _log_llm_call(
