@@ -381,6 +381,7 @@ class ToulminCheck(ContractModel):
 
 
 class AttackRelation(ContractModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
     from_: str = Field(alias="from", serialization_alias="from")
     to: str
     reason: str

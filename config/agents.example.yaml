@@ -4,6 +4,13 @@
 # config/agents.yaml is intentionally ignored by Git. Keep API keys in .env,
 # and tune local provider endpoints, models, and per-agent settings there.
 
+  ## 请尽可能避免在输出内容较多的节点中使用 qwen/glm ，可能会导致 Gateway Timeout 发生
+  
+  ## ============================ 模型更新日志 ===============================
+  ## 2026.08.06 更新:   glm 更新状态【不可使用】,请及时更换使用 glm 作为 provider 的节点;
+  ##                    grok 更新状态【可使用】
+  ##            新增:   yangmao 模型为 Deepseek Flash 158b A13B 1M context
+
 llm:
   default_provider: deepseek
   timeout_seconds: 90
@@ -14,8 +21,6 @@ providers:
     model_name: deepseek-v4-flash
     base_url: https://api.deepseek.com
     supports_strict_schema: false
-
-  ## 请尽可能避免在输出内容较多的节点中使用 qwen/glm ，可能会导致 Gateway Timeout 发生
   qwen:
     model_name: qwen3.7-plus
     base_url: https://api-slb.krill-ai.net/codex/v1
@@ -24,7 +29,6 @@ providers:
     model_name: glm-5.2
     base_url: https://api-slb.krill-ai.net/codex/v1
     supports_strict_schema: false
-    
   gpt:
     model_name: gpt-5.5
     base_url: https://api-slb.krill-ai.net/codex/v1
@@ -37,11 +41,15 @@ providers:
     model_name: gpt-5.6-terra
     base_url: https://api-slb.krill-ai.net/codex/v1
     supports_strict_schema: false
+  grok:
+    model_name: grok-4.5
+    base_url: https://api-slb.krill-ai.net/codex/v1
+    supports_strict_schema: false
+  yangmao:
+    model_name: yangmao-main
+    base_url: https://ai.gz404.com:54002/v1
+    supports_strict_schema: false
 
-## grok:
-##    model_name: grok-4.5
-##    base_url: https://api-slb.krill-ai.net/codex/v1
-##    supports_strict_schema: false
 
 
 agents:

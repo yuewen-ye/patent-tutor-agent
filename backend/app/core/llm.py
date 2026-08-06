@@ -22,7 +22,7 @@ from backend.app.core.agent_runtime_config import (
     provider_runtime_config,
 )
 
-LLMProvider = Literal["deepseek", "qwen", "glm", "gpt", "luna", "terra", "grok"]
+LLMProvider = Literal["deepseek", "qwen", "glm", "gpt", "luna", "terra", "grok", "yangmao"]
 LLMRole = Literal["system", "user", "assistant", "tool"]
 AgentName = Literal[
     "diagnosis_feedback",
@@ -84,6 +84,13 @@ DEFAULT_CONFIG: dict[LLMProvider, dict[str, str]] = {
         "base_url_env": "GROK_BASE_URL",
         "model": "grok-4.5",
         "base_url": "https://api-slb.krill-ai.net/codex/v1",
+    },
+    "yangmao": {
+        "api_key_env": "YANGMAO_API_KEY",
+        "model_env": "YANGMAO_MODEL",
+        "base_url_env": "YANGMAO_BASE_URL",
+        "model": "yangmao-main",
+        "base_url": "https://ai.gz404.com:54002/v1",
     }
 }
 AGENT_PROVIDER_ENV: dict[AgentName, str] = {
