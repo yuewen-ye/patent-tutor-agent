@@ -9,7 +9,7 @@
   ## ============================ 模型更新日志 ===============================
   ## 2026.08.06 更新:   glm 更新状态【不可使用】,请及时更换使用 glm 作为 provider 的节点;
   ##                    grok 更新状态【可使用】
-  ##            新增:   yangmao 模型为 Deepseek Flash 158b A13B 1M context
+  ##            新增:   yangmao 模型为 Deepseek Flash
 
 llm:
   default_provider: deepseek
