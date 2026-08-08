@@ -1,14 +1,19 @@
 from __future__ import annotations
 
-from contextlib import contextmanager
 import os
-from pathlib import Path
-from typing import Iterator
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
+from pathlib import Path
 
 import pytest
 
-from backend.app.persistence.db import MySQLConfigurationError, MySQLDatabase, MySQLSettings, _split_sql
+from backend.app.persistence.db import (
+    MySQLConfigurationError,
+    MySQLDatabase,
+    MySQLSettings,
+    _split_sql,
+)
 from backend.app.persistence.repositories import (
     MySQLLearnerStore,
     _answer_matches,
@@ -156,7 +161,7 @@ def test_mysql_schema_contains_business_tables() -> None:
 def test_fresh_schema_contains_unified_mastery_and_diagnostic_contract() -> None:
     database = MySQLDatabase(url="mysql://root:password@localhost/patent_tutor")
 
-    assert database.expected_migrations() == ["001_initial"]
+    assert database.expected_migrations() == ["001_initial", "002_mastery_events"]
 
     migration = Path("backend/app/persistence/migrations/001_initial.sql").read_text(
         encoding="utf-8"
@@ -167,6 +172,11 @@ def test_fresh_schema_contains_unified_mastery_and_diagnostic_contract() -> None
     assert "CREATE TABLE IF NOT EXISTS diagnostic_sessions" not in migration
     assert "CREATE TABLE IF NOT EXISTS diagnostic_attempts" not in migration
     assert "CREATE TABLE IF NOT EXISTS diagnostic_mastery_events" not in migration
+
+    source_migration = Path(
+        "backend/app/persistence/migrations/002_mastery_events.sql"
+    ).read_text(encoding="utf-8")
+    assert "ADD COLUMN source VARCHAR(32) NOT NULL DEFAULT 'exercise'" in source_migration
 
 
 @pytest.mark.unit
@@ -336,10 +346,9 @@ def test_mysql_connection_can_apply_schema_when_configured() -> None:
         pytest.skip("PATENT_TUTOR_MYSQL_URL is not configured")
     database = MySQLDatabase(url=url, auto_migrate=True)
     database.ensure_initialized()
-    with database.transaction() as connection:
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT COUNT(*) AS count FROM schema_migrations")
-            assert int(cursor.fetchone()["count"]) >= 1
+    with database.transaction() as connection, connection.cursor() as cursor:
+        cursor.execute("SELECT COUNT(*) AS count FROM schema_migrations")
+        assert int(cursor.fetchone()["count"]) >= 1
     database.close()
 
 

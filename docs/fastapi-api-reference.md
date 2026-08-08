@@ -90,8 +90,9 @@ FastAPI 自带的接口描述页：`/docs`、`/redoc`、`/openapi.json`。
 ```json
 {
   "learning_goal": "系统学习专利新颖性判断",
-  "education_background": "理工科，有研发经验",
+  "education_background": "理工背景+有研发经验",
   "responses": [
+    {"question_id": "Q0", "answer": "C"},
     {"question_id": "Q1", "answer": "B"}
   ]
 }
@@ -102,6 +103,13 @@ FastAPI 自带的接口描述页：`/docs`、`/redoc`、`/openapi.json`。
 ```json
 {"session_id": "session-id", "status": "running"}
 ```
+
+`education_background` 可选：缺省时从问卷 **Q0（教育背景）** 自动派生，选项与后端
+`parameters_for_background` 的五个 BKT 先验参数桶一一对应；两者都缺省时落入“其他”桶
+（`p_init=0.10`）。无 CAT 诊断快照（`diagnostic_payload` 为空）时，本接口会同步执行问卷 BKT 播种：
+Q1–Q21 按标准答案判分后写入 `student_node_mastery` 与 `mastery_events`
+（`source='questionnaire'`），并做知识 DAG 父节点传播；播种失败只降级、不阻断课程创建。
+问卷版本为 `1.1.0`（新增 Q0 教育背景题）。
 
 ### `POST /sessions`
 
@@ -191,14 +199,16 @@ FastAPI 自带的接口描述页：`/docs`、`/redoc`、`/openapi.json`。
 ```json
 {
   "learning_goal": "系统掌握专利新颖性判断",
-  "education_background": "理工科，有研发经验",
+  "education_background": "理工背景+有研发经验",
   "responses": [
     {"question_id": "<已有问卷题号>", "answer": "<已有问卷答案>"}
   ]
 }
 ```
 
-当前接口合同要求 `responses` 至少包含一项；这项数据只是创建诊断时一并保存的初始信息，不计入 CAT 的 `answered_questions`，也不决定 CAT 的第一题。返回 `DiagnosticProgress`：
+`education_background` 可选：缺省时从 `responses` 中的 **Q0（教育背景）** 自动派生；两者都缺省时落入
+“其他”桶。`responses` 至少包含一项；这些数据只是创建诊断时一并保存的初始信息，不计入 CAT 的
+`answered_questions`，也不决定 CAT 的第一题。返回 `DiagnosticProgress`：
 
 ```json
 {

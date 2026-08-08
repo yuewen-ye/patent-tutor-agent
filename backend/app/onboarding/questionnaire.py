@@ -9,7 +9,8 @@ _QUESTION_PATTERN = re.compile(
     r"\*\*(Q\d+)\*\*\s*(.*?)(?=\n\*\*Q\d+\*\*|\n-{5,}|\n##\s|\Z)",
     re.DOTALL,
 )
-_OPTION_PATTERN = re.compile(r"(?<![A-Za-z0-9])([A-D])\.\s*")
+_OPTION_PATTERN = re.compile(r"(?<![A-Za-z0-9])([A-E])\.\s*")
+_EDUCATION_BACKGROUND_QUESTION_ID = "Q0"
 
 
 def _compact_markdown_text(value: str) -> str:
@@ -73,10 +74,32 @@ def resolve_questionnaire_responses(
     return resolved
 
 
+def education_background_from_responses(
+    responses: list[dict[str, Any]],
+) -> str | None:
+    """Extract the education-background bucket selected in question Q0.
+
+    Returns the exact option text (which doubles as the BKT parameter-bucket
+    key consumed by ``parameters_for_background``), or ``None`` when the
+    learner did not answer Q0.
+    """
+
+    index = onboarding_question_index()
+    definition = index.get(_EDUCATION_BACKGROUND_QUESTION_ID)
+    if definition is None:
+        return None
+    for response in responses:
+        if str(response.get("question_id", "")).strip() != _EDUCATION_BACKGROUND_QUESTION_ID:
+            continue
+        answer_key = str(response.get("answer") or "").strip().upper()
+        return definition["options"].get(answer_key)
+    return None
+
+
 def onboarding_questionnaire() -> dict[str, str]:
     return {
         "id": "patent-tutor-onboarding",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "content_type": "text/markdown",
         "markdown": _QUESTIONNAIRE_PATH.read_text(encoding="utf-8"),
     }

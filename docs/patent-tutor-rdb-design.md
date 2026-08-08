@@ -251,6 +251,7 @@ erDiagram
 | `student_id` / `node_id` | 被更新的学员和知识节点。 |
 | `attempt_id` | 触发事件的作答；纯图谱推断事件可为空。 |
 | `event_kind` | 更新类型：直接观察 `observed` 或知识图谱推断 `inferred`。 |
+| `source` | 观测来源审计：`exercise`（课程练习，默认）、`questionnaire`（问卷播种）、`diagnostic`（CAT 诊断）。 |
 | `observed_correct` | 直接观察对应的正确性；推断事件可为空。 |
 | `prior_pl` / `predicted_pl` / `posterior_pl` / `updated_pl` | 更新前、预测后、观察后和最终写入的掌握概率。 |
 | `p_init` / `p_transit` / `p_guess` / `p_slip` | 本次计算采用的 BKT 初始、转移、猜测和失误参数快照。 |
@@ -297,10 +298,17 @@ erDiagram
 1. 发题时在 `questions` 写入诊断题快照及内部答案；
 2. 作答写入 `attempts`，由服务端根据答案判定；
 3. 每个直接观察和每个 DAG 推断写入 `mastery_events`，以 `event_kind='observed'/'inferred'` 区分；
-4. CAT tracker、候选题、当前题和课程衔接信息进入该诊断会话的 `session_states.state_json`；
-5. 诊断完成后更新 `student_node_mastery`，并创建课程会话。
+4. 每次作答在写事件的同时即时 upsert `student_node_mastery`（中途放弃也不丢掌握度）；
+5. CAT tracker、候选题、当前题和课程衔接信息进入该诊断会话的 `session_states.state_json`；
+6. 诊断完成后更新 `student_node_mastery`，并创建课程会话。
 
 课程练习沿用同一 `questions → attempts → mastery_events → student_node_mastery` 链。作答、当前 mastery 和所有对应事件必须同一事务提交。
+
+问卷播种（`POST /learners/{learner_id}/questionnaire-responses`，无 CAT 诊断快照时）复用同一条链：
+Q1–Q21 按 `questionnaire-kc-map.json` 标准答案判分后注册 `questions`/`attempts` 行（`origin='diagnostic_catalog'`，
+`grading_source='questionnaire_answer_key'`），逐题经 `_update_mastery_connection` 写入直接观测事件
+（`source='questionnaire'`），最后在同一事务内做知识 DAG 加权传播，父节点以 `inferred` 事件
+（`source='questionnaire'`，`attempt_id` 为空）写入；任一步失败整批回滚，服务层降级为不播种但不阻断开课。
 
 ## 6. 删除的冗余模型
 

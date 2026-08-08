@@ -113,7 +113,10 @@ class DiagnosticSessionSubmission(BaseModel):
     )
 
     learning_goal: str = Field(min_length=1)
-    education_background: str = Field(min_length=1)
+    education_background: str | None = Field(
+        default=None,
+        description="教育背景（BKT 先验参数桶）；缺省时从问卷 Q0 自动派生。",
+    )
     responses: list[QuestionnaireResponseItem] = Field(
         default_factory=list,
         description="问卷预筛回答；纯 CAT 诊断流程可留空，由 CAT 引擎自适应出题。",

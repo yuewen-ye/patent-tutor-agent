@@ -26,6 +26,17 @@
 快照生成完整知识维度、总体水平和薄弱点，并负责课程进度。原有直接提交问卷并创建课程的接口继续
 保留为兼容入口；没有 CAT 快照时也由后端初始化冷启动掌握度，而不是让 LLM 猜测。
 
+**问卷 → BKT 播种（无 CAT 快照时）**：`POST /learners/{id}/questionnaire-responses` 在创建课程
+会话的同时，把 Q1–Q21 知识题按 `questionnaire-kc-map.json` 的标准答案判分，逐题复用
+`_update_mastery_connection` 写入 `student_node_mastery` 与 `mastery_events`
+（`source='questionnaire'`、`inferred=0`），再在同一事务内做与 CAT 完全一致的知识 DAG 父节点
+加权传播与未掌握剪枝（父节点 `source='questionnaire'`、`inferred=1`）。教育背景来自问卷 Q0 或
+请求显式字段，用于选择 BKT 先验参数桶；播种失败只降级（保持未播种状态），不阻断 teach 流程。
+
+**CAT 路径持久化加固**：每次作答在写 `mastery_events`（`source='diagnostic'`）的同时即时 upsert
+`student_node_mastery`，学员中途放弃诊断也保留已观测掌握度；完成时仍写入 69 节点最终快照。
+两条路径的父节点落库行为一致（都写 `inferred` 父节点），事件来源可审计区分。
+
 ## 1. 当前工作流
 
 ```text

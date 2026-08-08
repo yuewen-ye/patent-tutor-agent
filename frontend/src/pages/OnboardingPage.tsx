@@ -24,9 +24,10 @@ import type { DiagnosticProgress } from "@/types";
 type Phase = "config" | "testing" | "completed";
 
 const EDUCATION_OPTIONS = [
+  { value: "法学背景+系统学过程序法", label: "法学背景 + 系统学过程序法" },
+  { value: "法学背景+未系统学", label: "法学背景 + 未系统学" },
   { value: "理工背景+有研发经验", label: "理工背景 + 有研发经验" },
-  { value: "理工背景", label: "理工背景" },
-  { value: "文法商背景", label: "文法商背景" },
+  { value: "理工背景+无研发经验", label: "理工背景 + 无研发经验" },
   { value: "其他", label: "其他" },
 ];
 

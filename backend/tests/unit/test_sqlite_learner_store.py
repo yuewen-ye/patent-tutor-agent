@@ -137,3 +137,47 @@ def test_direct_feedback_observation_replaces_inferred_mastery_state(tmp_path) -
     assert updated["observations"] == 1
     assert updated["inferred"] is False
     assert updated["pl"] > 0.35
+
+
+@pytest.mark.unit
+def test_diagnostic_attempt_upserts_mastery_progress_per_answer(tmp_path) -> None:
+    store = SQLiteLearnerStore(tmp_path / "learners.sqlite3")
+    store.save_diagnostic_session(
+        payload={
+            "diagnostic_session_id": "diagnostic-1",
+            "learner_id": "learner-1",
+            "status": "running",
+            "learning_goal": "学习新颖性",
+            "education_background": "理工背景+有研发经验",
+        }
+    )
+
+    store.save_diagnostic_attempt(
+        diagnostic_session_id="diagnostic-1",
+        learner_id="learner-1",
+        attempt={
+            "question_id": "q-1",
+            "user_answer": "A",
+            "is_correct": True,
+            "direct_steps": [
+                {
+                    "skill_id": "novelty",
+                    "observed_correct": True,
+                    "posterior_pl": 0.89,
+                }
+            ],
+            "inferred_changes": [
+                {
+                    "skill_id": "patentability-substantive",
+                    "posterior_pl": 0.45,
+                }
+            ],
+        },
+        idempotency_key="attempt-1",
+    )
+
+    snapshot = store.mastery_snapshot("learner-1")
+    assert snapshot["novelty"]["observations"] == 1
+    assert snapshot["novelty"]["pl"] == pytest.approx(0.89, abs=1e-4)
+    assert snapshot["patentability-substantive"]["inferred"] is True
+    assert snapshot["patentability-substantive"]["pl"] == pytest.approx(0.45, abs=1e-4)

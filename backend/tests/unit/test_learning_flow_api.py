@@ -215,7 +215,7 @@ def test_reproducible_questionnaire_teach_exercise_feedback_journey(
 
     questionnaire = client.get("/questionnaires/onboarding")
     assert questionnaire.status_code == 200
-    assert questionnaire.json()["version"] == "1.0.0"
+    assert questionnaire.json()["version"] == "1.1.0"
 
     course_response = client.post(
         f"/learners/{learner_id}/questionnaire-responses",
@@ -339,10 +339,11 @@ def test_frontend_can_fetch_versioned_onboarding_questionnaire(
 
     assert response.status_code == 200
     body = response.json()
-    assert body["version"] == "1.0.0"
+    assert body["version"] == "1.1.0"
     assert body["content_type"] == "text/markdown"
     assert body["markdown"].startswith("#")
     assert "48" in body["markdown"]
+    assert "**Q0**" in body["markdown"]
 
 
 def test_cat_diagnostic_session_updates_mastery_and_starts_course(

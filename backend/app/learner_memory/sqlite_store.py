@@ -6,8 +6,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from backend.app.learner_memory.memory import JsonValue, StoredMemoryItem
 from backend.app.learner_memory.bkt.model import compute_bkt_step, knowledge_node_snapshot
+from backend.app.learner_memory.memory import JsonValue, StoredMemoryItem
 
 P_L0 = 0.15
 P_T = 0.25
@@ -233,6 +233,7 @@ class SQLiteLearnerStore:
         idempotency_key: str | None,
     ) -> None:
         attempt_id = f"{diagnostic_session_id}:{len(self._diagnostic_attempts(diagnostic_session_id)) + 1}"
+        now = datetime.now(UTC).isoformat()
         with self._connect() as connection:
             connection.execute(
                 "INSERT OR IGNORE INTO diagnostic_attempts("
@@ -245,9 +246,226 @@ class SQLiteLearnerStore:
                     attempt["question_id"],
                     json.dumps(attempt, ensure_ascii=False),
                     idempotency_key,
-                    datetime.now(UTC).isoformat(),
+                    now,
                 ),
             )
+            for step in attempt.get("direct_steps") or []:
+                self._upsert_progress_sqlite(
+                    connection,
+                    learner_id,
+                    str(step["skill_id"]),
+                    pl=float(step["posterior_pl"]),
+                    inferred=False,
+                    now=now,
+                    observed_correct=bool(step["observed_correct"]),
+                )
+            for change in attempt.get("inferred_changes") or []:
+                self._upsert_progress_sqlite(
+                    connection,
+                    learner_id,
+                    str(change["skill_id"]),
+                    pl=float(change["posterior_pl"]),
+                    inferred=True,
+                    now=now,
+                )
+
+    def seed_mastery_from_questionnaire(
+        self,
+        *,
+        learner_id: str,
+        session_id: str,
+        responses: list[dict[str, Any]],
+        education_background: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """SQLite test-substitute for questionnaire BKT seeding.
+
+        Mirrors the MySQL path's math: graded Q1-Q21 answers are applied
+        sequentially through the same BKT step formula, then the deterministic
+        DAG inference pass propagates parent states. A per-session memory
+        marker makes re-seeding the same course session idempotent.
+        """
+
+        from backend.app.learner_memory.bkt.model import parameters_for_background
+        from backend.app.onboarding.questionnaire_kc_map import load_questionnaire_kc_map
+
+        marker = ("learners", learner_id, "bkt_seed")
+        existing = self.search(marker, limit=10)
+        if any(str(item.key) == f"qseed:{session_id}" for item in existing):
+            return []
+        parameters = parameters_for_background(education_background or "未提供")
+        answers = {
+            str(response.get("question_id") or "").strip(): response.get("answer")
+            for response in responses
+            if isinstance(response, dict)
+        }
+        mapping = load_questionnaire_kc_map()
+        now = datetime.now(UTC).isoformat()
+        results: list[dict[str, Any]] = []
+        seeded_skills: list[str] = []
+        with self._connect() as connection:
+            answered = self._answered_count_sqlite(connection, learner_id)
+            for question_id, meta in mapping.items():
+                if question_id not in answers:
+                    continue
+                kc_ids = [str(kc) for kc in meta["kc_ids"]]
+                if not kc_ids:
+                    continue
+                answered += 1
+                observed = (
+                    str(meta["standard"]).strip().casefold()
+                    == str(answers[question_id]).strip().casefold()
+                )
+                effective_transit = (
+                    min(1.0, parameters.p_transit * 1.5)
+                    if answered <= 10
+                    else parameters.p_transit
+                )
+                for kc in kc_ids:
+                    posterior = self.update_mastery(
+                        learner_id,
+                        kc,
+                        observed_correct=observed,
+                        p_init=parameters.p_init,
+                        p_transit=effective_transit,
+                        p_guess=parameters.p_guess,
+                        p_slip=parameters.p_slip,
+                    )
+                    results.append(
+                        {
+                            "skill_id": kc,
+                            "question_id": question_id,
+                            "posterior_pl": posterior,
+                            "observed_correct": observed,
+                        }
+                    )
+                    seeded_skills.append(kc)
+            if seeded_skills:
+                self._propagate_inference_sqlite(
+                    connection,
+                    learner_id,
+                    seeded_skills,
+                    p_init=parameters.p_init,
+                    now=now,
+                )
+        self.put(marker, f"qseed:{session_id}", {"seeded_at": now})
+        return results
+
+    def _upsert_progress_sqlite(
+        self,
+        connection: sqlite3.Connection,
+        learner_id: str,
+        skill_id: str,
+        *,
+        pl: float,
+        inferred: bool,
+        now: str,
+        observed_correct: bool | None = None,
+    ) -> None:
+        row = connection.execute(
+            "SELECT observations, correct_count, incorrect_count FROM skill_mastery "
+            "WHERE learner_id=? AND skill_id=?",
+            (learner_id, skill_id),
+        ).fetchone()
+        observations = int(row["observations"]) if row else 0
+        correct_count = int(row["correct_count"]) if row else 0
+        incorrect_count = int(row["incorrect_count"]) if row else 0
+        if observed_correct is not None:
+            observations += 1
+            correct_count += int(observed_correct)
+            incorrect_count += int(not observed_correct)
+        connection.execute(
+            "INSERT INTO skill_mastery(learner_id, skill_id, probability, observations, "
+            "inferred, correct_count, incorrect_count, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+            "ON CONFLICT(learner_id, skill_id) DO UPDATE SET "
+            "probability=excluded.probability, observations=excluded.observations, "
+            "inferred=excluded.inferred, "
+            "correct_count=excluded.correct_count, incorrect_count=excluded.incorrect_count, "
+            "updated_at=excluded.updated_at",
+            (
+                learner_id,
+                skill_id,
+                min(1.0, max(0.0, float(pl))),
+                observations,
+                int(inferred),
+                correct_count,
+                incorrect_count,
+                now,
+            ),
+        )
+
+    def _answered_count_sqlite(self, connection: sqlite3.Connection, learner_id: str) -> int:
+        row = connection.execute(
+            "SELECT COALESCE(SUM(observations), 0) AS total FROM skill_mastery "
+            "WHERE learner_id=?",
+            (learner_id,),
+        ).fetchone()
+        return int(row["total"]) if row else 0
+
+    def _propagate_inference_sqlite(
+        self,
+        connection: sqlite3.Connection,
+        learner_id: str,
+        seed_skills: list[str],
+        *,
+        p_init: float,
+        now: str,
+    ) -> None:
+        from backend.app.learner_memory.bkt.knowledge_graph import load_knowledge_graph
+
+        graph = load_knowledge_graph()
+
+        def _read(skill_id: str) -> tuple[float, int]:
+            row = connection.execute(
+                "SELECT probability, observations FROM skill_mastery "
+                "WHERE learner_id=? AND skill_id=?",
+                (learner_id, skill_id),
+            ).fetchone()
+            if row is None:
+                return p_init, 0
+            return float(row["probability"]), int(row["observations"])
+
+        def _write_inferred(skill_id: str, probability: float) -> None:
+            self._upsert_progress_sqlite(
+                connection,
+                learner_id,
+                skill_id,
+                pl=probability,
+                inferred=True,
+                now=now,
+            )
+
+        def _update_ancestors(skill_id: str, visited: set[str]) -> None:
+            for parent in graph.get_parents(skill_id):
+                if parent in visited:
+                    continue
+                children = graph.get_children(parent)
+                total_weight = sum(_read(child)[1] + 1 for child in children)
+                if not total_weight:
+                    continue
+                probability = sum(
+                    _read(child)[0] * (_read(child)[1] + 1) for child in children
+                ) / total_weight
+                if abs(probability - _read(parent)[0]) > 0.01:
+                    visited.add(parent)
+                    _write_inferred(parent, probability)
+                    _update_ancestors(parent, visited)
+
+        def _propagate_unmastered(skill_id: str, pruned: set[str]) -> None:
+            if skill_id in pruned:
+                return
+            probability, observations = _read(skill_id)
+            if observations >= 3 and probability <= 0.1:
+                pruned.add(skill_id)
+                _write_inferred(skill_id, 0.01)
+                for dependent in graph.get_dependents(skill_id):
+                    _propagate_unmastered(dependent, pruned)
+
+        visited: set[str] = set()
+        pruned: set[str] = set()
+        for skill_id in seed_skills:
+            _update_ancestors(skill_id, visited)
+            _propagate_unmastered(skill_id, pruned)
 
     def complete_diagnostic_session(
         self,

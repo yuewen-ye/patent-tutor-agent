@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 import hashlib
 import json
 import secrets
-from typing import Any, Iterable
 import uuid
+from collections.abc import Iterable, Mapping
+from datetime import UTC, datetime
+from typing import Any
 
-from backend.app.learner_memory.memory import JsonValue, StoredMemoryItem
+from backend.app.curriculum.learning_plan import plan_node_status
+from backend.app.learner_memory.bkt.knowledge_graph import load_knowledge_graph
 from backend.app.learner_memory.bkt.model import (
     BKT_MODEL_VERSION,
     BKTParameters,
@@ -17,9 +19,20 @@ from backend.app.learner_memory.bkt.model import (
     knowledge_node_snapshot,
     parameters_for_background,
 )
-from backend.app.learner_memory.sqlite_store import P_L0, P_G, P_S, P_T
-from backend.app.curriculum.learning_plan import plan_node_status
+from backend.app.learner_memory.memory import JsonValue, StoredMemoryItem
+from backend.app.learner_memory.sqlite_store import P_G, P_L0, P_S, P_T
+from backend.app.onboarding.questionnaire_kc_map import load_questionnaire_kc_map
 from backend.app.persistence.db import MySQLDatabase
+
+_SOURCE_EXERCISE = "exercise"
+_SOURCE_QUESTIONNAIRE = "questionnaire"
+_SOURCE_DIAGNOSTIC = "diagnostic"
+
+# Deterministic DAG inference constants mirroring learner_memory/bkt/cat.py so
+# DB-side propagation stays byte-for-byte consistent with the CAT engine.
+_PROPAGATION_DELTA = 0.01
+_UNMASTERY_THRESHOLD = 0.1
+_OBSERVATION_THRESHOLD_FOR_PRUNE = 3
 
 
 def _db_now() -> datetime:
@@ -77,6 +90,228 @@ def _state_status(state: dict[str, Any]) -> str:
     if status in {"running", "completed", "failed", "canceled"}:
         return str(status)
     return "running"
+
+
+def _write_mastery_snapshot(
+    connection: Any,
+    learner_id: str,
+    knowledge: Mapping[str, Any],
+    observation_counts: Mapping[str, tuple[int, int]],
+    now: datetime,
+) -> None:
+    """Upsert a final BKT state snapshot (shared by CAT completion and seeding)."""
+
+    cursor = connection.cursor()
+    for node_id, state in knowledge.items():
+        if not isinstance(state, dict):
+            continue
+        observations = int(state.get("observations", 0))
+        inferred = int(bool(state.get("inferred")))
+        if observations <= 0 and not inferred:
+            continue
+        correct_count, incorrect_count = observation_counts.get(str(node_id), (0, 0))
+        cursor.execute(
+            "INSERT INTO student_node_mastery("
+            "student_id, node_id, pl, observations, inferred, correct_count, "
+            "incorrect_count, model_version, updated_at"
+            ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) "
+            "ON DUPLICATE KEY UPDATE pl=%s, observations=%s, inferred=%s, "
+            "correct_count=%s, incorrect_count=%s, model_version=%s, updated_at=%s",
+            (
+                learner_id,
+                node_id,
+                float(state["pl"]),
+                observations,
+                inferred,
+                correct_count,
+                incorrect_count,
+                BKT_MODEL_VERSION,
+                now,
+                float(state["pl"]),
+                observations,
+                inferred,
+                correct_count,
+                incorrect_count,
+                BKT_MODEL_VERSION,
+                now,
+            ),
+        )
+
+
+def _upsert_mastery_progress(
+    connection: Any,
+    learner_id: str,
+    skill_id: str,
+    *,
+    pl: float,
+    inferred: bool,
+    now: datetime,
+    observed_correct: bool | None = None,
+) -> None:
+    """Incrementally upsert one node for mid-session durability.
+
+    When ``observed_correct`` is set, observations and correct/incorrect
+    counters advance by one; pure inference keeps counters unchanged.
+    """
+
+    cursor = connection.cursor()
+    cursor.execute(
+        "SELECT observations, correct_count, incorrect_count FROM student_node_mastery "
+        "WHERE student_id=%s AND node_id=%s FOR UPDATE",
+        (learner_id, skill_id),
+    )
+    row = cursor.fetchone()
+    observations = int(row["observations"]) if row else 0
+    correct_count = int(row["correct_count"]) if row else 0
+    incorrect_count = int(row["incorrect_count"]) if row else 0
+    if observed_correct is not None:
+        observations += 1
+        correct_count += int(observed_correct)
+        incorrect_count += int(not observed_correct)
+    probability = min(1.0, max(0.0, float(pl)))
+    cursor.execute(
+        "INSERT INTO student_node_mastery(student_id, node_id, pl, observations, inferred, "
+        "correct_count, incorrect_count, model_version, updated_at) "
+        "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) "
+        "ON DUPLICATE KEY UPDATE pl=%s, observations=%s, inferred=%s, "
+        "correct_count=%s, incorrect_count=%s, model_version=%s, updated_at=%s",
+        (
+            learner_id,
+            skill_id,
+            probability,
+            observations,
+            int(inferred),
+            correct_count,
+            incorrect_count,
+            BKT_MODEL_VERSION,
+            now,
+            probability,
+            observations,
+            int(inferred),
+            correct_count,
+            incorrect_count,
+            BKT_MODEL_VERSION,
+            now,
+        ),
+    )
+
+
+def _write_inferred_event(
+    connection: Any,
+    learner_id: str,
+    skill_id: str,
+    *,
+    prior_pl: float,
+    posterior_pl: float,
+    now: datetime,
+    source: str,
+) -> None:
+    """Append an inference audit event (attempt_id stays NULL for seeding)."""
+
+    connection.cursor().execute(
+        "INSERT INTO mastery_events(mastery_event_id, student_id, node_id, attempt_id, "
+        "event_kind, source, observed_correct, prior_pl, predicted_pl, posterior_pl, "
+        "updated_pl, model_version, created_at) "
+        "VALUES (%s,%s,%s,NULL,'inferred',%s,NULL,%s,NULL,%s,%s,%s,%s)",
+        (
+            uuid.uuid4().hex,
+            learner_id,
+            skill_id,
+            source,
+            prior_pl,
+            posterior_pl,
+            posterior_pl,
+            BKT_MODEL_VERSION,
+            now,
+        ),
+    )
+
+
+def _propagate_dag_inference(
+    connection: Any,
+    learner_id: str,
+    seed_skill_ids: Iterable[str],
+    *,
+    p_init: float,
+    now: datetime,
+    source: str,
+) -> None:
+    """Deterministic DAG inference identical to the CAT engine.
+
+    Mirrors ``CATEngine._update_ancestors`` (children weighted average) and
+    ``CATEngine._propagate_unmastered`` (prune confidently-unmastered
+    dependents) so questionnaire seeding and CAT produce identical parent
+    states. Only changed nodes are written, with inferred audit events.
+    """
+
+    graph = load_knowledge_graph()
+    cursor = connection.cursor()
+
+    def _read(skill_id: str) -> tuple[float, int]:
+        cursor.execute(
+            "SELECT pl, observations FROM student_node_mastery "
+            "WHERE student_id=%s AND node_id=%s",
+            (learner_id, skill_id),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return p_init, 0
+        return float(row["pl"]), int(row["observations"])
+
+    def _upsert_inferred(skill_id: str, probability: float) -> None:
+        prior_pl, _ = _read(skill_id)
+        _upsert_mastery_progress(
+            connection,
+            learner_id,
+            skill_id,
+            pl=probability,
+            inferred=True,
+            now=now,
+        )
+        _write_inferred_event(
+            connection,
+            learner_id,
+            skill_id,
+            prior_pl=prior_pl,
+            posterior_pl=probability,
+            now=now,
+            source=source,
+        )
+
+    def _update_ancestors(skill_id: str, visited: set[str]) -> None:
+        for parent in graph.get_parents(skill_id):
+            if parent in visited:
+                continue
+            children = graph.get_children(parent)
+            total_weight = sum(_read(child)[1] + 1 for child in children)
+            if not total_weight:
+                continue
+            probability = sum(
+                _read(child)[0] * (_read(child)[1] + 1) for child in children
+            ) / total_weight
+            if abs(probability - _read(parent)[0]) > _PROPAGATION_DELTA:
+                visited.add(parent)
+                _upsert_inferred(parent, probability)
+                _update_ancestors(parent, visited)
+
+    def _propagate_unmastered(skill_id: str, pruned: set[str]) -> None:
+        if skill_id in pruned:
+            return
+        probability, observations = _read(skill_id)
+        if (
+            observations >= _OBSERVATION_THRESHOLD_FOR_PRUNE
+            and probability <= _UNMASTERY_THRESHOLD
+        ):
+            pruned.add(skill_id)
+            _upsert_inferred(skill_id, 0.01)
+            for dependent in graph.get_dependents(skill_id):
+                _propagate_unmastered(dependent, pruned)
+
+    visited: set[str] = set()
+    pruned: set[str] = set()
+    for skill_id in seed_skill_ids:
+        _update_ancestors(skill_id, visited)
+        _propagate_unmastered(skill_id, pruned)
 
 
 _PBKDF2_ITERATIONS = 200_000
@@ -777,14 +1012,15 @@ class MySQLLearnerStore:
             for step in attempt.get("direct_steps") or []:
                 cursor.execute(
                     "INSERT INTO mastery_events(mastery_event_id, student_id, node_id, attempt_id, "
-                    "event_kind, observed_correct, prior_pl, predicted_pl, posterior_pl, updated_pl, "
-                    "p_init, p_transit, p_guess, p_slip, model_version, created_at) "
-                    "VALUES (%s,%s,%s,%s,'observed',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                    "event_kind, source, observed_correct, prior_pl, predicted_pl, posterior_pl, "
+                    "updated_pl, p_init, p_transit, p_guess, p_slip, model_version, created_at) "
+                    "VALUES (%s,%s,%s,%s,'observed',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                     (
                         uuid.uuid4().hex,
                         learner_id,
                         step["skill_id"],
                         attempt_id,
+                        _SOURCE_DIAGNOSTIC,
                         int(bool(step["observed_correct"])),
                         step["prior_pl"],
                         step["predicted_pl"],
@@ -801,20 +1037,40 @@ class MySQLLearnerStore:
             for change in attempt.get("inferred_changes") or []:
                 cursor.execute(
                     "INSERT INTO mastery_events(mastery_event_id, student_id, node_id, attempt_id, "
-                    "event_kind, observed_correct, prior_pl, predicted_pl, posterior_pl, updated_pl, "
-                    "model_version, created_at) "
-                    "VALUES (%s,%s,%s,%s,'inferred',NULL,%s,NULL,%s,%s,%s,%s)",
+                    "event_kind, source, observed_correct, prior_pl, predicted_pl, posterior_pl, "
+                    "updated_pl, model_version, created_at) "
+                    "VALUES (%s,%s,%s,%s,'inferred',%s,NULL,%s,NULL,%s,%s,%s,%s)",
                     (
                         uuid.uuid4().hex,
                         learner_id,
                         change["skill_id"],
                         attempt_id,
+                        _SOURCE_DIAGNOSTIC,
                         change["prior_pl"],
                         change["posterior_pl"],
                         change["posterior_pl"],
                         BKT_MODEL_VERSION,
                         now,
                     ),
+                )
+            for step in attempt.get("direct_steps") or []:
+                _upsert_mastery_progress(
+                    connection,
+                    learner_id,
+                    step["skill_id"],
+                    pl=float(step["posterior_pl"]),
+                    inferred=False,
+                    now=now,
+                    observed_correct=bool(step["observed_correct"]),
+                )
+            for change in attempt.get("inferred_changes") or []:
+                _upsert_mastery_progress(
+                    connection,
+                    learner_id,
+                    change["skill_id"],
+                    pl=float(change["posterior_pl"]),
+                    inferred=True,
+                    now=now,
                 )
 
     def complete_diagnostic_session(
@@ -831,42 +1087,14 @@ class MySQLLearnerStore:
         )
         with self.database.transaction() as connection:
             self._ensure_student(connection, learner_id, now)
-            cursor = connection.cursor()
-            for node_id, state in knowledge.items():
-                if not isinstance(state, dict):
-                    continue
-                observations = int(state.get("observations", 0))
-                inferred = int(bool(state.get("inferred")))
-                if observations <= 0 and not inferred:
-                    continue
-                correct_count, incorrect_count = observation_counts.get(str(node_id), (0, 0))
-                cursor.execute(
-                    "INSERT INTO student_node_mastery("
-                    "student_id, node_id, pl, observations, inferred, correct_count, "
-                    "incorrect_count, model_version, updated_at"
-                    ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) "
-                    "ON DUPLICATE KEY UPDATE pl=%s, observations=%s, inferred=%s, "
-                    "correct_count=%s, incorrect_count=%s, model_version=%s, updated_at=%s",
-                    (
-                        learner_id,
-                        node_id,
-                        float(state["pl"]),
-                        observations,
-                        inferred,
-                        correct_count,
-                        incorrect_count,
-                        BKT_MODEL_VERSION,
-                        now,
-                        float(state["pl"]),
-                        observations,
-                        inferred,
-                        correct_count,
-                        incorrect_count,
-                        BKT_MODEL_VERSION,
-                        now,
-                    ),
-                )
-            cursor.execute(
+            _write_mastery_snapshot(
+                connection,
+                learner_id,
+                knowledge,
+                observation_counts,
+                now,
+            )
+            connection.cursor().execute(
                 "UPDATE sessions SET status='completed', completed_at=%s, "
                 "updated_at=%s WHERE session_id=%s",
                 (now, now, diagnostic_session_id),
@@ -1208,6 +1436,138 @@ class MySQLLearnerStore:
                 )
         return results
 
+    def seed_mastery_from_questionnaire(
+        self,
+        *,
+        learner_id: str,
+        session_id: str,
+        responses: list[dict[str, Any]],
+        education_background: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Seed initial KC mastery from onboarding knowledge questions Q1-Q21.
+
+        Runs in a single transaction: each mapped, answered question is graded
+        against the questionnaire standard answer, registered as a question and
+        attempt row (per-session idempotency), then applied through the same
+        ``_update_mastery_connection`` writer used by exercises. Finally the
+        deterministic DAG inference pass propagates parent states exactly like
+        the CAT engine. Failures roll back the whole batch; the service layer
+        degrades to "no seeding" without blocking course creation.
+        """
+
+        parameters = parameters_for_background(education_background or "未提供")
+        answers = {
+            str(response.get("question_id") or "").strip(): response.get("answer")
+            for response in responses
+            if isinstance(response, dict)
+        }
+        mapping = load_questionnaire_kc_map()
+        now = _db_now()
+        results: list[dict[str, Any]] = []
+        seeded_skills: list[str] = []
+        with self.database.transaction() as connection:
+            self._ensure_student(connection, learner_id, now)
+            answered_questions = self._answered_question_count(connection, learner_id)
+            cursor = connection.cursor()
+            for question_id, meta in mapping.items():
+                if question_id not in answers:
+                    continue
+                kc_ids = [str(kc) for kc in meta["kc_ids"]]
+                if not kc_ids:
+                    continue
+                question_key = f"qseed:{session_id}:{question_id}"
+                question_id_db = f"qseed:{session_id}:{question_id}"[:128]
+                cursor.execute(
+                    "INSERT IGNORE INTO questions(question_id, session_id, origin, qid, kind, "
+                    "category, kc_node_id, skills_json, question_text, answer_json, "
+                    "question_version, status, created_at) "
+                    "VALUES (%s,%s,'diagnostic_catalog',%s,'diagnostic',%s,%s,%s,%s,%s,"
+                    "'catalog-v1','published',%s)",
+                    (
+                        question_id_db,
+                        session_id,
+                        question_id,
+                        meta["area"],
+                        kc_ids[0],
+                        _json_dump(kc_ids),
+                        meta.get("question_text") or question_id,
+                        _json_dump(meta["standard"]),
+                        now,
+                    ),
+                )
+                cursor.execute(
+                    "SELECT attempt_id FROM attempts "
+                    "WHERE student_id=%s AND idempotency_key=%s",
+                    (learner_id, question_key),
+                )
+                if cursor.fetchone():
+                    continue
+                raw_answer = answers[question_id]
+                is_correct = _answer_matches(meta["standard"], raw_answer)
+                attempt_id = uuid.uuid4().hex
+                cursor.execute(
+                    "INSERT INTO attempts(attempt_id, student_id, question_id, session_id, "
+                    "raw_answer_json, selected_option, is_correct, grading_status, "
+                    "grading_source, idempotency_key, created_at, graded_at) "
+                    "VALUES (%s,%s,%s,%s,%s,%s,%s,'graded',"
+                    "'questionnaire_answer_key',%s,%s,%s)",
+                    (
+                        attempt_id,
+                        learner_id,
+                        question_id_db,
+                        session_id,
+                        _json_dump(raw_answer),
+                        raw_answer if isinstance(raw_answer, str) else None,
+                        int(is_correct),
+                        question_key,
+                        now,
+                        now,
+                    ),
+                )
+                answered_questions += 1
+                effective_transit = (
+                    min(1.0, parameters.p_transit * 1.5)
+                    if answered_questions <= 10
+                    else parameters.p_transit
+                )
+                for kc in kc_ids:
+                    update = self._update_mastery_connection(
+                        connection,
+                        learner_id,
+                        kc,
+                        is_correct,
+                        attempt_id=attempt_id,
+                        now=now,
+                        p_init=parameters.p_init,
+                        p_transit=effective_transit,
+                        p_guess=parameters.p_guess,
+                        p_slip=parameters.p_slip,
+                        source=_SOURCE_QUESTIONNAIRE,
+                    )
+                    update["question_id"] = question_id
+                    results.append(update)
+                    seeded_skills.append(kc)
+            if seeded_skills:
+                _propagate_dag_inference(
+                    connection,
+                    learner_id,
+                    seeded_skills,
+                    p_init=parameters.p_init,
+                    now=now,
+                    source=_SOURCE_QUESTIONNAIRE,
+                )
+        return results
+
+    def _answered_question_count(self, connection: Any, learner_id: str) -> int:
+        cursor = connection.cursor()
+        cursor.execute(
+            "SELECT COUNT(*) AS answer_count FROM attempts "
+            "WHERE student_id=%s AND is_correct IS NOT NULL",
+            (learner_id,),
+        )
+        row = cursor.fetchone()
+        return int(row["answer_count"]) if row else 0
+
     def _put_memory(
         self,
         connection: Any,
@@ -1427,6 +1787,7 @@ class MySQLLearnerStore:
         p_transit: float = P_T,
         p_guess: float = P_G,
         p_slip: float = P_S,
+        source: str = _SOURCE_EXERCISE,
     ) -> dict[str, Any]:
         cursor = connection.cursor()
         cursor.execute(
@@ -1473,14 +1834,15 @@ class MySQLLearnerStore:
         )
         cursor.execute(
             "INSERT INTO mastery_events(mastery_event_id, student_id, node_id, attempt_id, "
-            "event_kind, observed_correct, prior_pl, predicted_pl, posterior_pl, updated_pl, p_init, "
-            "p_transit, p_guess, p_slip, model_version, created_at) "
-            "VALUES (%s,%s,%s,%s,'observed',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            "event_kind, source, observed_correct, prior_pl, predicted_pl, posterior_pl, "
+            "updated_pl, p_init, p_transit, p_guess, p_slip, model_version, created_at) "
+            "VALUES (%s,%s,%s,%s,'observed',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
             (
                 uuid.uuid4().hex,
                 learner_id,
                 skill_id,
                 attempt_id,
+                source,
                 int(observed_correct),
                 current,
                 predicted,
