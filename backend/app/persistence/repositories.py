@@ -988,23 +988,33 @@ class MySQLLearnerStore:
             idempotency = idempotency_key or hashlib.sha256(
                 _json_dump({"session": diagnostic_session_id, "attempt": attempt}).encode("utf-8")
             ).hexdigest()
+            is_correct = attempt.get("is_correct")
+            is_correct_value = int(bool(is_correct)) if is_correct is not None else None
+            grading_status = str(attempt.get("grading_status") or "graded")
+            grading_source = str(attempt.get("grading_source") or "diagnostic_answer_key")
+            user_answer = attempt.get("user_answer")
+            selected_option = (
+                str(user_answer) if attempt.get("question_type") != "open" else None
+            )
             cursor.execute(
                 "INSERT IGNORE INTO attempts(attempt_id, student_id, question_id, session_id, "
                 "raw_answer_json, selected_option, is_correct, grading_status, grading_source, "
                 "response_ms, idempotency_key, created_at, graded_at) "
-                "VALUES (%s,%s,%s,%s,%s,%s,%s,'graded','diagnostic_answer_key',%s,%s,%s,%s)",
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                 (
                     attempt_id,
                     learner_id,
                     question_id,
                     diagnostic_session_id,
-                    _json_dump(attempt["user_answer"]),
-                    attempt["user_answer"],
-                    int(bool(attempt["is_correct"])),
+                    _json_dump(user_answer),
+                    selected_option,
+                    is_correct_value,
+                    grading_status,
+                    grading_source,
                     attempt.get("response_time_ms"),
                     idempotency,
                     now,
-                    now,
+                    now if is_correct is not None else None,
                 ),
             )
             if cursor.rowcount == 0:

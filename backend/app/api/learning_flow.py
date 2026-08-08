@@ -142,6 +142,7 @@ class DiagnosticResponseSubmission(BaseModel):
     answer: str = Field(min_length=1)
     response_ms: int | None = Field(default=None, ge=0)
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=255)
+    skip: bool = Field(default=False, description="开放题跳过标记；仅画像阶段的开放题有效。")
 
 
 def create_learning_flow_router(session_service: SessionService) -> APIRouter:
@@ -246,6 +247,7 @@ def create_learning_flow_router(session_service: SessionService) -> APIRouter:
                 answer=request.answer,
                 response_ms=request.response_ms,
                 idempotency_key=request.idempotency_key,
+                skip=request.skip,
             )
         except KeyError as exc:
             raise HTTPException(
@@ -296,6 +298,11 @@ def create_learning_flow_router(session_service: SessionService) -> APIRouter:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail={"error": "permission_denied", "reason": str(exc)},
+            ) from exc
+        except RuntimeError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={"error": "diagnostic_conflict", "reason": str(exc)},
             ) from exc
         except Exception as exc:
             raise HTTPException(

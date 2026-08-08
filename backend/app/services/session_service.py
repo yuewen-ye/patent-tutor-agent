@@ -279,6 +279,7 @@ class SessionService:
         answer: str,
         response_ms: int | None,
         idempotency_key: str | None,
+        skip: bool = False,
     ) -> dict[str, Any]:
         session = self._diagnostics.get(diagnostic_session_id)
         if session.learner_id != learner_id:
@@ -289,6 +290,7 @@ class SessionService:
             answer=answer,
             response_ms=response_ms,
             idempotency_key=idempotency_key,
+            skip=skip,
         )
         return self._start_course_after_diagnostic(session, progress)
 

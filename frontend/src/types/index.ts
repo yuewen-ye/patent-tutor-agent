@@ -322,6 +322,7 @@ export interface LearnerMemoryResponse {
 
 export interface DiagnosticQuestionView {
   question_id: string;
+  question_type: "knowledge" | "profile" | "open";
   skills: string[];
   question_text: string;
   options: Record<string, string>;
@@ -329,9 +330,9 @@ export interface DiagnosticQuestionView {
 
 export interface DiagnosticAnswerResult {
   question_id: string;
-  is_correct: boolean;
-  correct_answer: string;
-  explanation: string;
+  is_correct: boolean | null;
+  correct_answer: string | null;
+  explanation: string | null;
 }
 
 export interface KnowledgeNodeSnapshot {
@@ -345,8 +346,11 @@ export interface DiagnosticProgress {
   diagnostic_session_id: string;
   learner_id: string;
   status: "running" | "completed";
+  phase: "knowledge" | "profile" | "completed";
   answered_questions: number;
   max_questions: number;
+  profile_answered_questions: number;
+  profile_total_questions: number;
   termination_reason: string | null;
   current_question: DiagnosticQuestionView | null;
   course_session_id: string | null;
@@ -365,6 +369,7 @@ export interface SubmitDiagnosticResponseRequest {
   answer: string;
   response_ms?: number | null;
   idempotency_key?: string | null;
+  skip?: boolean;
 }
 
 // ===== 学员基本信息（students 表） =====

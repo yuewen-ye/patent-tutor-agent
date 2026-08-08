@@ -309,6 +309,82 @@ def test_diagnostic_repository_sql_bindings_without_live_mysql() -> None:
     assert "INSERT IGNORE INTO attempts" in executed_sql
 
 
+def test_diagnostic_repository_persists_ungraded_profile_attempt() -> None:
+    class RecordingCursor:
+        def __init__(self) -> None:
+            self.executions: list[tuple[str, tuple[object, ...]]] = []
+            self.rowcount = 1
+
+        def execute(self, sql: str, params: tuple[object, ...] = ()) -> None:
+            assert sql.count("%s") == len(params)
+            self.executions.append((sql, params))
+            self.rowcount = 1
+
+        @staticmethod
+        def fetchone() -> None:
+            return None
+
+    class RecordingConnection:
+        def __init__(self) -> None:
+            self.recording_cursor = RecordingCursor()
+
+        def cursor(self) -> RecordingCursor:
+            return self.recording_cursor
+
+    class RecordingDatabase:
+        auto_migrate = True
+
+        def __init__(self) -> None:
+            self.connection = RecordingConnection()
+
+        @contextmanager
+        def transaction(self) -> Iterator[RecordingConnection]:
+            yield self.connection
+
+    database = RecordingDatabase()
+    store = MySQLLearnerStore(database=database)  # type: ignore[arg-type]
+    store.save_diagnostic_session(
+        payload={
+            "diagnostic_session_id": "diagnostic-profile",
+            "learner_id": "learner-1",
+            "status": "running",
+            "learning_goal": "学习专利法",
+            "education_background": "其他",
+        }
+    )
+
+    store.save_diagnostic_attempt(
+        diagnostic_session_id="diagnostic-profile",
+        learner_id="learner-1",
+        attempt={
+            "question_id": "Q23",
+            "question_type": "profile",
+            "skills": [],
+            "user_answer": "A",
+            "is_correct": None,
+            "response_time_ms": None,
+            "grading_status": "ungraded",
+            "grading_source": "diagnostic_profile",
+            "direct_steps": [],
+            "inferred_changes": [],
+            "question_snapshot": {
+                "question_text": "你的学习风格更接近？",
+                "options": {"A": "选项A", "B": "选项B"},
+                "correct_answer": None,
+            },
+        },
+        idempotency_key="profile-attempt-1",
+    )
+
+    attempts_insert = next(
+        sql
+        for sql, _params in database.connection.recording_cursor.executions
+        if "INSERT IGNORE INTO attempts" in sql
+    )
+    assert "ungraded" in attempts_insert
+    assert "diagnostic_profile" in attempts_insert
+
+
 @pytest.mark.unit
 def test_verifier_requirements_match_migration_contract() -> None:
     migration_text = "\n".join(

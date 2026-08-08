@@ -22,7 +22,7 @@ class DiagnosticQuestion(DiagnosticContract):
     explanation: str = Field(min_length=1)
 
     @model_validator(mode="after")
-    def validate_answer(self) -> "DiagnosticQuestion":
+    def validate_answer(self) -> DiagnosticQuestion:
         if self.correct_answer not in self.options:
             raise ValueError("correct_answer must reference an option")
         if len(set(self.skills)) != len(self.skills):
@@ -32,6 +32,7 @@ class DiagnosticQuestion(DiagnosticContract):
     def learner_view(self) -> dict[str, Any]:
         return {
             "question_id": self.id,
+            "question_type": "knowledge",
             "skills": list(self.skills),
             "question_text": self.question_text,
             "options": dict(self.options),
@@ -43,14 +44,18 @@ class DiagnosticAnswer(DiagnosticContract):
     answer: str = Field(min_length=1)
     response_ms: int | None = Field(default=None, ge=0)
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=255)
+    skip: bool = Field(default=False, description="开放题跳过标记；仅画像阶段的开放题有效。")
 
 
 class DiagnosticProgress(DiagnosticContract):
     diagnostic_session_id: str
     learner_id: str
     status: Literal["running", "completed"]
+    phase: Literal["knowledge", "profile", "completed"] = "knowledge"
     answered_questions: int = Field(ge=0)
     max_questions: int = Field(ge=1)
+    profile_answered_questions: int = Field(default=0, ge=0)
+    profile_total_questions: int = Field(default=0, ge=0)
     termination_reason: str | None = None
     current_question: dict[str, Any] | None = None
     course_session_id: str | None = None

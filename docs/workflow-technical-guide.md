@@ -37,6 +37,15 @@
 `student_node_mastery`，学员中途放弃诊断也保留已观测掌握度；完成时仍写入 69 节点最终快照。
 两条路径的父节点落库行为一致（都写 `inferred` 父节点），事件来源可审计区分。
 
+**画像题阶段（非知识维度）**：CAT 知识阶段自然终止后，同一诊断会话进入 `phase="profile"`：按固定
+顺序呈现问卷 Q23–Q46（认知/学习风格/进度/情感，选项 A–E，预筛已答的题跳过），随后是 Q47/Q48
+开放题（可跳过）。画像/开放题答案不判分、不更新 BKT、不进 `answer_log`，但走同一条
+`questions → attempts` 审计链（`grading_status='ungraded'`、`is_correct=NULL`），并追加进
+`questionnaire_responses`，完成建课时经 `questionnaire_context` 注入诊断 Agent 用于五维画像。
+画像阶段必须答完 Q23–Q46 才允许主动结束；`DiagnosticProgress` 新增
+`phase/profile_answered_questions/profile_total_questions`，`current_question` 新增
+`question_type`（`knowledge/profile/open`）。
+
 ## 1. 当前工作流
 
 ```text

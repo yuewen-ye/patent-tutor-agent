@@ -215,11 +215,15 @@ Q1–Q21 按标准答案判分后写入 `student_node_mastery` 与 `mastery_even
   "diagnostic_session_id": "diagnostic-id",
   "learner_id": "learner-001",
   "status": "running",
+  "phase": "knowledge",
   "answered_questions": 0,
   "max_questions": 40,
+  "profile_answered_questions": 0,
+  "profile_total_questions": 0,
   "termination_reason": null,
   "current_question": {
     "question_id": "q-002",
+    "question_type": "knowledge",
     "skills": ["patent-novelty"],
     "question_text": "...",
     "options": {"A": "...", "B": "..."}
@@ -230,7 +234,13 @@ Q1–Q21 按标准答案判分后写入 `student_node_mastery` 与 `mastery_even
 }
 ```
 
-前端只应使用 `current_question.question_id`、`current_question.question_text` 和 `current_question.options` 展示当前题。`max_questions` 是算法允许的上限，不是本次固定题数；本次实际题数由 CAT 的停止条件决定。
+诊断会话为同会话两阶段：`phase="knowledge"` 阶段由 CAT 自适应出知识题（`question_type="knowledge"`，
+带 `skills`）；知识阶段自然终止后进入 `phase="profile"` 画像阶段，固定顺序呈现问卷 Q23–Q46
+（`question_type="profile"`，选项 A–E，预筛已答的题跳过），最后是 Q47/Q48 开放题
+（`question_type="open"`，无选项，可 `skip`）。全部完成后 `phase="completed"` 并自动创建课程。
+`max_questions` 是知识阶段算法允许的上限；`profile_total_questions` 是本会话画像阶段待答/已答的
+题数（不含预筛已答）。前端只应使用 `current_question.question_id`、`question_text`、`options` 与
+`question_type` 展示当前题。
 
 ### `GET /learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}`
 
@@ -242,7 +252,11 @@ Q1–Q21 按标准答案判分后写入 `student_node_mastery` 与 `mastery_even
 
 用途：提交诊断过程中的下一道题答案。服务会返回下一题或诊断完成状态；`idempotency_key` 可用于客户端重试时避免重复提交。
 
-每次只提交当前 `current_question` 的一题。提交成功后重新检查响应：若 `status=running`，读取新的 `current_question` 并继续；若 `status=completed`，停止答题并取出 `course_session_id`。不能根据 `max_questions` 预先决定循环次数，也不能提交上一题或尚未返回的题目。
+每次只提交当前 `current_question` 的一题。知识题提交选项字母并判分；画像题提交选项字母（A–E），
+不判分不更新 BKT；开放题提交文本，或在请求体带 `"skip": true` 跳过（跳过即不记录答案）。
+提交成功后重新检查响应：若 `status=running`，读取新的 `current_question` 并继续；若
+`status=completed`，停止答题并取出 `course_session_id`。不能根据 `max_questions` 预先决定循环次数，
+也不能提交上一题或尚未返回的题目。
 
 提交一道诊断题答案：
 
@@ -257,11 +271,24 @@ Q1–Q21 按标准答案判分后写入 `student_node_mastery` 与 `mastery_even
 
 返回更新后的 `DiagnosticProgress`。重复或不允许提交时可能返回 `409`；字段或题目无效时返回 `422`。
 
+开放题跳过示例：
+
+```json
+{
+  "question_id": "Q48",
+  "answer": "",
+  "skip": true
+}
+```
+
 ### `POST /learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}/complete`
 
 用途：主动结束诊断并请求生成最终诊断结果；适用于前端提供“结束诊断”按钮的场景。
 
-完成诊断并返回最终 `DiagnosticProgress`。如果 CAT 已自然达到停止条件，最后一次 `responses` 调用已经会触发完成和课程创建，不需要再调用本接口；只有学员主动提前结束时才调用它。
+完成诊断并返回最终 `DiagnosticProgress`。知识阶段（`phase="knowledge"`）可主动结束；画像阶段
+（`phase="profile"`）必须答完全部 Q23–Q46（含预筛已答）后才允许主动结束，否则返回 `409`——开放题
+未答或跳过不影响。如果 CAT 已自然达到停止条件且画像阶段完成，最后一次 `responses` 调用已经会触发
+完成和课程创建，不需要再调用本接口。
 
 ## 4. 练习反馈
 
