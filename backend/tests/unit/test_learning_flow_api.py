@@ -459,6 +459,15 @@ def test_diagnostic_session_enforces_learner_ownership(
     assert response.status_code == 403
 
 
+def test_diagnostic_skip_accepts_empty_answer() -> None:
+    from backend.app.api.learning_flow import DiagnosticResponseSubmission
+
+    payload = DiagnosticResponseSubmission(question_id="Q48", answer="", skip=True)
+
+    assert payload.answer == ""
+    assert payload.skip is True
+
+
 def test_questionnaire_submission_is_persisted_before_course_session(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

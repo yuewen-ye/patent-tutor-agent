@@ -100,11 +100,12 @@ export function OnboardingPage() {
   }, [learnerId, learningGoal, educationBackground]);
 
   const submitAnswer = useCallback(async () => {
-    if (!progress || !progress.current_question || !selectedOption) return;
+    if (!progress || !progress.current_question) return;
+    const question = progress.current_question;
+    if (question.question_type === "open" ? !openText.trim() : !selectedOption) return;
     setError("");
     setSubmitting(true);
     try {
-      const question = progress.current_question;
       const isOpen = question.question_type === "open";
       const responseMs = questionStartedAt ? Date.now() - questionStartedAt : null;
       const result = await diagnosticApi.submitResponse(
@@ -117,8 +118,15 @@ export function OnboardingPage() {
         }
       );
       setProgress(result);
-      setShowExplanation(true);
       setOpenText("");
+      setSelectedOption("");
+      if (result.status === "completed") {
+        setPhase("completed");
+      } else if (question.question_type === "knowledge") {
+        setShowExplanation(true);
+      } else {
+        setQuestionStartedAt(Date.now());
+      }
     } catch (err) {
       setError(resolveError(err));
     } finally {
@@ -144,6 +152,11 @@ export function OnboardingPage() {
       setProgress(result);
       setOpenText("");
       setSelectedOption("");
+      if (result.status === "completed") {
+        setPhase("completed");
+      } else {
+        setQuestionStartedAt(Date.now());
+      }
     } catch (err) {
       setError(resolveError(err));
     } finally {

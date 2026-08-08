@@ -41,7 +41,7 @@ class DiagnosticQuestion(DiagnosticContract):
 
 class DiagnosticAnswer(DiagnosticContract):
     question_id: str = Field(min_length=1)
-    answer: str = Field(min_length=1)
+    answer: str = Field(default="", description="答案文本；开放题跳过时可为空。")
     response_ms: int | None = Field(default=None, ge=0)
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=255)
     skip: bool = Field(default=False, description="开放题跳过标记；仅画像阶段的开放题有效。")
