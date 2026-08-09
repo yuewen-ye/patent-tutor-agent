@@ -1,11 +1,13 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { sessionsApi } from "@/api/sessions";
 import { getAuth } from "@/api/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Loader2,
   BookOpen,
@@ -14,10 +16,13 @@ import {
   Award,
   ArrowRight,
   GraduationCap,
-  AlertTriangle,
   Plus,
   MessageSquare,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
 } from "lucide-react";
+import { PixelMascot } from "@/components/auth/PixelMascot";
 import { formatDate } from "@/lib/utils";
 
 const MODE_LABELS: Record<string, string> = {
@@ -36,6 +41,11 @@ const MODE_COLORS: Record<string, string> = {
   auto: "bg-green-500/10 text-green-600",
 };
 
+const PAGE_SIZE = 5;
+
+type ModeFilter = "all" | "teach" | "chat" | "diagnose" | "feedback" | "auto";
+type StatusFilter = "all" | "completed" | "running" | "failed" | "canceled";
+
 export function HistoryCoursesPage() {
   const auth = getAuth();
   const learnerId = auth?.learner_id ?? "";
@@ -46,7 +56,10 @@ export function HistoryCoursesPage() {
     enabled: !!learnerId,
   });
 
-  // 转换所有会话为课程展示格式
+  const [modeFilter, setModeFilter] = useState<ModeFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+
   const allSessions = (sessionsData?.sessions || []).map((s) => {
     const course = s.course;
     const mode = s.workflow_mode || "";
@@ -59,7 +72,6 @@ export function HistoryCoursesPage() {
       mode,
       modeLabel: MODE_LABELS[mode] || mode,
       isCourse,
-      // 课程信息（有则用，无则默认）
       title: course?.title || `会话 ${s.session_id.slice(0, 8)}`,
       duration_min: course?.duration_min || 30,
       knowledge_points: course?.knowledge_points || [],
@@ -68,12 +80,26 @@ export function HistoryCoursesPage() {
     };
   });
 
-  // 按创建时间倒序
-  const sortedCourses = [...allSessions].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  const sortedCourses = useMemo(
+    () =>
+      [...allSessions].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      ),
+    [allSessions]
   );
 
-  // 统计数据（与学员中心一致）
+  const filteredCourses = useMemo(() => {
+    return sortedCourses.filter((c) => {
+      if (modeFilter !== "all" && c.mode !== modeFilter) return false;
+      if (statusFilter !== "all" && c.status !== statusFilter) return false;
+      return true;
+    });
+  }, [sortedCourses, modeFilter, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredCourses.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const pagedCourses = filteredCourses.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
   const totalCourses = sortedCourses.length;
   const completedCourses = sortedCourses.filter((c) => c.status === "completed").length;
   const totalDuration = sortedCourses.reduce((sum, c) => sum + c.duration_min, 0);
@@ -81,13 +107,23 @@ export function HistoryCoursesPage() {
     sortedCourses.flatMap((c) => c.knowledge_points)
   ).size;
 
+  const handleModeChange = (value: string) => {
+    setModeFilter(value as ModeFilter);
+    setCurrentPage(1);
+  };
+
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value as StatusFilter);
+    setCurrentPage(1);
+  };
+
   if (!learnerId) {
     return (
       <div className="container py-16">
         <div className="max-w-md mx-auto text-center space-y-4">
-          <AlertTriangle className="h-10 w-10 text-destructive mx-auto" />
-          <h2 className="text-lg font-medium">未登录</h2>
-          <p className="text-sm text-muted-foreground">请先登录后查看历史课程</p>
+          <PixelMascot size={48} className="mx-auto" />
+          <h2 className="text-lg font-bold text-[#C15B27]">未登录</h2>
+          <p className="text-sm text-[#8B5A3C]">请先登录后查看历史课程</p>
           <Button asChild>
             <Link to="/auth">前往登录</Link>
           </Button>
@@ -103,14 +139,12 @@ export function HistoryCoursesPage() {
         <div className="flex items-center justify-between">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <BookOpen className="h-5 w-5 text-primary" />
-              </div>
+              <PixelMascot size={36} />
               <div>
-                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-[#C15B27]">
                   历史课程
                 </h1>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-[#8B5A3C]">
                   查看您的学习历程与课程进度
                 </p>
               </div>
@@ -126,11 +160,11 @@ export function HistoryCoursesPage() {
 
         {/* 统计卡片 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="border-border/40 bg-card shadow-soft">
+          <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <BookOpen className="h-4 w-4 text-primary" />
+                <div className="p-2 rounded-lg bg-[#D9773E]/10">
+                  <BookOpen className="h-4 w-4 text-[#D9773E]" />
                 </div>
                 <div>
                   <p className="text-2xl font-semibold">{totalCourses}</p>
@@ -140,11 +174,11 @@ export function HistoryCoursesPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-border/40 bg-card shadow-soft">
+          <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-500/10">
-                  <Award className="h-4 w-4 text-green-600" />
+                <div className="p-2 rounded-lg bg-[#10B981]/10">
+                  <Award className="h-4 w-4 text-[#10B981]" />
                 </div>
                 <div>
                   <p className="text-2xl font-semibold">{completedCourses}</p>
@@ -154,11 +188,11 @@ export function HistoryCoursesPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-border/40 bg-card shadow-soft">
+          <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-500/10">
-                  <Clock className="h-4 w-4 text-blue-600" />
+                <div className="p-2 rounded-lg bg-[#60A5FA]/10">
+                  <Clock className="h-4 w-4 text-[#60A5FA]" />
                 </div>
                 <div>
                   <p className="text-2xl font-semibold">{totalDuration}</p>
@@ -168,11 +202,11 @@ export function HistoryCoursesPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-border/40 bg-card shadow-soft">
+          <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-amber-500/10">
-                  <Target className="h-4 w-4 text-amber-600" />
+                <div className="p-2 rounded-lg bg-[#F59E0B]/10">
+                  <Target className="h-4 w-4 text-[#F59E0B]" />
                 </div>
                 <div>
                   <p className="text-2xl font-semibold">{totalKnowledgePoints}</p>
@@ -183,6 +217,44 @@ export function HistoryCoursesPage() {
           </Card>
         </div>
 
+        {/* 筛选区 */}
+        <Card className="border-white/70 bg-white/90 shadow-soft">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Filter className="h-4 w-4" />
+              <span>分类筛选</span>
+            </div>
+
+            {/* 模式筛选 */}
+            <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
+              <span className="text-xs font-medium text-muted-foreground w-12 shrink-0">模式</span>
+              <Tabs value={modeFilter} onValueChange={handleModeChange} className="flex-1">
+                <TabsList className="h-9 flex-wrap">
+                  <TabsTrigger value="all" className="text-xs">全部</TabsTrigger>
+                  <TabsTrigger value="teach" className="text-xs">教学</TabsTrigger>
+                  <TabsTrigger value="chat" className="text-xs">问答</TabsTrigger>
+                  <TabsTrigger value="diagnose" className="text-xs">诊断</TabsTrigger>
+                  <TabsTrigger value="feedback" className="text-xs">反馈</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+
+            {/* 状态筛选 */}
+            <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-6">
+              <span className="text-xs font-medium text-muted-foreground w-12 shrink-0">状态</span>
+              <Tabs value={statusFilter} onValueChange={handleStatusChange} className="flex-1">
+                <TabsList className="h-9 flex-wrap">
+                  <TabsTrigger value="all" className="text-xs">全部</TabsTrigger>
+                  <TabsTrigger value="completed" className="text-xs">已完成</TabsTrigger>
+                  <TabsTrigger value="running" className="text-xs">学习中</TabsTrigger>
+                  <TabsTrigger value="failed" className="text-xs">失败</TabsTrigger>
+                  <TabsTrigger value="canceled" className="text-xs">已取消</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* 课程列表 */}
         {isLoading && (
           <div className="flex items-center justify-center gap-2 text-muted-foreground py-16">
@@ -192,11 +264,11 @@ export function HistoryCoursesPage() {
         )}
 
         {!isLoading && sortedCourses.length === 0 && (
-          <Card className="border-border/40 bg-card shadow-soft">
+          <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200">
             <CardContent className="py-16 text-center">
-              <GraduationCap className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">暂无历史课程</h3>
-              <p className="text-sm text-muted-foreground mb-4">
+              <PixelMascot size={56} className="mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-[#C15B27] mb-2">暂无历史课程</h3>
+              <p className="text-sm text-[#8B5A3C] mb-4">
                 开始您的第一次课程学习，系统将为您生成个性化学习内容
               </p>
               <Button asChild>
@@ -210,130 +282,167 @@ export function HistoryCoursesPage() {
         )}
 
         {!isLoading && sortedCourses.length > 0 && (
-          <div className="space-y-4">
-            {sortedCourses.map((course) => (
-              <Card
-                key={course.sessionId}
-                className="border-border/40 bg-card shadow-soft hover:shadow-elevated transition-all duration-200"
-              >
-                <CardContent className="p-5">
-                  <div className="flex flex-col md:flex-row md:items-center gap-4">
-                    {/* 课程信息 */}
-                    <div className="flex-1 min-w-0 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-base font-medium truncate">
-                          {course.title}
-                        </h3>
-                        {/* 模式标签 */}
-                        {course.modeLabel && (
-                          <Badge
-                            variant="outline"
-                            className={`text-xs ${MODE_COLORS[course.mode] || ""}`}
-                          >
-                            {course.modeLabel}
-                          </Badge>
-                        )}
-                        <Badge
-                          variant={
-                            course.status === "completed"
-                              ? "default"
-                              : course.status === "running"
-                              ? "secondary"
-                              : "outline"
-                          }
-                          className="text-xs"
-                        >
-                          {course.status === "completed"
-                            ? "已完成"
-                            : course.status === "running"
-                            ? "学习中"
-                            : course.status}
-                        </Badge>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3.5 w-3.5" />
-                          {course.duration_min} 分钟
-                        </span>
-                        {course.isCourse ? (
-                          <>
-                            <span className="flex items-center gap-1">
-                              <Target className="h-3.5 w-3.5" />
-                              {course.knowledge_points.length} 知识点
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <GraduationCap className="h-3.5 w-3.5" />
-                              {course.exercise_count} 道练习
-                            </span>
-                          </>
-                        ) : (
-                          <span className="flex items-center gap-1">
-                            <MessageSquare className="h-3.5 w-3.5" />
-                            问答会话
-                          </span>
-                        )}
-                        <span className="text-xs">
-                          {formatDate(course.createdAt)}
-                        </span>
-                      </div>
-
-                      {/* 知识点标签 */}
-                      {course.isCourse && course.knowledge_points.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5">
-                          {course.knowledge_points.slice(0, 5).map((kp, idx) => (
-                            <Badge
-                              key={idx}
-                              variant="outline"
-                              className="text-xs px-2 py-0.5 bg-secondary/30"
-                            >
-                              {typeof kp === "string" ? kp : kp.kc_name ?? kp.node_id ?? String(kp)}
-                            </Badge>
-                          ))}
-                          {course.knowledge_points.length > 5 && (
-                            <Badge
-                              variant="outline"
-                              className="text-xs px-2 py-0.5 bg-secondary/30"
-                            >
-                              +{course.knowledge_points.length - 5}
-                            </Badge>
-                          )}
-                        </div>
-                      )}
-
-                      {/* 进度条 */}
-                      {course.status === "running" && (
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>学习进度</span>
-                            <span>{course.progress}%</span>
-                          </div>
-                          <Progress value={course.progress} className="h-1.5" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* 操作按钮 */}
-                    <div className="flex items-center gap-2 md:flex-shrink-0">
-                      <Button variant="outline" size="sm" asChild>
-                        <Link to={`/session/${course.sessionId}`}>
-                          查看详情
-                        </Link>
-                      </Button>
-                      {course.isCourse && (
-                        <Button size="sm" asChild>
-                          <Link to={`/course/${course.sessionId}`}>
-                            进入学习
-                            <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
-                          </Link>
-                        </Button>
-                      )}
-                    </div>
-                  </div>
+          <>
+            {filteredCourses.length === 0 ? (
+              <Card className="border-white/70 bg-white/90 shadow-soft">
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  当前筛选条件下无课程
                 </CardContent>
               </Card>
-            ))}
-          </div>
+            ) : (
+              <>
+                <div className="space-y-4">
+                  {pagedCourses.map((course) => (
+                    <Card
+                      key={course.sessionId}
+                      className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200"
+                    >
+                      <CardContent className="p-5">
+                        <div className="flex flex-col md:flex-row md:items-center gap-4">
+                          <div className="flex-1 min-w-0 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-base font-medium truncate">
+                                {course.title}
+                              </h3>
+                              {course.modeLabel && (
+                                <Badge
+                                  variant="outline"
+                                  className={`text-xs ${MODE_COLORS[course.mode] || ""}`}
+                                >
+                                  {course.modeLabel}
+                                </Badge>
+                              )}
+                              <Badge
+                                variant={
+                                  course.status === "completed"
+                                    ? "default"
+                                    : course.status === "running"
+                                    ? "secondary"
+                                    : "outline"
+                                }
+                                className="text-xs"
+                              >
+                                {course.status === "completed"
+                                  ? "已完成"
+                                  : course.status === "running"
+                                  ? "学习中"
+                                  : course.status}
+                              </Badge>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3.5 w-3.5" />
+                                {course.duration_min} 分钟
+                              </span>
+                              {course.isCourse ? (
+                                <>
+                                  <span className="flex items-center gap-1">
+                                    <Target className="h-3.5 w-3.5" />
+                                    {course.knowledge_points.length} 知识点
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <GraduationCap className="h-3.5 w-3.5" />
+                                    {course.exercise_count} 道练习
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="flex items-center gap-1">
+                                  <MessageSquare className="h-3.5 w-3.5" />
+                                  问答会话
+                                </span>
+                              )}
+                              <span className="text-xs">
+                                {formatDate(course.createdAt)}
+                              </span>
+                            </div>
+
+                            {course.isCourse && course.knowledge_points.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5">
+                                {course.knowledge_points.slice(0, 5).map((kp, idx) => (
+                                  <Badge
+                                    key={idx}
+                                    variant="outline"
+                                    className="text-xs px-2 py-0.5 bg-secondary/30"
+                                  >
+                                    {typeof kp === "string" ? kp : kp.kc_name ?? kp.node_id ?? String(kp)}
+                                  </Badge>
+                                ))}
+                                {course.knowledge_points.length > 5 && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs px-2 py-0.5 bg-secondary/30"
+                                  >
+                                    +{course.knowledge_points.length - 5}
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
+
+                            {course.status === "running" && (
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                  <span>学习进度</span>
+                                  <span>{course.progress}%</span>
+                                </div>
+                                <Progress value={course.progress} className="h-1.5" />
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 md:flex-shrink-0">
+                            <Button variant="outline" size="sm" asChild>
+                              <Link to={`/session/${course.sessionId}`}>
+                                查看详情
+                              </Link>
+                            </Button>
+                            {course.isCourse && (
+                              <Button size="sm" asChild>
+                                <Link to={`/course/${course.sessionId}`}>
+                                  进入学习
+                                  <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                                </Link>
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* 分页 */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between pt-2">
+                    <p className="text-sm text-muted-foreground">
+                      共 {filteredCourses.length} 条，每页 {PAGE_SIZE} 条
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={safePage <= 1}
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        {safePage} / {totalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={safePage >= totalPages}
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </>
         )}
       </div>
     </div>

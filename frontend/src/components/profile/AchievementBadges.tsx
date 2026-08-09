@@ -26,13 +26,6 @@ const categoryFilters: Record<string, (k: string) => boolean> = {
   "related-laws": (k) => k.includes("related") || k.includes("civil") || k.includes("contract") || k.includes("law"),
 };
 
-const categoryLabels: Record<string, string> = {
-  "patent-law": "专利法",
-  examination: "审查指南",
-  practice: "代理实务",
-  "related-laws": "相关法律",
-};
-
 function getCategoryAvg(mastery: Record<string, number> | undefined, key: string): number {
   if (!mastery) return 0;
   const filter = categoryFilters[key];

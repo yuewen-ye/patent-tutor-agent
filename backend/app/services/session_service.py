@@ -427,6 +427,7 @@ class SessionService:
             persisted_before = mastery_reader(learner_id)
             if isinstance(persisted_before, dict):
                 mastery_snapshot = persisted_before
+        # 主观题也传入 record_attempts，但因无 answer_key 故 grading_status=ungraded 且不触发 BKT
         if callable(record_attempts):
             attempt_results = cast(
                 list[dict[str, Any]],

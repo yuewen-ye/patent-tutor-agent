@@ -21,14 +21,12 @@ interface ExerciseResponse {
 interface FeedbackResultCardProps {
   gradingReport?: GradingItem[];
   feedbackResult?: Record<string, unknown>;
-  learnerProfileUpdate?: Record<string, unknown>;
   inputPayload?: Record<string, unknown>;
 }
 
 export function FeedbackResultCard({
   gradingReport,
   feedbackResult,
-  learnerProfileUpdate,
   inputPayload,
 }: FeedbackResultCardProps) {
   const responses = (inputPayload?.exercise_responses as Array<Record<string, unknown>>) || [];

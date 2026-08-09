@@ -4,25 +4,25 @@
 
 @layer base {
   :root {
-    --background: 30 20% 98%;
-    --foreground: 25 15% 18%;
+    --background: 30 55% 98%;
+    --foreground: 24 35% 18%;
     --card: 0 0% 100%;
-    --card-foreground: 25 15% 18%;
+    --card-foreground: 24 35% 18%;
     --popover: 0 0% 100%;
-    --popover-foreground: 25 15% 18%;
-    --primary: 160 25% 30%;
+    --popover-foreground: 24 35% 18%;
+    --primary: 24 78% 48%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 30 15% 94%;
-    --secondary-foreground: 25 10% 35%;
-    --muted: 30 10% 90%;
-    --muted-foreground: 25 5% 50%;
-    --accent: 160 20% 92%;
-    --accent-foreground: 160 25% 25%;
-    --destructive: 10 55% 55%;
+    --secondary: 30 35% 95%;
+    --secondary-foreground: 24 35% 25%;
+    --muted: 30 25% 93%;
+    --muted-foreground: 24 18% 45%;
+    --accent: 30 60% 93%;
+    --accent-foreground: 24 70% 25%;
+    --destructive: 10 70% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 30 12% 86%;
-    --input: 30 12% 86%;
-    --ring: 160 25% 30%;
+    --border: 30 35% 90%;
+    --input: 30 35% 90%;
+    --ring: 24 78% 48%;
     --radius: 0.75rem;
 
     --font-sans: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -56,23 +56,64 @@
   }
 
   .glass {
-    @apply bg-card/80 backdrop-blur-sm border border-border/50;
+    @apply bg-white/90 backdrop-blur-sm border border-white/70;
   }
 
   .gradient-subtle {
-    background: linear-gradient(135deg, var(--background) 0%, var(--secondary) 100%);
+    background: linear-gradient(135deg, #FFF7ED 0%, #FFE8D0 100%);
   }
 
   .shadow-soft {
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 20px 60px -15px rgba(193, 91, 39, 0.25), 0 1px 3px rgba(92, 58, 38, 0.04);
   }
 
   .shadow-elevated {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05), 0 8px 24px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 20px 60px -15px rgba(193, 91, 39, 0.28), 0 4px 12px rgba(92, 58, 38, 0.06);
   }
 
   .shadow-hover {
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.06), 0 12px 32px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 25px 70px -15px rgba(193, 91, 39, 0.32), 0 8px 24px rgba(92, 58, 38, 0.08);
+  }
+
+  .page-fade-in {
+    animation: page-fade-in 0.5s ease-out both;
+  }
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Auth page warm theme overrides */
+.auth-theme {
+  --primary: 24 78% 48%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 24 78% 48%;
+  --accent: 30 60% 92%;
+  --accent-foreground: 24 70% 25%;
+}
+
+.auth-float {
+  animation: auth-float 4s ease-in-out infinite;
+}
+
+.font-display {
+  font-family: "Fredoka", "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+@keyframes auth-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
   }
 }
 
@@ -82,16 +123,16 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: hsl(30 20% 97%);
+  background: hsl(30 40% 96%);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(30 10% 75%);
+  background: hsl(24 25% 70%);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(30 10% 65%);
+  background: hsl(24 40% 55%);
 }
 
 .react-flow__node {
@@ -103,14 +144,14 @@
 }
 
 .react-flow__edge-path {
-  stroke: hsl(30 10% 80%);
+  stroke: hsl(30 25% 80%);
   stroke-width: 1.5;
 }
 
 .react-flow__edge.selected .react-flow__edge-path,
 .react-flow__edge:focus .react-flow__edge-path,
 .react-flow__edge:focus-visible .react-flow__edge-path {
-  stroke: hsl(160 25% 30%);
+  stroke: hsl(24 78% 48%);
 }
 
 .react-flow__controls-button {
@@ -118,7 +159,7 @@
 }
 
 .react-flow__background {
-  background-color: hsl(30 20% 98%);
+  background-color: hsl(30 50% 97%);
 }
 
 .markdown-body {

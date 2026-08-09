@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Send, MessageSquare, Sparkles, HelpCircle } from "lucide-react";
+import { PixelMascot } from "@/components/auth/PixelMascot";
 
 const suggestions = [
   "什么是抵触申请？",
@@ -50,15 +51,18 @@ export function ChatPage() {
     <div className="container py-8 md:py-12">
       <div className="max-w-3xl mx-auto space-y-8">
         <div className="text-center space-y-3">
-          <h1 className="text-2xl md:text-4xl font-semibold tracking-tight text-foreground">
-            快速问答 & 诊断
-          </h1>
-          <p className="text-muted-foreground text-sm md:text-base max-w-xl mx-auto">
+          <div className="flex items-center justify-center gap-3">
+            <PixelMascot size={40} />
+            <h1 className="text-2xl md:text-4xl font-bold tracking-tight text-[#C15B27]">
+              快速问答 & 诊断
+            </h1>
+          </div>
+          <p className="text-[#8B5A3C] text-sm md:text-base max-w-xl mx-auto">
             输入你的问题，RAG 检索与问答 Agent 将基于知识产权知识库作答。
           </p>
         </div>
 
-        <Card className="border-border/40 bg-card shadow-soft">
+        <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200">
           <CardHeader className="pb-4">
             <CardTitle className="text-base font-medium flex items-center gap-2">
               <MessageSquare className="h-4 w-4 text-primary" />
@@ -73,7 +77,7 @@ export function ChatPage() {
                   id="chat-learner"
                   value={learnerId}
                   onChange={(e) => setLearnerId(e.target.value)}
-                  className="bg-background border-input"
+                  className="bg-white/70 border-[#E5C9AB] placeholder:text-[#B8957A] focus-visible:ring-[#D9773E]"
                 />
               </div>
               <div className="space-y-2">
@@ -83,7 +87,7 @@ export function ChatPage() {
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
                   placeholder="例如：什么是抵触申请？"
-                  className="bg-background border-input"
+                  className="bg-white/70 border-[#E5C9AB] placeholder:text-[#B8957A] focus-visible:ring-[#D9773E]"
                 />
               </div>
             </div>
@@ -95,7 +99,7 @@ export function ChatPage() {
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 placeholder="请详细描述你的问题，以便获得更精准的回答..."
-                className="min-h-[120px] bg-background border-input"
+                className="min-h-[120px] bg-white/70 border-[#E5C9AB] placeholder:text-[#B8957A] focus-visible:ring-[#D9773E]"
               />
             </div>
 
@@ -109,7 +113,7 @@ export function ChatPage() {
                   <Badge
                     key={s}
                     variant="outline"
-                    className="cursor-pointer hover:bg-secondary/50 hover:text-foreground transition-colors"
+                    className="cursor-pointer border-[#E5C9AB]/70 hover:bg-[#FFE8D0]/60 hover:text-[#5C3A26] hover:border-[#D9773E]/30 transition-all"
                     onClick={() => setQuestion(s)}
                   >
                     {s}
