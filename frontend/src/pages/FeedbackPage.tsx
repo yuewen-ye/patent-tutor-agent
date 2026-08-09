@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, ArrowLeft, Target, AlertCircle, CheckCircle2 } from "lucide-react";
+import { PixelMascot } from "@/components/auth/PixelMascot";
 
 export function FeedbackPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -38,10 +39,13 @@ export function FeedbackPage() {
                   <ArrowLeft className="h-5 w-5" />
                 </Link>
               </Button>
-              <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">练习反馈报告</h1>
-              <StatusBadge status={session?.status} />
+              <div className="flex items-center gap-3">
+                <PixelMascot size={36} />
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-[#C15B27]">练习反馈报告</h1>
+                <StatusBadge status={session?.status} />
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground">基于答题表现的画像更新与下一步学习建议</p>
+            <p className="text-sm text-[#8B5A3C]">基于答题表现的画像更新与下一步学习建议</p>
           </div>
         </div>
 
@@ -55,7 +59,7 @@ export function FeedbackPage() {
         {feedback && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card className="border-border/40 bg-card shadow-soft">
+              <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base font-medium flex items-center gap-2">
                     <Target className="h-4 w-4 text-primary" />
@@ -67,7 +71,7 @@ export function FeedbackPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border-border/40 bg-card shadow-soft">
+              <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base font-medium flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-primary" />
@@ -81,7 +85,7 @@ export function FeedbackPage() {
             </div>
 
             {feedback.bkt_update && (
-              <Card className="border-border/40 bg-card shadow-soft">
+              <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base font-medium flex items-center gap-2">
                     <AlertCircle className="h-4 w-4 text-amber-500" />

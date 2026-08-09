@@ -275,8 +275,10 @@ export interface QuestionnaireSubmission {
 export interface ExerciseResponseItem {
   question_id: string;
   answer: unknown;
+  selected_option?: string | null;
   observed_correct?: boolean | null;
   skill_id?: string | null;
+  is_subjective?: boolean;
 }
 
 export interface ExerciseSubmission {

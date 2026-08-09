@@ -63,6 +63,10 @@ class ExerciseResponseItem(BaseModel):
     )
     skill_id: str | None = None
     skill_ids: list[str] | None = None
+    is_subjective: bool = Field(
+        default=False,
+        description="主观题标记；主观题不参与 BKT 判分，仅用于反馈 Agent 参考。",
+    )
 
 
 class ExerciseSubmission(BaseModel):

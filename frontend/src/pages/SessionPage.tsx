@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 import { Loader2, RefreshCw, BookOpen, MessageSquare, AlertCircle, Activity } from "lucide-react";
+import { PixelMascot } from "@/components/auth/PixelMascot";
 import { formatDate } from "@/lib/utils";
 
 export function SessionPage() {
@@ -55,7 +56,10 @@ export function SessionPage() {
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col xl:flex-row xl:items-center gap-2">
               <div className="flex items-center gap-2 shrink-0">
-                <h1 className="text-base font-semibold tracking-tight">会话详情</h1>
+                <div className="flex items-center gap-2">
+                  <PixelMascot size={28} />
+                  <h1 className="text-base font-bold tracking-tight text-[#C15B27]">会话详情</h1>
+                </div>
                 <StatusBadge status={status} />
                 {connected && (
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0">
@@ -109,8 +113,8 @@ export function SessionPage() {
 
       {error && (
         <div className="flex-1 flex items-center justify-center">
-          <Card className="border-destructive/30 bg-destructive/5 max-w-md">
-            <CardContent className="py-5 flex items-center gap-3 text-destructive">
+          <Card className="border-[#D9773E]/30 bg-[#D9773E]/5 max-w-md">
+            <CardContent className="py-5 flex items-center gap-3 text-[#9A4A1C]">
               <AlertCircle className="h-5 w-5 flex-shrink-0" />
               <span className="text-sm">加载失败：{error instanceof Error ? error.message : String(error)}</span>
             </CardContent>
@@ -120,9 +124,9 @@ export function SessionPage() {
 
       {session && !isLoading && !error && (
         <div className="flex-1 flex flex-col lg:flex-row gap-2 overflow-hidden min-h-0">
-          <aside className="lg:w-56 flex-shrink-0 min-h-0">
+          <aside className="lg:w-72 flex-shrink-0 min-h-0">
             <div className="h-full py-2 px-2 lg:px-0 lg:pl-4">
-              <Card className="border-border/40 bg-card shadow-soft overflow-hidden h-full flex flex-col">
+              <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200 overflow-hidden h-full flex flex-col">
                 <CardHeader className="py-2 px-3 pb-1 flex-shrink-0">
                   <CardTitle className="text-sm font-medium">多 Agent 协同调度图</CardTitle>
                 </CardHeader>
@@ -151,8 +155,7 @@ export function SessionPage() {
                 {state?.workflow_mode === "feedback" && (
                   <FeedbackResultCard
                     gradingReport={state?.grading_report}
-                    feedbackResult={state?.feedback_result}
-                    learnerProfileUpdate={state?.learner_profile_update}
+                    feedbackResult={state?.feedback_result as Record<string, unknown> | undefined}
                     inputPayload={state?.input_payload}
                   />
                 )}
@@ -191,8 +194,8 @@ export function SessionPage() {
 
                 {!isFinished && (
                   <div className="flex items-center justify-center py-10 text-muted-foreground">
-                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                    工作流运行中，请稍候...
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin text-[#D9773E]" />
+                    <span className="text-[#8B5A3C]">工作流运行中，请稍候...</span>
                   </div>
                 )}
             </div>
@@ -200,7 +203,7 @@ export function SessionPage() {
 
           <aside className="lg:w-56 flex-shrink-0 min-h-0">
             <div className="h-full py-2 px-2 lg:px-0 lg:pr-4">
-              <Card className="border-border/40 bg-card shadow-soft overflow-hidden h-full flex flex-col">
+              <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200 overflow-hidden h-full flex flex-col">
                 <CardHeader className="py-2 px-3 pb-1 flex-shrink-0">
                   <CardTitle className="text-sm font-medium">Agent 事件流</CardTitle>
                 </CardHeader>
@@ -218,7 +221,7 @@ export function SessionPage() {
 
 function MetaCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-baseline gap-2 rounded-md border border-border/30 bg-card/60 px-2.5 py-1.5 min-w-0">
+    <div className="flex items-baseline gap-2 rounded-lg border border-white/70 bg-white/80 px-2.5 py-1.5 min-w-0 shadow-sm">
       <span className="text-[11px] text-muted-foreground whitespace-nowrap">{label}</span>
       <span className="text-xs font-medium truncate min-w-0" title={value}>
         {value}

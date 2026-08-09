@@ -42,7 +42,7 @@ export function LearningPathSection({ path, dualAxisSnapshot, mastery }: Learnin
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent>
         <Tabs defaultValue="graph" className="w-full">
           <TabsList className="grid w-full grid-cols-3 bg-secondary/50 p-1 rounded-lg">
             <TabsTrigger value="graph" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-soft rounded-md">
@@ -64,6 +64,10 @@ export function LearningPathSection({ path, dualAxisSnapshot, mastery }: Learnin
           </TabsContent>
 
           <TabsContent value="curve" className="mt-4">
+            <div className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+              <TrendingUp className="h-3 w-3" />
+              悬浮节点可查看该节点的详细信息（难度、时长、策略、前置）
+            </div>
             <DifficultyCurve path={path} />
           </TabsContent>
 
@@ -71,43 +75,6 @@ export function LearningPathSection({ path, dualAxisSnapshot, mastery }: Learnin
             <ConfusionRiskPanel items={dualAxisSnapshot?.confusion_axis} />
           </TabsContent>
         </Tabs>
-
-        <div className="rounded-lg border border-border/30 bg-secondary/20 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-secondary/50 text-left">
-                <th className="p-3 font-medium text-foreground/70">顺序</th>
-                <th className="p-3 font-medium text-foreground/70">节点</th>
-                <th className="p-3 font-medium text-foreground/70">时长</th>
-                <th className="p-3 font-medium text-foreground/70">学习策略</th>
-                <th className="p-3 font-medium text-foreground/70">前置</th>
-              </tr>
-            </thead>
-            <tbody>
-              {path.map((item, index) => (
-                <tr key={item.node_id} className="border-t border-border/30 hover:bg-secondary/30 transition-colors">
-                  <td className="p-3 text-muted-foreground">{index + 1}</td>
-                  <td className="p-3 font-medium">{item.node_name}</td>
-                  <td className="p-3 text-muted-foreground">{item.duration_min} 分钟</td>
-                  <td className="p-3 text-muted-foreground">{item.strategy}</td>
-                  <td className="p-3">
-                    {item.prerequisites.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {item.prerequisites.map((pre) => (
-                          <Badge key={pre} variant="outline" className="text-[10px]">
-                            {pre}
-                          </Badge>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">无</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       </CardContent>
     </Card>
   );

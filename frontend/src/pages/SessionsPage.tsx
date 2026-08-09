@@ -15,6 +15,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Loader2, ArrowRight, FileText, Clock, Trash2, AlertTriangle, GraduationCap, Stethoscope, MessageSquare, BarChart3 } from "lucide-react";
+import { PixelMascot } from "@/components/auth/PixelMascot";
 import { formatDate } from "@/lib/utils";
 import { useState, useMemo } from "react";
 
@@ -53,7 +54,7 @@ export function SessionsPage() {
     enabled: !!learnerId,
   });
 
-  const allSessions = sessions?.sessions ?? [];
+  const allSessions = useMemo(() => sessions?.sessions ?? [], [sessions?.sessions]);
 
   const counts = useMemo(() => {
     const c = { all: allSessions.length, teach: 0, diagnose: 0, chat: 0, feedback: 0, other: 0 };
@@ -95,9 +96,9 @@ export function SessionsPage() {
     return (
       <div className="container py-16">
         <div className="max-w-md mx-auto text-center space-y-4">
-          <AlertTriangle className="h-10 w-10 text-destructive mx-auto" />
-          <h2 className="text-lg font-medium">未登录</h2>
-          <p className="text-sm text-muted-foreground">请先登录后查看会话记录</p>
+          <PixelMascot size={48} className="mx-auto" />
+          <h2 className="text-lg font-bold text-[#C15B27]">未登录</h2>
+          <p className="text-sm text-[#8B5A3C]">请先登录后查看会话记录</p>
           <Button asChild>
             <Link to="/auth">前往登录</Link>
           </Button>
@@ -111,8 +112,11 @@ export function SessionsPage() {
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-2">
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">会话管理</h1>
-            <p className="text-sm text-muted-foreground">查看和管理我的学习会话</p>
+            <div className="flex items-center gap-3">
+              <PixelMascot size={36} />
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-[#C15B27]">会话管理</h1>
+            </div>
+            <p className="text-sm text-[#8B5A3C]">查看和管理我的学习会话</p>
           </div>
           <Button asChild>
             <Link to="/onboarding">
@@ -130,10 +134,10 @@ export function SessionsPage() {
         )}
 
         {sessions && allSessions.length === 0 && (
-          <Card className="border-border/40 bg-card shadow-soft">
+          <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200">
             <CardContent className="py-12 text-center text-muted-foreground">
-              <FileText className="h-12 w-12 mx-auto mb-4 opacity-30" />
-              <p>暂无会话记录</p>
+              <PixelMascot size={56} className="mx-auto mb-4 opacity-80" />
+              <p className="text-[#8B5A3C]">暂无会话记录</p>
               <Button variant="outline" className="mt-4" asChild>
                 <Link to="/onboarding">创建第一个会话</Link>
               </Button>
@@ -167,7 +171,7 @@ export function SessionsPage() {
                     {icon}
                     {f.label}
                     <span className={`text-[10px] px-1.5 py-0 rounded-full ${
-                      isActive ? "bg-primary-foreground/20" : "bg-secondary"
+                      isActive ? "bg-white/30" : "bg-[#FFE8D0]/60"
                     }`}>
                       {count}
                     </span>
@@ -191,7 +195,7 @@ export function SessionsPage() {
 
             {/* 会话列表 */}
             {filteredSessions.length === 0 ? (
-              <Card className="border-border/40 bg-card shadow-soft">
+              <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200">
                 <CardContent className="py-10 text-center text-sm text-muted-foreground">
                   该分类下暂无会话
                 </CardContent>
@@ -207,11 +211,11 @@ export function SessionsPage() {
                   return (
                     <Card
                       key={session.session_id}
-                      className={`border-border/40 bg-card shadow-soft hover:shadow-elevated transition-all duration-200 ${
+                      className={`border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200 hover:shadow-elevated transition-all duration-200 ${
                         isTeach ? "border-l-2 border-l-primary/40" :
-                        isDiagnose ? "border-l-2 border-l-amber-500/40" :
-                        isChat ? "border-l-2 border-l-sky-500/40" :
-                        isFeedback ? "border-l-2 border-l-emerald-500/40" :
+                        isDiagnose ? "border-l-2 border-l-[#F59E0B]/40" :
+                        isChat ? "border-l-2 border-l-[#60A5FA]/40" :
+                        isFeedback ? "border-l-2 border-l-[#10B981]/40" :
                         ""
                       }`}
                     >
@@ -228,11 +232,11 @@ export function SessionsPage() {
                               {isTeach ? (
                                 <GraduationCap className="h-5 w-5 text-primary" />
                               ) : isDiagnose ? (
-                                <Stethoscope className="h-5 w-5 text-amber-500" />
+                                <Stethoscope className="h-5 w-5 text-[#F59E0B]" />
                               ) : isChat ? (
-                                <MessageSquare className="h-5 w-5 text-sky-500" />
+                                <MessageSquare className="h-5 w-5 text-[#60A5FA]" />
                               ) : isFeedback ? (
-                                <BarChart3 className="h-5 w-5 text-emerald-600" />
+                                <BarChart3 className="h-5 w-5 text-[#10B981]" />
                               ) : (
                                 <FileText className="h-5 w-5 text-muted-foreground" />
                               )}
