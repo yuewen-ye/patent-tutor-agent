@@ -52,7 +52,7 @@ REPORTS_DIR = _EVAL_DIR / "results" / "reports"
 # 指标分类（按 calculate.py 顺序，与 doc/指标草案.md 对齐）
 METRIC_CATEGORIES: list[tuple[str, list[str]]] = [
     ("幻觉率 — 系统自评", ["专家互评异议率", "裁判准确性评分"]),
-    ("匹配度", ["难度符合度", "情感状态适配度"]),
+    ("匹配度", ["难度符合度", "情感使用度"]),
     ("覆盖率", ["本节知识点覆盖率", "薄弱点命中率", "混淆对覆盖率"]),
 ]
 
@@ -70,7 +70,7 @@ METRIC_META: dict[str, tuple[str, str]] = {
         "题目难度≤上限的题数 / 总题数 × 100%",
         "course_package.md (Q难度) + learning_path.md (难度上限表)",
     ),
-    "情感状态适配度": (
+    "情感使用度": (
         "情感支持板块数 / 总板块数 × 100%",
         "course_package.md (教学模块清单 block_type)",
     ),

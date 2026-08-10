@@ -8,7 +8,7 @@
 
 匹配度：
   ① 难度符合度 = 题目难度≤上限的题数 / 总题数 × 100%
-  ② 情感状态适配度 = 情感支持板块数 / 总板块数 × 100%
+  ② 情感使用度 = 情感支持板块数 / 总板块数 × 100%
 
 覆盖率：
   ① 本节知识点覆盖率 = |实际覆盖 ∩ 预设期望| / |预设期望| × 100%
@@ -325,13 +325,13 @@ def calc_matching_difficulty(
 
 
 def calc_matching_emotional(course_text: str) -> MetricResult:
-    """匹配度②：情感状态适配度 = 情感支持板块数 / 总板块数 × 100%"""
+    """匹配度②：情感使用度 = 情感支持板块数 / 总板块数 × 100%"""
     course = _parse_course_package(course_text)
     block_types = course["block_types"]
 
     if not block_types:
         return MetricResult(
-            name="情感状态适配度",
+            name="情感使用度",
             value=0.0,
             unit="%",
             detail={"error": "未找到教学模块清单"},
@@ -341,7 +341,7 @@ def calc_matching_emotional(course_text: str) -> MetricResult:
     rate = emotional_count / len(block_types) * 100
 
     return MetricResult(
-        name="情感状态适配度",
+        name="情感使用度",
         value=round(rate, 1),
         unit="%",
         detail={

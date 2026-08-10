@@ -129,12 +129,12 @@
 - 分子：从 `course_package.md` 的"教学模块选择清单"表格中，`类型` 列为"自适应"的板块，检查其 `触发原因 (trigger)` 是否与 `learner_profile.md` 中的学习风格维度（Felder-Silverman：sensing/intuitive、visual/verbal、active/reflective、sequential/global）匹配
 - 分母：同上表格中 `类型` 列为"自适应"的板块总数
 
-**子维度 3：情感状态适配度**
+**子维度 3：情感使用度**
 
 计算公式：
 
 ```
-情感状态适配度 = 情感支持模块数 / 总模块数 × 100%
+情感使用度 = 情感支持模块数 / 总模块数 × 100%
 ```
 
 字段来源：
