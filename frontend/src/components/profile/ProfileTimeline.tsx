@@ -25,7 +25,7 @@ function masteryColor(pct: number) {
 export function ProfileTimeline({ profiles, mastery }: ProfileTimelineProps) {
   if (!profiles || profiles.length === 0) {
     return (
-      <Card className="border-border/40 bg-card shadow-soft">
+      <Card className="rounded-2xl border border-white/70 bg-white/90 shadow-soft">
         <CardContent className="py-8 text-center text-muted-foreground text-sm">
           暂无画像演进记录
         </CardContent>
@@ -36,13 +36,19 @@ export function ProfileTimeline({ profiles, mastery }: ProfileTimelineProps) {
   const sortedProfiles = [...profiles].reverse().slice(0, 5);
 
   return (
-    <Card className="border-border/40 bg-card shadow-soft">
+    <Card className="rounded-2xl border border-white/70 bg-white/90 shadow-soft overflow-hidden">
+      <div className="h-1.5 w-full bg-gradient-to-r from-[#D9773E] via-[#F59E0B] to-[#C15B27]" />
       <CardHeader className="pb-3">
-        <CardTitle className="text-base font-medium">画像演进时间线</CardTitle>
+        <CardTitle className="text-base font-medium flex items-center gap-2 text-[#5C3A26]">
+          <span className="inline-flex items-center justify-center rounded-lg bg-[#D9773E]/10 p-1.5 text-[#D9773E]">
+            <Clock className="h-4 w-4" />
+          </span>
+          画像演进时间线
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="relative">
-          <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-border/50" />
+          <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-[#FFE8D0]" />
           <div className="space-y-4">
             {sortedProfiles.map((profile, index) => {
               const level = String(profile.knowledge_level || "beginner");
@@ -65,10 +71,10 @@ export function ProfileTimeline({ profiles, mastery }: ProfileTimelineProps) {
 
               return (
                 <div key={index} className="relative pl-8">
-                  <div className="absolute left-0 top-2 w-6 h-6 rounded-full bg-primary/10 border-2 border-primary flex items-center justify-center">
-                    <Clock className="h-3 w-3 text-primary" />
+                  <div className="absolute left-0 top-2 w-6 h-6 rounded-full bg-[#D9773E]/10 border-2 border-[#D9773E] flex items-center justify-center">
+                    <Clock className="h-3 w-3 text-[#D9773E]" />
                   </div>
-                  <div className="rounded-lg border border-border/30 bg-secondary/20 p-4">
+                  <div className="rounded-lg border border-[#FFE8D0]/70 bg-[#FFF7ED]/70 p-4">
                     <div className="flex items-center justify-between mb-3">
                       <Badge
                         variant={

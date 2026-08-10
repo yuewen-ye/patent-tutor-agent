@@ -10,10 +10,10 @@ interface LearnerProfileCardProps {
 export function LearnerProfileCard({ profile }: LearnerProfileCardProps) {
   if (!profile) {
     return (
-      <Card className="border-border/40 bg-card shadow-soft">
+      <Card className="rounded-2xl border border-white/70 bg-white/90 shadow-soft">
         <CardContent className="py-12 text-center text-muted-foreground">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-secondary/50 flex items-center justify-center">
-            <User className="h-8 w-8 text-muted-foreground/50" />
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#FFF7ED] flex items-center justify-center">
+            <User className="h-8 w-8 text-[#D9773E]/50" />
           </div>
           <p className="text-sm">暂无学员画像</p>
           <p className="text-xs text-muted-foreground mt-1">完成自评诊断后将生成画像</p>
@@ -56,11 +56,13 @@ export function LearnerProfileCard({ profile }: LearnerProfileCardProps) {
   ];
 
   return (
-    <Card className="border-border/40 bg-card shadow-soft overflow-hidden">
-      <div className="h-1 w-full bg-gradient-to-r from-primary via-cyan-500 to-violet-500" />
+    <Card className="rounded-2xl border border-white/70 bg-white/90 shadow-soft overflow-hidden">
+      <div className="h-1.5 w-full bg-gradient-to-r from-[#D9773E] via-[#F59E0B] to-[#C15B27]" />
       <CardHeader className="pb-4">
-        <CardTitle className="text-lg font-medium flex items-center gap-2">
-          <Zap className="h-5 w-5 text-primary" />
+        <CardTitle className="text-lg font-medium flex items-center gap-2 text-[#5C3A26]">
+          <span className="inline-flex items-center justify-center rounded-lg bg-[#D9773E]/10 p-1.5 text-[#D9773E]">
+            <Zap className="h-5 w-5" />
+          </span>
           学员画像档案
         </CardTitle>
       </CardHeader>
@@ -71,10 +73,10 @@ export function LearnerProfileCard({ profile }: LearnerProfileCardProps) {
             return (
               <div
                 key={item.label}
-                className="group rounded-xl border border-border/30 bg-secondary/20 p-4 hover:bg-secondary/30 hover:border-border/50 transition-all duration-300"
+                className="group rounded-xl border border-[#FFE8D0]/70 bg-[#FFF7ED]/70 p-4 hover:bg-[#FFE8D0]/60 hover:border-[#FFE8D0] transition-all duration-300"
               >
                 <div className="flex items-start gap-3">
-                  <div className={`p-2 rounded-lg bg-secondary/50 group-hover:bg-primary/10 transition-colors`}>
+                  <div className={`p-2 rounded-lg bg-white/80 group-hover:bg-[#D9773E]/10 transition-colors`}>
                     <Icon className={`h-4 w-4 ${item.color}`} />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -114,7 +116,7 @@ export function LearnerProfileCard({ profile }: LearnerProfileCardProps) {
         </div>
 
         {profile.confidence !== undefined && (
-          <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
+          <div className="flex items-center justify-between p-3 rounded-lg bg-[#FFF7ED]/70 border border-[#FFE8D0]/50">
             <span className="text-sm text-muted-foreground">画像置信度</span>
             <div className="flex items-center gap-2">
               <div className="w-24 h-2 bg-secondary/50 rounded-full overflow-hidden">

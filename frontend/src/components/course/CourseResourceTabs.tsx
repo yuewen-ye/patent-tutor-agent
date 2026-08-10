@@ -12,7 +12,7 @@ import { ArtifactViewer } from "@/components/ArtifactViewer";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { sessionsApi } from "@/api/sessions";
 import { getAuth } from "@/api/auth";
-import { BookOpen, Wrench, ListChecks, FileText, Scale, Lightbulb, CheckCircle2, XCircle, Loader2, Send, RefreshCw, MessageSquare, ArrowRight } from "lucide-react";
+import { BookOpen, Wrench, ListChecks, FileText, Scale, Lightbulb, CheckCircle2, XCircle, Loader2, Send, RefreshCw, ArrowRight } from "lucide-react";
 import type { MarkdownArtifact, ExerciseSubmission } from "@/types";
 
 interface CourseResourceTabsProps {
@@ -320,8 +320,8 @@ function ExercisePanel({
   sessionId: string;
   questions: InteractiveQuestion[];
 }) {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState("");
   const [results, setResults] = useState<Record<string, SubmissionResult> | null>(null);
@@ -396,7 +396,7 @@ function ExercisePanel({
   };
 
   const handleGotoNewSession = () => {
-    if (reteachSessionId) navigate(`/sessions/${reteachSessionId}`);
+    if (reteachSessionId) navigate(`/course/${reteachSessionId}`);
   };
 
   const answeredCount = questions.filter((q) => answers[q.qid]).length;

@@ -41,12 +41,12 @@ export function HomePage() {
   };
 
   return (
-    <div className="container py-10 md:py-16 animate-fade-in">
-      <div className="max-w-4xl mx-auto space-y-12">
+    <div className="container mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 md:py-16 animate-fade-in">
+      <div className="w-full max-w-6xl mx-auto space-y-12">
         <div className="text-center space-y-4">
-          <div className="inline-flex items-center justify-center gap-3 rounded-2xl border border-white/70 bg-white/80 px-5 py-3 shadow-soft backdrop-blur-sm">
+          <div className="inline-flex flex-col sm:flex-row items-center justify-center gap-3 rounded-2xl border border-white/70 bg-white/80 px-5 py-3 shadow-soft backdrop-blur-sm">
             <PixelMascot size={40} />
-            <div className="text-left">
+            <div className="text-center sm:text-left">
               <h1 className="text-2xl md:text-4xl font-bold tracking-tight text-[#C15B27]">
                 Patent Tutor Agent
               </h1>
