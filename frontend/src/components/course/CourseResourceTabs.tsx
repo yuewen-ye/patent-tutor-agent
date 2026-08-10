@@ -5,12 +5,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { ArtifactViewer } from "@/components/ArtifactViewer";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { sessionsApi } from "@/api/sessions";
 import { getAuth } from "@/api/auth";
-import { BookOpen, Wrench, ListChecks, FileText, Scale, Lightbulb, CheckCircle2, XCircle, Loader2, Send, RefreshCw } from "lucide-react";
+import { BookOpen, Wrench, ListChecks, FileText, Scale, Lightbulb, CheckCircle2, XCircle, Loader2, Send, RefreshCw, ArrowRight } from "lucide-react";
 import type { MarkdownArtifact, ExerciseSubmission } from "@/types";
 
 interface CourseResourceTabsProps {
@@ -73,13 +75,9 @@ const BLOCK_TYPE_ICONS: Record<string, typeof BookOpen> = {
 };
 
 export function CourseResourceTabs({ sessionId, coursePackage, artifacts }: CourseResourceTabsProps) {
+  const [activeTab, setActiveTab] = useState<string>("lecture");
   const packageArtifact = useMemo(
     () => artifacts.find((a) => a.kind === "course_package"),
-    [artifacts]
-  );
-
-  const draftArtifacts = useMemo(
-    () => artifacts.filter((a) => a.kind === "expert_draft"),
     [artifacts]
   );
 
@@ -99,15 +97,11 @@ export function CourseResourceTabs({ sessionId, coursePackage, artifacts }: Cour
   const legalBasis = (coursePackage?.legal_basis as Array<Record<string, unknown>>) || [];
 
   return (
-    <Tabs defaultValue="lecture" className="w-full">
-      <TabsList className="grid w-full grid-cols-3 bg-slate-900">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <TabsList className="grid w-full grid-cols-2 bg-slate-900">
         <TabsTrigger value="lecture" className="gap-2">
           <BookOpen className="h-4 w-4" />
           定制化讲义
-        </TabsTrigger>
-        <TabsTrigger value="guide" className="gap-2">
-          <Wrench className="h-4 w-4" />
-          实务操作指南
         </TabsTrigger>
         <TabsTrigger value="exercises" className="gap-2">
           <ListChecks className="h-4 w-4" />
@@ -119,11 +113,28 @@ export function CourseResourceTabs({ sessionId, coursePackage, artifacts }: Cour
       <TabsContent value="lecture" className="mt-4 space-y-4">
         {teachingContent ? (
           <Card className="border-border/40 bg-card shadow-soft">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
               <CardTitle className="text-base font-medium flex items-center gap-2">
                 <BookOpen className="h-4 w-4 text-primary" />
                 课程讲义
               </CardTitle>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => setActiveTab("guide")}
+                    >
+                      <Wrench className="h-3.5 w-3.5 mr-1.5" />
+                      实务操作指南
+                      <ArrowRight className="h-3 w-3 ml-1" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>跳转至实务操作指南（IRAC 框架、法条依据）</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </CardHeader>
             <CardContent>
               <div className="max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
@@ -255,11 +266,18 @@ export function CourseResourceTabs({ sessionId, coursePackage, artifacts }: Cour
                 <div className="mt-3">
                   <span className="text-xs text-muted-foreground mb-1.5 block">易混淆概念</span>
                   <div className="flex flex-wrap gap-1.5">
-                    {knowledgeSynthesis.confusable_pairs.map((cp, i) => (
-                      <Badge key={i} variant="outline" className="text-xs text-amber-600">
-                        {cp.pair || String(cp)}
-                      </Badge>
-                    ))}
+                    {knowledgeSynthesis.confusable_pairs.map((cp, i) => {
+                      const obj = cp as Record<string, unknown>;
+                      const pair = obj.pair as string | undefined;
+                      const nodeA = obj.node_a as string | undefined;
+                      const nodeB = obj.node_b as string | undefined;
+                      const label = pair || (nodeA && nodeB ? `${nodeA} ⇄ ${nodeB}` : String(cp));
+                      return (
+                        <Badge key={i} variant="outline" className="text-xs text-amber-600">
+                          {label}
+                        </Badge>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -285,6 +303,9 @@ export function CourseResourceTabs({ sessionId, coursePackage, artifacts }: Cour
 
 // ── 分级习题交互面板 ──
 
+const SUBJECTIVE_QID = "lecture_feedback_subjective";
+const SUBJECTIVE_QUESTION = "你对本讲义有什么建议？";
+
 interface SubmissionResult {
   question_id: string;
   is_correct: boolean;
@@ -299,9 +320,10 @@ function ExercisePanel({
   sessionId: string;
   questions: InteractiveQuestion[];
 }) {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [feedback, setFeedback] = useState("");
   const [results, setResults] = useState<Record<string, SubmissionResult> | null>(null);
   const [reteachSessionId, setReteachSessionId] = useState<string | null>(null);
   const learnerId = getAuth()?.learner_id ?? "";
@@ -354,6 +376,16 @@ function ExercisePanel({
         selected_option: answers[q.qid],
         skill_id: q.kc_node_id || null,
       }));
+    // 附带固定的主观题
+    if (feedback.trim()) {
+      responses.push({
+        question_id: SUBJECTIVE_QID,
+        answer: feedback.trim(),
+        selected_option: null,
+        skill_id: null,
+        is_subjective: true,
+      });
+    }
     if (responses.length === 0) return;
     submitMutation.mutate({ learner_id: learnerId, responses });
   };
@@ -364,7 +396,7 @@ function ExercisePanel({
   };
 
   const handleGotoNewSession = () => {
-    if (reteachSessionId) navigate(`/sessions/${reteachSessionId}`);
+    if (reteachSessionId) navigate(`/course/${reteachSessionId}`);
   };
 
   const answeredCount = questions.filter((q) => answers[q.qid]).length;
@@ -447,6 +479,31 @@ function ExercisePanel({
             disabled={isSubmitted}
           />
         ))}
+
+        {/* 固定主观题：讲义建议 */}
+        <div className={`rounded-lg border p-4 transition-all duration-200 ${
+          isSubmitted
+            ? "border-blue-500/30 bg-blue-500/5"
+            : "border-border/30 hover:border-border/50"
+        }`}>
+          <div className="flex items-center gap-2 mb-3">
+            <Badge variant="secondary" className="text-xs">主观题</Badge>
+            <Badge variant="outline" className="text-xs text-blue-600 border-blue-500/30 bg-blue-500/10">
+              讲义反馈
+            </Badge>
+            {isSubmitted && feedback.trim() && (
+              <CheckCircle2 className="h-4 w-4 text-blue-500 ml-auto" />
+            )}
+          </div>
+          <p className="text-sm leading-relaxed text-foreground/90 mb-3">{SUBJECTIVE_QUESTION}</p>
+          <Textarea
+            value={feedback}
+            onChange={(e) => !isSubmitted && setFeedback(e.target.value)}
+            placeholder="请输入你对本讲义的建议（选填，提交后将反馈给下一轮 Agent 用于课程优化）..."
+            disabled={isSubmitted}
+            className="min-h-[100px] resize-y text-sm"
+          />
+        </div>
       </CardContent>
     </Card>
   );
@@ -591,7 +648,7 @@ function EmptyResource({ title }: { title: string }) {
 
 /** 清理教学正文：去掉 RAG 引用标记，格式化 Markdown */
 function cleanTeachingContent(content: string): string {
-  let cleaned = content
+  const cleaned = content
     // Remove 〔RAG: ...〕citations
     .replace(/〔RAG:[^〕]*〕/g, "")
     // Convert escaped newlines to real newlines

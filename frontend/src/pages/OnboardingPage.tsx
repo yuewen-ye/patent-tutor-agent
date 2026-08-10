@@ -18,7 +18,8 @@ import {
   XCircle,
   Sparkles,
   AlertTriangle,
-} from "lucide-react";
+  } from "lucide-react";
+import { PixelMascot } from "@/components/auth/PixelMascot";
 import type { DiagnosticProgress } from "@/types";
 
 type Phase = "config" | "testing" | "completed";
@@ -45,13 +46,105 @@ function knowledgeStateLabel(state: string): string {
 function knowledgeStateColor(state: string): string {
   switch (state) {
     case "learned":
-      return "text-emerald-600";
+      return "text-green-600";
     case "learning":
       return "text-amber-600";
     case "unlearned":
     default:
       return "text-muted-foreground";
   }
+}
+
+const NODE_NAME_MAP: Record<string, string> = {
+  "patent-law-foundation": "专利法律制度基础",
+  "patent-system-overview": "专利制度概论",
+  "patent-law-framework": "专利法律体系",
+  "patent-rights-nature": "专利权的性质与特征",
+  "patentability-substantive": "专利授权实质条件",
+  novelty: "新颖性",
+  "prior-art-definition": "现有技术认定",
+  "conflicting-application": "抵触申请",
+  "grace-period": "不丧失新颖性的宽限期",
+  "inventive-step": "创造性",
+  "three-step-method": "创造性三步法判断",
+  "person-skilled-in-art": "所属技术领域的技术人员",
+  "practical-applicability": "实用性",
+  "design-patentability": "外观设计授权条件",
+  "non-patentable-subject": "不授予专利权的主题",
+  "scientific-discovery-vs-invention": "科学发现与发明创造的区分",
+  "medical-method-exclusion": "疾病诊疗方法的排除",
+  "public-order-morality": "公共秩序与道德条款",
+  "patent-application-process": "专利申请程序",
+  "application-documents": "专利申请文件要求",
+  "specification-requirements": "说明书撰写要求",
+  "claims-drafting-basics": "权利要求书撰写基础",
+  "priority-right": "优先权制度",
+  "filing-date": "申请日的确定",
+  "divisional-application": "分案申请",
+  "patent-examination": "专利审查流程",
+  "preliminary-examination": "初步审查",
+  "substantive-examination": "实质审查",
+  "office-action-response": "审查意见答复",
+  "amendment-limits": "专利申请文件的修改限制",
+  "patent-reexamination": "专利复审程序",
+  "reexamination-request": "复审请求的提出",
+  "collegial-review": "合议审查与复审决定",
+  "patent-invalidation": "专利无效宣告",
+  "invalidation-grounds": "无效宣告理由",
+  "oral-proceeding": "口头审理程序",
+  "patent-rights-protection": "专利权保护",
+  "protection-scope": "专利权保护范围",
+  "doctrine-of-equivalents": "等同原则",
+  "claim-interpretation": "权利要求解释规则",
+  "infringement-types": "专利侵权行为类型",
+  "infringement-defenses": "侵权抗辩事由",
+  "bolar-exemption": "Bolar例外",
+  "prior-use-right": "先用权",
+  remedies: "侵权救济",
+  "patent-agency-practice": "专利代理实务",
+  "claims-drafting-advanced": "权利要求撰写实务",
+  "oa-response-practice": "审查意见答复实务",
+  "invalidation-practice": "无效宣告实务",
+  "related-laws": "相关法律知识",
+  "civil-law-basics": "民法基础",
+  "contract-law-tech": "技术合同法",
+  "administrative-procedure": "行政法与行政诉讼",
+  "civil-procedure": "民事诉讼程序",
+  "trips-agreement": "TRIPS协定",
+  "pct-system": "PCT国际申请",
+  "pct-filing": "PCT国际申请程序",
+  "pct-national-phase": "PCT国家阶段",
+  "foreign-priority": "外国优先权",
+  "domestic-priority": "本国优先权",
+  "scientific-research-exemption": "科学实验使用例外",
+  "direct-infringement": "直接侵权",
+  "indirect-infringement": "间接侵权",
+  "independent-claim": "独立权利要求",
+  "dependent-claim": "从属权利要求",
+  "employee-invention": "职务发明",
+  "exhaustion-of-rights": "权利用尽",
+  "implied-license": "默示许可",
+  "general-consumer": "一般消费者",
+};
+
+function nodeIdToName(nodeId: string): string {
+  return NODE_NAME_MAP[nodeId] ?? nodeId;
+}
+
+const TERMINATION_REASON_MAP: Record<string, string> = {
+  "所有高权重知识点状态已明确": "所有高权重知识点状态已明确",
+  "达到最大诊断题数": "达到最大诊断题数",
+  "无满足条件的题目可测": "无满足条件的题目可测",
+  "继续诊断": "继续诊断",
+  "学员主动结束诊断": "学员主动结束诊断",
+  "max_questions_reached": "达到最大诊断题数",
+  "all_nodes_classified": "所有高权重知识点状态已明确",
+  "no_suitable_question": "无满足条件的题目可测",
+  "user_requested": "学员主动结束诊断",
+};
+
+function terminationReasonToZh(reason: string): string {
+  return TERMINATION_REASON_MAP[reason] ?? reason;
 }
 
 export function OnboardingPage() {
@@ -156,19 +249,22 @@ export function OnboardingPage() {
   // ===== 配置阶段 =====
   if (phase === "config") {
     return (
-      <div className="container py-8 md:py-12">
-        <div className="max-w-2xl mx-auto space-y-7">
-          <div className="space-y-3">
-            <h1 className="text-2xl md:text-4xl font-semibold tracking-tight text-foreground">
-              自评诊断
-            </h1>
-            <p className="text-muted-foreground text-sm md:text-base">
+      <div className="container mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        <div className="w-full max-w-3xl mx-auto space-y-7">
+          <div className="space-y-3 text-center">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <PixelMascot size={40} />
+              <h1 className="text-2xl md:text-4xl font-bold tracking-tight text-[#C15B27]">
+                自评诊断
+              </h1>
+            </div>
+            <p className="text-[#8B5A3C] text-sm md:text-base max-w-2xl mx-auto">
               基于 CAT（计算机自适应测试）算法，系统将根据你的作答动态选题，
               精准评估各知识节点的掌握程度，生成专属学习路径。
             </p>
           </div>
 
-          <Card className="border-border/40 bg-card shadow-soft">
+          <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200">
             <CardHeader className="pb-4">
               <CardTitle className="text-base font-medium flex items-center gap-2">
                 <User className="h-4 w-4 text-primary" />
@@ -195,7 +291,7 @@ export function OnboardingPage() {
                   id="goal"
                   value={learningGoal}
                   onChange={(e) => setLearningGoal(e.target.value)}
-                  className="bg-background border-input"
+                  className="bg-white/70 border-[#E5C9AB] placeholder:text-[#B8957A] focus-visible:ring-[#D9773E]"
                   placeholder="例如：系统掌握专利新颖性判断"
                 />
               </div>
@@ -210,8 +306,8 @@ export function OnboardingPage() {
                       onClick={() => setEducationBackground(opt.value)}
                       className={`p-3 rounded-lg border text-sm text-left transition-all ${
                         educationBackground === opt.value
-                          ? "border-primary bg-primary/5 text-foreground"
-                          : "border-border/40 hover:bg-secondary/40 text-muted-foreground"
+                          ? "border-[#D9773E] bg-[#D9773E]/10 text-[#5C3A26]"
+                          : "border-[#E5C9AB]/70 hover:bg-[#FFE8D0]/60 text-[#8B5A3C]"
                       }`}
                     >
                       {opt.label}
@@ -223,7 +319,7 @@ export function OnboardingPage() {
           </Card>
 
           {error && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+            <div className="flex items-start gap-2 p-3 rounded-xl bg-[#D9773E]/10 text-[#9A4A1C] text-sm border border-[#D9773E]/20">
               <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
               <span>{error}</span>
             </div>
@@ -264,19 +360,22 @@ export function OnboardingPage() {
     ).length;
 
     return (
-      <div className="container py-8 md:py-12">
-        <div className="max-w-3xl mx-auto space-y-7">
-          <div className="space-y-3">
-            <h1 className="text-2xl md:text-4xl font-semibold tracking-tight text-foreground">
-              诊断完成
-            </h1>
-            <p className="text-muted-foreground text-sm md:text-base">
+      <div className="container mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        <div className="w-full max-w-4xl mx-auto space-y-7">
+          <div className="space-y-3 text-center">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <PixelMascot size={40} />
+              <h1 className="text-2xl md:text-4xl font-bold tracking-tight text-[#C15B27]">
+                诊断完成
+              </h1>
+            </div>
+            <p className="text-[#8B5A3C] text-sm md:text-base max-w-2xl mx-auto">
               已完成 {progress.answered_questions} 道题目的自适应测试，
-              {progress.termination_reason && `结束原因：${progress.termination_reason}`}
+              {progress.termination_reason && `结束原因：${terminationReasonToZh(progress.termination_reason)}`}
             </p>
           </div>
 
-          <Card className="border-border/40 bg-card shadow-soft">
+          <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200">
             <CardHeader className="pb-4">
               <CardTitle className="text-base font-medium flex items-center gap-2">
                 <Target className="h-4 w-4 text-primary" />
@@ -286,7 +385,7 @@ export function OnboardingPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div className="p-3 rounded-lg bg-secondary/30">
-                  <div className="text-2xl font-semibold text-emerald-600">
+                  <div className="text-2xl font-semibold text-green-600">
                     {learnedCount}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">已掌握</div>
@@ -313,10 +412,10 @@ export function OnboardingPage() {
                     return (
                       <div key={nodeId} className="space-y-1">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="font-mono text-xs text-muted-foreground">
-                            {nodeId}
+                          <span className="font-normal tracking-wide text-foreground/90">
+                            {nodeIdToName(nodeId)}
                           </span>
-                          <span className={`text-xs ${knowledgeStateColor(node.state)}`}>
+                          <span className={`text-xs tracking-wide ${knowledgeStateColor(node.state)}`}>
                             {knowledgeStateLabel(node.state)} · {percent}%
                           </span>
                         </div>
@@ -330,7 +429,7 @@ export function OnboardingPage() {
           </Card>
 
           {error && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+            <div className="flex items-start gap-2 p-3 rounded-xl bg-[#D9773E]/10 text-[#9A4A1C] text-sm border border-[#D9773E]/20">
               <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
               <span>{error}</span>
             </div>
@@ -368,18 +467,18 @@ export function OnboardingPage() {
   const showResult = showExplanation && progress?.answer_result;
 
   return (
-    <div className="container py-8 md:py-12">
-      <div className="max-w-2xl mx-auto space-y-7">
-        <div className="space-y-3">
+    <div className="container mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+      <div className="w-full max-w-3xl mx-auto space-y-7">
+        <div className="space-y-3 text-center">
           <h1 className="text-2xl md:text-4xl font-semibold tracking-tight text-foreground">
             CAT 自适应诊断
           </h1>
-          <p className="text-muted-foreground text-sm md:text-base">
+          <p className="text-muted-foreground text-sm md:text-base max-w-2xl mx-auto">
             系统将根据你的作答动态调整题目难度，请认真作答每一题。
           </p>
         </div>
 
-        <Card className="border-border/40 bg-card shadow-soft">
+        <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-2.5">
               <span className="text-sm font-medium flex items-center gap-1.5">
@@ -395,18 +494,18 @@ export function OnboardingPage() {
         </Card>
 
         {currentQuestion && !showResult && (
-          <Card className="border-border/40 bg-card shadow-soft">
+          <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-2 flex-wrap">
                 {currentQuestion.skills.map((skill) => (
                   <Badge key={skill} variant="secondary" className="text-xs">
-                    {skill}
+                    {nodeIdToName(skill)}
                   </Badge>
                 ))}
               </div>
             </CardHeader>
             <CardContent className="space-y-5">
-              <p className="text-sm md:text-base font-medium leading-relaxed">
+              <p className="text-sm md:text-base font-normal leading-relaxed tracking-wide text-foreground/90">
                 {currentQuestion.question_text}
               </p>
 
@@ -418,18 +517,18 @@ export function OnboardingPage() {
                     onClick={() => setSelectedOption(key)}
                     className={`p-4 rounded-lg border text-sm text-left transition-all ${
                       selectedOption === key
-                        ? "border-primary bg-primary/5 text-foreground"
-                        : "border-border/40 hover:bg-secondary/40 text-muted-foreground"
+                        ? "border-[#D9773E] bg-[#D9773E]/10 text-[#5C3A26]"
+                        : "border-[#E5C9AB]/70 hover:bg-[#FFE8D0]/60 text-[#8B5A3C]"
                     }`}
                   >
-                    <span className="font-medium text-foreground mr-2">{key}.</span>
+                    <span className="font-normal tracking-wide text-foreground/80 mr-2">{key}.</span>
                     {text}
                   </button>
                 ))}
               </div>
 
               {error && (
-                <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-[#D9773E]/10 text-[#9A4A1C] text-sm border border-[#D9773E]/20">
                   <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -458,13 +557,13 @@ export function OnboardingPage() {
         )}
 
         {showResult && progress?.answer_result && (
-          <Card className="border-border/40 bg-card shadow-soft">
+          <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200">
             <CardHeader className="pb-4">
               <CardTitle className="text-base font-medium flex items-center gap-2">
                 {progress.answer_result.is_correct ? (
                   <>
-                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                    <span className="text-emerald-600">回答正确</span>
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    <span className="text-green-600">回答正确</span>
                   </>
                 ) : (
                   <>
@@ -489,7 +588,7 @@ export function OnboardingPage() {
               </div>
 
               {error && (
-                <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-[#D9773E]/10 text-[#9A4A1C] text-sm border border-[#D9773E]/20">
                   <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -515,14 +614,6 @@ export function OnboardingPage() {
                     )}
                   </Button>
                 )}
-                <Button
-                  variant="outline"
-                  onClick={completeDiagnostic}
-                  disabled={submitting}
-                  size="lg"
-                >
-                  提前结束
-                </Button>
               </div>
             </CardContent>
           </Card>

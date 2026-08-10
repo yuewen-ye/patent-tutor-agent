@@ -6,7 +6,6 @@ import { sessionsApi } from "@/api/sessions";
 import { getAuth, saveAuth } from "@/api/auth";
 import { ApiError } from "@/api/client";
 import { LearnerProfileCard } from "@/components/profile/LearnerProfileCard";
-import { MasteryHeatmap } from "@/components/profile/MasteryHeatmap";
 import { ProfileStats } from "@/components/profile/ProfileStats";
 import { LearningStyleRadar } from "@/components/profile/LearningStyleRadar";
 import { KnowledgeLevelBar } from "@/components/profile/KnowledgeLevelBar";
@@ -20,16 +19,21 @@ import { Label } from "@/components/ui/label";
 import {
   Loader2,
   ArrowRight,
-  BookOpen,
   User,
-  RefreshCw,
   Mail,
   Save,
   X,
   Pencil,
   AlertTriangle,
   Calendar,
+  ShieldCheck,
+  Hash,
+  Target,
+  BookOpen,
+  MessageSquare,
+  AtSign,
 } from "lucide-react";
+import { PixelMascot } from "@/components/auth/PixelMascot";
 import type { LearnerProfile, StudentInfo } from "@/types";
 import { formatDate } from "@/lib/utils";
 
@@ -179,9 +183,9 @@ export function LearnerPage() {
     return (
       <div className="container py-16">
         <div className="max-w-md mx-auto text-center space-y-4">
-          <AlertTriangle className="h-10 w-10 text-destructive mx-auto" />
-          <h2 className="text-lg font-medium">未登录</h2>
-          <p className="text-sm text-muted-foreground">请先登录后查看学员中心</p>
+          <PixelMascot size={48} className="mx-auto" />
+          <h2 className="text-lg font-bold text-[#C15B27]">未登录</h2>
+          <p className="text-sm text-[#8B5A3C]">请先登录后查看学员中心</p>
           <Button asChild>
             <Link to="/auth">前往登录</Link>
           </Button>
@@ -191,20 +195,20 @@ export function LearnerPage() {
   }
 
   return (
-    <div className="container py-8 md:py-10">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="container mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 md:py-10">
+      <div className="max-w-6xl mx-auto space-y-8">
         {/* 标题 */}
         <div className="flex items-center justify-between">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <User className="h-5 w-5 text-primary" />
+              <div className="w-10 h-10 rounded-full bg-[#D9773E]/10 flex items-center justify-center">
+                <User className="h-5 w-5 text-[#D9773E]" />
               </div>
               <div>
-                <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-[#C15B27]">
                   学员中心
                 </h1>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-[#8B5A3C]">
                   {info?.display_name || info?.login_id || "学员"}
                 </p>
               </div>
@@ -221,11 +225,13 @@ export function LearnerPage() {
 
         {info && learner && (
           <>
-            {/* 学员基本信息卡片 */}
-            <Card className="border-border/40 bg-card shadow-soft">
-              <CardHeader className="pb-3 flex flex-row items-center justify-between">
+            {/* 学员信息（全宽）+ 档案小计 */}
+            <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200 overflow-hidden">
+              <CardHeader className="pb-3 flex flex-row items-center justify-between border-b border-[#FFE8D0]/50">
                 <CardTitle className="text-base font-medium flex items-center gap-2">
-                  <User className="h-4 w-4 text-primary" />
+                  <span className="inline-flex items-center justify-center rounded-lg bg-[#D9773E]/10 p-1.5 text-[#D9773E]">
+                    <User className="h-4 w-4" />
+                  </span>
                   学员信息
                 </CardTitle>
                 {!editing ? (
@@ -259,46 +265,86 @@ export function LearnerPage() {
                   </div>
                 )}
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 {!editing ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">登录账号</Label>
-                      <p className="text-sm font-medium">{info.login_id}</p>
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#FFE8D0]/50">
+                      <div className="flex items-start gap-3 p-4">
+                        <div className="mt-0.5 inline-flex items-center justify-center rounded-lg bg-[#FFF7ED] p-2 text-[#D9773E]">
+                          <User className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 space-y-0.5">
+                          <Label className="text-xs text-muted-foreground">登录账号</Label>
+                          <p className="text-sm font-medium text-[#5C3A26] truncate">{info.login_id}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-4">
+                        <div className="mt-0.5 inline-flex items-center justify-center rounded-lg bg-[#FFF7ED] p-2 text-[#D9773E]">
+                          <AtSign className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 space-y-0.5">
+                          <Label className="text-xs text-muted-foreground">显示名称</Label>
+                          <p className="text-sm font-medium text-[#5C3A26] truncate">{info.display_name || "未设置"}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-4">
+                        <div className="mt-0.5 inline-flex items-center justify-center rounded-lg bg-[#FFF7ED] p-2 text-[#D9773E]">
+                          <Mail className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 space-y-0.5">
+                          <Label className="text-xs text-muted-foreground">邮箱</Label>
+                          <p className="text-sm font-medium text-[#5C3A26] truncate">{info.email || "未设置"}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-4">
+                        <div className="mt-0.5 inline-flex items-center justify-center rounded-lg bg-[#FFF7ED] p-2 text-[#D9773E]">
+                          <Calendar className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 space-y-0.5">
+                          <Label className="text-xs text-muted-foreground">注册时间</Label>
+                          <p className="text-sm font-medium text-[#5C3A26] truncate">{formatDate(info.created_at || undefined)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-4">
+                        <div className="mt-0.5 inline-flex items-center justify-center rounded-lg bg-[#FFF7ED] p-2 text-[#D9773E]">
+                          <ShieldCheck className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 space-y-0.5">
+                          <Label className="text-xs text-muted-foreground">账号状态</Label>
+                          <Badge variant={info.status === "active" ? "default" : "secondary"}>
+                            {info.status === "active" ? "正常" : info.status}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 p-4">
+                        <div className="mt-0.5 inline-flex items-center justify-center rounded-lg bg-[#FFF7ED] p-2 text-[#D9773E]">
+                          <Hash className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 space-y-0.5">
+                          <Label className="text-xs text-muted-foreground">学员 ID</Label>
+                          <p className="text-xs font-mono text-muted-foreground truncate">{info.learner_id}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">显示名称</Label>
-                      <p className="text-sm font-medium">{info.display_name || "未设置"}</p>
+                    <div className="grid grid-cols-3 divide-x divide-[#FFE8D0]/50 border-t border-[#FFE8D0]/50 bg-[#FFF7ED]/30">
+                      {[
+                        { label: "画像数量", value: learner.profiles.length, icon: Target },
+                        { label: "历史记录", value: learner.history.length, icon: BookOpen },
+                        { label: "会话总数", value: sessionCount, icon: MessageSquare },
+                      ].map((stat) => {
+                        const Icon = stat.icon;
+                        return (
+                          <div key={stat.label} className="flex flex-col items-center justify-center gap-1.5 p-4">
+                            <Icon className="h-4 w-4 text-[#D9773E]" />
+                            <p className="text-xl font-bold text-[#C15B27]">{stat.value}</p>
+                            <p className="text-xs text-muted-foreground">{stat.label}</p>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
-                        邮箱
-                      </Label>
-                      <p className="text-sm font-medium">{info.email || "未设置"}</p>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        注册时间
-                      </Label>
-                      <p className="text-sm font-medium">{formatDate(info.created_at || undefined)}</p>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">账号状态</Label>
-                      <Badge variant={info.status === "active" ? "default" : "secondary"}>
-                        {info.status === "active" ? "正常" : info.status}
-                      </Badge>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">学员 ID</Label>
-                      <p className="text-xs font-mono text-muted-foreground truncate">
-                        {info.learner_id}
-                      </p>
-                    </div>
-                  </div>
+                  </>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="p-4 sm:p-6 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="displayName">显示名称</Label>
@@ -343,69 +389,57 @@ export function LearnerPage() {
               accuracyRate={accuracyRate}
             />
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-              <div className="lg:col-span-2 space-y-5">
+            {/* 画像详情 + 成就徽章 */}
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+              <div className="lg:col-span-3">
                 <LearnerProfileCard profile={latestProfile} />
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <KnowledgeLevelBar profile={latestProfile} mastery={learner.mastery} />
-                  <LearningStyleRadar learningStyle={latestProfile?.learning_style} />
-                </div>
-
-                <MasteryHeatmap mastery={learner.mastery} />
-
-                <ProfileTimeline profiles={learner.profiles} />
               </div>
-
-              <div className="space-y-5">
+              <div className="lg:col-span-2">
                 <AchievementBadges
                   mastery={learner.mastery}
                   sessionCount={sessionCount}
                   profilesCount={learner.profiles.length}
                 />
+              </div>
+            </div>
 
-                <Card className="border-border/40 bg-card shadow-soft">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-medium">快速操作</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <Button className="w-full" asChild>
-                      <Link to="/onboarding">
-                        <BookOpen className="h-4 w-4 mr-2" />
-                        新的自评诊断
-                      </Link>
-                    </Button>
-                    <Button variant="outline" className="w-full" asChild>
-                      <Link to="/chat">
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        快速问答
-                      </Link>
-                    </Button>
-                  </CardContent>
-                </Card>
+            {/* 掌握度柱状图 + 学习风格雷达 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <KnowledgeLevelBar profile={latestProfile} mastery={learner.mastery} />
+              <LearningStyleRadar learningStyle={latestProfile?.learning_style} />
+            </div>
 
-                <Card className="border-border/40 bg-card shadow-soft">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-medium">最近会话</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {(sessionsData?.sessions || []).length === 0 && (
-                      <p className="text-sm text-muted-foreground">暂无历史会话</p>
-                    )}
-                    {(sessionsData?.sessions || []).slice(0, 5).map((s) => {
-                      const modeLabel = s.workflow_mode ? labelMode(String(s.workflow_mode)) : null;
-                      const displayTitle = s.course?.title || `会话 ${s.session_id.slice(0, 8)}`;
-                      const createdAt = (s as { created_at?: string }).created_at || "";
-                      return (
+            {/* 时间线（全宽） + 最近会话 横向嵌入 */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <div className="lg:col-span-2">
+                <ProfileTimeline profiles={learner.profiles} mastery={learner.mastery} />
+              </div>
+              <Card className="rounded-2xl border border-white/70 bg-white/90 shadow-soft overflow-hidden">
+                <div className="h-1.5 w-full bg-gradient-to-r from-[#D9773E] via-[#F59E0B] to-[#C15B27]" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-medium flex items-center gap-2 text-[#5C3A26]">
+                    <span className="inline-flex items-center justify-center rounded-lg bg-[#D9773E]/10 p-1.5 text-[#D9773E]">
+                      <MessageSquare className="h-4 w-4" />
+                    </span>
+                    最近会话
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {(sessionsData?.sessions || []).length === 0 && (
+                    <p className="text-sm text-muted-foreground">暂无历史会话</p>
+                  )}
+                  {(sessionsData?.sessions || []).slice(0, 5).map((s) => {
+                    const modeLabel = s.workflow_mode ? labelMode(String(s.workflow_mode)) : null;
+                    const displayTitle = s.course?.title || `会话 ${s.session_id.slice(0, 8)}`;
+                    const createdAt = (s as { created_at?: string }).created_at || "";
+                    return (
                       <div
                         key={s.session_id}
-                        className="flex items-center justify-between rounded-lg border border-border/30 bg-secondary/20 p-3.5 hover:bg-secondary/30 transition-colors cursor-pointer"
+                        className="flex items-center justify-between rounded-xl border border-[#FFE8D0]/70 bg-[#FFF7ED]/70 p-3.5 hover:bg-[#FFE8D0]/60 hover:border-[#FFE8D0] hover:-translate-y-0.5 transition-all cursor-pointer shadow-sm"
                         onClick={() => (window.location.href = `/session/${s.session_id}`)}
                       >
                         <div className="min-w-0">
-                          <p className="text-sm font-medium truncate max-w-[180px]">
-                            {displayTitle}
-                          </p>
+                          <p className="text-sm font-medium truncate">{displayTitle}</p>
                           <p className="text-xs text-muted-foreground truncate">
                             {formatDate(createdAt)}
                           </p>
@@ -416,45 +450,13 @@ export function LearnerPage() {
                               {modeLabel}
                             </Badge>
                           )}
-                          <Badge variant="outline" className="text-xs">
-                            {s.status}
-                          </Badge>
                           <ArrowRight className="h-4 w-4 text-muted-foreground" />
                         </div>
                       </div>
-                      );
-                    })}
-                  </CardContent>
-                </Card>
-
-                <Card className="border-border/40 bg-card shadow-soft">
-                  <CardContent className="p-6 space-y-4">
-                    <div className="text-center">
-                      <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="h-6 w-6 text-primary" />
-                      </div>
-                      <h3 className="font-medium">学员档案</h3>
-                      <p className="text-xs text-muted-foreground font-mono mt-1 truncate">
-                        {info.login_id}
-                      </p>
-                    </div>
-                    <div className="pt-4 border-t border-border/30 space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">画像数量</span>
-                        <span className="font-medium">{learner.profiles.length}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">历史记录</span>
-                        <span className="font-medium">{learner.history.length}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">会话总数</span>
-                        <span className="font-medium">{sessionCount}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
             </div>
           </>
         )}

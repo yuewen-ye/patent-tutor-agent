@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Target } from "lucide-react";
 
 interface LearningStyleRadarProps {
   learningStyle?: string;
@@ -11,11 +12,22 @@ const styleDimensions = [
   { key: "understanding", label: "理解方式", options: ["sequential", "global"] },
 ];
 
+const optionLabels: Record<string, string> = {
+  sensing: "具体型",
+  intuitive: "直觉型",
+  visual: "视觉型",
+  verbal: "言语型",
+  active: "实践型",
+  reflective: "反思型",
+  sequential: "顺序型",
+  global: "整体型",
+};
+
 export function LearningStyleRadar({ learningStyle }: LearningStyleRadarProps) {
   if (!learningStyle) {
     return (
-      <Card className="border-border/40 bg-card shadow-soft">
-        <CardContent className="py-8 text-center text-muted-foreground text-sm">
+      <Card className="rounded-2xl border border-white/70 bg-white/90 shadow-soft h-full overflow-hidden">
+        <CardContent className="py-8 text-center text-muted-foreground text-sm h-full flex items-center justify-center">
           暂无学习风格数据
         </CardContent>
       </Card>
@@ -23,77 +35,140 @@ export function LearningStyleRadar({ learningStyle }: LearningStyleRadarProps) {
   }
 
   const scores = parseLearningStyle(learningStyle);
+  const center = 50;
+  const radius = 36;
+  const labelRadius = 46;
+  const levels = [0.2, 0.4, 0.6, 0.8, 1];
+
   const points = styleDimensions.map((dim, i) => {
     const angle = (Math.PI * 2 * i) / styleDimensions.length - Math.PI / 2;
     const value = scores[dim.key] || 0.5;
-    const x = 50 + 35 * Math.cos(angle) * value;
-    const y = 50 + 35 * Math.sin(angle) * value;
-    return { x, y, label: dim.label, value };
+    const x = center + radius * Math.cos(angle) * value;
+    const y = center + radius * Math.sin(angle) * value;
+    const lx = center + labelRadius * Math.cos(angle);
+    const ly = center + labelRadius * Math.sin(angle);
+    return { x, y, lx, ly, label: dim.label, value, angle };
   });
 
   return (
-    <Card className="border-border/40 bg-card shadow-soft">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base font-medium">学习风格分析</CardTitle>
+    <Card className="rounded-2xl border border-white/70 bg-white/90 shadow-soft h-full overflow-hidden">
+      <div className="h-1.5 w-full bg-gradient-to-r from-[#D9773E] via-[#F59E0B] to-[#C15B27]" />
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base font-medium flex items-center gap-2">
+          <span className="inline-flex items-center justify-center rounded-lg bg-[#D9773E]/10 p-1.5 text-[#D9773E]">
+            <Target className="h-4 w-4" />
+          </span>
+          学习风格分析
+        </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-2">
         <div className="flex flex-col items-center">
-          <svg viewBox="0 0 100 100" className="w-full max-w-[200px] h-auto">
-            {[0.25, 0.5, 0.75, 1].map((scale) => (
-              <polygon
-                key={scale}
-                points={styleDimensions
-                  .map((_, i) => {
-                    const angle = (Math.PI * 2 * i) / styleDimensions.length - Math.PI / 2;
-                    const x = 50 + 35 * Math.cos(angle) * scale;
-                    const y = 50 + 35 * Math.sin(angle) * scale;
-                    return `${x},${y}`;
-                  })
-                  .join(" ")}
-                fill="none"
-                stroke="rgba(148, 163, 184, 0.2)"
-                strokeWidth="0.5"
-              />
-            ))}
-            {styleDimensions.map((dim, i) => {
-              const angle = (Math.PI * 2 * i) / styleDimensions.length - Math.PI / 2;
+          <svg
+            viewBox="0 0 100 100"
+            className="w-full max-w-[260px] h-auto overflow-visible"
+            aria-label="学习风格雷达图"
+          >
+            <defs>
+              <radialGradient id="radarFill" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#D9773E" stopOpacity="0.35" />
+                <stop offset="100%" stopColor="#C15B27" stopOpacity="0.12" />
+              </radialGradient>
+            </defs>
+
+            {/* 同心网格 */}
+            {levels.map((scale) => {
+              const levelPoints = styleDimensions
+                .map((_, i) => {
+                  const angle = (Math.PI * 2 * i) / styleDimensions.length - Math.PI / 2;
+                  const x = center + radius * Math.cos(angle) * scale;
+                  const y = center + radius * Math.sin(angle) * scale;
+                  return `${x},${y}`;
+                })
+                .join(" ");
               return (
-                <line
-                  key={dim.key}
-                  x1="50"
-                  y1="50"
-                  x2={50 + 35 * Math.cos(angle)}
-                  y2={50 + 35 * Math.sin(angle)}
-                  stroke="rgba(148, 163, 184, 0.3)"
+                <polygon
+                  key={scale}
+                  points={levelPoints}
+                  fill="none"
+                  stroke="rgba(193, 91, 39, 0.12)"
                   strokeWidth="0.5"
                 />
               );
             })}
+
+            {/* 轴线 */}
+            {styleDimensions.map((dim, i) => {
+              const angle = (Math.PI * 2 * i) / styleDimensions.length - Math.PI / 2;
+              const x = center + radius * Math.cos(angle);
+              const y = center + radius * Math.sin(angle);
+              return (
+                <line
+                  key={dim.key}
+                  x1={center}
+                  y1={center}
+                  x2={x}
+                  y2={y}
+                  stroke="rgba(193, 91, 39, 0.18)"
+                  strokeWidth="0.5"
+                />
+              );
+            })}
+
+            {/* 数据区域 */}
             <polygon
               points={points.map((p) => `${p.x},${p.y}`).join(" ")}
-              fill="rgba(99, 102, 241, 0.2)"
-              stroke="rgba(99, 102, 241, 0.6)"
+              fill="url(#radarFill)"
+              stroke="#C15B27"
               strokeWidth="1.5"
+              strokeLinejoin="round"
             />
+
+            {/* 数据点 */}
             {points.map((p, i) => (
               <circle
-                key={i}
+                key={`point-${i}`}
                 cx={p.x}
                 cy={p.y}
-                r="2"
-                fill="rgba(99, 102, 241, 0.8)"
+                r="2.5"
+                fill="#D9773E"
+                stroke="#fff"
+                strokeWidth="0.8"
               />
             ))}
-          </svg>
-          <div className="grid grid-cols-2 gap-3 mt-4 w-full max-w-[200px]">
-            {styleDimensions.map((dim) => (
-              <div key={dim.key} className="text-center">
-                <div className="text-xs text-muted-foreground">{dim.label}</div>
-                <div className="text-sm font-medium text-foreground">
-                  {scores[dim.key] > 0.5 ? dim.options[1] : dim.options[0]}
-                </div>
-              </div>
+
+            {/* 维度标签 */}
+            {points.map((p, i) => (
+              <text
+                key={`label-${i}`}
+                x={p.lx}
+                y={p.ly}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fontSize="4"
+                fontWeight="500"
+                fill="#8B5A3C"
+              >
+                {p.label}
+              </text>
             ))}
+          </svg>
+
+          <div className="grid grid-cols-2 gap-3 mt-6 w-full">
+            {styleDimensions.map((dim) => {
+              const value = scores[dim.key] || 0.5;
+              const dominant = value > 0.5 ? dim.options[1] : dim.options[0];
+              return (
+                <div
+                  key={dim.key}
+                  className="flex items-center justify-between rounded-xl border border-[#FFE8D0]/80 bg-[#FFF7ED]/70 px-3 py-2.5"
+                >
+                  <span className="text-xs text-[#8B5A3C]">{dim.label}</span>
+                  <span className="text-sm font-semibold text-[#C15B27]">
+                    {optionLabels[dominant] || dominant}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </CardContent>

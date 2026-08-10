@@ -193,10 +193,13 @@ export function WorkflowGraph({
                 </span>
               )}
               {active && (
-                <>
-                  <span className="mt-1 h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                  <span className="mt-0.5 text-[9px] text-cyan-300">运行中</span>
-                </>
+                <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-cyan-500/30 px-2 py-0.5 text-[10px] font-semibold text-cyan-200">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-cyan-300" />
+                  </span>
+                  运行中
+                </span>
               )}
             </div>
           ),
@@ -204,10 +207,11 @@ export function WorkflowGraph({
         className: cn(
           nodeBase,
           typeStyles[kind],
-          active && "ring-4 ring-cyan-400 ring-offset-4 ring-offset-slate-950 scale-110 z-10",
-          active && "shadow-lg shadow-cyan-400/40",
+          active &&
+            "ring-4 ring-cyan-400/70 ring-offset-2 ring-offset-slate-950 scale-110 z-10",
+          active && "shadow-[0_0_24px_4px_rgba(34,211,238,0.45)]",
+          active && "bg-cyan-600 border-cyan-400 text-white",
           completed && !active && "opacity-70 border-white/10",
-          active && "bg-cyan-600 border-cyan-400 text-white"
         ),
         sourcePosition: Position.Bottom,
         targetPosition: Position.Top,

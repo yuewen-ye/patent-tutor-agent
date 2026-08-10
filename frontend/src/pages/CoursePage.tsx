@@ -1,12 +1,12 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
 import { sessionsApi } from "@/api/sessions";
 import { CourseResourceTabs } from "@/components/course/CourseResourceTabs";
 import { LearnerProfileCard } from "@/components/profile/LearnerProfileCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft } from "lucide-react";
+import { PixelMascot } from "@/components/auth/PixelMascot";
 
 export function CoursePage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -18,19 +18,6 @@ export function CoursePage() {
   });
 
   const state = session?.state;
-  const learnerId = session?.learner_id || "learner-demo";
-
-  const exercises = useMemo(() => {
-    if (!state?.course_package) return [];
-    const pkg = state.course_package as Record<string, unknown>;
-    const exerciseList = (pkg.exercises as Array<Record<string, unknown>> || [])
-      .concat(pkg.interactive_questions as Array<Record<string, unknown>> || []);
-    return exerciseList.map((ex, idx) => ({
-      question_id: (ex.qid as string) || (ex.question_id as string) || `exercise-${idx + 1}`,
-      question: (ex.question as string) || (ex.title as string) || `练习 ${idx + 1}`,
-      skill_id: (ex.kc_node_id as string) || (ex.skill_id as string) || undefined,
-    }));
-  }, [state?.course_package]);
 
   return (
     <div className="container py-8 md:py-10">
@@ -43,10 +30,13 @@ export function CoursePage() {
                   <ArrowLeft className="h-5 w-5" />
                 </Link>
               </Button>
-              <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">课程学习</h1>
-              <StatusBadge status={session?.status} />
+              <div className="flex items-center gap-3">
+                <PixelMascot size={36} />
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-[#C15B27]">课程学习</h1>
+                <StatusBadge status={session?.status} />
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground">个性化学习资源：讲义 · 实务指南 · 分级习题</p>
+            <p className="text-sm text-[#8B5A3C]">个性化学习资源：讲义 · 实务指南 · 分级习题</p>
           </div>
         </div>
 

@@ -25,16 +25,16 @@ const getNodeColor = (masteryValue?: number) => {
 };
 
 export function LearningPathGraph({ path }: LearningPathGraphProps) {
+  const displayPath = path.slice(0, 4);
   const { nodes, edges } = useMemo(() => {
-    const gapX = 260;
-    const gapY = 140;
+    const gapX = 280;
+    const gapY = 160;
 
-    const generatedNodes: Node[] = path.map((item, index) => {
-      const row = Math.floor(index / 3);
-      const col = index % 3;
-      const y = row * gapY + 20;
-      const reverseCol = row % 2 === 1 ? 2 - col : col;
-      const finalX = reverseCol * gapX + 20;
+    const generatedNodes: Node[] = displayPath.map((item, index) => {
+      const row = Math.floor(index / 2);
+      const col = index % 2;
+      const y = row * gapY + 40;
+      const finalX = col * gapX + 40;
 
       return {
         id: item.node_id,
@@ -47,18 +47,18 @@ export function LearningPathGraph({ path }: LearningPathGraphProps) {
     });
 
     const generatedEdges: Edge[] = [];
-    for (let i = 0; i < path.length - 1; i++) {
+    for (let i = 0; i < displayPath.length - 1; i++) {
       generatedEdges.push({
-        id: `e-${path[i].node_id}-${path[i + 1].node_id}`,
-        source: path[i].node_id,
-        target: path[i + 1].node_id,
+        id: `e-${displayPath[i].node_id}-${displayPath[i + 1].node_id}`,
+        source: displayPath[i].node_id,
+        target: displayPath[i + 1].node_id,
         animated: true,
         style: { stroke: "#22d3ee", strokeWidth: 2, opacity: 0.6 },
       });
     }
 
     return { nodes: generatedNodes, edges: generatedEdges };
-  }, [path]);
+  }, [displayPath]);
 
   const nodeTypes = useMemo(
     () => ({
@@ -68,7 +68,7 @@ export function LearningPathGraph({ path }: LearningPathGraphProps) {
   );
 
   return (
-    <div className="h-[520px] w-full rounded-xl border border-white/5 bg-slate-950/50">
+    <div className="h-[380px] w-full rounded-xl border border-white/5 bg-slate-950/50">
       <ReactFlow
         nodes={nodes}
         edges={edges}
