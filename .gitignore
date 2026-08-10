@@ -34,3 +34,8 @@ models/
 .DS_Store
 *.bak
 temp_clone/
+
+# 评估产物（运行时生成，不入库）
+backend/tests/evaluation/results/
+backend/tests/evaluation/LLM/results/
+backend/tests/evaluation/LLM/config/external_llm.yaml

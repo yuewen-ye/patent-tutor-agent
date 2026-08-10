@@ -292,22 +292,22 @@ export function OnboardingPage() {
   // ===== 配置阶段 =====
   if (phase === "config") {
     return (
-      <div className="container py-8 md:py-12">
-        <div className="max-w-2xl mx-auto space-y-7">
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
+      <div className="container mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        <div className="w-full max-w-3xl mx-auto space-y-7">
+          <div className="space-y-3 text-center">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <PixelMascot size={40} />
               <h1 className="text-2xl md:text-4xl font-bold tracking-tight text-[#C15B27]">
                 自评诊断
               </h1>
             </div>
-            <p className="text-[#8B5A3C] text-sm md:text-base">
+            <p className="text-[#8B5A3C] text-sm md:text-base max-w-2xl mx-auto">
               基于 CAT（计算机自适应测试）算法，系统将根据你的作答动态选题，
               精准评估各知识节点的掌握程度，生成专属学习路径。
             </p>
           </div>
 
-          <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200 hover:shadow-elevated transition-all duration-200">
+          <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200">
             <CardHeader className="pb-4">
               <CardTitle className="text-base font-medium flex items-center gap-2">
                 <User className="h-4 w-4 text-primary" />
@@ -403,16 +403,16 @@ export function OnboardingPage() {
     ).length;
 
     return (
-      <div className="container py-8 md:py-12">
-        <div className="max-w-3xl mx-auto space-y-7">
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
+      <div className="container mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        <div className="w-full max-w-4xl mx-auto space-y-7">
+          <div className="space-y-3 text-center">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <PixelMascot size={40} />
               <h1 className="text-2xl md:text-4xl font-bold tracking-tight text-[#C15B27]">
                 诊断完成
               </h1>
             </div>
-            <p className="text-[#8B5A3C] text-sm md:text-base">
+            <p className="text-[#8B5A3C] text-sm md:text-base max-w-2xl mx-auto">
               已完成 {progress.answered_questions} 道题目的自适应测试，
               {progress.termination_reason && `结束原因：${terminationReasonToZh(progress.termination_reason)}`}
             </p>
@@ -520,13 +520,13 @@ export function OnboardingPage() {
     : `${progress?.answered_questions ?? 0} / ${progress?.max_questions ?? 40} 题`;
 
   return (
-    <div className="container py-8 md:py-12">
-      <div className="max-w-2xl mx-auto space-y-7">
-        <div className="space-y-3">
+    <div className="container mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+      <div className="w-full max-w-3xl mx-auto space-y-7">
+        <div className="space-y-3 text-center">
           <h1 className="text-2xl md:text-4xl font-semibold tracking-tight text-foreground">
             {isProfilePhase ? "画像自评" : "CAT 自适应诊断"}
           </h1>
-          <p className="text-muted-foreground text-sm md:text-base">
+          <p className="text-muted-foreground text-sm md:text-base max-w-2xl mx-auto">
             {isProfilePhase
               ? "请根据自身实际情况作答，用于构建学习画像。"
               : "系统将根据你的作答动态调整题目难度，请认真作答每一题。"}

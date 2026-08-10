@@ -42,7 +42,7 @@ export function Header() {
         <div className="flex items-center justify-between h-14">
           <Link to="/" className="flex items-center gap-2 font-semibold text-[#9A4A1C] hover:text-[#C15B27] transition-colors">
             <PixelMascot size={32} className="rounded-sm" />
-            <span className="text-base hidden sm:inline tracking-tight">Patent Tutor</span>
+            <span className="text-base hidden sm:inline tracking-tight">Patent Tutor Agent</span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">

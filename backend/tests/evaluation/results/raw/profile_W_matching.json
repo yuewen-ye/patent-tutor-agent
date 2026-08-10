@@ -1,0 +1,10 @@
+{
+  "profile_id": "profile_W",
+  "session_id": "eval-profile_W",
+  "matching": {
+    "difficulty_match": 100.0,
+    "style_match": 100.0,
+    "affect_adaptation": 100.0,
+    "goal_match": 0.0
+  }
+}

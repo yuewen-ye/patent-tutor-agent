@@ -1,0 +1,32 @@
+{
+  "profile_id": "profile_W",
+  "round": 2,
+  "learning_goal": "我想系统掌握专利法律知识，并与商标著作权作对比",
+  "expected_course_content": {
+    "section_kcs": [
+      "patentability-substantive"
+    ],
+    "weakness_kcs": [
+      "创造性",
+      "权利要求书撰写基础",
+      "所属技术领域的技术人员",
+      "不授予专利权的主题",
+      "审查意见答复"
+    ],
+    "confusable_pairs": [
+      [
+        "novelty",
+        "inventive-step"
+      ],
+      [
+        "conflicting-application",
+        "prior-art-definition"
+      ],
+      [
+        "grace-period",
+        "priority-right"
+      ]
+    ]
+  },
+  "_design_notes": "DRAFT·需教师校准 | section_kcs←推测首轮章节patentability-substantive(专利授权实质条件)[节点缺失-待重跑校准]; weakness_kcs←Q47自述+偏离分析(5候选取5); confusable_pairs←按考试频率取3对 | 偏离题: Q2(学选C/标D),Q6(学选C/标B),Q22(学选B/标C)"
+}

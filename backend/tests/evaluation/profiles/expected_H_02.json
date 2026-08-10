@@ -1,0 +1,32 @@
+{
+  "profile_id": "profile_H",
+  "round": 2,
+  "learning_goal": "我想学习材料领域专利申请的审查规则，尤其是新颖性和创造性判断",
+  "expected_course_content": {
+    "section_kcs": [
+      "patentability-substantive"
+    ],
+    "weakness_kcs": [
+      "不授予专利权的主题",
+      "新颖性",
+      "专利侵权行为类型",
+      "不丧失新颖性的宽限期",
+      "等同原则"
+    ],
+    "confusable_pairs": [
+      [
+        "novelty",
+        "inventive-step"
+      ],
+      [
+        "conflicting-application",
+        "prior-art-definition"
+      ],
+      [
+        "grace-period",
+        "priority-right"
+      ]
+    ]
+  },
+  "_design_notes": "DRAFT·需教师校准 | section_kcs←推测首轮章节patentability-substantive(专利授权实质条件)[节点缺失-待重跑校准]; weakness_kcs←Q47自述+偏离分析(17候选取5); confusable_pairs←按考试频率取3对 | 偏离题: Q1(学选D/标B),Q2(学选B/标D),Q3(学选C/标D),Q4(学选D/标A),Q5(学选A/标B),Q6(学选C/标B),Q7(学选A/标B),Q8(学选B/标C),Q9(学选D/标A),Q10(学选B/标A),Q11(学选B/标C),Q13(学选A/标C),Q14(学选C/标B),Q15(学选B/标A),Q16(学选B/标C),Q17(学选A/标D),Q18(学选C/标A),Q19(学选A/标D),Q20(学选B/标A),Q21(学选A/标B)"
+}

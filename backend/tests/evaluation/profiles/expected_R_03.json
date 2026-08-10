@@ -1,0 +1,32 @@
+{
+  "profile_id": "profile_R",
+  "round": 3,
+  "learning_goal": "我想理解专利规则背后的商业逻辑，掌握FTO分析和融资出海前的专利准备",
+  "expected_course_content": {
+    "section_kcs": [
+      "patent-application-process"
+    ],
+    "weakness_kcs": [
+      "实质审查",
+      "PCT国家阶段",
+      "分案申请",
+      "专利侵权行为类型",
+      "审查意见答复"
+    ],
+    "confusable_pairs": [
+      [
+        "conflicting-application",
+        "prior-art-definition"
+      ],
+      [
+        "independent-claim",
+        "dependent-claim"
+      ],
+      [
+        "foreign-priority",
+        "domestic-priority"
+      ]
+    ]
+  },
+  "_design_notes": "DRAFT·需教师校准 | section_kcs←推测首轮章节patent-application-process(专利申请程序)[节点缺失-待重跑校准]; weakness_kcs←Q47自述+偏离分析(6候选取5); confusable_pairs←按考试频率取3对 | 偏离题: Q6(学选D/标B),Q9(学选D/标A),Q11(学选A/标C),Q22(学选B/标C)"
+}

@@ -196,11 +196,14 @@ export function AchievementBadges({
   };
 
   return (
-    <Card className="border-border/40 bg-card shadow-soft">
+    <Card className="rounded-2xl border border-white/70 bg-white/90 shadow-soft overflow-hidden">
+      <div className="h-1.5 w-full bg-gradient-to-r from-[#D9773E] via-[#F59E0B] to-[#C15B27]" />
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-medium flex items-center gap-2">
-            <Award className="h-4 w-4 text-primary" />
+          <CardTitle className="text-base font-medium flex items-center gap-2 text-[#5C3A26]">
+            <span className="inline-flex items-center justify-center rounded-lg bg-[#D9773E]/10 p-1.5 text-[#D9773E]">
+              <Award className="h-4 w-4" />
+            </span>
             学习成就
           </CardTitle>
           <span className="text-xs text-muted-foreground">

@@ -6,7 +6,6 @@ import { sessionsApi } from "@/api/sessions";
 import { getAuth, saveAuth } from "@/api/auth";
 import { ApiError } from "@/api/client";
 import { LearnerProfileCard } from "@/components/profile/LearnerProfileCard";
-import { MasteryHeatmap } from "@/components/profile/MasteryHeatmap";
 import { ProfileStats } from "@/components/profile/ProfileStats";
 import { LearningStyleRadar } from "@/components/profile/LearningStyleRadar";
 import { KnowledgeLevelBar } from "@/components/profile/KnowledgeLevelBar";
@@ -27,6 +26,12 @@ import {
   Pencil,
   AlertTriangle,
   Calendar,
+  ShieldCheck,
+  Hash,
+  Target,
+  BookOpen,
+  MessageSquare,
+  AtSign,
 } from "lucide-react";
 import { PixelMascot } from "@/components/auth/PixelMascot";
 import type { LearnerProfile, StudentInfo } from "@/types";
@@ -190,8 +195,8 @@ export function LearnerPage() {
   }
 
   return (
-    <div className="container py-8 md:py-10">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="container mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 md:py-10">
+      <div className="max-w-6xl mx-auto space-y-8">
         {/* 标题 */}
         <div className="flex items-center justify-between">
           <div className="space-y-2">
@@ -221,10 +226,12 @@ export function LearnerPage() {
         {info && learner && (
           <>
             {/* 学员信息（全宽）+ 档案小计 */}
-            <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200">
-              <CardHeader className="pb-3 flex flex-row items-center justify-between">
+            <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200 overflow-hidden">
+              <CardHeader className="pb-3 flex flex-row items-center justify-between border-b border-[#FFE8D0]/50">
                 <CardTitle className="text-base font-medium flex items-center gap-2">
-                  <User className="h-4 w-4 text-primary" />
+                  <span className="inline-flex items-center justify-center rounded-lg bg-[#D9773E]/10 p-1.5 text-[#D9773E]">
+                    <User className="h-4 w-4" />
+                  </span>
                   学员信息
                 </CardTitle>
                 {!editing ? (
@@ -258,62 +265,86 @@ export function LearnerPage() {
                   </div>
                 )}
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 {!editing ? (
-                  <div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">登录账号</Label>
-                        <p className="text-sm font-medium">{info.login_id}</p>
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#FFE8D0]/50">
+                      <div className="flex items-start gap-3 p-4">
+                        <div className="mt-0.5 inline-flex items-center justify-center rounded-lg bg-[#FFF7ED] p-2 text-[#D9773E]">
+                          <User className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 space-y-0.5">
+                          <Label className="text-xs text-muted-foreground">登录账号</Label>
+                          <p className="text-sm font-medium text-[#5C3A26] truncate">{info.login_id}</p>
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">显示名称</Label>
-                        <p className="text-sm font-medium">{info.display_name || "未设置"}</p>
+                      <div className="flex items-start gap-3 p-4">
+                        <div className="mt-0.5 inline-flex items-center justify-center rounded-lg bg-[#FFF7ED] p-2 text-[#D9773E]">
+                          <AtSign className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 space-y-0.5">
+                          <Label className="text-xs text-muted-foreground">显示名称</Label>
+                          <p className="text-sm font-medium text-[#5C3A26] truncate">{info.display_name || "未设置"}</p>
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          邮箱
-                        </Label>
-                        <p className="text-sm font-medium">{info.email || "未设置"}</p>
+                      <div className="flex items-start gap-3 p-4">
+                        <div className="mt-0.5 inline-flex items-center justify-center rounded-lg bg-[#FFF7ED] p-2 text-[#D9773E]">
+                          <Mail className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 space-y-0.5">
+                          <Label className="text-xs text-muted-foreground">邮箱</Label>
+                          <p className="text-sm font-medium text-[#5C3A26] truncate">{info.email || "未设置"}</p>
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          注册时间
-                        </Label>
-                        <p className="text-sm font-medium">{formatDate(info.created_at || undefined)}</p>
+                      <div className="flex items-start gap-3 p-4">
+                        <div className="mt-0.5 inline-flex items-center justify-center rounded-lg bg-[#FFF7ED] p-2 text-[#D9773E]">
+                          <Calendar className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 space-y-0.5">
+                          <Label className="text-xs text-muted-foreground">注册时间</Label>
+                          <p className="text-sm font-medium text-[#5C3A26] truncate">{formatDate(info.created_at || undefined)}</p>
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">账号状态</Label>
-                        <Badge variant={info.status === "active" ? "default" : "secondary"}>
-                          {info.status === "active" ? "正常" : info.status}
-                        </Badge>
+                      <div className="flex items-start gap-3 p-4">
+                        <div className="mt-0.5 inline-flex items-center justify-center rounded-lg bg-[#FFF7ED] p-2 text-[#D9773E]">
+                          <ShieldCheck className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 space-y-0.5">
+                          <Label className="text-xs text-muted-foreground">账号状态</Label>
+                          <Badge variant={info.status === "active" ? "default" : "secondary"}>
+                            {info.status === "active" ? "正常" : info.status}
+                          </Badge>
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">学员 ID</Label>
-                        <p className="text-xs font-mono text-muted-foreground truncate">
-                          {info.learner_id}
-                        </p>
+                      <div className="flex items-start gap-3 p-4">
+                        <div className="mt-0.5 inline-flex items-center justify-center rounded-lg bg-[#FFF7ED] p-2 text-[#D9773E]">
+                          <Hash className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 space-y-0.5">
+                          <Label className="text-xs text-muted-foreground">学员 ID</Label>
+                          <p className="text-xs font-mono text-muted-foreground truncate">{info.learner_id}</p>
+                        </div>
                       </div>
                     </div>
-                    <div className="mt-4 pt-4 border-t border-border/30 grid grid-cols-3 gap-3 text-center">
-                      <div>
-                        <p className="text-xl font-bold text-primary">{learner.profiles.length}</p>
-                        <p className="text-xs text-muted-foreground">画像数量</p>
-                      </div>
-                      <div>
-                        <p className="text-xl font-bold text-primary">{learner.history.length}</p>
-                        <p className="text-xs text-muted-foreground">历史记录</p>
-                      </div>
-                      <div>
-                        <p className="text-xl font-bold text-primary">{sessionCount}</p>
-                        <p className="text-xs text-muted-foreground">会话总数</p>
-                      </div>
+                    <div className="grid grid-cols-3 divide-x divide-[#FFE8D0]/50 border-t border-[#FFE8D0]/50 bg-[#FFF7ED]/30">
+                      {[
+                        { label: "画像数量", value: learner.profiles.length, icon: Target },
+                        { label: "历史记录", value: learner.history.length, icon: BookOpen },
+                        { label: "会话总数", value: sessionCount, icon: MessageSquare },
+                      ].map((stat) => {
+                        const Icon = stat.icon;
+                        return (
+                          <div key={stat.label} className="flex flex-col items-center justify-center gap-1.5 p-4">
+                            <Icon className="h-4 w-4 text-[#D9773E]" />
+                            <p className="text-xl font-bold text-[#C15B27]">{stat.value}</p>
+                            <p className="text-xs text-muted-foreground">{stat.label}</p>
+                          </div>
+                        );
+                      })}
                     </div>
-                  </div>
+                  </>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="p-4 sm:p-6 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="displayName">显示名称</Label>
@@ -378,17 +409,20 @@ export function LearnerPage() {
               <LearningStyleRadar learningStyle={latestProfile?.learning_style} />
             </div>
 
-            {/* 掌握度热力图（全宽） */}
-            <MasteryHeatmap mastery={learner.mastery} />
-
             {/* 时间线（全宽） + 最近会话 横向嵌入 */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
               <div className="lg:col-span-2">
                 <ProfileTimeline profiles={learner.profiles} mastery={learner.mastery} />
               </div>
-              <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200">
+              <Card className="rounded-2xl border border-white/70 bg-white/90 shadow-soft overflow-hidden">
+                <div className="h-1.5 w-full bg-gradient-to-r from-[#D9773E] via-[#F59E0B] to-[#C15B27]" />
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-medium">最近会话</CardTitle>
+                  <CardTitle className="text-base font-medium flex items-center gap-2 text-[#5C3A26]">
+                    <span className="inline-flex items-center justify-center rounded-lg bg-[#D9773E]/10 p-1.5 text-[#D9773E]">
+                      <MessageSquare className="h-4 w-4" />
+                    </span>
+                    最近会话
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {(sessionsData?.sessions || []).length === 0 && (
@@ -401,7 +435,7 @@ export function LearnerPage() {
                     return (
                       <div
                         key={s.session_id}
-                        className="flex items-center justify-between rounded-xl border border-white/70 bg-white/70 p-3.5 hover:bg-white/90 hover:-translate-y-0.5 transition-all cursor-pointer shadow-sm"
+                        className="flex items-center justify-between rounded-xl border border-[#FFE8D0]/70 bg-[#FFF7ED]/70 p-3.5 hover:bg-[#FFE8D0]/60 hover:border-[#FFE8D0] hover:-translate-y-0.5 transition-all cursor-pointer shadow-sm"
                         onClick={() => (window.location.href = `/session/${s.session_id}`)}
                       >
                         <div className="min-w-0">
