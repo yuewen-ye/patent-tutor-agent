@@ -29,6 +29,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
+from urllib.parse import unquote
 
 _THIS_DIR = Path(__file__).resolve().parent
 _EVAL_DIR = _THIS_DIR.parent
@@ -111,7 +112,7 @@ class InfusionResult:
 # ── MySQL helpers ───────────────────────────────────────────────────────────
 
 def _parse_mysql_url(url: str) -> dict[str, Any]:
-    """解析 mysql://user:password@host:port/database。"""
+    """解析 mysql://user:password@host:port/database，支持 URL 编码的凭据。"""
     m = re.match(
         r"mysql(?:\+mysqlconnector)?://(?P<u>[^:]+):(?P<p>[^@]+)@(?P<h>[^:]+):(?P<port>\d+)/(?P<db>[^/?]+)",
         url,
@@ -119,8 +120,8 @@ def _parse_mysql_url(url: str) -> dict[str, Any]:
     if not m:
         raise ValueError(f"无法解析 MySQL URL: {url}")
     return {
-        "user": m.group("u"),
-        "password": m.group("p"),
+        "user": unquote(m.group("u")),
+        "password": unquote(m.group("p")),
         "host": m.group("h"),
         "port": int(m.group("port")),
         "database": m.group("db"),

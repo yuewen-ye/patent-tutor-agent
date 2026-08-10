@@ -24,6 +24,7 @@ import re
 import sys
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]  # backend/tests/evaluation/ -> project root
 EVAL_DIR = Path(__file__).resolve().parent  # backend/tests/evaluation/
@@ -57,28 +58,20 @@ def get_mysql_url() -> str:
 
 
 def parse_mysql_url(url: str) -> dict[str, str]:
-    """解析 MySQL URL，支持 mysql://、mysql+pymysql://、mysql+mysqlconnector:// 格式。"""
-    # 移除协议前缀
+    """解析 MySQL URL，支持 mysql://、mysql+pymysql://、mysql+mysqlconnector:// 格式，支持 URL 编码的凭据。"""
     m = re.match(
-        r"mysql(?:\+\w+)?://(.+?)@([^:]+):(\d+)/([^/?]+)",
+        r"mysql(?:\+\w+)?://(?P<u>[^:]+):(?P<p>[^@]+)@(?P<h>[^:]+):(?P<port>\d+)/(?P<db>[^/?]+)",
         url,
     )
     if not m:
         raise ValueError(f"无法解析 MySQL URL: {url}")
-    
-    # 解析用户名和密码（格式: user:password）
-    user_pass = m.group(1)
-    if ":" in user_pass:
-        user, password = user_pass.split(":", 1)  # 只分割第一个冒号
-    else:
-        user, password = user_pass, ""
-    
+
     return {
-        "user": user,
-        "password": password,
-        "host": m.group(2),
-        "port": m.group(3),
-        "database": m.group(4),
+        "user": unquote(m.group("u")),
+        "password": unquote(m.group("p")),
+        "host": m.group("h"),
+        "port": m.group("port"),
+        "database": m.group("db"),
     }
 
 

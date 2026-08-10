@@ -29,6 +29,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
+from urllib.parse import unquote
 
 import httpx
 from dotenv import load_dotenv
@@ -644,6 +645,7 @@ def wipe_learner_mysql(learner_id: str) -> int:
     """
     import mysql.connector  # type: ignore[import-untyped]
 
+    ensure_dotenv()
     url = os.environ.get("PATENT_TUTOR_MYSQL_URL")
     if not url:
         print(f"  [{learner_id}] 未配置 PATENT_TUTOR_MYSQL_URL，跳过 MySQL 清理")
@@ -658,7 +660,7 @@ def wipe_learner_mysql(learner_id: str) -> int:
         raise ValueError(f"无法解析 PATENT_TUTOR_MYSQL_URL: {url!r}")
 
     conn = mysql.connector.connect(
-        user=m.group("u"), password=m.group("p"),
+        user=unquote(m.group("u")), password=unquote(m.group("p")),
         host=m.group("h"), port=int(m.group("port")), database=m.group("db"),
     )
     try:
