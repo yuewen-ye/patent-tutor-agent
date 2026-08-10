@@ -1,0 +1,112 @@
+{
+  "Q1": {
+    "kc_ids": ["patent-rights-nature"],
+    "standard": "B",
+    "area": "专利法基础"
+  },
+  "Q2": {
+    "kc_ids": ["non-patentable-subject"],
+    "standard": "D",
+    "area": "专利法基础"
+  },
+  "Q3": {
+    "kc_ids": ["doctrine-of-equivalents"],
+    "standard": "D",
+    "area": "专利法基础"
+  },
+  "Q4": {
+    "kc_ids": ["priority-right"],
+    "standard": "D",
+    "area": "专利法基础"
+  },
+  "Q5": {
+    "kc_ids": ["bolar-exemption"],
+    "standard": "B",
+    "area": "专利法基础"
+  },
+  "Q6": {
+    "kc_ids": ["office-action-response"],
+    "standard": "D",
+    "area": "专利法基础"
+  },
+  "Q7": {
+    "kc_ids": ["amendment-limits"],
+    "standard": "B",
+    "area": "专利法基础"
+  },
+  "Q8": {
+    "kc_ids": ["conflicting-application"],
+    "standard": "C",
+    "area": "专利法基础",
+    "note": "近似映射：题目考察“禁止重复授权”，知识图谱中最接近的节点为“抵触申请”"
+  },
+  "Q9": {
+    "kc_ids": ["divisional-application"],
+    "standard": "A",
+    "area": "专利法基础"
+  },
+  "Q10": {
+    "kc_ids": ["pct-national-phase"],
+    "standard": "A",
+    "area": "专利法基础"
+  },
+  "Q11": {
+    "kc_ids": ["civil-law-basics"],
+    "standard": "C",
+    "area": "相关法律知识"
+  },
+  "Q12": {
+    "kc_ids": ["civil-law-basics"],
+    "standard": "B",
+    "area": "相关法律知识"
+  },
+  "Q13": {
+    "kc_ids": ["civil-procedure"],
+    "standard": "C",
+    "area": "相关法律知识"
+  },
+  "Q14": {
+    "kc_ids": ["administrative-procedure"],
+    "standard": "B",
+    "area": "相关法律知识"
+  },
+  "Q15": {
+    "kc_ids": ["related-laws"],
+    "standard": "A",
+    "area": "相关法律知识",
+    "note": "著作权取得方式，知识图谱无著作权专用节点，归入“相关法律”汇总节点"
+  },
+  "Q16": {
+    "kc_ids": ["related-laws"],
+    "standard": "C",
+    "area": "相关法律知识",
+    "note": "商标注册原则，知识图谱无商标专用节点，归入“相关法律”汇总节点"
+  },
+  "Q17": {
+    "kc_ids": ["related-laws"],
+    "standard": "D",
+    "area": "相关法律知识",
+    "note": "商业秘密构成要件，知识图谱无专门节点，归入“相关法律”汇总节点"
+  },
+  "Q18": {
+    "kc_ids": ["trips-agreement"],
+    "standard": "A",
+    "area": "相关法律知识",
+    "note": "近似映射：布图设计保护期，TRIPS 协定覆盖布图设计（第 35-38 条）"
+  },
+  "Q19": {
+    "kc_ids": ["claims-drafting-basics"],
+    "standard": "D",
+    "area": "专利审查指南"
+  },
+  "Q20": {
+    "kc_ids": ["patent-invalidation"],
+    "standard": "A",
+    "area": "专利审查指南"
+  },
+  "Q21": {
+    "kc_ids": ["patent-agency-practice"],
+    "standard": "B",
+    "area": "代理实务"
+  }
+}

@@ -5,13 +5,15 @@
 
 from __future__ import annotations
 
+import json
+import logging
+import shutil
 import threading
 import uuid
-import json
-import shutil
+from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Literal, Mapping, cast
+from typing import Any, Literal, cast
 
 import anyio
 from langgraph.checkpoint.memory import InMemorySaver
@@ -26,7 +28,6 @@ from backend.app.core.llm import (
     load_provider_config,
 )
 from backend.app.curriculum.learning_progress import advance_learning_progress
-from backend.app.runtime_outputs.artifacts import write_manifest, write_process_markdown
 from backend.app.graph.workflow import arun_workflow
 from backend.app.learner_memory.bkt.model import (
     DEFAULT_P_G,
@@ -38,9 +39,11 @@ from backend.app.learner_memory.bkt.model import (
 from backend.app.learner_memory.diagnostic_sessions import DiagnosticSessionManager
 from backend.app.learner_memory.memory import learner_memory_snapshot
 from backend.app.onboarding.questionnaire import (
+    education_background_from_responses,
     onboarding_questionnaire,
     resolve_questionnaire_responses,
 )
+from backend.app.runtime_outputs.artifacts import write_manifest, write_process_markdown
 from backend.app.schemas.state import StateDict
 from backend.app.services.artifact_paths import InvalidArtifactPathError, normalize_artifact_path
 from backend.app.services.cancellation import CancelAwareLLMClient, SessionCancelled
@@ -57,6 +60,7 @@ from backend.app.services.session_types import (
 
 _APPEND_FIELDS = {"events", "artifacts"}
 _TERMINAL_STATUSES: set[SessionStatus] = {"completed", "failed", "canceled"}
+logger = logging.getLogger(__name__)
 
 
 class SessionService:
@@ -156,6 +160,7 @@ class SessionService:
         diagnostic_payload: dict[str, Any] | None = None,
     ) -> SessionRecord:
         submission_id = uuid.uuid4().hex
+        resolved_background = education_background or education_background_from_responses(responses)
         self._save_history(
             learner_id=learner_id,
             session_id=submission_id,
@@ -169,7 +174,7 @@ class SessionService:
             input_payload={
                 "questionnaire_responses": responses,
                 "questionnaire_context": resolve_questionnaire_responses(responses),
-                "education_background": education_background,
+                "education_background": resolved_background,
                 "diagnostic_snapshot": diagnostic_payload,
             },
             start_immediately=False,
@@ -182,6 +187,18 @@ class SessionService:
                 responses=responses,
                 questionnaire_version=onboarding_questionnaire()["version"],
             )
+        if diagnostic_payload is None:
+            seeder = getattr(self._store, "seed_mastery_from_questionnaire", None)
+            if callable(seeder):
+                try:
+                    seeder(
+                        learner_id=learner_id,
+                        session_id=record.session_id,
+                        responses=responses,
+                        education_background=resolved_background,
+                    )
+                except Exception as exc:  # noqa: BLE001 - seeding must not block course start
+                    logger.warning("问卷 BKT 播种失败，降级跳过: %s", exc)
         questionnaire = onboarding_questionnaire()["markdown"]
         questionnaire_artifact = write_process_markdown(
             artifact_root=self.artifact_root,
@@ -218,14 +235,17 @@ class SessionService:
         *,
         learner_id: str,
         learning_goal: str,
-        education_background: str,
+        education_background: str | None,
         responses: list[dict[str, Any]],
     ) -> dict[str, Any]:
         resolve_questionnaire_responses(responses)
+        resolved_background = (
+            education_background or education_background_from_responses(responses) or "未提供"
+        )
         progress = self._diagnostics.create(
             learner_id=learner_id,
             learning_goal=learning_goal,
-            education_background=education_background,
+            education_background=resolved_background,
             questionnaire_responses=responses,
         )
         self._save_history(
@@ -234,7 +254,7 @@ class SessionService:
             event_type="diagnostic_started",
             payload={
                 "learning_goal": learning_goal,
-                "education_background": education_background,
+                "education_background": resolved_background,
             },
         )
         return progress
@@ -259,6 +279,7 @@ class SessionService:
         answer: str,
         response_ms: int | None,
         idempotency_key: str | None,
+        skip: bool = False,
     ) -> dict[str, Any]:
         session = self._diagnostics.get(diagnostic_session_id)
         if session.learner_id != learner_id:
@@ -269,6 +290,7 @@ class SessionService:
             answer=answer,
             response_ms=response_ms,
             idempotency_key=idempotency_key,
+            skip=skip,
         )
         return self._start_course_after_diagnostic(session, progress)
 

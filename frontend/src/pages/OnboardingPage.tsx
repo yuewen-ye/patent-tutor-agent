@@ -25,9 +25,10 @@ import type { DiagnosticProgress } from "@/types";
 type Phase = "config" | "testing" | "completed";
 
 const EDUCATION_OPTIONS = [
+  { value: "法学背景+系统学过程序法", label: "法学背景 + 系统学过程序法" },
+  { value: "法学背景+未系统学", label: "法学背景 + 未系统学" },
   { value: "理工背景+有研发经验", label: "理工背景 + 有研发经验" },
-  { value: "理工背景", label: "理工背景" },
-  { value: "文法商背景", label: "文法商背景" },
+  { value: "理工背景+无研发经验", label: "理工背景 + 无研发经验" },
   { value: "其他", label: "其他" },
 ];
 
@@ -160,6 +161,7 @@ export function OnboardingPage() {
 
   const [progress, setProgress] = useState<DiagnosticProgress | null>(null);
   const [selectedOption, setSelectedOption] = useState<string>("");
+  const [openText, setOpenText] = useState<string>("");
   const [questionStartedAt, setQuestionStartedAt] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>("");
@@ -191,28 +193,69 @@ export function OnboardingPage() {
   }, [learnerId, learningGoal, educationBackground]);
 
   const submitAnswer = useCallback(async () => {
-    if (!progress || !progress.current_question || !selectedOption) return;
+    if (!progress || !progress.current_question) return;
+    const question = progress.current_question;
+    if (question.question_type === "open" ? !openText.trim() : !selectedOption) return;
     setError("");
     setSubmitting(true);
     try {
+      const isOpen = question.question_type === "open";
       const responseMs = questionStartedAt ? Date.now() - questionStartedAt : null;
       const result = await diagnosticApi.submitResponse(
         learnerId,
         progress.diagnostic_session_id,
         {
-          question_id: progress.current_question.question_id,
-          answer: selectedOption,
+          question_id: question.question_id,
+          answer: isOpen ? openText : selectedOption,
           response_ms: responseMs,
         }
       );
       setProgress(result);
-      setShowExplanation(true);
+      setOpenText("");
+      setSelectedOption("");
+      if (result.status === "completed") {
+        setPhase("completed");
+      } else if (question.question_type === "knowledge") {
+        setShowExplanation(true);
+      } else {
+        setQuestionStartedAt(Date.now());
+      }
     } catch (err) {
       setError(resolveError(err));
     } finally {
       setSubmitting(false);
     }
-  }, [progress, selectedOption, learnerId, questionStartedAt]);
+  }, [progress, selectedOption, openText, learnerId, questionStartedAt]);
+
+  const skipOpen = useCallback(async () => {
+    if (!progress || !progress.current_question) return;
+    setError("");
+    setSubmitting(true);
+    try {
+      const question = progress.current_question;
+      const result = await diagnosticApi.submitResponse(
+        learnerId,
+        progress.diagnostic_session_id,
+        {
+          question_id: question.question_id,
+          answer: "",
+          skip: true,
+        }
+      );
+      setProgress(result);
+      setOpenText("");
+      setSelectedOption("");
+      if (result.status === "completed") {
+        setPhase("completed");
+      } else {
+        setQuestionStartedAt(Date.now());
+      }
+    } catch (err) {
+      setError(resolveError(err));
+    } finally {
+      setSubmitting(false);
+    }
+  }, [progress, learnerId]);
 
   const nextQuestion = useCallback(() => {
     setSelectedOption("");
@@ -461,20 +504,32 @@ export function OnboardingPage() {
 
   // ===== 答题阶段 =====
   const currentQuestion = progress?.current_question;
+  const isProfilePhase = progress?.phase === "profile";
   const progressPercent = progress
-    ? Math.round((progress.answered_questions / progress.max_questions) * 100)
+    ? isProfilePhase
+      ? Math.round(
+          (progress.profile_answered_questions /
+            (progress.profile_total_questions || 1)) *
+            100
+        )
+      : Math.round((progress.answered_questions / progress.max_questions) * 100)
     : 0;
   const showResult = showExplanation && progress?.answer_result;
+  const progressLabel = isProfilePhase
+    ? `${progress?.profile_answered_questions ?? 0} / ${progress?.profile_total_questions ?? 0} 题`
+    : `${progress?.answered_questions ?? 0} / ${progress?.max_questions ?? 40} 题`;
 
   return (
     <div className="container mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 md:py-12">
       <div className="w-full max-w-3xl mx-auto space-y-7">
         <div className="space-y-3 text-center">
           <h1 className="text-2xl md:text-4xl font-semibold tracking-tight text-foreground">
-            CAT 自适应诊断
+            {isProfilePhase ? "画像自评" : "CAT 自适应诊断"}
           </h1>
           <p className="text-muted-foreground text-sm md:text-base max-w-2xl mx-auto">
-            系统将根据你的作答动态调整题目难度，请认真作答每一题。
+            {isProfilePhase
+              ? "请根据自身实际情况作答，用于构建学习画像。"
+              : "系统将根据你的作答动态调整题目难度，请认真作答每一题。"}
           </p>
         </div>
 
@@ -485,9 +540,7 @@ export function OnboardingPage() {
                 <Target className="h-4 w-4 text-primary" />
                 答题进度
               </span>
-              <span className="text-sm text-muted-foreground">
-                {progress?.answered_questions ?? 0} / {progress?.max_questions ?? 40} 题
-              </span>
+              <span className="text-sm text-muted-foreground">{progressLabel}</span>
             </div>
             <Progress value={progressPercent} className="h-1.5" />
           </CardContent>
@@ -509,23 +562,33 @@ export function OnboardingPage() {
                 {currentQuestion.question_text}
               </p>
 
-              <div className="grid grid-cols-1 gap-2">
-                {Object.entries(currentQuestion.options).map(([key, text]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setSelectedOption(key)}
-                    className={`p-4 rounded-lg border text-sm text-left transition-all ${
-                      selectedOption === key
-                        ? "border-[#D9773E] bg-[#D9773E]/10 text-[#5C3A26]"
-                        : "border-[#E5C9AB]/70 hover:bg-[#FFE8D0]/60 text-[#8B5A3C]"
-                    }`}
-                  >
-                    <span className="font-normal tracking-wide text-foreground/80 mr-2">{key}.</span>
-                    {text}
-                  </button>
-                ))}
-              </div>
+              {currentQuestion.question_type === "open" ? (
+                <textarea
+                  value={openText}
+                  onChange={(e) => setOpenText(e.target.value)}
+                  rows={4}
+                  placeholder="请输入你的回答（可选，可跳过）"
+                  className="w-full p-3 rounded-lg border border-border/40 bg-background text-sm resize-y focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+              ) : (
+                <div className="grid grid-cols-1 gap-2">
+                  {Object.entries(currentQuestion.options).map(([key, text]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setSelectedOption(key)}
+                      className={`p-4 rounded-lg border text-sm text-left transition-all ${
+                        selectedOption === key
+                          ? "border-[#D9773E] bg-[#D9773E]/10 text-[#5C3A26]"
+                          : "border-[#E5C9AB]/70 hover:bg-[#FFE8D0]/60 text-[#8B5A3C]"
+                      }`}
+                    >
+                      <span className="font-normal tracking-wide text-foreground/80 mr-2">{key}.</span>
+                      {text}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {error && (
                 <div className="flex items-start gap-2 p-3 rounded-xl bg-[#D9773E]/10 text-[#9A4A1C] text-sm border border-[#D9773E]/20">
@@ -534,24 +597,41 @@ export function OnboardingPage() {
                 </div>
               )}
 
-              <Button
-                onClick={submitAnswer}
-                disabled={submitting || !selectedOption}
-                className="w-full"
-                size="lg"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    提交中...
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-4 w-4 mr-2" />
-                    提交答案
-                  </>
+              <div className="flex gap-3">
+                <Button
+                  onClick={submitAnswer}
+                  disabled={
+                    submitting ||
+                    (currentQuestion.question_type === "open"
+                      ? !openText.trim()
+                      : !selectedOption)
+                  }
+                  className="flex-1"
+                  size="lg"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      提交中...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      提交答案
+                    </>
+                  )}
+                </Button>
+                {currentQuestion.question_type === "open" && (
+                  <Button
+                    variant="outline"
+                    onClick={skipOpen}
+                    disabled={submitting}
+                    size="lg"
+                  >
+                    跳过
+                  </Button>
                 )}
-              </Button>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -560,7 +640,12 @@ export function OnboardingPage() {
           <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200">
             <CardHeader className="pb-4">
               <CardTitle className="text-base font-medium flex items-center gap-2">
-                {progress.answer_result.is_correct ? (
+                {progress.answer_result.is_correct == null ? (
+                  <>
+                    <CheckCircle2 className="h-5 w-5 text-sky-600" />
+                    <span className="text-sky-600">已记录</span>
+                  </>
+                ) : progress.answer_result.is_correct ? (
                   <>
                     <CheckCircle2 className="h-5 w-5 text-green-600" />
                     <span className="text-green-600">回答正确</span>
@@ -574,18 +659,22 @@ export function OnboardingPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="p-3 rounded-lg bg-secondary/30 text-sm">
-                <span className="text-muted-foreground">正确答案：</span>
-                <span className="font-medium text-foreground ml-1">
-                  {progress.answer_result.correct_answer}
-                </span>
-              </div>
-              <div className="p-4 rounded-lg border border-border/40 bg-secondary/20">
-                <p className="text-xs text-muted-foreground mb-2 font-medium">解析</p>
-                <p className="text-sm leading-relaxed">
-                  {progress.answer_result.explanation}
-                </p>
-              </div>
+              {progress.answer_result.correct_answer != null && (
+                <div className="p-3 rounded-lg bg-secondary/30 text-sm">
+                  <span className="text-muted-foreground">正确答案：</span>
+                  <span className="font-medium text-foreground ml-1">
+                    {progress.answer_result.correct_answer}
+                  </span>
+                </div>
+              )}
+              {progress.answer_result.explanation != null && (
+                <div className="p-4 rounded-lg border border-border/40 bg-secondary/20">
+                  <p className="text-xs text-muted-foreground mb-2 font-medium">解析</p>
+                  <p className="text-sm leading-relaxed">
+                    {progress.answer_result.explanation}
+                  </p>
+                </div>
+              )}
 
               {error && (
                 <div className="flex items-start gap-2 p-3 rounded-xl bg-[#D9773E]/10 text-[#9A4A1C] text-sm border border-[#D9773E]/20">
@@ -612,6 +701,16 @@ export function OnboardingPage() {
                         完成诊断并生成课程
                       </>
                     )}
+                  </Button>
+                )}
+                {!isProfilePhase && (
+                  <Button
+                    variant="outline"
+                    onClick={completeDiagnostic}
+                    disabled={submitting}
+                    size="lg"
+                  >
+                    提前结束
                   </Button>
                 )}
               </div>

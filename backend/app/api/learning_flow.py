@@ -117,7 +117,10 @@ class DiagnosticSessionSubmission(BaseModel):
     )
 
     learning_goal: str = Field(min_length=1)
-    education_background: str = Field(min_length=1)
+    education_background: str | None = Field(
+        default=None,
+        description="教育背景（BKT 先验参数桶）；缺省时从问卷 Q0 自动派生。",
+    )
     responses: list[QuestionnaireResponseItem] = Field(
         default_factory=list,
         description="问卷预筛回答；纯 CAT 诊断流程可留空，由 CAT 引擎自适应出题。",
@@ -140,9 +143,10 @@ class DiagnosticResponseSubmission(BaseModel):
     )
 
     question_id: str = Field(min_length=1)
-    answer: str = Field(min_length=1)
+    answer: str = Field(default="", description="答案文本；开放题跳过（skip=true）时可为空。")
     response_ms: int | None = Field(default=None, ge=0)
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=255)
+    skip: bool = Field(default=False, description="开放题跳过标记；仅画像阶段的开放题有效。")
 
 
 def create_learning_flow_router(session_service: SessionService) -> APIRouter:
@@ -247,6 +251,7 @@ def create_learning_flow_router(session_service: SessionService) -> APIRouter:
                 answer=request.answer,
                 response_ms=request.response_ms,
                 idempotency_key=request.idempotency_key,
+                skip=request.skip,
             )
         except KeyError as exc:
             raise HTTPException(
@@ -297,6 +302,11 @@ def create_learning_flow_router(session_service: SessionService) -> APIRouter:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail={"error": "permission_denied", "reason": str(exc)},
+            ) from exc
+        except RuntimeError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={"error": "diagnostic_conflict", "reason": str(exc)},
             ) from exc
         except Exception as exc:
             raise HTTPException(

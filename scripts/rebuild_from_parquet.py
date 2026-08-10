@@ -24,7 +24,7 @@ from pymilvus import MilvusClient, DataType
 os.environ['GRPC_VERBOSITY'] = 'ERROR'
 os.environ['GRPC_TRACE'] = ''
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OLD_DB_PATH = os.path.join(BASE_DIR, "backend", "app", "rag", "data", "milvus_lite.db")
 NEW_DB_PATH = os.path.join(BASE_DIR, "backend", "app", "rag", "data", "milvus_lite_rebuild.db")
 COLLECTION_NAME = "law_knowledge_base"

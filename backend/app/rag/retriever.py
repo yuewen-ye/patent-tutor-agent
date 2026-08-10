@@ -13,8 +13,8 @@ os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
 try:
     import milvus_lite.storage.manifest as _manifest
     if not getattr(_manifest, '_patched_rename', False):
-        setattr(_manifest.os, 'rename', _manifest.os.replace)
-        setattr(_manifest, '_patched_rename', True)
+        _manifest.os.rename = _manifest.os.replace
+        _manifest._patched_rename = True
 except ImportError:
     pass
 
@@ -25,6 +25,7 @@ EMBEDDING_MODEL_PATH_ENV: Final = "RAG_EMBEDDING_MODEL_PATH"
 RERANKER_MODEL_PATH_ENV: Final = "RAG_RERANKER_MODEL_PATH"
 RERANK_ENABLED_ENV: Final = "RAG_RERANK_ENABLED"
 RERANK_CANDIDATE_MULTIPLIER: Final = 3
+MILVUS_DB_PATH_ENV: Final = "MILVUS_DB_PATH"
 
 _milvus_client = None
 _embedding_model = None
@@ -48,6 +49,9 @@ class RAGRetrievalError(RuntimeError):
 
 
 def _get_db_path() -> str:
+    configured = os.getenv(MILVUS_DB_PATH_ENV, "").strip()
+    if configured:
+        return configured
     return str(Path(__file__).resolve().parent / "data" / "milvus_lite.db")
 
 
