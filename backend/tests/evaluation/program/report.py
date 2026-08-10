@@ -26,6 +26,7 @@ CLI 用法：
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -112,6 +113,101 @@ class FullReportContext:
     """完整报告渲染上下文（多画像汇总）。"""
     profiles: list[ProfileReport]
     generated_at: str
+    llm_eval_results: dict[str, Any] = field(default_factory=dict)
+
+
+# ── 外部 LLM 评估结果读取 ─────────────────────────────────────────────────────
+
+LLM_EVAL_RESULTS_DIR = _EVAL_DIR / "LLM" / "results"
+
+# 外部 LLM 评分维度（与 evaluator_system.md 对齐）
+LLM_SCORING_DIMENSIONS: list[tuple[str, str]] = [
+    ("goal_coverage", "目标覆盖度"),
+    ("factual_accuracy", "事实/法律准确性"),
+    ("case_accuracy", "案例准确性"),
+    ("factual_consistency", "事实一致性"),
+    ("pedagogical_clarity", "教学清晰度"),
+    ("difficulty_fit", "难度适配性"),
+    ("learner_fit", "学员匹配度"),
+    ("knowledge_completeness", "知识完整性"),
+    ("weakness_addressing", "薄弱点针对性"),
+]
+
+
+def _load_llm_eval_results() -> dict[str, Any]:
+    """加载所有外部 LLM 评估结果。
+
+    Returns:
+        dict 结构: {profile_letter: {round_num: json_data, ...}, ...}
+    """
+    results: dict[str, Any] = {}
+
+    if not LLM_EVAL_RESULTS_DIR.exists():
+        return results
+
+    for json_file in sorted(LLM_EVAL_RESULTS_DIR.glob("judge_*.json")):
+        try:
+            data = json.loads(json_file.read_text(encoding="utf-8"))
+            metadata = data.get("metadata", {})
+            profile_id = metadata.get("profile_id", "")
+            round_num = metadata.get("round", 0)
+
+            if profile_id and round_num:
+                if profile_id not in results:
+                    results[profile_id] = {}
+                results[profile_id][round_num] = data
+        except (json.JSONDecodeError, KeyError):
+            continue
+
+    return results
+
+
+def _has_llm_eval_for(profile_letter: str, round_num: int,
+                      llm_results: dict[str, Any]) -> bool:
+    """检查指定画像指定轮次是否有外部 LLM 评估结果。"""
+    return profile_letter in llm_results and round_num in llm_results[profile_letter]
+
+
+def _get_llm_overall_scores(profile_letter: str, round_num: int,
+                             llm_results: dict[str, Any]) -> dict[str, Any] | None:
+    """获取指定画像指定轮次的整体评估分数。"""
+    if not _has_llm_eval_for(profile_letter, round_num, llm_results):
+        return None
+
+    data = llm_results[profile_letter][round_num]
+    overall = data.get("overall_evaluation", {})
+    return overall.get("scores", {})
+
+
+def _get_llm_chunk_scores(profile_letter: str, round_num: int,
+                           llm_results: dict[str, Any]) -> list[dict[str, Any]]:
+    """获取指定画像指定轮次的分块评估分数。"""
+    if not _has_llm_eval_for(profile_letter, round_num, llm_results):
+        return []
+
+    data = llm_results[profile_letter][round_num]
+    return data.get("chunk_evaluations", [])
+
+
+def _get_llm_summary(profile_letter: str, round_num: int,
+                      llm_results: dict[str, Any]) -> dict[str, Any]:
+    """获取指定画像指定轮次的评估总结。"""
+    if not _has_llm_eval_for(profile_letter, round_num, llm_results):
+        return {}
+
+    data = llm_results[profile_letter][round_num]
+    overall = data.get("overall_evaluation", {})
+    return overall.get("summary", {})
+
+
+def _get_llm_metadata(profile_letter: str, round_num: int,
+                       llm_results: dict[str, Any]) -> dict[str, Any]:
+    """获取指定画像指定轮次的元数据。"""
+    if not _has_llm_eval_for(profile_letter, round_num, llm_results):
+        return {}
+
+    data = llm_results[profile_letter][round_num]
+    return data.get("metadata", {})
 
 
 # ── 路径查找 ─────────────────────────────────────────────────────────────────
@@ -204,13 +300,22 @@ def _metric_avg_for_profile(
 def _calculate_profile(
     profile_letter: str,
     session_dir: Path,
+    max_round: int | None = None,
 ) -> ProfileReport:
-    """对单个画像逐轮计算指标。"""
+    """对单个画像逐轮计算指标。
+
+    Args:
+        profile_letter: 画像字母
+        session_dir: 测试快照目录
+        max_round: 最大轮次上限（None 表示全部）
+    """
     pr = ProfileReport(
         profile_letter=profile_letter,
         session_dir=session_dir,
     )
     rounds_nums = _list_available_rounds(session_dir)
+    if max_round is not None:
+        rounds_nums = [r for r in rounds_nums if r <= max_round]
     for r in rounds_nums:
         try:
             rm = calculate.calculate_round(
@@ -269,23 +374,51 @@ def generate_report(
 def generate_full_report(
     *,
     learner_prefix: str = "multi",
+    max_round: int | None = None,
+    profile_ids: list[str] | None = None,
     output_path: Path | None = None,
 ) -> Path | None:
-    """生成所有有运行数据画像的完整评估报告（Markdown）。
+    """生成完整评估报告（多画像汇总）。
+
+    Args:
+        learner_prefix: 学习者前缀（默认 multi）
+        max_round: 最大轮次上限（None 表示全部轮次）
+        profile_ids: 指定画像 ID 列表（如 ["profile_B", "profile_C"]），None 表示自动发现
+        output_path: 输出路径（None 表示默认路径）
 
     Returns: 实际写入的报告文件路径；失败（无数据）返回 None。
     """
-    letters = _list_profiles_with_data(learner_prefix)
+    # 确定要处理的画像列表
+    if profile_ids is not None:
+        letters = []
+        for pid in profile_ids:
+            # 提取字母：profile_B -> B
+            letter = pid.split("_")[-1] if "_" in pid else pid
+            letters.append(letter)
+    else:
+        letters = _list_profiles_with_data(learner_prefix)
+
     if not letters:
         print("  ❌ 没有找到任何有运行数据的画像")
         return None
 
-    print(f"  发现 {len(letters)} 个有数据的画像：{', '.join(letters)}")
+    max_desc = f"≤ R{max_round:02d}" if max_round is not None else "全部轮次"
+    print(f"  发现 {len(letters)} 个画像，{max_desc}：{', '.join(letters)}")
+
     profiles: list[ProfileReport] = []
     for letter in letters:
         session_dir = common.EVAL_ARTIFACTS_DIR / f"{learner_prefix}-{letter}"
-        print(f"  [profile_{letter}] 计算中...")
-        pr = _calculate_profile(letter, session_dir)
+        if not session_dir.exists():
+            print(f"  [profile_{letter}] ⚠️ 测试快照目录不存在，已跳过")
+            continue
+        rounds = _list_available_rounds(session_dir)
+        if max_round is not None:
+            rounds = [r for r in rounds if r <= max_round]
+        if not rounds:
+            print(f"  [profile_{letter}] ⚠️ 无符合条件的轮次数据，已跳过")
+            continue
+        print(f"  [profile_{letter}] 计算 {len(rounds)} 个轮次...")
+        pr = _calculate_profile(letter, session_dir, max_round=max_round)
         if pr.rounds:
             profiles.append(pr)
         else:
@@ -295,9 +428,18 @@ def generate_full_report(
         print("  ❌ 所有画像均无可用数据")
         return None
 
+    # 加载外部 LLM 评估结果
+    llm_eval_results = _load_llm_eval_results()
+    llm_eval_count = sum(
+        len(rounds) for rounds in llm_eval_results.values()
+    )
+    if llm_eval_results:
+        print(f"  发现 {llm_eval_count} 条外部 LLM 评估结果")
+
     ctx = FullReportContext(
         profiles=profiles,
         generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        llm_eval_results=llm_eval_results,
     )
     md = _render_markdown_full(ctx)
 
@@ -434,6 +576,7 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
     lines: list[str] = []
     profiles = ctx.profiles
     all_names = _all_metric_names(profiles)
+    llm_results = ctx.llm_eval_results  # 从 ctx 获取外部 LLM 结果
 
     # ── 标题与概览 ───────────────────────────────────────────────────────────
     lines.append("# 评估报告 — 完整汇总")
@@ -512,18 +655,121 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
     lines.append("---")
     lines.append("")
 
+    # ── 二-2、外部 LLM 评分横向对比 ────────────────────────────────────────
+    if llm_results:
+        lines.append("### 外部 LLM 评分横向对比（各画像跨轮平均值）")
+        lines.append("")
+        lines.append(f"_数据来源: {LLM_EVAL_RESULTS_DIR} 下的 judge_*.json 文件_")
+        lines.append("")
+
+        llm_dim_keys = [key for key, _ in LLM_SCORING_DIMENSIONS]
+        llm_dim_labels = [label for _, label in LLM_SCORING_DIMENSIONS]
+
+        # 表头：画像 | 各维度 | 总体评分
+        llm_header_cells = ["画像"]
+        llm_header_cells.extend(llm_dim_labels)
+        llm_header_cells.append("总体评分")
+        lines.append("| " + " | ".join(llm_header_cells) + " |")
+        lines.append("|---|" + "|".join("---" for _ in llm_header_cells[1:]) + "|")
+
+        # 每个画像一行：计算跨轮平均
+        for p in profiles:
+            letter = p.profile_letter
+            row_cells = [f"profile_{letter}"]
+
+            for dim_key in llm_dim_keys:
+                scores: list[float] = []
+                for rm in p.rounds:
+                    overall = _get_llm_overall_scores(
+                        letter, rm.round_num, llm_results
+                    )
+                    if overall:
+                        dim_data = overall.get(dim_key, {})
+                        score = dim_data.get("score", 0)
+                        if score > 0:
+                            scores.append(score)
+                if scores:
+                    avg = sum(scores) / len(scores)
+                    max_score = 5  # 除了 overall_score 都是 5 分制
+                    row_cells.append(f"{avg:.1f}/{max_score}")
+                else:
+                    row_cells.append("-")
+
+            # 总体评分列
+            overall_totals: list[float] = []
+            for rm in p.rounds:
+                overall = _get_llm_overall_scores(
+                    letter, rm.round_num, llm_results
+                )
+                if overall:
+                    total_data = overall.get("overall_score", {})
+                    total = total_data.get("score", 0)
+                    if total > 0:
+                        overall_totals.append(total)
+            if overall_totals:
+                avg_total = sum(overall_totals) / len(overall_totals)
+                row_cells.append(f"{avg_total:.1f}/100")
+            else:
+                row_cells.append("-")
+
+            lines.append("| " + " | ".join(row_cells) + " |")
+
+        # 总体平均行
+        grand_cells = ["**总体平均**"]
+        for dim_key in llm_dim_keys:
+            all_scores: list[float] = []
+            for p in profiles:
+                letter = p.profile_letter
+                for rm in p.rounds:
+                    overall = _get_llm_overall_scores(
+                        letter, rm.round_num, llm_results
+                    )
+                    if overall:
+                        dim_data = overall.get(dim_key, {})
+                        score = dim_data.get("score", 0)
+                        if score > 0:
+                            all_scores.append(score)
+            if all_scores:
+                grand_avg = sum(all_scores) / len(all_scores)
+                grand_cells.append(f"{grand_avg:.1f}/5")
+            else:
+                grand_cells.append("-")
+
+        # 总体评分列的总体平均
+        all_overall_totals: list[float] = []
+        for p in profiles:
+            letter = p.profile_letter
+            for rm in p.rounds:
+                overall = _get_llm_overall_scores(
+                    letter, rm.round_num, llm_results
+                )
+                if overall:
+                    total_data = overall.get("overall_score", {})
+                    total = total_data.get("score", 0)
+                    if total > 0:
+                        all_overall_totals.append(total)
+        if all_overall_totals:
+            grand_total = sum(all_overall_totals) / len(all_overall_totals)
+            grand_cells.append(f"{grand_total:.1f}/100")
+        else:
+            grand_cells.append("-")
+
+        lines.append("| " + " | ".join(grand_cells) + " |")
+        lines.append("")
+
     # ── 三、各画像详情 ───────────────────────────────────────────────────────
     lines.append("## 三、各画像详情")
     lines.append("")
     for p in profiles:
-        lines.append(f"### profile_{p.profile_letter}")
+        letter = p.profile_letter
+        lines.append(f"### profile_{letter}")
         lines.append("")
         lines.append(f"- 测试快照目录：`{p.session_dir}`")
         lines.append(f"- 轮次数：{len(p.rounds)}")
         lines.append("")
 
-        # 3.1 该画像的轮次汇总表
-        lines.append("#### 轮次汇总")
+        # 3.1 该画像的轮次汇总表（原有指标）
+        lines.append("#### 轮次汇总（规则计算指标）")
         lines.append("")
         header = "| 指标 | " + " | ".join(f"R{rm.round_num:02d}" for rm in p.rounds) + " | 平均 |"
         sep = "|---|" + "|".join("---" for _ in p.rounds) + "|---|"
@@ -559,8 +805,81 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
 
         lines.append("")
 
-        # 3.2 该画像各轮明细
-        lines.append("#### 各轮明细")
+        # 3.2 外部 LLM 评分轮次汇总
+        has_llm = any(
+            _has_llm_eval_for(letter, rm.round_num, llm_results)
+            for rm in p.rounds
+        )
+        if has_llm:
+            lines.append("#### 外部 LLM 评分轮次汇总")
+            lines.append("")
+
+            llm_dim_keys = [key for key, _ in LLM_SCORING_DIMENSIONS]
+            llm_dim_labels = [label for _, label in LLM_SCORING_DIMENSIONS]
+
+            # 表头
+            llm_header = ["指标"]
+            for rm in p.rounds:
+                llm_header.append(f"R{rm.round_num:02d}")
+            llm_header.append("平均")
+            lines.append("| " + " | ".join(llm_header) + " |")
+            lines.append("|---|" + "|".join("---" for _ in p.rounds) + "|---|")
+
+            # 各维度
+            for dim_key, dim_label in LLM_SCORING_DIMENSIONS:
+                row_cells = [f"`{dim_label}`"]
+                scores: list[float] = []
+                for rm in p.rounds:
+                    overall = _get_llm_overall_scores(
+                        letter, rm.round_num, llm_results
+                    )
+                    if overall:
+                        dim_data = overall.get(dim_key, {})
+                        score = dim_data.get("score", 0)
+                        max_score = dim_data.get("max", 5)
+                        if score > 0:
+                            row_cells.append(f"{score}/{max_score}")
+                            scores.append(score)
+                        else:
+                            row_cells.append("-")
+                    else:
+                        row_cells.append("-")
+                if scores:
+                    avg = sum(scores) / len(scores)
+                    row_cells.append(f"{avg:.1f}/5")
+                else:
+                    row_cells.append("-")
+                lines.append("| " + " | ".join(row_cells) + " |")
+
+            # 总体评分行
+            row_cells = ["`总体评分`"]
+            overall_totals: list[float] = []
+            for rm in p.rounds:
+                overall = _get_llm_overall_scores(
+                    letter, rm.round_num, llm_results
+                )
+                if overall:
+                    total_data = overall.get("overall_score", {})
+                    total = total_data.get("score", 0)
+                    max_total = total_data.get("max", 100)
+                    if total > 0:
+                        row_cells.append(f"{total}/{max_total}")
+                        overall_totals.append(total)
+                    else:
+                        row_cells.append("-")
+                else:
+                    row_cells.append("-")
+            if overall_totals:
+                avg_total = sum(overall_totals) / len(overall_totals)
+                row_cells.append(f"{avg_total:.1f}/100")
+            else:
+                row_cells.append("-")
+            lines.append("| " + " | ".join(row_cells) + " |")
+
+            lines.append("")
+
+        # 3.3 该画像各轮明细（原有指标）
+        lines.append("#### 各轮明细（规则计算指标）")
         lines.append("")
         for rm in p.rounds:
             lines.append(f"**round-{rm.round_num:02d}**")
@@ -574,6 +893,95 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
                     for k, v in m.detail.items():
                         lines.append(f"    - {k}: {_format_detail(v)}")
             lines.append("")
+
+        # 3.4 外部 LLM 评估详情
+        if has_llm:
+            lines.append("#### 外部 LLM 评估详情")
+            lines.append("")
+
+            llm_dim_keys = [key for key, _ in LLM_SCORING_DIMENSIONS]
+            llm_dim_labels = {key: label for key, label in LLM_SCORING_DIMENSIONS}
+
+            for rm in p.rounds:
+                round_num = rm.round_num
+                if not _has_llm_eval_for(letter, round_num, llm_results):
+                    continue
+
+                meta = _get_llm_metadata(letter, round_num, llm_results)
+                lines.append(f"**R{round_num:02d}** "
+                           f"({meta.get('model', '?')} @ {meta.get('timestamp', '?')})")
+                lines.append("")
+
+                # 总体评分
+                overall_scores = _get_llm_overall_scores(
+                    letter, round_num, llm_results
+                )
+                if overall_scores:
+                    overall_data = overall_scores.get("overall_score", {})
+                    lines.append(f"- **总体评分**: {overall_data.get('score', '-')}/"
+                               f"{overall_data.get('max', 100)} — "
+                               f"{overall_data.get('comment', '')}")
+
+                    # 各维度评分
+                    lines.append("")
+                    lines.append("**各维度评分**:")
+                    lines.append("")
+                    for dim_key in llm_dim_keys:
+                        dim_data = overall_scores.get(dim_key, {})
+                        score = dim_data.get("score", 0)
+                        max_score = dim_data.get("max", 5)
+                        comment = dim_data.get("comment", "")
+                        if score > 0:
+                            lines.append(f"- {llm_dim_labels.get(dim_key, dim_key)}: "
+                                       f"{score}/{max_score} — {comment}")
+
+                # 分块评估
+                chunks = _get_llm_chunk_scores(letter, round_num, llm_results)
+                if chunks:
+                    lines.append("")
+                    lines.append("**分块评分**:")
+                    lines.append("")
+                    lines.append("| 分块 | 标题 | 主要评分 |")
+                    lines.append("|---|---|---|")
+                    for chunk in chunks:
+                        chunk_idx = chunk.get("chunk_index", 0)
+                        chunk_title = chunk.get("chunk_title", f"分块{chunk_idx + 1}")
+                        chunk_eval = chunk.get("evaluation", {})
+                        chunk_scores = chunk_eval.get("scores", {})
+
+                        # 取第一个非 0 的评分
+                        first_score = "-"
+                        for dim_key in llm_dim_keys:
+                            dim_data = chunk_scores.get(dim_key, {})
+                            if dim_data.get("score", 0) > 0:
+                                first_score = (f"{llm_dim_labels.get(dim_key, dim_key)}: "
+                                             f"{dim_data['score']}/{dim_data.get('max', 5)}")
+                                break
+
+                        lines.append(
+                            f"| {chunk_idx + 1} | {chunk_title} | {first_score} |"
+                        )
+
+                # 评估总结
+                summary = _get_llm_summary(letter, round_num, llm_results)
+                if summary:
+                    lines.append("")
+                    if summary.get("highlights"):
+                        lines.append("**亮点**:")
+                        for h in summary["highlights"]:
+                            lines.append(f"- {h}")
+                    if summary.get("issues"):
+                        lines.append("")
+                        lines.append("**问题**:")
+                        for issue in summary["issues"]:
+                            lines.append(f"- {issue}")
+                    if summary.get("suggestions"):
+                        lines.append("")
+                        lines.append("**建议**:")
+                        for s in summary["suggestions"]:
+                            lines.append(f"- {s}")
+
+                lines.append("")
 
         lines.append("---")
         lines.append("")

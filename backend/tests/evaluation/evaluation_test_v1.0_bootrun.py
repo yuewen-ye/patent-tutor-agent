@@ -3,7 +3,7 @@
 Single interactive entry point:
 
   ① 主菜单（循环直到 0-退出）：
-       0-退出 / 1-删除数据 / 2-计算指标 / 3-生成报告 / 4-运行系统
+       0-退出 / 1-删除数据 / 2-计算指标 / 3-生成报告 / 4-运行系统 / 5-外部LLM评估
   ② 依据选择列出可操作的画像（删除只列有运行数据的，运行/指标/报告列全部）
   ③ 选择画像（删除可多选，其余只能单选）
   ④ 执行：
@@ -14,6 +14,7 @@ Single interactive entry point:
                     1-运行初始化画像（运行第0轮，即首轮课程生成）
                     2-运行系统（输入运行到第n轮，自动循环：灌输全对答案+新一轮课程生成）
                     0-返回上层
+       5 外部LLM评估 → 使用独立LLM对产物进行评价 → 返回主菜单
 """
 
 from __future__ import annotations
@@ -24,7 +25,8 @@ from pathlib import Path
 
 _EVAL_DIR = Path(__file__).resolve().parent
 _PROGRAM_DIR = _EVAL_DIR / "program"
-for _p in (_EVAL_DIR, _PROGRAM_DIR):
+_LLM_DIR = _EVAL_DIR / "LLM"
+for _p in (_EVAL_DIR, _PROGRAM_DIR, _LLM_DIR):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
@@ -78,7 +80,7 @@ def _next_round_idx(letter: str, *, learner_prefix: str = "multi") -> int:
 # ── prompts ─────────────────────────────────────────────────────────────────
 
 def _prompt_main_menu() -> str:
-    """① 主菜单：0-退出 / 1-删除 / 2-计算指标 / 3-生成报告 / 4-运行。"""
+    """① 主菜单：0-退出 / 1-删除 / 2-计算指标 / 3-生成报告 / 4-运行 / 5-外部LLM评估。"""
     print("\n" + "=" * 60)
     print("请选择操作模式：")
     print("  0 — 退出")
@@ -86,13 +88,14 @@ def _prompt_main_menu() -> str:
     print("  2 — 计算指标")
     print("  3 — 生成报告")
     print("  4 — 运行系统")
+    print("  5 — 外部LLM评估")
     while True:
         raw = input("→ 选择: ").strip()
-        if raw in {"0", "1", "2", "3", "4"}:
+        if raw in {"0", "1", "2", "3", "4", "5"}:
             return raw
         if raw.lower() in {"exit", "quit", "q"}:
             return "0"
-        print("  请输入 0、1、2、3 或 4")
+        print("  请输入 0、1、2、3、4 或 5")
 
 
 def _prompt_profile_selection(profiles: list[str], *, multi: bool) -> list[str]:
@@ -166,18 +169,16 @@ def _list_available_rounds(session_dir: Path) -> list[int]:
 
 
 def _do_metrics(profile_ids: list[str], learner_prefix: str = "multi") -> None:
-    """④-2 计算指标：批量调用 calculate.py 计算指定轮次的全部指标。
+    """④-2 计算指标：批量调用 calculate.py 计算所有轮次的指标。
 
-    支持多画像多轮次：
-      - 画像：从主菜单多选传入
-      - 轮次：每个画像单独选（all 或 单轮）
+    支持多画像，每个画像默认计算所有可用轮次。
     """
     for pid in profile_ids:
         _do_metrics_one(pid, learner_prefix=learner_prefix)
 
 
 def _do_metrics_one(profile_id: str, learner_prefix: str = "multi") -> None:
-    """单个画像的指标计算。"""
+    """单个画像的指标计算（默认所有轮次）。"""
     letter = common.profile_letter_from_id(profile_id)
 
     # 1. 查找测试快照目录（multi-{letter}）
@@ -192,25 +193,10 @@ def _do_metrics_one(profile_id: str, learner_prefix: str = "multi") -> None:
         print(f"  ❌ 测试快照目录中无轮次数据: {session_dir}")
         return
 
-    # 3. 选择轮次
+    # 3. 默认计算所有轮次
+    rounds_to_calc = available_rounds
     print(f"\n[{profile_id}] 可用轮次: {', '.join(f'round-{r:02d}' for r in available_rounds)}")
-    while True:
-        raw = input(f"→ 选择轮次（1-{available_rounds[-1]}，all 计算全部，exit 返回）: ").strip().lower()
-        if raw in {"exit", "quit", "q"}:
-            return
-        if raw == "all":
-            rounds_to_calc = available_rounds
-            break
-        try:
-            r = int(raw)
-        except ValueError:
-            print("  请输入数字或 all")
-            continue
-        if r not in available_rounds:
-            print(f"  轮次 {r} 不在可用列表中")
-            continue
-        rounds_to_calc = [r]
-        break
+    print(f"[{profile_id}] 默认计算所有 {len(rounds_to_calc)} 个轮次")
 
     # 4. 逐轮计算
     all_results: list[calculate.RoundMetrics] = []
@@ -254,17 +240,186 @@ def _do_metrics_one(profile_id: str, learner_prefix: str = "multi") -> None:
 
 
 def _do_report(learner_prefix: str = "multi") -> None:
-    """④-3 生成报告：调用 report.generate_full_report 汇总所有画像所有轮次。"""
-    print("\n正在生成完整评估报告（所有画像）...")
+    """④-3 生成报告：选择最大轮次，只计算有 ≤ 该轮次产物的画像。"""
+    # 1. 先列出所有有数据的画像及其最大轮次
+    profiles_with_data = _profiles_with_run_data()
+    if not profiles_with_data:
+        print("  ❌ 没有找到任何有运行数据的画像")
+        return
+
+    # 收集所有画像的轮次信息
+    profile_rounds: dict[str, list[int]] = {}
+    all_max_round = 0
+    for pid in profiles_with_data:
+        letter = common.profile_letter_from_id(pid)
+        session_dir = common.EVAL_ARTIFACTS_DIR / f"{learner_prefix}-{letter}"
+        rounds = _list_available_rounds(session_dir)
+        profile_rounds[pid] = rounds
+        if rounds:
+            all_max_round = max(all_max_round, max(rounds))
+
+    if all_max_round == 0:
+        print("  ❌ 所有画像均无可用轮次数据")
+        return
+
+    # 显示各画像轮次信息
+    print("\n各画像可用轮次：")
+    for pid, rounds in profile_rounds.items():
+        rounds_str = ", ".join(f"R{r:02d}" for r in rounds) or "无"
+        print(f"  {pid}: {rounds_str}")
+
+    # 2. 选择最大轮次
+    print(f"\n当前已运行的最大轮次: R{all_max_round:02d}")
+    print(f"可选: all（使用全部轮次）或 1 到 {all_max_round}（只使用 ≤ 该轮次的数据）")
+    while True:
+        raw = input(f"→ 选择参与生成的最大轮次（all 或 1-{all_max_round}，exit 返回）: ").strip().lower()
+        if raw in {"exit", "quit", "q"}:
+            return
+        if raw == "all":
+            max_round = None  # None 表示全部
+            break
+        try:
+            max_round = int(raw)
+        except ValueError:
+            print("  请输入 all 或数字")
+            continue
+        if max_round < 1 or max_round > all_max_round:
+            print(f"  请输入 1-{all_max_round} 或 all")
+            continue
+        break
+
+    # 3. 过滤符合条件的画像（必须有至少 1 个 ≤ max_round 的轮次）
+    selected_profiles = []
+    for pid, rounds in profile_rounds.items():
+        if max_round is None:
+            # all: 所有有数据的画像都参与
+            if rounds:
+                selected_profiles.append(pid)
+        else:
+            # 必须有至少 1 个 ≤ max_round 的轮次
+            has_eligible = any(r <= max_round for r in rounds)
+            if has_eligible:
+                selected_profiles.append(pid)
+
+    if not selected_profiles:
+        max_desc = f"≤ R{max_round:02d}" if max_round else "全部"
+        print(f"  ❌ 没有找到任何有{max_desc}轮次数据的画像")
+        return
+
+    max_desc = f"≤ R{max_round:02d}" if max_round else "全部"
+    print(f"\n参与报告生成的画像（{len(selected_profiles)} 个，{max_desc}）:")
+    for pid in selected_profiles:
+        rounds = profile_rounds[pid]
+        filtered = [r for r in rounds if max_round is None or r <= max_round]
+        print(f"  {pid}: {', '.join(f'R{r:02d}' for r in filtered)}")
+
+    # 4. 调用 report.generate_full_report
+    print("\n正在生成完整评估报告...")
     try:
-        output = report.generate_full_report(learner_prefix=learner_prefix)
+        output = report.generate_full_report(
+            learner_prefix=learner_prefix,
+            max_round=max_round,
+            profile_ids=selected_profiles,
+        )
     except Exception as exc:  # noqa: BLE001
         print(f"  ❌ 异常: {type(exc).__name__}: {exc}")
         return
     if output is None:
-        print("  ❌ 生成失败，请检查是否有画像已运行")
+        print("  ❌ 生成失败，请检查画像产物")
         return
     print(f"  ✅ 完整报告已生成: {output}")
+
+
+# ── external LLM evaluate ────────────────────────────────────────────────────
+
+def _do_llm_evaluate(profile_ids: list[str], *, force: bool = False) -> None:
+    """⑤ 外部 LLM 评估：使用独立 LLM 对产物进行评价。"""
+    try:
+        import evaluator_LLM as llm_evaluator  # noqa: WPS433
+    except ImportError as exc:
+        print(f"  ❌ 导入 evaluator_LLM 失败: {exc}")
+        print("  请确保已安装依赖: uv add pyyaml requests")
+        return
+
+    try:
+        config = llm_evaluator.load_config()
+    except Exception as exc:  # noqa: BLE001
+        print(f"  ❌ 加载配置失败: {exc}")
+        print("  请检查 config/external_llm.yaml 配置文件")
+        return
+
+    model = config.get("llm", {}).get("model", "unknown")
+    print(f"\n{'='*60}")
+    print(f"外部 LLM 评估")
+    print(f"{'='*60}")
+    print(f"  模型: {model}")
+    print(f"  画像: {len(profile_ids)} 个")
+    print(f"  强制重跑: {force}")
+    print(f"{'='*60}")
+
+    success_count = 0
+    skip_count = 0
+    fail_count = 0
+
+    for pid in profile_ids:
+        letter = common.profile_letter_from_id(pid)
+        rounds = _list_available_rounds(common.EVAL_ARTIFACTS_DIR / f"multi-{letter}")
+
+        if not rounds:
+            print(f"\n📋 {pid}: 无可用轮次，跳过")
+            skip_count += 1
+            continue
+
+        print(f"\n📋 {pid} ({len(rounds)} 个轮次):")
+        for r in rounds:
+            print(f"  R{r:02d}", end="")
+
+        # 选择轮次
+        print(f"\n  可选: all（全部）或 1 到 {max(rounds)}")
+        while True:
+            raw = input(f"  → 选择轮次（all 或数字，exit 跳过）: ").strip().lower()
+            if raw in {"exit", "quit", "q"}:
+                break
+            if raw == "all":
+                eval_rounds = rounds
+                break
+            try:
+                r = int(raw)
+            except ValueError:
+                print("  请输入 all 或数字")
+                continue
+            if r not in rounds:
+                print(f"  轮次 R{r:02d} 不存在")
+                continue
+            eval_rounds = [r]
+            break
+
+        if raw in {"exit", "quit", "q"}:
+            skip_count += len(rounds)
+            continue
+
+        for r in eval_rounds:
+            print(f"\n  评估 R{r:02d}...")
+            try:
+                result = llm_evaluator.evaluate_profile_round(
+                    letter, r, config, force=force
+                )
+                if result is None:
+                    skip_count += 1
+                else:
+                    success_count += 1
+            except Exception as exc:  # noqa: BLE001
+                print(f"  ❌ 异常: {type(exc).__name__}: {exc}")
+                fail_count += 1
+
+    print(f"\n{'='*60}")
+    print(f"外部 LLM 评估完成")
+    print(f"{'='*60}")
+    print(f"  ✅ 成功: {success_count}")
+    print(f"  ⏭️  跳过: {skip_count}")
+    print(f"  ❌ 失败: {fail_count}")
+    print(f"  📁 结果目录: backend/tests/evaluation/LLM/results/")
+    print(f"{'='*60}")
 
 
 # ── run ─────────────────────────────────────────────────────────────────────
@@ -563,7 +718,7 @@ def main(argv: list[str] | None = None) -> int:
     common.ensure_dotenv()
     args = _build_parser().parse_args(argv)
 
-    # 主菜单循环：0 才退出；1/2/3/4 执行完都回到主菜单
+    # 主菜单循环：0 才退出；1/2/3/4/5 执行完都回到主菜单
     while True:
         choice = _prompt_main_menu()
         if choice == "0":
@@ -575,10 +730,10 @@ def main(argv: list[str] | None = None) -> int:
             print("\n报告生成完成，返回主菜单。")
             continue
 
-        # 1=删除数据 / 2=计算指标 → 只列有运行数据的，可多选
+        # 1=删除数据 / 2=计算指标 / 5=外部LLM评估 → 只列有运行数据的，可多选
         # 4=运行系统 → 列全部画像，单选
-        multi_select = choice in {"1", "2"}
-        if choice in {"1", "2"}:
+        multi_select = choice in {"1", "2", "5"}
+        if choice in {"1", "2", "5"}:
             profiles = _profiles_with_run_data()
             print(f"\n有运行数据的画像（{len(profiles)} 个）：")
         else:
@@ -606,6 +761,10 @@ def main(argv: list[str] | None = None) -> int:
                 artifact_dir=args.artifact_dir,
                 learner_prefix=args.learner_prefix,
             )
+        elif choice == "5":
+            print(f"\n将进行外部 LLM 评估：{', '.join(selected)}")
+            _do_llm_evaluate(selected)
+            print("\n外部 LLM 评估完成，返回主菜单。")
 
 
 if __name__ == "__main__":

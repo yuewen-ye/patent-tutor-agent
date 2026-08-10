@@ -1,0 +1,68 @@
+# 外部 LLM 评估配置文件（示例）
+# 复制此文件为 external_llm.yaml 并填入实际配置
+
+# LLM 配置
+llm:
+  provider: "gpt"  # 可选: deepseek, qwen, glm, gpt
+  model: "gpt-5.5"  # 根据 Krill-AI 支持的模型选择
+  base_url: "https://api-slb.krill-ai.net/codex/v1"  # Krill-AI 网关
+  # API Key：支持直接填写或使用环境变量
+  # 方式 1: 直接填写（不推荐 push 到远程）
+  # api_key: "nb_your_api_key_here"
+  # 方式 2: 使用环境变量（推荐）
+  api_key: "${EXTERNAL_LLM_API_KEY}"
+  temperature: 0.0
+  max_tokens: 4096
+  timeout: 120  # 秒
+  retry: 2      # 失败重试次数
+
+# 分块配置
+chunking:
+  strategy: "by_section"  # 按 ## 标题分块
+  max_tokens_per_chunk: 4000
+  auto_whole_threshold: 4000  # 低于此 token 数直接整体评估
+
+# 输入产物配置
+inputs:
+  # 评估时读取的产物目录结构（相对于 backend/ 目录）
+  artifacts_dir: "tests/evaluation/artifacts"
+  # 需要的文件
+  required_files:
+    - "course_package.md"
+    - "learning_path.md"
+
+# 输出配置
+output:
+  dir: "tests/evaluation/LLM/results"
+  naming: "judge_{model}_{profile}_{round:02d}.json"
+  overwrite: false  # 不覆盖已有结果（支持重跑失败的）
+
+# 评分维度配置（供本地汇总时参考）
+scoring_dimensions:
+  - key: "goal_coverage"
+    label: "目标覆盖度"
+    description: "课程是否覆盖了学习路径中的学习目标"
+  - key: "factual_accuracy"
+    label: "事实/法律准确性"
+    description: "法条引用、案例描述是否准确"
+  - key: "case_accuracy"
+    label: "案例准确性"
+    description: "案例描述是否真实、事实是否正确"
+  - key: "factual_consistency"
+    label: "事实一致性"
+    description: "课程内部陈述是否前后一致"
+  - key: "pedagogical_clarity"
+    label: "教学清晰度"
+    description: "讲解逻辑是否通顺、是否易懂"
+  - key: "difficulty_fit"
+    label: "难度适配性"
+    description: "题目难度是否符合学习路径要求"
+  - key: "learner_fit"
+    label: "学员匹配度"
+    description: "是否考虑学员的薄弱点"
+  - key: "knowledge_completeness"
+    label: "知识完整性"
+    description: "知识点覆盖是否完整"
+  - key: "weakness_addressing"
+    label: "薄弱点针对性"
+    description: "是否针对性解决薄弱点"
