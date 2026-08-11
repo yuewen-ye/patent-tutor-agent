@@ -494,7 +494,7 @@ def test_feedback_mode_reuses_diagnosis_feedback_and_skips_course_agents(
 def test_rejected_judge_reintegrates_until_accepts(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """judge 判 revise 时应打回 expert_a 重新整合（最终稿被修正），二审 accept 后完成。"""
+    """judge 判 revise 时应打回 expert_a 重新整合（最终稿被修正），复审 accept 后完成，judge 至多 3 轮。"""
     monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
     llm = WorkflowLLMClient()
     rejected = {
@@ -520,12 +520,12 @@ def test_rejected_judge_reintegrates_until_accepts(
         "disputes": [],
         "rationale": "修正后通过",
     }
-    llm.queues["judge"] = [rejected, rejected, rejected, accepted]
+    llm.queues["judge"] = [rejected, rejected, accepted]
     # 重新整合需要 expert_a 多一次 integration 响应（基于原整合稿修正）
     integrated_revised = dict(llm.queues["expert_a"][3])
     integrated_revised["teaching_content"] = "修正后的课程正文（已补充法条与案例依据）"
     llm.queues["expert_a"].append(integrated_revised)
-    llm.queues["expert_a"].extend([dict(integrated_revised), dict(integrated_revised)])
+    llm.queues["expert_a"].append(dict(integrated_revised))
 
     artifact_root = tmp_path / "artifacts"
     state = run_workflow(
@@ -539,10 +539,10 @@ def test_rejected_judge_reintegrates_until_accepts(
     assert "workflow_status" in state
     assert state["workflow_status"] == "completed"
     assert "judge_attempts" not in state
-    # 3 次不通过后，第 4 次通过 = 4 次 judge
-    assert llm.agents.count("judge") == 4
-    # 首轮 4 次，再加上 3 次重新整合
-    assert llm.agents.count("expert_a") == 7
+    # 2 次不通过后，第 3 次通过 = 3 次 judge
+    assert llm.agents.count("judge") == 3
+    # 首轮 4 次，再加上 2 次重新整合
+    assert llm.agents.count("expert_a") == 6
     # 最终稿被修改：course_package 是重新整合的修正版
     assert state["course_package"]["teaching_content"] == (
         "修正后的课程正文（已补充法条与案例依据）"
