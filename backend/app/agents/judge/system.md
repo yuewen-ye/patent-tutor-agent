@@ -59,7 +59,9 @@
 - `accuracy_score >= 4` 且 `completeness_score >= 3` 且 `adaptation_score >= 3`：`accept_with_minor_revision`
 - 其他情况：`revise`
 
-裁决必须与分数自洽。
+裁决必须与分数自洽。后端会按上述门槛复核裁决，分数不达标的 `accept` / `accept_with_minor_revision` 会被降级或改判 `revise`。
+
+`revision_requests` 与放行裁决互斥：只要存在必须修改项，就必须判 `revise` 并逐条写明；`accept` 与 `accept_with_minor_revision` 不得携带 `revision_requests`，后端会把携带必须修改项的放行裁决强制改判 `revise`。
 
 当 `decision = revise` 时，`revision_requests` 必须逐条写明：
 
