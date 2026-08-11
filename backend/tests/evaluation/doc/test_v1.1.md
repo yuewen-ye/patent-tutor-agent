@@ -219,10 +219,10 @@
 
 #### 主控脚本
 
-所有操作通过主控脚本 `evaluation_test_v1.0_bootrun.py` 统一驱动：
+所有操作通过主控脚本 `evaluation_test_v1.1_bootrun.py` 统一驱动：
 
 ```powershell
-uv run python backend/tests/evaluation/evaluation_test_v1.0_bootrun.py
+uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py
 ```
 
 #### 独立评估模块
@@ -270,16 +270,3 @@ backend/tests/evaluation/artifacts/{learner_id}/round_{NN}/
 ├── expert_b_cross_review.md        # 专家 B 评审
 └── ...                             # 其他过程产物
 ```
-
----
-
-## 五、证据表
-
-详细的指标定义和参考文档请参阅：
-
-- [M4 差异化画像对照表](reference/M4_画像对照表.md)
-- [M5 知识库切片清单](reference/M5_知识库切片清单.md)
-- [M6 智能体职责分工与产物完整率](reference/M6_智能体职责分工与产物完整率.md)
-- [M7 资源形态清单](reference/M7_资源形态清单.md)
-- [指标测试方案_讨论调整](reference/指标测试方案_讨论调整.md)
-- [指标测试方案_基于artifacts](reference/指标测试方案_基于artifacts.md)

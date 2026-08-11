@@ -1,6 +1,6 @@
 # 评估测试操作手册
 
-本文件描述如何使用主控脚本 `evaluation_test_v1.0_bootrun.py` 完成评估测试的全流程操作，包括运行系统、删除数据、计算指标、生成报告四个模块。
+本文件描述如何使用主控脚本 `evaluation_test_v1.1_bootrun.py` 完成评估测试的全流程操作，包括运行系统、删除数据、计算指标、生成报告及外部LLM评估五大模块。
 
 ---
 
@@ -11,9 +11,6 @@
 ```powershell
 # 项目主依赖
 uv sync
-
-# 评估脚本独立 MySQL 驱动（非项目主依赖，清理数据库用）
-uv pip install mysql-connector-python
 ```
 
 ### 1.2 配置 MySQL
@@ -33,7 +30,11 @@ uv pip install mysql-connector-python
 在 `.env` 文件中配置至少一个 Provider 的 API Key：
 Provider 的 `base_url`、`model_name`、`temperature` 等在 `config/agents.yaml` 中配置。
 
-### 1.4 配置 UTF-8 编码（Windows 必做）
+### 1.4 配置外部 LLM 评估（可选）
+
+如需运行外部 LLM 评估（M1/M7/M8/M9），需在 `backend/tests/evaluation/LLM/config/external_llm.yaml` 中配置外部 LLM 的 API Key，或通过环境变量 `EXTERNAL_LLM_API_KEY` 设置。
+
+### 1.5 配置 UTF-8 编码（Windows 必做）
 
 每次打开 PowerShell 后先执行：
 ```powershell
@@ -50,9 +51,8 @@ $env:PYTHONUTF8 = 1
 
 ```powershell
 $env:PYTHONUTF8 = 1
-uv run python backend/tests/evaluation/evaluation_test_v1.0_bootrun.py
+uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py
 ```
-或在IDE中直接运行 `evaluation_test_v1.0_bootrun.py`。
 
 启动后进入**主菜单循环**：
 
@@ -64,20 +64,23 @@ uv run python backend/tests/evaluation/evaluation_test_v1.0_bootrun.py
   2 — 计算指标
   3 — 生成报告
   4 — 运行系统
+  5 — 外部LLM评估
 → 选择:
 ```
 
-主菜单 5 个选项的功能定位：
+主菜单选项的功能定位：
 
 | 选项 | 功能 | 可选画像范围 | 选择方式 |
 |------|------|-------------|---------|
 | 0 | 退出脚本 | — | — |
 | 1 | 删除选中画像的全部运行数据（文件 + MySQL） | 仅列出有运行痕迹的画像 | 多选（`-` 分隔，如 `1-3-5`） |
-| 2 | 计算选中画像各轮次的三项评估指标 | 仅列出有运行痕迹的画像 | 多选（`-` 分隔） |
+| 2 | 计算选中画像各轮次的评估指标 | 仅列出有运行痕迹的画像 | 多选（`-` 分隔） |
 | 3 | 一键生成所有画像所有轮次的完整评估报告 | 无需选择画像 | 直接执行 |
 | 4 | 对单个画像运行系统：初始化画像 + 多轮 teach/feedback 循环 | 全部 10 个画像 | 单选（单个数字） |
+| 5 | 使用外部 LLM 对产物进行评价（M1/M7/M8/M9） | 列出有运行痕迹的画像 | 单选（单个数字） |
 
-> **注意**：3-生成报告不经过画像选择，直接扫描所有已运行的画像产物。
+> **注意**：选项 3（生成报告）不经过画像选择，直接扫描所有已运行的画像产物。
+> **注意**：选项 5（外部LLM评估）用于补充评估系统自身难以计算的指标，需在完成模块 4 和 2 之后执行。
 
 ---
 
@@ -105,14 +108,7 @@ uv run python backend/main.py
 
   1 — profile_M
   2 — profile_W
-  3 — profile_H
-  4 — profile_S
-  5 — profile_C
-  6 — profile_G
-  7 — profile_T
-  8 — profile_B
-  9 — profile_P
-  10 — profile_R
+  ...
 → 选择画像（单选，exit 退出）: 8
 ```
 
@@ -135,8 +131,6 @@ uv run python backend/main.py
   0 — 返回上层
 → 选择:
 ```
-
----
 
 ### 3.3 子菜单 1：运行初始化画像（首轮课程生成）
 
@@ -164,8 +158,6 @@ uv run python backend/main.py
 
 成功后回到子菜单。
 
----
-
 ### 3.4 子菜单 2：运行系统（多轮自动循环）
 
 **适用场景**：首轮完成后，批量完成第 2、3、…、n 轮学习。
@@ -191,61 +183,10 @@ uv run python backend/main.py
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [B] 开始 R02（灌输 R01 答案 + 生成 R02 课程）
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-▶ 步骤 1/2：灌输 R01 全对答案
-[learn_sim/B] 正在从最新 teach session 提取题目...
-  teach session: 781337c6...
-  当前教学节点: patentability-substantive
-  1. （backward_review）新颖性与现有技术的区别（难度L1）→ skill: novelty
-  2. （core）抵触申请的判断要点（难度L2）→ skill: conflicting-application
-  3. （extension）等同原则适用场景（难度L3）→ skill: doctrine-of-equivalents
-
-[learn_sim/B] R01 全部答对 3/3 题，提交中...
-  ✅ 反馈完成 — 3/3 正确, node=patentability-substantive, feedback_session=b474cbac...
-  产物: D:\...\artifacts\multi-B\round-01\feedback
-
-▶ 步骤 2/2：生成 R02 课程
-[course_gen/B] 后续课程生成 R02...
-  ✅ 课程生成成功 — node: patentability-substantive → patent-examination
-  产物: D:\...\artifacts\multi-B\round-02
-
-✅ R02 完成
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[B] 开始 R03（灌输 R02 答案 + 生成 R03 课程）
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-...（同上流程）
-
-============================================================
-[B] 全部完成：R02 → R03
-============================================================
+...
 ```
 
 任何一步失败都会立即停止后续运行并显示错误信息。
-
----
-
-### 3.5 灌输答案的详细逻辑
-
-灌输答案是多轮循环的关键步骤，对应模块 `eval_learn_sim.infuse_learning_results()`：
-
-| 子步骤 | 动作 |
-|--------|------|
-| 1 | MySQL 查询该 learner 的最新 completed teach 会话 |
-| 2 | `GET /sessions/{id}` 取完整 state，从 `course_package.interactive_questions` 提取题目列表 |
-| 3 | 构造答题响应：`correct_count = total`，每道题的 `answer` 设为题目的 `correct_answer` |
-| 4 | `POST /sessions/{course_session_id}/exercise-responses` 提交答案，触发 feedback 会话 |
-| 5 | 轮询 feedback 会话直到 completed |
-| 6 | 保存反馈产物到 `round-{NN}/feedback/` |
-
-提交的答题格式与后端 API 契约完全匹配：
-```json
-{
-  "question_id": "Q-001",
-  "skill_id": "novelty",
-  "answer": "A"
-}
-```
 
 ---
 
@@ -269,13 +210,13 @@ backend/tests/evaluation/artifacts/
 |--------|------|------|
 | `session_snapshot.json` | `GET /sessions/{session_id}` 返回的完整 StateDict | 指标计算：取 state 各字段原始值 |
 | `learner_memory.json` | `GET /learners/{learner_id}` 返回的学习者完整记忆 | 指标计算：BKT 掌握度、学习计划、画像快照 |
-| `course_package.md` | 系统产物 `artifacts/sessions/{sid}/round-{NN}/course_package.md` | **指标计算核心文件**：知识点覆盖率（知识节点）、幻觉率（题目正确性）、匹配度（难度/模块/情感） |
+| `course_package.md` | 系统产物 | **指标计算核心文件**：知识点覆盖率、幻觉率、匹配度、资源形态、异议闭环等均依赖此文件 |
 | `learner_profile.md` | 从 `learner_memory.latest_profile._raw_md` 提取 | 匹配度计算：学习风格、情感状态、学习目标、薄弱点 |
-| `judge_report.md` | 系统产物 `artifacts/sessions/{sid}/round-{NN}/judge_report.md` | 幻觉率计算：准确性评分、决策结果 |
-| `learning_path.md` | 系统产物 `artifacts/sessions/{sid}/path/learning_path.md` | 匹配度计算：难度上限分阶、当前节点路径 |
-| `dual_axis_snapshot.md` | 系统产物 `artifacts/sessions/{sid}/path/dual_axis_snapshot.md` | 覆盖率参考：当前混淆风险快照 |
-| `expert_a_cross_review.md` | 系统产物 `artifacts/sessions/{sid}/round-{NN}/expert_a_cross_review.md` | 幻觉率计算：专家 A 标记的错误/异议数 |
-| `expert_b_cross_review.md` | 系统产物 `artifacts/sessions/{sid}/round-{NN}/expert_b_cross_review.md` | 幻觉率计算：专家 B 标记的错误/异议数 |
+| `judge_report.md` | 系统产物 | 幻觉率计算：准确性评分、决策结果 |
+| `learning_path.md` | 系统产物 | 匹配度计算：难度上限分阶、当前节点路径 |
+| `dual_axis_snapshot.md` | 系统产物 | 覆盖率参考：当前混淆风险快照 |
+| `expert_a_cross_review.md` | 系统产物 | 幻觉率计算、异议闭环率：专家 A 标记的错误/异议数 |
+| `expert_b_cross_review.md` | 系统产物 | 幻觉率计算、异议闭环率：专家 B 标记的错误/异议数 |
 
 ### 4.3 Feedback 子目录产物清单
 
@@ -285,13 +226,19 @@ backend/tests/evaluation/artifacts/
 |--------|------|------|
 | `session_snapshot.json` | feedback 会话的完整 StateDict | 审计：feedback 会话状态 |
 | `learner_memory.json` | feedback 完成后的学习者记忆 | 对比：BKT 掌握度变化、画像更新 |
-| `feedback_report.md` | 系统产物 `artifacts/sessions/{fsid}/feedback/feedback_report.md` | 学习效果验证：反馈内容、薄弱点更新建议 |
-| `grading_report.md` | 系统产物 `artifacts/sessions/{fsid}/feedback/grading_report.md` | 学习效果验证：题目对错、得分、每题解析 |
-| `learner_profile_update.md` | 系统产物 `artifacts/sessions/{fsid}/feedback/learner_profile_update.md` | 画像演进：本轮答题后画像更新的具体字段 |
+| `feedback_report.md` | 系统产物 | 学习效果验证：反馈内容、薄弱点更新建议 |
+| `grading_report.md` | 系统产物 | 学习效果验证：题目对错、得分、每题解析 |
+| `learner_profile_update.md` | 系统产物 | 画像演进：本轮答题后画像更新的具体字段；M11 动态迭代触发率依赖此文件 |
 
-### 4.4 系统侧完整产物
+### 4.4 外部 LLM 评估产物
 
-除上述评估目录外，后端同时在 `artifacts/sessions/{session_id}/` 下生成完整工作流产物（含每步节点日志、manifest.json、workflow.log.jsonl 等），如需排查错误可前往此处查看。
+运行外部 LLM 评估（模块 5）后，会在 `backend/tests/evaluation/LLM/results/` 下生成额外产物：
+
+| 文件名 | 来源 | 用途 |
+|--------|------|------|
+| `judge_{model}_{profile}_{round:02d}.json` | 外部 LLM 评估结果 | M1 幻觉率、M9 知识溯源可验证率的原始数据 |
+| `resource_morphology_{profile}_{round:02d}.json` | 外部 LLM 评估结果 | M7 资源形态评估的原始数据 |
+| `objection_loop_{profile}_{round:02d}.json` | 外部 LLM 评估结果 | M8 异议闭环率的原始数据 |
 
 ---
 
@@ -316,31 +263,20 @@ backend/tests/evaluation/artifacts/
 | 系统产物文件 | `artifacts/eval-{letter}/`、`artifacts/sessions/eval-{letter}/` |
 | 状态快照文件 | `backend/tests/evaluation/results/raw/{profile_id}_state.json` |
 | MySQL 记录 | learner 全部相关记录：profile、BKT mastery、learning plan、session、events、audit events |
+| 外部 LLM 评估结果 | `backend/tests/evaluation/LLM/results/` 下对应的 JSON 文件 |
 
 **保留不删**：
 - `profile_{X}.json`（画像问卷数据）
 - `expected_{X}_{NN}.json`（预设答案）
-
-控制台输出示例：
-```
-将删除 2 个画像的运行数据：profile_B, profile_M
-
-[profile_B] 正在删除运行数据...
-[profile_B] ✅ 删除成功
-
-[profile_M] 正在删除运行数据...
-[profile_M] ✅ 删除成功
-
-删除完成，返回主菜单。
-```
+- `backend/tests/evaluation/results/` 下的汇总报告（如有）
 
 ---
 
 ## 六、模块 2：计算指标
 
-**适用场景**：所有轮次运行完成、且对应轮次的 `expected_*.json` 已编写完毕后，计算三项评估指标。
+**适用场景**：所有轮次运行完成、且对应轮次的 `expected_*.json` 已编写完毕后，计算各项评估指标。
 
-主菜单选 2 后，列出所有有运行痕迹的画像（同模块 1），可多选：
+主菜单选 2 后，列出所有有运行痕迹的画像，可多选：
 
 ```
 → 选择画像（多选，用 '-' 分隔（如 1-3-5），exit 退出）: 1
@@ -357,39 +293,28 @@ backend/tests/evaluation/artifacts/
 - `all` — 计算全部已有轮次（推荐）
 - 单个数字 — 只计算某一轮（例如 `2`）
 
-然后逐轮输出计算结果：
+然后逐轮输出计算结果。计算的指标包括：
 
-```
-──────────────────────────────────────────────────────────
-[profile_B] 计算 round-01 ...
+1.  **指标一：幻觉率 — 系统自评**
+    *   专家互评异议率
+    *   裁判准确性评分
+2.  **指标二：匹配度**
+    *   难度符合度
+    *   资源形态评估（需先完成模块 5 的 M7 评估）
+3.  **指标三：覆盖率**
+    *   本节知识点覆盖率
+    *   薄弱点命中率
+    *   混淆对覆盖率
+4.  **指标四：幻觉率 — 外部 LLM**（需先完成模块 5 的 M1/M9 评估）
+    *   专业知识谬误率
+    *   知识溯源可验证率
+5.  **指标五：对话质量**（需先完成模块 5 的 M8 评估）
+    *   异议闭环率
+    *   动态迭代触发率
 
-指标一：知识点覆盖率
-  本节知识点覆盖率  :  85.7%   （6 / 7 section_kcs 命中）
-  薄弱点命中率      :  66.7%   （2 / 3 weakness_kcs 命中）
-  混淆风险覆盖率    :  50.0%   （1 / 2 confusable_pairs 命中）
+> **注意**：如果相关的外部 LLM 评估结果不存在，对应的指标项会标记为"未评估"或使用脚本估算值。
 
-指标二：幻觉率
-  专家互评异议率    :  12.5%   （🔴2 + 🟡3 / 总批注40）
-  裁判准确性评分    :   4 / 5
-  裁判决策通过率    : 100.0%   （accept 1 轮 / 共 1 轮）
-
-指标三：用户画像匹配度
-  难度符合度        : 100.0%   （3/3 题难度 ≤ 学员上限）
-  学习风格匹配度    :  80.0%   （4/5 自适应板块匹配）
-  情感使用度    :  33.3%   （1/3 模块为情感支持型）
-  学习目标匹配度    :  66.7%   （2/3 目标领域覆盖）
-```
-
-多轮（>1 轮）计算完成后，还会输出算术平均值汇总：
-
-```
-============================================================
-[profile_B] 多轮汇总（算术平均）
-============================================================
-  本节知识点覆盖率  :  82.1%  (各轮: [85.7, 78.6, 82.1])
-  薄弱点命中率      :  66.7%  (各轮: [66.7, 66.7, 66.7])
-  ...
-```
+多轮（>1 轮）计算完成后，还会输出算术平均值汇总。
 
 ---
 
@@ -403,83 +328,66 @@ backend/tests/evaluation/artifacts/
 → 选择: 3
 
 正在生成完整评估报告（所有画像）...
-  ✅ 完整报告已生成: D:\...\backend\tests\evaluation\results\reports\evaluation_report_v1.0_20260805.md
+  ✅ 完整报告已生成: D:\...\backend\tests\evaluation\results\reports\evaluation_report_v1.1_YYYYMMDD.md
 ```
 
 报告内容包含：
-- 全部画像 × 全部轮次的九项指标（3 大维度 × 3 子项）详细结果表
-- 各画像多轮变化趋势（难度曲线、覆盖率变化、匹配度变化）
-- 跨画像横向对比（不同知识水平/学习风格的表现差异）
-- 系统整体表现（所有画像所有轮次的九项指标总平均）
+- 全部画像 × 全部轮次的所有指标详细结果表
+- 各画像多轮变化趋势
+- 跨画像横向对比
+- 系统整体表现
 
 ---
 
-## 八、`expected_*.json` 预设答案编写（覆盖率指标依赖）
+## 八、模块 5：外部 LLM 评估
 
-**知识点覆盖率**三项子指标（本节覆盖率、薄弱点命中率、混淆风险覆盖率）的计算依赖对应轮次的预设答案文件。
+**适用场景**：补充评估系统自身难以计算的指标（M1、M7、M8、M9）。
 
-### 8.1 编写时机
+### 8.1 独立运行方式
 
-**每轮课程生成完成后、运行模块 2（计算指标）之前**，编写该轮的预设答案。
+外部 LLM 评估可独立运行，也可通过主菜单调用。独立运行方式如下：
 
-**编写顺序**：
-```
-运行模块 4（生成 R01 课程）
-    → 查看 round-01/learning_path.md + dual_axis_snapshot.md
-    → 编写 expected_B_01.json
-运行模块 4（生成 R02 课程）
-    → 查看 round-02/learning_path.md + dual_axis_snapshot.md
-    → 编写 expected_B_02.json
-...（逐轮编写）
-全部写完 → 运行模块 2（计算指标）
-```
+```powershell
+# 对所有画像所有轮次运行全部外部评估
+uv run python backend/tests/evaluation/LLM/evaluator_LLM.py
 
-### 8.2 编写流程
+# 仅运行 M7 资源形态评估
+uv run python backend/tests/evaluation/LLM/evaluator_LLM.py --mode m7
 
-对每一个画像的每一轮：
-
-1. 打开该轮产物：
-   - `round-{NN}/learning_path.md` — 查看本轮路径规划的当前学习节点、前驱/后继节点
-   - `round-{NN}/dual_axis_snapshot.md` — 查看双轴快照中的薄弱点和混淆风险
-   - `round-{NN}/learner_profile.md` — 查看该轮学员画像（薄弱点、风格、目标）
-2. 结合静态知识库（`backend/app/curriculum/data/knowledge-dag.json` + `confusion-pairs.json`），站在有经验的专利教师角度，确定：
-   - **本节应覆盖的章节级知识点**（section_kcs）：从 9 个章节节点中选 1-3 个
-   - **应针对性覆盖的薄弱点名称**（weakness_kcs）：用中文名，从知识库子级节点选 0-5 个
-   - **应辨析的易混淆对**（confusable_pairs）：用 node_id 对，从混淆对清单选 0-3 对
-3. 按格式写入 JSON 文件，保存到 `backend/tests/evaluation/profiles/`
-
-详细格式要求、字段取值表、知识库节点清单、设计原则见 [expected.md](expected.md)。
-
-### 8.3 命名与存放
-
-```
-存放目录：backend/tests/evaluation/profiles/
-文件命名：expected_{学员首字母}_{两位轮次编号}.json
-示例：
-  expected_B_01.json   ← profile_B 第 1 轮
-  expected_B_02.json   ← profile_B 第 2 轮
-  expected_M_01.json   ← profile_M 第 1 轮
+# 仅运行 M8 异议闭环率评估
+uv run python backend/tests/evaluation/LLM/evaluator_LLM.py --mode m8
 ```
 
-### 8.4 内容格式（最简样例）
+### 8.2 通过主菜单调用
 
-```json
-{
-  "profile_id": "profile_B",
-  "round": 1,
-  "learning_goal": "我想学习外观设计专利与实用新型的申请和保护，结合消费电子真实案例",
-  "expected_course_content": {
-    "section_kcs": ["patentability-substantive", "patent-rights-protection"],
-    "weakness_kcs": ["新颖性", "抵触申请", "等同原则"],
-    "confusable_pairs": [
-      ["novelty", "inventive-step"],
-      ["conflicting-application", "prior-art-definition"]
-    ]
-  }
-}
+主菜单选 5 后，列出有运行痕迹的画像，选择后会提示选择评估模式：
+
+```
+→ 选择画像（单选，exit 退出）: 1
+
+============================================================
+[profile_B] 外部LLM评估菜单
+  1 — 全部评估（M1+M7+M8+M9）
+  2 — 仅 M7 资源形态评估
+  3 — 仅 M8 异议闭环率评估
+  0 — 返回上层
+→ 选择:
 ```
 
-详细字段说明见 [expected.md](expected.md) 第二章。
+### 8.3 评估模式说明
+
+| 模式 | 评估内容 | 输出文件 |
+|------|---------|---------|
+| `all` / `--mode overall` | 全面评估 | `judge_*.json` + `resource_morphology_*.json` + `objection_loop_*.json` |
+| `statement` / `--mode statement` | M1/M9 陈述级评估 | `judge_{model}_{profile}_{round:02d}.json` |
+| `m7` / `--mode m7` | M7 资源形态评估 | `resource_morphology_{profile}_{round:02d}.json` |
+| `m8` / `--mode m8` | M8 异议闭环率评估 | `objection_loop_{profile}_{round:02d}.json` |
+
+### 8.4 注意事项
+
+-   外部 LLM 评估会消耗额外的 API 资源和时间。
+-   评估结果会缓存，重复运行默认会跳过已存在的结果，除非使用 `--force` 标志。
+-   详细评估逻辑参见 `backend/tests/evaluation/LLM/evaluator_LLM.py`。
 
 ---
 
@@ -489,15 +397,15 @@ backend/tests/evaluation/artifacts/
 
 ```
 （1）环境准备
-   ├─ uv sync + mysql-connector-python
-   ├─ 配置 .env（MySQL + LLM Keys）
+   ├─ uv sync
+   ├─ 配置 .env（MySQL + LLM Keys + 外部 LLM Key）
    └─ 验证数据库连通性
 
 （2）启动后端（独立终端持续运行）
    └─ $env:PYTHONUTF8=1; uv run python backend/main.py
 
 （3）启动主控脚本
-   └─ $env:PYTHONUTF8=1; uv run python backend/tests/evaluation/evaluation_test_v1.0_bootrun.py
+   └─ $env:PYTHONUTF8=1; uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py
 
 （4）清理旧数据（可选，若之前跑过）
    └─ 主菜单 1 → 选择画像 → 删除
@@ -505,19 +413,21 @@ backend/tests/evaluation/artifacts/
 （5）首轮课程生成
    └─ 主菜单 4 → 选画像 → ready → 子菜单 1 → 等待完成 → 查看 round-01 产物
 
-（6）编写首轮预设答案
-   └─ 根据 round-01/learning_path.md + dual_axis_snapshot.md → 写 expected_{X}_01.json
+（6）编写首轮预设答案（expected_{X}_01.json）
+   └─ 参考 [expected.md](expected.md)
 
 （7）多轮运行（例如跑 3 轮）
    └─ 主菜单 4 → 选画像 → ready → 子菜单 2 → 输入运行到 3 → 等待完成
 
-（8）编写第 2、3 轮预设答案
-   └─ expected_{X}_02.json、expected_{X}_03.json
+（8）编写第 2、3 轮预设答案（expected_{X}_02.json、expected_{X}_03.json）
 
-（9）计算指标
+（9）运行外部 LLM 评估（可选但推荐）
+   └─ 主菜单 5 → 选画像 → 选择评估模式 → 等待完成
+
+（10）计算指标
    └─ 主菜单 2 → 选画像 → all → 查看逐轮结果 + 多轮平均值
 
-（10）生成完整报告
+（11）生成完整报告
    └─ 主菜单 3 → 打开 results/reports/evaluation_report_*.md
 ```
 
@@ -531,7 +441,8 @@ backend/tests/evaluation/artifacts/
 | 运行系统 | 4 → 子菜单 1 | 后续轮课程生成（复用计划） | `eval_course_gen.run_subsequent_round()` |
 | 运行系统 | 4 → 子菜单 2 | 灌输全对答案（多轮循环第一步） | `eval_learn_sim.infuse_learning_results()` |
 | 删除数据 | 1 | 清理文件 + MySQL 运行痕迹 | `eval_common.delete_run_results()` |
-| 计算指标 | 2 | 九项指标逐轮计算 + 多轮平均 | `calculate.calculate_round()` |
+| 计算指标 | 2 | 所有指标逐轮计算 + 多轮平均 | `calculate.calculate_round()` |
 | 生成报告 | 3 | 跨画像跨轮次汇总报告 | `report.generate_full_report()` |
+| 外部 LLM 评估 | 5 | 补充 M1/M7/M8/M9 指标 | `evaluator_LLM.evaluate_*()` |
 
-所有底层模块均位于 `backend/tests/evaluation/program/` 目录下，可单独调用（非交互模式）供自动化测试脚本集成。
+所有底层模块均位于 `backend/tests/evaluation/program/` 和 `backend/tests/evaluation/LLM/` 目录下，可单独调用（非交互模式）供自动化测试脚本集成。

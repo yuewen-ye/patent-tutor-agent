@@ -14,7 +14,7 @@ evaluation entry points:
 * ``progress.advance_bkt``         – register N correct observations on a node
 
 All runnable scripts (``eval_course_gen.py``, ``eval_learn_sim.py`` and
-``evaluation_test_v1.0_bootrun.py``) import from this single common module so
+``evaluation_test_v1.1_bootrun.py``) import from this single common module so
 the core logic is defined once and only the CLI orchestration differs.
 """
 
@@ -498,7 +498,7 @@ def generate_control_md(preserve_previous: bool = True) -> None:
         "",
         "## 使用说明",
         "",
-        "这个控制文件是 **eval_course_gen、eval_learn_sim、evaluation_test_v1.0_bootrun.py** 共用的。",
+        "这个控制文件是 **eval_course_gen、eval_learn_sim、evaluation_test_v1.1_bootrun.py** 共用的。",
         "无论单独运行哪一个流程，都是读取/修改这一个文件。",
         "",
         "使用方式：",

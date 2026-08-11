@@ -53,11 +53,36 @@ _EVAL_ARTIFACTS_DIR = common.EVAL_ARTIFACTS_DIR
 _PROFILES_DIR = common.PROFILES_DIR
 _KNOWLEDGE_DAG = _PROJECT_ROOT / "backend" / "app" / "curriculum" / "data" / "knowledge-dag.json"
 
-# 情感支持板块类型
-EMOTIONAL_BLOCK_TYPES = {
-    "anchor_scenario", "worked_example", "decision_flow",
-    "mnemonic", "summary_card", "analogy",
+# 资源形态类型（与 resource_morphology_evaluator.md 定义的 13 种对齐，用于 M7 回退脚本计算）
+RESOURCE_MORPHOLOGY_TYPES = {
+    # 讲义类 (5)
+    "knowledge_synthesis",
+    "verbal_explanation",
+    "summary_card",
+    "mnemonic",
+    "legal_anchor",
+    # 实操指南类 (3)
+    "worked_example",
+    "anchor_scenario",
+    "reflect_prompt",
+    # 分阶题类 (1)
+    "assessment",
+    # 其他扩展类型 (4)
+    "global_framework",
+    "decision_flow",
+    "common_pitfall",
+    "predict_activate",
 }
+
+# 核心资源形态类别 —— 外部 LLM 评估时要求讲义/实操/分阶题三类均覆盖
+RESOURCE_MORPHOLOGY_CORE_CATEGORIES = {
+    "讲义类": {"knowledge_synthesis", "verbal_explanation", "summary_card", "mnemonic", "legal_anchor"},
+    "实操指南类": {"worked_example", "anchor_scenario", "reflect_prompt"},
+    "分阶题类": {"assessment"},
+}
+
+# 兼容别名：旧代码中 EMOTIONAL_BLOCK_TYPES 已重命名为 RESOURCE_MORPHOLOGY_TYPES
+EMOTIONAL_BLOCK_TYPES = RESOURCE_MORPHOLOGY_TYPES
 
 # 难度排序
 DIFFICULTY_ORDER = {"L1": 1, "L2": 2, "L3": 3}
@@ -462,29 +487,53 @@ def calc_matching_difficulty(
 
 
 def calc_matching_emotional(course_text: str) -> MetricResult:
-    """匹配度②：情感使用度 = 情感支持板块数 / 总板块数 × 100%"""
+    """M7 回退脚本计算：资源形态评估。
+
+    与外部 LLM 评估对齐：
+    - 覆盖率 = 已出现的资源形态数 / 13 种已知类型
+    - 三类核心形态（讲义/实操指南/分阶题）是否均覆盖
+    - 综合分 = 覆盖率 * 0.4 + 核心覆盖 * 0.6
+    """
     course = _parse_course_package(course_text)
     block_types = course["block_types"]
 
     if not block_types:
         return MetricResult(
-            name="情感使用度",
+            name="资源形态评估",
             value=0.0,
-            unit="%",
+            unit="分",
             detail={"error": "未找到教学模块清单"},
         )
 
-    emotional_count = sum(1 for bt in block_types if bt in EMOTIONAL_BLOCK_TYPES)
-    rate = emotional_count / len(block_types) * 100
+    # 统计出现的资源形态
+    present_types = {bt for bt in block_types if bt in RESOURCE_MORPHOLOGY_TYPES}
+    total_types = len(RESOURCE_MORPHOLOGY_TYPES)
+    coverage_rate = round(len(present_types) / total_types * 100, 1)
+
+    # 三类核心形态是否均覆盖
+    core_coverage_flags = {
+        cat: any(bt in present_types for bt in cat_types)
+        for cat, cat_types in RESOURCE_MORPHOLOGY_CORE_CATEGORIES.items()
+    }
+    core_coverage_count = sum(1 for v in core_coverage_flags.values() if v)
+    core_score = round(core_coverage_count / len(core_coverage_flags) * 100, 1)
+
+    # 综合分（与外部 LLM 保持一致的加权）
+    overall_score = round(coverage_rate * 0.4 + core_score * 0.6, 1)
 
     return MetricResult(
-        name="情感使用度",
-        value=round(rate, 1),
-        unit="%",
+        name="资源形态评估",
+        value=overall_score,
+        unit="分",
         detail={
+            "评估方式": "回退脚本（外部 LLM 结果不存在时）",
             "总板块数": len(block_types),
-            "情感支持板块数": emotional_count,
-            "板块列表": block_types,
+            "已识别资源形态数": len(present_types),
+            "资源形态覆盖率(%)": coverage_rate,
+            "已识别形态列表": sorted(present_types),
+            "核心形态覆盖": core_coverage_flags,
+            "核心形态得分(%)": core_score,
+            "计算公式": f"{coverage_rate} × 0.4 + {core_score} × 0.6 = {overall_score}",
         },
     )
 
@@ -748,15 +797,15 @@ def load_m8_external_result(profile_letter: str, round_num: int) -> MetricResult
     )
 
 
-# ── M7 情感使用度（可选：外部 LLM 评估结果加载） ──────────────────────────────
+# ── M7 资源形态评估（可选：外部 LLM 评估结果加载） ─────────────────────────────
 
 def load_m7_external_result(profile_letter: str, round_num: int) -> MetricResult | None:
-    """从外部 LLM 评估结果文件加载 M7 情感使用度。
+    """从外部 LLM 评估结果文件加载 M7 资源形态评估。
 
     如果外部评估结果不存在，返回 None（回退到 calculate.py 内部的脚本计算）。
     """
     llm_results_dir = _EVAL_DIR / "LLM" / "results"
-    pattern = f"emotional_support_*_{profile_letter}_{round_num:02d}.json"
+    pattern = f"resource_morphology_*_{profile_letter}_{round_num:02d}.json"
     matching = sorted(llm_results_dir.glob(pattern))
 
     if not matching:
@@ -769,14 +818,79 @@ def load_m7_external_result(profile_letter: str, round_num: int) -> MetricResult
 
     m7_data = data.get("metrics", {})
     return MetricResult(
-        name="情感使用度",
+        name="资源形态评估",
         value=m7_data.get("value", 0),
-        unit=m7_data.get("unit", "%"),
+        unit=m7_data.get("unit", "分"),
         detail=m7_data.get("detail", {
             "评估方式": "外部 LLM",
             "source_file": str(matching[0].name),
         }),
     )
+
+
+# ── M1 专业知识谬误率 & M9 知识溯源可验证率（外部 LLM 评估） ─────────────────────
+
+def load_m1_m9_external_result(profile_letter: str, round_num: int) -> tuple[MetricResult | None, MetricResult | None]:
+    """从外部 LLM 评估结果文件加载 M1 和 M9 指标。
+
+    两个指标由同一次 LLM 调用 (evaluate_m1_m9) 生成，保存在同一文件中。
+    文件命名：statement_judge_{model}_{profile}_{round:02d}.json
+
+    Returns:
+        (m1_result, m9_result): 任一不存在则返回 None
+    """
+    llm_results_dir = _EVAL_DIR / "LLM" / "results"
+    pattern = f"statement_judge_*_{profile_letter}_{round_num:02d}.json"
+    matching = sorted(llm_results_dir.glob(pattern))
+
+    if not matching:
+        return None, None
+
+    try:
+        data = json.loads(matching[0].read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None, None
+
+    source_file = str(matching[0].name)
+
+    # M1
+    m1_data = data.get("m1_hallucination_rate", {})
+    m1_result = MetricResult(
+        name="专业知识谬误率",
+        value=m1_data.get("value", 0),
+        unit=m1_data.get("unit", "分"),
+        detail={
+            "评估方式": "外部 LLM",
+            "抽样陈述数": m1_data.get("total", 0),
+            "错误数": m1_data.get("incorrect", 0),
+            "正确数": m1_data.get("correct", 0),
+            "存疑数": m1_data.get("uncertain", 0),
+            "100分制平均正确率": m1_data.get("score_based_avg"),
+            "传统谬误率(%)": m1_data.get("verdict_based_rate"),
+            "加权值(备用)": m1_data.get("weighted_value"),
+            "source_file": source_file,
+        },
+    )
+
+    # M9
+    m9_data = data.get("m9_source_verifiable_rate", {})
+    m9_result = MetricResult(
+        name="知识溯源可验证率",
+        value=m9_data.get("value", 0),
+        unit=m9_data.get("unit", "分"),
+        detail={
+            "评估方式": "外部 LLM",
+            "带来源陈述数": m9_data.get("total_with_source", 0),
+            "完全验证数": m9_data.get("fully_verified", 0),
+            "未验证数": m9_data.get("unverified", 0),
+            "平均来源得分": m9_data.get("avg_source_score"),
+            "平均相关性得分": m9_data.get("avg_relevance_score"),
+            "传统溯源率(%)": m9_data.get("verdict_based_rate"),
+            "source_file": source_file,
+        },
+    )
+
+    return m1_result, m9_result
 
 
 # ── M11 动态迭代 ──────────────────────────────────────────────────────────────
@@ -971,12 +1085,15 @@ def calculate_round(
             profile_update_text=profile_update_text,
         )
     )
-    # M7 情感使用度（优先外部 LLM 结果，回退脚本计算）
+    # M7 资源形态评估（优先外部 LLM 结果，回退脚本计算）
     m7_ext = load_m7_external_result(profile_letter, round_num)
     if m7_ext:
         rm.metrics.append(m7_ext)
     else:
-        rm.metrics.append(calc_matching_emotional(course_text))
+        # 回退到脚本计算：仍使用情感使用度算法（block_type 占比），但指标名统一为"资源形态评估"
+        m7_fallback = calc_matching_emotional(course_text)
+        m7_fallback.name = "资源形态评估"
+        rm.metrics.append(m7_fallback)
 
     # 覆盖率（累计 + 祖先匹配）
     rm.metrics.append(
@@ -996,6 +1113,13 @@ def calculate_round(
     m8_result = load_m8_external_result(profile_letter, round_num)
     if m8_result:
         rm.metrics.append(m8_result)
+
+    # M1 专业知识谬误率 & M9 知识溯源可验证率（外部 LLM 评估）
+    m1_result, m9_result = load_m1_m9_external_result(profile_letter, round_num)
+    if m1_result:
+        rm.metrics.append(m1_result)
+    if m9_result:
+        rm.metrics.append(m9_result)
 
     # 动态迭代（M11）
     if prev_profile_update:
@@ -1032,7 +1156,7 @@ def format_result(rm: RoundMetrics) -> str:
             lines.append("  (无数据)")
 
     _append_group("幻觉率 — 系统自评", ["专家互评异议率", "裁判准确性评分"])
-    _append_group("匹配度", ["难度符合度", "情感使用度"])
+    _append_group("匹配度", ["难度符合度", "资源形态评估"])
 
     # M6 产物完整率（特殊位置）
     m6 = next((m for m in rm.metrics if m.name == "产物完整率"), None)
@@ -1047,6 +1171,10 @@ def format_result(rm: RoundMetrics) -> str:
         "覆盖率",
         ["本节知识点覆盖率", "薄弱点命中率", "混淆对覆盖率"],
     )
+
+    # M1 & M9 外部 LLM 评估
+    _append_group("幻觉率 — 外部LLM", ["专业知识谬误率", "知识溯源可验证率"])
+
     _append_group("对话质量", ["异议闭环率"])
     _append_group("动态迭代", ["动态迭代触发率"])
 

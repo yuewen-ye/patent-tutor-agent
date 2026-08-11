@@ -191,15 +191,15 @@ class LLMClient:
         """生成降级响应（当 LLM 调用失败时）。"""
         return json.dumps({
             "scores": {
-                "goal_coverage": {"score": 0, "max": 5, "comment": f"LLM 调用失败: {error_msg}", "matched_goals": [], "missed_goals": []},
-                "factual_accuracy": {"score": 0, "max": 5, "comment": f"LLM 调用失败: {error_msg}", "correct_items": [], "errors": []},
-                "case_accuracy": {"score": 0, "max": 5, "comment": f"LLM 调用失败: {error_msg}", "reliable_cases": [], "problematic_cases": []},
-                "factual_consistency": {"score": 0, "max": 5, "comment": f"LLM 调用失败: {error_msg}", "consistent_points": [], "contradictions": []},
-                "pedagogical_clarity": {"score": 0, "max": 5, "comment": f"LLM 调用失败: {error_msg}", "clear_points": [], "confusing_points": []},
-                "difficulty_fit": {"score": 0, "max": 5, "comment": f"LLM 调用失败: {error_msg}", "matched_items": [], "mismatched_items": []},
-                "learner_fit": {"score": 0, "max": 5, "comment": f"LLM 调用失败: {error_msg}", "adapted_points": [], "missing_adaptations": []},
-                "knowledge_completeness": {"score": 0, "max": 5, "comment": f"LLM 调用失败: {error_msg}", "covered_points": [], "missing_points": []},
-                "weakness_addressing": {"score": 0, "max": 5, "comment": f"LLM 调用失败: {error_msg}", "addressed_weaknesses": [], "untouched_weaknesses": []},
+                "goal_coverage": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "matched_goals": [], "missed_goals": []},
+                "factual_accuracy": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "correct_items": [], "errors": []},
+                "case_accuracy": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "reliable_cases": [], "problematic_cases": []},
+                "factual_consistency": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "consistent_points": [], "contradictions": []},
+                "pedagogical_clarity": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "clear_points": [], "confusing_points": []},
+                "difficulty_fit": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "matched_items": [], "mismatched_items": []},
+                "learner_fit": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "adapted_points": [], "missing_adaptations": []},
+                "knowledge_completeness": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "covered_points": [], "missing_points": []},
+                "weakness_addressing": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "addressed_weaknesses": [], "untouched_weaknesses": []},
             },
             "overall_score": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "summary": "评估失败"},
             "highlights": [],
@@ -577,9 +577,9 @@ def generate_summary_from_chunks(chunk_results: list[dict[str, Any]]) -> str:
         lines.append(f"### {title}")
         for dim_name, dim_data in scores.items():
             score = dim_data.get("score", 0)
-            max_score = dim_data.get("max", 5)
+            max_score = dim_data.get("max", 100)
             comment = dim_data.get("comment", "")
-            lines.append(f"- {dim_name}: {score}/{max_score} - {comment[:100]}")
+            lines.append(f"- {dim_name}: {score}/{max_score} - {comment[:100]}" if comment else f"- {dim_name}: {score}/{max_score}")
         lines.append("")
 
     return "\n".join(lines)
@@ -710,99 +710,169 @@ def cmd_evaluate(args) -> None:
 
 def extract_verifiable_statements(course_text: str) -> list[dict[str, Any]]:
     """从 course_package.md 中抽取可核验陈述。
-    
+
+    新格式：各章节为标准 JSON 代码块，示例：
+        ## legal_basis
+        ```json
+        [{"article": "TRIPs协定第3条 国民待遇原则", "source": "..."}]
+        ```
+
     返回格式：
     [
         {
-            "text": "专利法第 42 条规定...",
+            "text": "TRIPs协定第3条 国民待遇原则 | 相关法律知识详细解读.txt：...",
             "source_type": "legal_basis" | "time_limit" | "procedure",
             "has_source": True,
-            "source_file": "中华人民共和国专利法.txt",
-            "context": "法条号 42",
+            "source_file": "相关法律知识详细解读.txt",
+            "context": "法条/规则引用",
         },
         ...
     ]
     """
-    statements = []
-    
-    # 1. legal_basis 中的法条引用
-    # 匹配 ## legal_basis 章节下的表格内容
-    legal_section = re.search(
-        r"## legal_basis\s*([\s\S]*?)(?=\n##|\Z)",
-        course_text
-    )
-    if legal_section:
-        legal_text = legal_section.group(1)
-        # 匹配 article 和 source 字段
-        for m in re.finditer(
-            r"article[:：]\s*(\d+).*?source[:：]\s*([^\n|]+)",
-            legal_text
-        ):
+    statements: list[dict[str, Any]] = []
+
+    def _extract_json_section(section_name: str) -> list[Any]:
+        """从指定 ## section 下提取 ```json ... ``` 代码块中的 JSON 内容。"""
+        pattern = re.compile(
+            r"## " + re.escape(section_name) + r"\s*```json\s*(\[.*?\]|\{.*?\})\s*```",
+            re.DOTALL,
+        )
+        m = pattern.search(course_text)
+        if not m:
+            return []
+        try:
+            data = json.loads(m.group(1))
+            return data if isinstance(data, list) else [data]
+        except (json.JSONDecodeError, TypeError):
+            return []
+
+    # 1. legal_basis（法条引用）：数组，每个元素含 article + source
+    for item in _extract_json_section("legal_basis"):
+        if not isinstance(item, dict):
+            continue
+        article = item.get("article", "").strip()
+        source = item.get("source", "").strip()
+        if not article:
+            continue
+        # 从 source 中提取文件名（如 "相关法律知识详细解读.txt：..."）
+        source_file = ""
+        source_content = source
+        if "：" in source:
+            source_file = source.split("：", 1)[0].strip()
+        elif ":" in source:
+            source_file = source.split(":", 1)[0].strip()
+        statements.append({
+            "text": f"{article} | {source}" if source else article,
+            "source_type": "legal_basis",
+            "has_source": bool(source),
+            "source_file": source_file,
+            "source_content": source_content,
+            "context": f"法条引用: {article}",
+        })
+
+    # 2. knowledge_synthesis（知识综合）：含 coverage 子节点
+    ks_data = None
+    try:
+        ks_m = re.search(
+            r"## knowledge_synthesis\s*```json\s*(\{.*?\})\s*```",
+            course_text, re.DOTALL,
+        )
+        if ks_m:
+            ks_data = json.loads(ks_m.group(1))
+    except (json.JSONDecodeError, TypeError):
+        ks_data = None
+    if ks_data:
+        for cov in ks_data.get("coverage", []):
+            if not isinstance(cov, dict):
+                continue
+            sub_concept = cov.get("sub_concept", "").strip()
+            explanation = cov.get("explanation", "").strip()
+            if sub_concept:
+                statements.append({
+                    "text": f"{sub_concept}: {explanation}",
+                    "source_type": "legal_basis",
+                    "has_source": False,
+                    "source_file": "",
+                    "source_content": "",
+                    "context": f"知识综合: {sub_concept}",
+                })
+        # 混淆对也作为可核验陈述
+        for pair in ks_data.get("confusable_pairs", []):
+            if not isinstance(pair, dict):
+                continue
+            left = pair.get("left", "").strip()
+            right = pair.get("right", "").strip()
+            distinguish = pair.get("distinguish", "").strip()
+            if left and right:
+                statements.append({
+                    "text": f"{left} vs {right}: {distinguish}",
+                    "source_type": "procedure",
+                    "has_source": False,
+                    "source_file": "",
+                    "source_content": "",
+                    "context": f"混淆对: {left} vs {right}",
+                })
+
+    # 3. risks（风险提示）：数组，每个元素含 risk + related_node_id
+    for item in _extract_json_section("risks"):
+        if not isinstance(item, dict):
+            continue
+        risk = item.get("risk", "").strip()
+        node_id = item.get("related_node_id", "").strip()
+        if risk:
             statements.append({
-                "text": m.group(0).strip(),
-                "source_type": "legal_basis",
-                "has_source": True,
-                "source_file": m.group(2).strip(),
-                "context": f"法条号 {m.group(1)}",
+                "text": risk,
+                "source_type": "procedure",
+                "has_source": False,
+                "source_file": "",
+                "source_content": "",
+                "context": f"风险提示{('→ ' + node_id) if node_id else ''}",
             })
-        # 也匹配表格行中的法条引用
-        for line in legal_text.splitlines():
-            if "|" in line and "---" not in line:
-                cells = [c.strip() for c in line.split("|") if c.strip()]
-                if len(cells) >= 2 and not cells[0].startswith("法条"):
-                    # 可能是表格行
-                    for cell in cells:
-                        article_match = re.search(r"第\s*(\d+)\s*条", cell)
-                        source_match = re.search(r"source[:：]\s*(\S+)", line)
-                        if article_match:
-                            statements.append({
-                                "text": line.strip(),
-                                "source_type": "legal_basis",
-                                "has_source": bool(source_match),
-                                "source_file": source_match.group(1) if source_match else "",
-                                "context": f"法条号 {article_match.group(1)}",
-                            })
-    
-    # 2. 教学正文中的期限断言（如"6个月"、"12个月"）
+
+    # 4. 教学正文中的期限断言（如"6个月"、"12个月"、"20年"）
     for m in re.finditer(
-        r"(\d+)\s*(?:个月|天|日|年).*?(?:内|前|后|期限)",
-        course_text
+        r"(\d+)\s*(?:个月|天|日|年).*?(?:内|前|后|期限|保护期|窗口)",
+        course_text,
     ):
         statements.append({
             "text": m.group(0).strip(),
             "source_type": "time_limit",
             "has_source": False,
             "source_file": "",
+            "source_content": "",
             "context": "期限断言",
         })
-    
-    # 3. risks 中的程序规则
-    risks_section = re.search(
-        r"## risks\s*([\s\S]*?)(?=\n##|\Z)",
-        course_text
-    )
-    if risks_section:
-        for line in risks_section.group(1).splitlines():
-            if line.strip() and not line.startswith("#") and not line.startswith("|"):
-                # 只提取非表格、非标题的规则陈述
-                if len(line.strip()) > 5:  # 过滤太短的行
-                    statements.append({
-                        "text": line.strip(),
-                        "source_type": "procedure",
-                        "has_source": False,
-                        "source_file": "",
-                        "context": "风险/程序规则",
-                    })
-    
+
+    # 5. irac 结构（结论）
+    try:
+        irac_m = re.search(
+            r"## irac\s*```json\s*(\{.*?\})\s*```",
+            course_text, re.DOTALL,
+        )
+        if irac_m:
+            irac = json.loads(irac_m.group(1))
+            conclusion = irac.get("conclusion", "").strip()
+            if conclusion:
+                statements.append({
+                    "text": conclusion,
+                    "source_type": "legal_basis",
+                    "has_source": True,
+                    "source_file": "irac.conclusion",
+                    "source_content": conclusion,
+                    "context": "IRAC 结论",
+                })
+    except (json.JSONDecodeError, TypeError):
+        pass
+
     # 去重
-    seen = set()
-    unique_statements = []
+    seen: set[str] = set()
+    unique: list[dict[str, Any]] = []
     for s in statements:
         if s["text"] not in seen:
             seen.add(s["text"])
-            unique_statements.append(s)
-    
-    return unique_statements
+            unique.append(s)
+
+    return unique
 
 
 def evaluate_statements(
@@ -836,33 +906,39 @@ def evaluate_statements(
     for i in range(0, len(statements), batch_size):
         batch = statements[i:i + batch_size]
         
-        user_prompt = f"""请评估以下 {len(batch)} 条陈述的正确性和溯源有效性：
+        user_prompt = f"""请评估以下 {len(batch)} 条陈述的正确性和溯源有效性（100 分制）：
 
 {json.dumps(batch, ensure_ascii=False, indent=2)}
 
-对每条陈述，请判断：
-1. 是否正确 (correct) / 错误 (incorrect) / 存疑 (uncertain)
-2. 是否带来源 (has_source)
-3. 来源是否可验证 (source_check_result)：verified/unverified/mismatch
-4. 【M9 增强】内容相关性判断：
-   - content_relevance：该陈述引用的法条/来源内容是否**直接支撑**该陈述的核心断言（true=支撑，false=不支撑）
-   - relevance_check_result：relevant（完全支撑）/ partially_relevant（部分支撑）/ irrelevant（不支撑）
+对每条陈述，请进行以下评估：
+1. **正确性评分 (score)**：0-100 分制，参考以下标准：
+   - 90-100 分：准确无误，完全符合专利法规定
+   - 70-89 分：基本正确，有极少量表述瑕疵
+   - 50-69 分：部分正确但存在争议
+   - 30-49 分：明显错误，但核心意思尚可辨认
+   - 0-29 分：完全错误
+   基于 score 自动判定 verdict：score ≥ 70 → correct；40 ≤ score < 70 → uncertain；score < 40 → incorrect
+
+2. **溯源评估**：
+   - source_score (0-100 分)：来源可验证性评分
+   - source_check_result：verified/partially_verified/unverified
+   - relevance_score (0-100 分)：内容相关性评分
+   - relevance_check_result：relevant/partially_relevant/irrelevant
    - relevance_reasoning：简要说明相关性判定理由
-   
-   示例：
-   - 陈述"专利法第42条规定发明专利权期限为20年" → 引用第42条内容确有20年期限 → relevant
-   - 陈述"专利法第42条规定了侵权赔偿" → 第42条实际是关于期限而非赔偿 → irrelevant
 
 请严格按照以下 JSON 格式输出：
 {{
     "evaluations": [
         {{
             "text": "原文陈述",
+            "score": 0,
             "verdict": "correct/incorrect/uncertain",
             "reasoning": "判定理由",
             "source_verifiable": true/false,
-            "source_check_result": "verified/unverified/mismatch",
+            "source_score": 0,
+            "source_check_result": "verified/partially_verified/unverified",
             "content_relevance": true/false,
+            "relevance_score": 0,
             "relevance_check_result": "relevant/partially_relevant/irrelevant",
             "relevance_reasoning": "相关性判定理由"
         }}
@@ -889,13 +965,32 @@ def evaluate_statements(
         for j, statement in enumerate(batch):
             if j < len(batch_results):
                 result = batch_results[j]
+                # 确保 score 字段存在（100 分制）
+                score = result.get("score")
+                if score is None:
+                    score = result.get("score", 0)
+                # 如果 LLM 未提供 verdict，根据 score 自动判定
+                verdict = result.get("verdict", "")
+                if not verdict and score:
+                    if score >= 70:
+                        verdict = "correct"
+                    elif score >= 40:
+                        verdict = "uncertain"
+                    else:
+                        verdict = "incorrect"
+                # 确保 source_score / relevance_score 字段存在
+                source_score = result.get("source_score", 0)
+                relevance_score = result.get("relevance_score", 0)
                 results.append({
                     "text": statement["text"],
-                    "verdict": result.get("verdict", "uncertain"),
+                    "score": score,
+                    "verdict": verdict,
                     "reasoning": result.get("reasoning", ""),
                     "source_verifiable": result.get("source_verifiable", statement.get("has_source", False)),
+                    "source_score": source_score,
                     "source_check_result": result.get("source_check_result", "unverified"),
                     "content_relevance": result.get("content_relevance", statement.get("has_source", False)),
+                    "relevance_score": relevance_score,
                     "relevance_check_result": result.get("relevance_check_result", "irrelevant"),
                     "relevance_reasoning": result.get("relevance_reasoning", ""),
                 })
@@ -903,11 +998,14 @@ def evaluate_statements(
                 # 如果 LLM 没有返回足够的结果，使用默认值
                 results.append({
                     "text": statement["text"],
+                    "score": 0,
                     "verdict": "uncertain",
                     "reasoning": "LLM 未返回评估结果",
                     "source_verifiable": statement.get("has_source", False),
+                    "source_score": 0,
                     "source_check_result": "unverified",
                     "content_relevance": False,
+                    "relevance_score": 0,
                     "relevance_check_result": "irrelevant",
                     "relevance_reasoning": "",
                 })
@@ -950,24 +1048,30 @@ def calc_hallucination_rate(
     eval_results: list[dict[str, Any]],
     config: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """计算 M1 专业知识谬误率（支持加权计算）。
+    """计算 M1 专业知识谬误率（100分制）。
 
-    加权方案：不同类型的错误具有不同权重。
-    - 默认权重在 M1_ERROR_WEIGHTS 中定义
-    - 可通过 config["m1_weights"] 覆盖
-    - 加权谬误率 = Σ(错误_i × weight_i) / Σ(陈述_j × max_weight)
+    同时支持两种计算方式：
+    1. 基于 verdict 的传统计算（correct/incorrect/uncertain）
+    2. 基于 score 的 100 分制计算（取所有陈述的平均得分）
 
-    注：当前实现同时返回简单谬误率和加权谬误率，
-    具体使用哪个数值由上层消费方（如 report.py）决定。
+    返回的 value 字段为 100 分制的平均正确率。
     """
     total = len(eval_results)
     incorrect = sum(1 for r in eval_results if r.get("verdict") == "incorrect")
     uncertain = sum(1 for r in eval_results if r.get("verdict") == "uncertain")
     correct = sum(1 for r in eval_results if r.get("verdict") == "correct")
 
+    # 基于 verdict 的谬误率（传统方式，保留兼容）
     rate = incorrect / total * 100 if total > 0 else 0
 
-    # 加权计算
+    # 基于 score 的 100 分制计算
+    scores = [r.get("score", 0) for r in eval_results if "score" in r]
+    if scores:
+        avg_score = round(sum(scores) / len(scores), 1)
+    else:
+        avg_score = round((total - incorrect) / total * 100, 1) if total > 0 else 0
+
+    # 加权计算（保留兼容）
     weights = M1_ERROR_WEIGHTS.copy()
     if config and "m1_weights" in config:
         weights.update(config["m1_weights"])
@@ -993,27 +1097,32 @@ def calc_hallucination_rate(
 
     return {
         "name": "专业知识谬误率",
-        "value": round(rate, 1),
-        "unit": "%",
+        "value": avg_score,
+        "unit": "分",
         "total": total,
         "incorrect": incorrect,
         "correct": correct,
         "uncertain": uncertain,
-        # 加权相关
+        "score_based_avg": avg_score,
+        "verdict_based_rate": round(rate, 1),
+        # 加权相关（保留兼容）
         "weighted_value": weighted_rate,
         "weighted_error_sum": round(weighted_error_sum, 2),
         "max_weight_sum": round(max_weight_sum, 2),
         "error_type_distribution": error_type_details,
         "weights_used": weights,
-        "note": "value 为简单谬误率，weighted_value 为加权谬误率",
+        "note": "value 为 100 分制平均正确率，verdict_based_rate 为传统谬误率，weighted_value 为加权谬误率",
     }
 
 
 def calc_source_verifiable_rate(eval_results: list[dict[str, Any]]) -> dict[str, Any]:
-    """计算 M9 知识溯源可验证率。
+    """计算 M9 知识溯源可验证率（100分制）。
 
-    增强版：同时考虑「来源可验证」和「内容相关性」两个维度。
-    只有当来源可验证 AND 内容相关时，才算有效溯源。
+    同时支持两种计算方式：
+    1. 基于 verdict/result 的传统计算（verified/relevant 计数）
+    2. 基于 source_score 和 relevance_score 的 100 分制计算
+
+    返回的 value 字段为 100 分制的平均溯源得分。
     """
     source_with = [r for r in eval_results if r.get("source_verifiable")]
     
@@ -1021,7 +1130,7 @@ def calc_source_verifiable_rate(eval_results: list[dict[str, Any]]) -> dict[str,
         return {
             "name": "知识溯源可验证率",
             "value": 0,
-            "unit": "%",
+            "unit": "分",
             "note": "无带来源的陈述",
             "total_with_source": 0,
             "verified": 0,
@@ -1039,18 +1148,39 @@ def calc_source_verifiable_rate(eval_results: list[dict[str, Any]]) -> dict[str,
                         and r.get("content_relevance")
                         and r.get("relevance_check_result") == "relevant")
 
+    # 基于传统 verdict 的溯源率
     rate = fully_verified / len(source_with) * 100 if source_with else 0
+
+    # 基于 score 的 100 分制计算
+    source_scores = [r.get("source_score", 0) for r in source_with if "source_score" in r]
+    relevance_scores = [r.get("relevance_score", 0) for r in source_with if "relevance_score" in r]
+    
+    if source_scores and relevance_scores:
+        avg_source_score = round(sum(source_scores) / len(source_scores), 1)
+        avg_relevance_score = round(sum(relevance_scores) / len(relevance_scores), 1)
+        avg_verifiability = round((avg_source_score + avg_relevance_score) / 2, 1)
+    elif source_scores:
+        avg_source_score = round(sum(source_scores) / len(source_scores), 1)
+        avg_relevance_score = 0
+        avg_verifiability = avg_source_score
+    else:
+        avg_source_score = 0
+        avg_relevance_score = 0
+        avg_verifiability = round(rate, 1)
     
     return {
         "name": "知识溯源可验证率",
-        "value": round(rate, 1),
-        "unit": "%",
+        "value": avg_verifiability,
+        "unit": "分",
         "total_with_source": len(source_with),
         "verified": verified,
         "content_relevant": content_relevant,
         "fully_verified": fully_verified,
         "unverified": len(source_with) - fully_verified,
-        "note": "完全验证 = 来源可验证 AND 内容支撑陈述",
+        "avg_source_score": avg_source_score,
+        "avg_relevance_score": avg_relevance_score,
+        "verdict_based_rate": round(rate, 1),
+        "note": "value 为 100 分制平均溯源得分，verdict_based_rate 为传统溯源率",
     }
 
 
@@ -1254,6 +1384,13 @@ def evaluate_m8_objection_loop(
     else:
         loop_rate = 100.0  # 无异议视为满分
 
+    # 优先使用 LLM 返回的 100 分制 overall_score
+    llm_overall_score = parsed.get("overall_score", 0)
+    if llm_overall_score:
+        final_score = round(llm_overall_score, 1)
+    else:
+        final_score = loop_rate
+
     result = {
         "metadata": {
             "profile_id": profile_id,
@@ -1264,15 +1401,17 @@ def evaluate_m8_objection_loop(
         },
         "raw_llm_response": parsed,
         "metrics": {
-            "value": loop_rate,
-            "unit": "%",
+            "value": final_score,
+            "unit": "分",
             "detail": {
                 "总🔴异议数": total_objections,
                 "裁判采纳数": adopted_count,
                 "闭环数（采纳+修正）": closed_loop_count,
                 "未闭环数": max(0, total_objections - closed_loop_count),
+                "闭环率(%)": loop_rate,
+                "总体评分(100分制)": final_score,
+                "评分等级": parsed.get("overall_grade", "-"),
                 "闭环详情": parsed.get("objections_detail", []),
-                "LLM评分": overall_score,
                 "LLM理由": parsed.get("reasoning", ""),
                 "评估方式": "外部 LLM 判定（objection_loop_evaluator 提示词）",
             },
@@ -1322,8 +1461,8 @@ def evaluate_m7_resource_morphology(
 
     # 读取学员画像（用于适配度评估）
     profile_data = {}
-    profile_dir = get_profile_dir(profile_id)
-    profile_files = sorted(profile_dir.glob("profile_B.json")) # 假设画像文件
+    profiles_dir = _PROJECT_ROOT / "backend" / "tests" / "evaluation" / "profiles"
+    profile_files = sorted(profiles_dir.glob(f"profile_{profile_id}.json"))
     if profile_files:
         try:
             profile_data = json.loads(profile_files[0].read_text(encoding="utf-8"))
@@ -1364,20 +1503,35 @@ def evaluate_m7_resource_morphology(
     llm_response = llm_client.chat(system_prompt, user_prompt)
     parsed = parse_llm_response(llm_response)
 
-    # 6. 解析结果
+    # 6. 解析结果（支持新旧两种格式）
     coverage_rate = parsed.get("coverage_rate", 0)
+    coverage_score = parsed.get("coverage_score", 0)
     fit_score = parsed.get("fit_score", 0)
     core_shapes = parsed.get("core_shapes_status", {})
+
+    # 优先使用 LLM 返回的 coverage_score（100 分制），否则从 coverage_rate 推导
+    if not coverage_score and coverage_rate:
+        coverage_score = round(coverage_rate, 1)
+    
+    # 如果 LLM 没有返回 overall_score，按公式计算
+    llm_overall_score = parsed.get("overall_score", 0)
+    if llm_overall_score:
+        overall_score = round(llm_overall_score, 1)
+    elif coverage_score and fit_score:
+        overall_score = round(coverage_score * 0.5 + fit_score * 0.5, 1)
+    elif coverage_rate:
+        overall_score = round(coverage_rate * 0.4 + fit_score * 0.6, 1)
+    else:
+        overall_score = 0
 
     # 核心形态检查
     core_coverage = sum(1 for v in core_shapes.values() if v)
     if coverage_rate == 0 and parsed.get("matched_types"):
-        # 提示词未返回覆盖率时，自行计算
         matched = len(parsed.get("matched_types", []))
-        coverage_rate = round(matched / 13 * 100, 1)  # 假设总类型13种
-
-    # 综合分：简单加权 (覆盖率 * 0.4 + 适配分 * 0.6)
-    overall_score = round(coverage_rate * 0.4 + fit_score * 0.6, 1)
+        if matched > 0:
+            coverage_rate = round(matched / 13 * 100, 1)
+        else:
+            coverage_rate = 0.0
 
     result = {
         "metadata": {
@@ -1393,7 +1547,10 @@ def evaluate_m7_resource_morphology(
             "unit": "分",
             "detail": {
                 "资源形态覆盖率": coverage_rate,
+                "覆盖率评分(100分制)": coverage_score,
                 "学员画像适配度": fit_score,
+                "总体评分(100分制)": overall_score,
+                "评分等级": parsed.get("overall_grade", "-"),
                 "核心形态（讲义/实操/分阶题）": f"{core_coverage}/3",
                 "已识别形态": parsed.get("matched_types", []),
                 "缺失形态": parsed.get("missing_types", []),

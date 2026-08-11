@@ -1,4 +1,4 @@
-"""Evaluation batch runner v1.0 — non-interactive batch profile runner.
+"""Evaluation batch runner v1.1 — non-interactive batch profile runner.
 
 Usage:
 
@@ -6,7 +6,7 @@ Usage:
        uv run python backend/main.py
 
   2. 运行批处理脚本:
-       uv run python backend/tests/evaluation/evaluation_test_v1.0_batchrun.py
+       uv run python backend/tests/evaluation/evaluation_test_v1.1_batchrun.py
 
   脚本会提示:
     - 选择要运行的画像（多选，如 1-3-5）

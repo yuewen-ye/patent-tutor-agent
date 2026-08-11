@@ -332,10 +332,10 @@ expected_{学员首字母}_03.json    # 第 3 轮的预设答案
 
 #### 3.2.1 执行入口
 
-所有操作通过主控脚本 `evaluation_test_v1.0_bootrun.py` 统一驱动：
+所有操作通过主控脚本 `evaluation_test_v1.1_bootrun.py` 统一驱动：
 
 ```powershell
-& .venv/Scripts/python.exe backend/tests/evaluation/evaluation_test_v1.0_bootrun.py
+& .venv/Scripts/python.exe backend/tests/evaluation/evaluation_test_v1.1_bootrun.py
 ```
 
 也可单独运行课程生成或学习模拟模块（共用同一个 `run_control.md` 控制文件）：

@@ -4,27 +4,42 @@
 # 核心任务
 评估以下陈述的**正确性**（Correctness）和**溯源可靠性**（Source Verifiability）。
 
-# 评估标准
+# 评估标准（100分制）
 
 #### 1. 正确性评估 (Correctness)
 **任务指令**：判断陈述内容是否准确无误，符合专利法规定和实践。
 **评分标准**：
-- **correct** (Score: 1)：陈述内容准确无误，完全符合专利法规定、司法实践或逻辑推理。
-- **incorrect** (Score: 0)：陈述内容存在错误、不准确或误导性信息，违背专利法规定或事实。
-- **uncertain** (Score: 0.5)：无法确定陈述的正确性（信息不足或存在争议）。
+- **90-100分 (correct)**：陈述内容准确无误，完全符合专利法规定、司法实践或逻辑推理，无任何瑕疵。
+- **70-89分 (correct)**：陈述内容基本正确，有极少量不影响理解的表述瑕疵或简化。
+- **50-69分 (uncertain)**：陈述部分正确但存在争议，或信息不足以完全确认其正确性。
+- **30-49分 (incorrect)**：陈述存在明显错误，与专利法规定或事实不符，但核心意思尚可辨认。
+- **0-29分 (incorrect)**：陈述完全错误，违背专利法规定或客观事实，具有误导性。
 
-#### 2. 溯源可靠性评估 (Context Correctness / Source Verifiability)
+**verdict 判定规则**：
+- `correct`：score ≥ 70
+- `uncertain`：40 ≤ score < 70
+- `incorrect`：score < 40
+
+#### 2. 溯源可靠性评估 (Source Verifiability)
 **任务指令**：判断陈述所引用的来源（法条号、文件出处）是否真实存在且内容匹配。
 **评分标准**：
-- **source_verifiable**：来源是否明确且真实存在 (true/false)
-- **source_check_result**：来源检查结果
-    - **verified** (Score: 1)：来源真实存在，且内容与陈述完全匹配。
-    - **unverified** (Score: 0)：来源不存在或无法验证。
-    - **mismatch** (Score: 0)：来源存在，但内容与陈述不匹配。
-- **content_relevance**：来源内容是否直接支撑陈述的核心断言 (true/false)
-    - **relevant** (Score: 1)：来源内容完全支撑陈述。
-    - **partially_relevant** (Score: 0.5)：来源部分支撑，但有偏差。
-    - **irrelevant** (Score: 0)：来源内容与陈述无关。
+- **source_score**: 来源可验证性评分（0-100分）
+    - **90-100分**：来源真实存在，内容与陈述完全匹配，法条号准确无误
+    - **70-89分**：来源真实存在，内容基本匹配，有极少量偏差
+    - **50-69分**：来源存在但内容匹配度一般，或法条号有轻微错误
+    - **30-49分**：来源存在但内容不匹配，或法条号错误
+    - **0-29分**：来源不存在、无法验证，或引用完全错误
+
+**溯源判定字段**：
+- `source_verifiable`：来源是否明确且真实存在 (true/false)
+- `source_check_result`：来源检查结果
+    - **verified** (90-100分)：来源真实存在，且内容与陈述完全匹配。
+    - **partially_verified** (50-89分)：来源存在，内容部分匹配。
+    - **unverified** (0-49分)：来源不存在或无法验证。
+- `content_relevance`：来源内容是否直接支撑陈述的核心断言 (true/false)
+    - **relevant** (90-100分)：来源内容完全支撑陈述。
+    - **partially_relevant** (50-89分)：来源部分支撑，但有偏差。
+    - **irrelevant** (0-49分)：来源内容与陈述无关。
 
 # 输出格式
 请严格按照以下 JSON 格式输出评估结果，**不要添加任何额外文本**：
@@ -34,11 +49,14 @@
   "evaluations": [
     {
       "text": "原文陈述文本",
+      "score": 0,
       "verdict": "correct",
       "reasoning": "判定理由（简要说明，指出关键专利法依据或事实）",
       "source_verifiable": true,
+      "source_score": 0,
       "source_check_result": "verified",
       "content_relevance": true,
+      "relevance_score": 0,
       "relevance_check_result": "relevant",
       "relevance_reasoning": "相关性判定理由（说明来源如何支撑陈述）"
     }
@@ -54,3 +72,4 @@
 5.  **程序规则**：核实申请、审查、授权等程序步骤的描述是否准确。
 6.  **溯源严格性**：只有当来源**存在且内容匹配**时，才能判定为 `verified` 且 `relevant`。如果引用了错误的法条号，即使陈述本身正确，也应判定为 `source_verifiable: false` 和 `irrelevant`。
 7.  **不确定性处理**：如果陈述无法验证，请使用 `uncertain` 并说明原因（如"缺乏具体案例支持"）。
+8.  **评分一致性**：`score`、`source_score`、`relevance_score` 均为 0-100 分制，`verdict` 由 `score` 区间自动决定。

@@ -1,4 +1,4 @@
-"""Evaluation boot runner v1.0 — interactive mode.
+"""Evaluation boot runner v1.1 — interactive mode.
 
 Single interactive entry point:
 

@@ -1,6 +1,6 @@
 # 预设答案（expected_*.json）设计与编写指南
 
-本文件描述 `expected_*.json` 预设答案文件的设计要求、编写流程、格式规范、设计原则，以及与指标计算/报告生成模块的配合方式。
+本文件描述 `expected_*.json` 预设答案文件的设计要求、编写流程、格式规范，以及与指标计算/报告生成模块的配合方式。
 
 ---
 
@@ -8,13 +8,25 @@
 
 ### 1.1 为什么需要预设答案
 
-主控脚本 [evaluation_test_v1.0_bootrun.py](../evaluation_test_v1.0_bootrun.py) 驱动系统完成多轮 teach + feedback 循环后，需要系统地评估系统输出质量。其中 **指标一：知识点覆盖率** 的三个子维度必须有一份"标准答案"作为对比基准：
+主控脚本 [evaluation_test_v1.1_bootrun.py](../evaluation_test_v1.1_bootrun.py) 驱动系统完成多轮 teach + feedback 循环后，需要系统地评估系统输出质量。
+
+目前的评估体系包含五大类指标，其中**只有指标三：覆盖率**（及其三个子维度）必须依赖预设答案作为对比基准：
+
+| 指标类别 | 是否需要预设答案 | 评估方式 |
+|---------|----------------|---------|
+| **指标一：幻觉率 — 系统自评** | ❌ 不需要 | 系统内置的"专家 Agent 互评 + 裁判 Agent 决策"机制 |
+| **指标二：匹配度** | ❌ 不需要 | 脚本计算（难度符合度）+ 外部 LLM 评估（资源形态） |
+| **指标三：覆盖率** | ✅ **需要** | **必须与预设答案比对** |
+| **指标四：幻觉率 — 外部 LLM** | ❌ 不需要 | 外部 LLM 对课程内容进行事实性核查 |
+| **指标五：对话质量** | ❌ 不需要 | 外部 LLM 评估（异议闭环率）+ 脚本计算（动态迭代） |
+
+预设答案仅服务于**指标三：覆盖率**的三个子维度：
 
 | 子维度 | 计算公式 | 需要用到 expected 中的哪些字段 |
 |--------|---------|-------------------------------|
-| 本节知识点覆盖率 | `课程已覆盖的子知识点数 / 预定义子知识点总数 × 100% | `expected_course_content.section_kcs` |
+| 本节知识点覆盖率 | `课程已覆盖的子知识点数 / 预定义子知识点总数 × 100%` | `expected_course_content.section_kcs` |
 | 薄弱点命中率 | `课程命中的薄弱知识点数 / 薄弱知识点总数 × 100%` | `expected_course_content.weakness_kcs` |
-| 混淆风险覆盖率 | `课程辨析的高风险混淆对数 / 高风险混淆对总数 × 100%` | `expected_course_content.confusable_pairs` |
+| 混淆对覆盖率 | `课程辨析的高风险混淆对数 / 高风险混淆对总数 × 100%` | `expected_course_content.confusable_pairs` |
 
 预设答案 = "这个学员 + 这一轮实际路径 → 课程应该讲哪些知识点"。
 
@@ -25,7 +37,7 @@
 ```
 ① 环境准备
 ② 启动 FastAPI 后端
-③ 启动主控脚本（evaluation_test_v1.0_bootrun.py）
+③ 启动主控脚本（evaluation_test_v1.1_bootrun.py）
 ④ 删除旧数据（可选）
 ⑤ 运行模块 4 → 子菜单 1：生成 R01 课程
             ↓
@@ -35,12 +47,14 @@
             ↓
 ⑧ **编写 expected_{X}_02.json、expected_{X}_03.json ...**
             ↓
-⑨ 运行模块 2：计算指标（逐轮计算 + 多轮平均）
+⑨ 运行模块 5：外部 LLM 评估（M1/M7/M8/M9）
             ↓
-⑩ 运行模块 3：生成完整评估报告
+⑩ 运行模块 2：计算指标（逐轮计算 + 多轮平均）
+            ↓
+⑪ 运行模块 3：生成完整评估报告
 ```
 
-> **关键原则**：每写完一轮的 expected 文件，才能进行下一轮的指标计算。全部写完后一次性跑模块 2 即可，也可以写完一个算一个（模块 2 支持 `all` 或单轮）。
+> **关键原则**：每写完一轮的 expected 文件，才能进行该轮的覆盖率指标计算。全部写完后一次性跑模块 2 即可，也可以写完一个算一个（模块 2 支持 `all` 或单轮）。
 
 ---
 
@@ -55,7 +69,7 @@
 运行 R02 课程 → 查看 R02 产物 → 写 expected_{X}_02.json → OK
 运行 R03 课程 → 查看 R03 产物 → 写 expected_{X}_03.json → OK
                                           ↓
-                    全部写完后，模块 2（指标计算）+ 模块 3（报告）
+                    全部写完后，模块 5（外部LLM评估）+ 模块 2（指标计算）+ 模块 3（报告）
 ```
 
 ### 2.2 每轮编写的具体步骤
@@ -156,9 +170,9 @@ expected_{学员首字母}_{两位轮次编号}.json
 
 | expected_course_content 的子字段 | 类型 | 数量 | 必须 | 取值要求 |
 |----------------------------|------|------|------|---------|
-| `section_kcs` | `string[]` | 1–3 个 | ✅ | **章节级知识点 node_id，选自下方 3.1 表，必须是 knowledge-dag.json 中 level=1 的 9 个章节之一 |
-| `weakness_kcs` | `string[]` | 0–5 个 | ✅ | **薄弱知识点中文 node_name**，选自下方 3.2 表（子级节点清单）；可为空数组 `[]` |
-| `confusable_pairs` | `[string, string][]` | 0–3 对 | ✅ | **易混淆对的 node_id 对**，选自下方 3.3 表（混淆对清单）；每对是长度为 2 的 string 数组；可为空数组 `[]` |
+| `section_kcs` | `string[]` | 1–3 个 | ✅ | **章节级知识点 node_id，选自下方 5.1 表，必须是 knowledge-dag.json 中 level=1 的 9 个章节之一 |
+| `weakness_kcs` | `string[]` | 0–5 个 | ✅ | **薄弱知识点中文 node_name**，选自下方 5.2 表（子级节点清单）；可为空数组 `[]` |
+| `confusable_pairs` | `[string, string][]` | 0–3 对 | ✅ | **易混淆对的 node_id 对**，选自下方 5.3 表（混淆对清单）；每对是长度为 2 的 string 数组；可为空数组 `[]` |
 
 > `weakness_kcs` 与 `confusable_pairs` 为空数组 `[]` 时，模块 2（指标计算时将跳过对应的两个子维度（薄弱点命中率 / 混淆风险覆盖率），标记为"无预设"，不参与覆盖率平均值的分子/分母。
 
@@ -170,7 +184,7 @@ expected_{学员首字母}_{两位轮次编号}.json
 
 摘自 `backend/app/curriculum/data/knowledge-dag.json` 的 level=1 章节节点：
 
-| node_id | node_name（章节标题） | 适用画像类型 / 学习场景
+| node_id | node_name（章节标题） | 适用画像类型 / 学习场景 |
 |---------|-------------------|---------------------|
 | `patent-law-foundation` | 专利法律制度基础（第一章） | 零基础入门学员、需补习专利法理基础 |
 | `patentability-substantive` | 专利授权实质条件（第二章） | 关注**三性判断（新颖性、创造性、实用性）**的学员 |
@@ -283,38 +297,42 @@ expected_{学员首字母}_{两位轮次编号}.json
 
 ---
 
-## 六、设计原则（编写时必须遵守
+## 六、设计原则（编写时必须遵守）
 
 ### 原则 1：区分度优先 + 匹配学员背景 + 匹配学习目标
 
-- **区分度优先 + 匹配学员背景
+- **区分度优先 + 匹配学员背景**
 - 同一学员不同轮次的 `section_kcs` 应反映学习路径推进（不重复）
 - 不同学员（不同画像不同背景的 `section_kcs` 应覆盖至少 5 个不同章节节点
 
 ### 原则 2：section_kcs 只从 9 个章节级节点选（node_id）
 
-只能从 5.1 节 9 个 node_id
+只能从 5.1 节 9 个 node_id 中选择。
 
 - 不准用子级节点填 section_kcs（子级节点只用在 weakness_kcs（用中文名）
+- 每个值必须是 knowledge-dag.json 中 level=1 的 node_id
 
 ### 原则 3：weakness_kcs 必须具体
 
-- 必须用**具体的 node_name（中文名）
+- 必须用**具体的 node_name（中文名）**
 - 不准"专利法"、"保护" 这样的泛泛词
+- 应从 5.2 节的子级节点清单中选择
 
 ### 原则 4：confusable_pairs 必须核对 node_id 对
 
 - 必须从 5.3 节的清单中选择
 - 不准自造不存在的 node_id
+- 每对必须是长度为 2 的 string 数组
 
 ### 原则 5：数量合理
+
 - `section_kcs`：1–3 个/轮
 - `weakness_kcs`：0–5 个/轮（无明显薄弱点时可为空数组）
 - `confusable_pairs`：0–3 对/轮（无混淆点可为空数组）
 
 ### 原则 6：从教师视角设计
 
-想象你是专利法老师，面对这个学员在这一节课应该教什么
+想象你是专利法老师，面对这个学员在这一节课应该教什么：
 
 1. 这节课主题（对应 learning_path 的当前节点（current_node）是什么章节）
 2. 这个学员最需要补哪几个具体概念（weakness_kcs）
@@ -347,7 +365,7 @@ profiles/expected_{letter}_{round:02d}.json
 
 1. 扫描所有已运行的 `multi-{letter}/round-*`
 2. 汇总所有轮次的指标计算结果
-3. 输出跨画像跨轮次的完整报告：results/reports/evaluation_report_*.md`
+3. 输出跨画像跨轮次的完整报告：`results/reports/evaluation_report_*.md`
 
 ---
 
@@ -355,33 +373,33 @@ profiles/expected_{letter}_{round:02d}.json
 
 对 10 个画像运行 3 轮后需编写 30 个 expected 文件：
 
-- [ ] `expected_B_01.json
-- [ ] `expected_B_02.json
-- [ ] `expected_B_03.json
-- [ ] `expected_C_01.json
-- [ ] `expected_C_02.json
-- [ ] `expected_C_03.json
-- [ ] `expected_G_01.json
-- [ ] `expected_G_02.json
-- [ ] `expected_G_03.json
-- [ ] `expected_H_01.json
-- [ ] `expected_H_02.json
-- [ ] `expected_H_03.json
-- [ ] `expected_M_01.json
-- [ ] `expected_M_02.json
-- [ ] `expected_M_03.json
-- [ ] `expected_P_01.json
-- [ ] `expected_P_02.json
-- [ ] `expected_P_03.json
-- [ ] `expected_R_01.json
-- [ ] `expected_R_02.json
-- [ ] `expected_R_03.json
-- [ ] `expected_S_01.json
-- [ ] `expected_S_02.json
-- [ ] `expected_S_03.json
-- [ ] `expected_T_01.json
-- [ ] `expected_T_02.json
-- [ ] `expected_T_03.json
-- [ ] `expected_W_01.json
-- [ ] `expected_W_02.json
-- [ ] `expected_W_03.json
+- [ ] `expected_B_01.json`
+- [ ] `expected_B_02.json`
+- [ ] `expected_B_03.json`
+- [ ] `expected_C_01.json`
+- [ ] `expected_C_02.json`
+- [ ] `expected_C_03.json`
+- [ ] `expected_G_01.json`
+- [ ] `expected_G_02.json`
+- [ ] `expected_G_03.json`
+- [ ] `expected_H_01.json`
+- [ ] `expected_H_02.json`
+- [ ] `expected_H_03.json`
+- [ ] `expected_M_01.json`
+- [ ] `expected_M_02.json`
+- [ ] `expected_M_03.json`
+- [ ] `expected_P_01.json`
+- [ ] `expected_P_02.json`
+- [ ] `expected_P_03.json`
+- [ ] `expected_R_01.json`
+- [ ] `expected_R_02.json`
+- [ ] `expected_R_03.json`
+- [ ] `expected_S_01.json`
+- [ ] `expected_S_02.json`
+- [ ] `expected_S_03.json`
+- [ ] `expected_T_01.json`
+- [ ] `expected_T_02.json`
+- [ ] `expected_T_03.json`
+- [ ] `expected_W_01.json`
+- [ ] `expected_W_02.json`
+- [ ] `expected_W_03.json`
