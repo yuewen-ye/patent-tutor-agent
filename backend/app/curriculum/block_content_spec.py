@@ -64,10 +64,12 @@ BLOCK_CONTENT_SPEC: dict[str, dict[str, Any]] = {
         "purpose": "三类测评闭环，检验是否真掌握。",
         "fields": [
             {"key": "coverage", "desc": "三类出题覆盖说明：backward_review(向后复习)/forward_probe(向前探测)/weakness_probe(薄弱点) 各是否覆盖", "min": "三类齐全"},
-            {"key": "items", "desc": "实际题目列表（至少 3 题，与 interactive_questions/assessment.items 对应；可放题面摘要或引用 qid）", "min": "≥3 题"},
+            {"key": "items", "desc": "题目索引列表（至少 3 题，每项仅引用 qid 与一句话主题摘要，与 interactive_questions 一一对应）；完整题干、选项、答案与解析只存在于 interactive_questions / assessment.items 等 JSON 题目字段，不得写入正文 teaching_content", "min": "≥3 题"},
+            {"key": "body_guide", "desc": "正文引导语（≤1 句）：测评模块在正文 teaching_content 只保留「本节设有测评，请到【习题】区作答」这类引导句，禁止出现题干、选项、答案或解析", "min": "≤1 句"},
         ],
         "example": {
             "coverage": {"backward_review": True, "forward_probe": True, "weakness_probe": True},
+            "body_guide": "本节设有测评（覆盖向后复习/向前探测/薄弱点），请到【习题】区作答。",
             "items": [
                 {"qid": "q1", "summary": "下列哪项正确描述三性？"},
                 {"qid": "q2", "summary": "给出技术方案判断是否具备实用性"},
@@ -109,7 +111,7 @@ BLOCK_CONTENT_SPEC: dict[str, dict[str, Any]] = {
             {"key": "problem", "desc": "完整例题/案情：给定事实 + 待判定问题", "min": "非空"},
             {"key": "applicable_rule", "desc": "本题用到的法条/规则（引用条号）", "min": "非空"},
             {"key": "steps", "desc": "分步推演列表，每步含‘推理’与‘小结’，展示判定链如何走", "min": "≥3 步"},
-            {"key": "conclusion", "desc": "本题最终结论", "min": "非空"},
+            {"key": "conclusion", "desc": "本例判定结论（教学结论，非测验答案；例题仅用于演示判定链，不进入测评区）", "min": "非空"},
             {"key": "takeaway", "desc": "本题训练的能力点（1 句）", "min": "非空"},
         ],
         "example": {

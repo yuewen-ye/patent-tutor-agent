@@ -35,9 +35,9 @@
 - 法律依据、要件拆解、判断流程、边界例外；
 - 常见错误和易混淆点；
 - `knowledge_synthesis.coverage` 是否如实覆盖当前节点 KC，是否存在未处理项；
-- `assessment.items` 是否执行 Planner 给出的实际出题范围；
-- 前探题是否仅为 L1，所有题是否未超过相应 `difficulty_cap`；
-- `block_plan` 中承诺的模块是否在 `teaching_content` 中真正展开，payload 是否有实质内容。
+- `assessment.items` 是否执行 Planner 给出的实际出题范围，题目是否在 JSON 块（`assessment.items` / `interactive_questions` / `exercises`）中提供；正文 `teaching_content` 不得承载可作答的题目、选项、答案或解析（测评模块在正文只保留引导语）；
+- 前探题是否仅为 L1；每题难度是否受双向约束：既不超过对应节点的 `difficulty_cap`，也不低于 `question_scope` 为该题声明的目标 `difficulty`（杜绝过易的注水题）；
+- `block_plan` 中承诺的讲解类模块（法律依据、要件拆解、判断流程、边界例外、常见错误等）是否在 `teaching_content` 中真正展开，payload 是否有实质内容；测评模块不计入正文展开判据，正文只需引导语，正文出现可作答题目或答案属于违规项而非加分项。
 
 缺少核心要素时，`completeness_score` 不得高于 3。
 
