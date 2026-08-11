@@ -52,8 +52,10 @@ REPORTS_DIR = _EVAL_DIR / "results" / "reports"
 # 指标分类（按 calculate.py 顺序，与 doc/指标草案.md 对齐）
 METRIC_CATEGORIES: list[tuple[str, list[str]]] = [
     ("幻觉率 — 系统自评", ["专家互评异议率", "裁判准确性评分"]),
-    ("匹配度", ["难度符合度", "情感使用度"]),
+    ("匹配度", ["难度符合度", "资源形态评估"]),  # 替换原 情感使用度
     ("覆盖率", ["本节知识点覆盖率", "薄弱点命中率", "混淆对覆盖率"]),
+    ("幻觉率 — 外部LLM", ["专业知识谬误率", "知识溯源可验证率"]),
+    ("对话质量", ["异议闭环率", "动态迭代触发率"]),
 ]
 
 # 指标说明：name -> (计算公式, 数据来源)
@@ -67,16 +69,16 @@ METRIC_META: dict[str, tuple[str, str]] = {
         "judge_report.md",
     ),
     "难度符合度": (
-        "题目难度≤上限的题数 / 总题数 × 100%",
-        "course_package.md (Q难度) + learning_path.md (难度上限表)",
+        "L_low ≤ 题.difficulty ≤ L_high 的题数 / 总题数 × 100%",
+        "course_package.md (Q难度) + learning_path.md (难度上限表) + learner_profile_update.md (pl)",
     ),
-    "情感使用度": (
-        "情感支持板块数 / 总板块数 × 100%",
-        "course_package.md (教学模块清单 block_type)",
+    "资源形态评估": (
+        "外部 LLM 判定：资源形态覆盖率 + 学员画像适配度",
+        "resource_morphology_*.json (外部 LLM 评估)",
     ),
     "本节知识点覆盖率": (
-        "|实际覆盖 ∩ 预设期望| / |预设期望| × 100%",
-        "course_package.md (knowledge_points.node_id) + expected_*.json (section_kcs)",
+        "|累计实际(含祖先) ∩ learning_path 全量| / |learning_path 全量| × 100%",
+        "course_package.md (knowledge_points.node_id) + learning_path.md + knowledge-dag.json (祖先扩展)",
     ),
     "薄弱点命中率": (
         "命中的薄弱点数 / 总薄弱点数 × 100%",
@@ -86,7 +88,57 @@ METRIC_META: dict[str, tuple[str, str]] = {
         "命中的混淆对数 / 总预设混淆对数 × 100%",
         "course_package.md (全文匹配 node_name) + expected_*.json (confusable_pairs)",
     ),
+    "专业知识谬误率": (
+        "错误陈述数 / 总可核验陈述数 × 100%",
+        "course_package.md (legal_basis / risks / 教学正文) → 外部 LLM 判定",
+    ),
+    "知识溯源可验证率": (
+        "(条号真实且内容对应的引用数) / 抽样引用总数 × 100%",
+        "course_package.md (legal_basis.source) → 外部 LLM 核验",
+    ),
+    "异议闭环率": (
+        "闭环条数 / 总🔴条数 × 100%",
+        "cross_review.md + judge_report.md + revision.md (外部 LLM 判定)",
+    ),
+    "动态迭代触发率": (
+        "pl从弱升至已掌握的节点数 / r01弱状态节点数 × 100%",
+        "learner_profile_update.md (跨轮比对) + course_package.md (难度变化)",
+    ),
 }
+
+# ── 证据表：M4~M7（从 doc/reference/ 读取） ──────────────────────────────────
+
+REFERENCE_DIR = _EVAL_DIR / "doc" / "reference"
+
+EVIDENCE_TABLES: list[tuple[str, str]] = [
+    ("M4 差异化画像对照表", "M4_画像对照表.md"),
+    ("M5 知识库切片清单", "M5_知识库切片清单.md"),
+    ("M6 智能体职责分工与产物完整率", "M6_智能体职责分工与产物完整率.md"),
+    ("M7 资源形态清单", "M7_资源形态清单.md"),
+]
+
+
+def _append_evidence_tables(lines: list[str]) -> None:
+    """从 doc/reference/M4~M7_*.md 读取证据表，追加到报告末尾。"""
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append("## 五、证据表")
+    lines.append("")
+
+    for title, filename in EVIDENCE_TABLES:
+        filepath = REFERENCE_DIR / filename
+        if filepath.exists():
+            content = filepath.read_text(encoding="utf-8").strip()
+            lines.append(f"### {title}")
+            lines.append("")
+            lines.append(content)
+            lines.append("")
+        else:
+            lines.append(f"### {title}")
+            lines.append("")
+            lines.append(f"_（证据文件 {filename} 不存在，跳过）_")
+            lines.append("")
 
 
 # ── 数据结构 ─────────────────────────────────────────────────────────────────
@@ -138,13 +190,18 @@ def _load_llm_eval_results() -> dict[str, Any]:
     """加载所有外部 LLM 评估结果。
 
     Returns:
-        dict 结构: {profile_letter: {round_num: json_data, ...}, ...}
+        dict 结构: {profile_letter: {round_num: {
+            'judge_eval': judge_data,
+            'm7_resource': m7_data,
+            ...
+        }, ...}, ...}
     """
     results: dict[str, Any] = {}
 
     if not LLM_EVAL_RESULTS_DIR.exists():
         return results
 
+    # 加载 Judge 评估结果
     for json_file in sorted(LLM_EVAL_RESULTS_DIR.glob("judge_*.json")):
         try:
             data = json.loads(json_file.read_text(encoding="utf-8"))
@@ -155,7 +212,26 @@ def _load_llm_eval_results() -> dict[str, Any]:
             if profile_id and round_num:
                 if profile_id not in results:
                     results[profile_id] = {}
-                results[profile_id][round_num] = data
+                if round_num not in results[profile_id]:
+                    results[profile_id][round_num] = {}
+                results[profile_id][round_num]["judge_eval"] = data
+        except (json.JSONDecodeError, KeyError):
+            continue
+
+    # 加载 M7 资源形态评估结果
+    for json_file in sorted(LLM_EVAL_RESULTS_DIR.glob("resource_morphology_*.json")):
+        try:
+            data = json.loads(json_file.read_text(encoding="utf-8"))
+            metadata = data.get("metadata", {})
+            profile_id = metadata.get("profile_id", "")
+            round_num = metadata.get("round", 0)
+
+            if profile_id and round_num:
+                if profile_id not in results:
+                    results[profile_id] = {}
+                if round_num not in results[profile_id]:
+                    results[profile_id][round_num] = {}
+                results[profile_id][round_num]["m7_resource"] = data
         except (json.JSONDecodeError, KeyError):
             continue
 
@@ -164,17 +240,31 @@ def _load_llm_eval_results() -> dict[str, Any]:
 
 def _has_llm_eval_for(profile_letter: str, round_num: int,
                       llm_results: dict[str, Any]) -> bool:
-    """检查指定画像指定轮次是否有外部 LLM 评估结果。"""
+    """检查指定画像指定轮次是否有任何外部 LLM 评估结果。"""
     return profile_letter in llm_results and round_num in llm_results[profile_letter]
+
+
+def _has_judge_eval_for(profile_letter: str, round_num: int,
+                        llm_results: dict[str, Any]) -> bool:
+    """检查指定画像指定轮次是否有 Judge 评估结果。"""
+    return (_has_llm_eval_for(profile_letter, round_num, llm_results) and
+            "judge_eval" in llm_results[profile_letter][round_num])
+
+
+def _has_m7_eval_for(profile_letter: str, round_num: int,
+                     llm_results: dict[str, Any]) -> bool:
+    """检查指定画像指定轮次是否有 M7 资源形态评估结果。"""
+    return (_has_llm_eval_for(profile_letter, round_num, llm_results) and
+            "m7_resource" in llm_results[profile_letter][round_num])
 
 
 def _get_llm_overall_scores(profile_letter: str, round_num: int,
                              llm_results: dict[str, Any]) -> dict[str, Any] | None:
-    """获取指定画像指定轮次的整体评估分数。"""
-    if not _has_llm_eval_for(profile_letter, round_num, llm_results):
+    """获取指定画像指定轮次的 Judge 整体评估分数。"""
+    if not _has_judge_eval_for(profile_letter, round_num, llm_results):
         return None
 
-    data = llm_results[profile_letter][round_num]
+    data = llm_results[profile_letter][round_num]["judge_eval"]
     overall = data.get("overall_evaluation", {})
     return overall.get("scores", {})
 
@@ -191,13 +281,23 @@ def _get_llm_chunk_scores(profile_letter: str, round_num: int,
 
 def _get_llm_summary(profile_letter: str, round_num: int,
                       llm_results: dict[str, Any]) -> dict[str, Any]:
-    """获取指定画像指定轮次的评估总结。"""
-    if not _has_llm_eval_for(profile_letter, round_num, llm_results):
+    """获取指定画像指定轮次的 Judge 评估总结。"""
+    if not _has_judge_eval_for(profile_letter, round_num, llm_results):
         return {}
 
-    data = llm_results[profile_letter][round_num]
+    data = llm_results[profile_letter][round_num]["judge_eval"]
     overall = data.get("overall_evaluation", {})
     return overall.get("summary", {})
+
+
+def _get_m7_resource_scores(profile_letter: str, round_num: int,
+                             llm_results: dict[str, Any]) -> dict[str, Any] | None:
+    """获取指定画像指定轮次的 M7 资源形态评估分数。"""
+    if not _has_m7_eval_for(profile_letter, round_num, llm_results):
+        return None
+
+    data = llm_results[profile_letter][round_num]["m7_resource"]
+    return data.get("metrics", {})
 
 
 def _get_llm_metadata(profile_letter: str, round_num: int,
@@ -267,28 +367,81 @@ def _format_detail(v: Any) -> str:
     return str(v)
 
 
-def _all_metric_names(profiles: list[ProfileReport]) -> list[str]:
+def _all_metric_names(profiles: list[ProfileReport], 
+                       llm_results: dict[str, Any] | None = None) -> list[str]:
     """收集所有出现过的指标名（按 calculate.py 顺序去重）。"""
     names: list[str] = []
     seen: set[str] = set()
+    
+    # 1. 收集规则计算指标
     for p in profiles:
         for rm in p.rounds:
             for m in rm.metrics:
                 if m.name not in seen:
                     names.append(m.name)
                     seen.add(m.name)
+    
+    # 2. 收集外部 LLM 评估指标（如资源形态评估）
+    if llm_results:
+        for profile_letter in llm_results:
+            for round_num in llm_results[profile_letter]:
+                if "m7_resource" in llm_results[profile_letter][round_num]:
+                    if "资源形态评估" not in seen:
+                        names.append("资源形态评估")
+                        seen.add("资源形态评估")
+                        
     return names
 
 
+def _get_metric_value_for_round(
+    profile_letter: str, 
+    round_num: int, 
+    metric_name: str,
+    llm_results: dict[str, Any],
+    round_metrics: list[Any]  # from RoundMetrics.metrics
+) -> tuple[float, str] | None:
+    """获取特定画像特定轮次的指标值。
+    
+    优先从规则计算指标中查找，若不存在则尝试从外部 LLM 结果中获取。
+    """
+    # 1. 查找规则计算指标
+    for m in round_metrics:
+        if m.name == metric_name:
+            return m.value, m.unit
+    
+    # 2. 查找外部 LLM 指标
+    if metric_name == "资源形态评估":
+        m7_scores = _get_m7_resource_scores(profile_letter, round_num, llm_results)
+        if m7_scores:
+            return m7_scores.get("value", 0), m7_scores.get("unit", "分")
+            
+    return None
+
+
 def _metric_avg_for_profile(
-    profile: ProfileReport, metric_name: str,
+    profile: ProfileReport, 
+    metric_name: str,
+    llm_results: dict[str, Any] | None = None,
 ) -> tuple[float, str] | None:
     """计算单个画像某指标的跨轮平均值。"""
     values_with_unit: list[tuple[float, str]] = []
-    for rm in profile.rounds:
-        m = next((x for x in rm.metrics if x.name == metric_name), None)
-        if m is not None:
-            values_with_unit.append((m.value, m.unit))
+    
+    # 检查是否为外部 LLM 指标
+    if metric_name == "资源形态评估" and llm_results:
+        for rm in profile.rounds:
+            result = _get_metric_value_for_round(
+                profile.profile_letter, rm.round_num, metric_name, 
+                llm_results, rm.metrics
+            )
+            if result is not None:
+                values_with_unit.append(result)
+    else:
+        # 规则计算指标
+        for rm in profile.rounds:
+            m = next((x for x in rm.metrics if x.name == metric_name), None)
+            if m is not None:
+                values_with_unit.append((m.value, m.unit))
+                
     if not values_with_unit:
         return None
     avg = sum(v for v, _ in values_with_unit) / len(values_with_unit)
@@ -562,6 +715,9 @@ def _render_markdown_single(ctx: ReportContext) -> str:
             lines.append(f"- **{name}** 平均 {_format_value(avg, unit)}")
         lines.append("")
 
+    # 五、证据表
+    _append_evidence_tables(lines)
+
     lines.append("---")
     lines.append("")
     lines.append(f"_报告由 report.py 自动生成 @ {ctx.generated_at}_")
@@ -575,8 +731,8 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
     """渲染完整 Markdown 报告（多画像汇总）。"""
     lines: list[str] = []
     profiles = ctx.profiles
-    all_names = _all_metric_names(profiles)
     llm_results = ctx.llm_eval_results  # 从 ctx 获取外部 LLM 结果
+    all_names = _all_metric_names(profiles, llm_results)
 
     # ── 标题与概览 ───────────────────────────────────────────────────────────
     lines.append("# 评估报告 — 完整汇总")
@@ -626,7 +782,7 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
     for p in profiles:
         row = [f"profile_{p.profile_letter}"]
         for name in all_names:
-            result = _metric_avg_for_profile(p, name)
+            result = _metric_avg_for_profile(p, name, llm_results)
             if result is None:
                 row.append("-")
             else:
@@ -640,7 +796,7 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
         all_values: list[float] = []
         unit = ""
         for p in profiles:
-            result = _metric_avg_for_profile(p, name)
+            result = _metric_avg_for_profile(p, name, llm_results)
             if result is not None:
                 all_values.append(result[0])
                 unit = result[1]
@@ -768,34 +924,50 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
         lines.append(f"- 轮次数：{len(p.rounds)}")
         lines.append("")
 
-        # 3.1 该画像的轮次汇总表（原有指标）
-        lines.append("#### 轮次汇总（规则计算指标）")
+        # 3.1 该画像的轮次汇总表（所有指标）
+        lines.append("#### 轮次汇总（所有指标）")
         lines.append("")
+        
+        # 收集该画像所有指标名（包含外部 LLM 指标）
+        p_all_names: list[str] = []
+        p_all_seen: set[str] = set()
+        
+        # 规则计算指标
+        for rm in p.rounds:
+            for m in rm.metrics:
+                if m.name not in p_all_seen:
+                    p_all_names.append(m.name)
+                    p_all_seen.add(m.name)
+        
+        # 外部 LLM 指标 (检查 M7)
+        has_m7 = any(
+            _has_m7_eval_for(letter, rm.round_num, llm_results)
+            for rm in p.rounds
+        )
+        if has_m7 and "资源形态评估" not in p_all_seen:
+            p_all_names.append("资源形态评估")
+            p_all_seen.add("资源形态评估")
+
         header = "| 指标 | " + " | ".join(f"R{rm.round_num:02d}" for rm in p.rounds) + " | 平均 |"
         sep = "|---|" + "|".join("---" for _ in p.rounds) + "|---|"
         lines.append(header)
         lines.append(sep)
 
-        p_names: list[str] = []
-        p_seen: set[str] = set()
-        for rm in p.rounds:
-            for m in rm.metrics:
-                if m.name not in p_seen:
-                    p_names.append(m.name)
-                    p_seen.add(m.name)
-
-        for name in p_names:
+        for name in p_all_names:
             row = [f"`{name}`"]
             values: list[float] = []
             unit = ""
             for rm in p.rounds:
-                m = next((x for x in rm.metrics if x.name == name), None)
-                if m is None:
+                result = _get_metric_value_for_round(
+                    letter, rm.round_num, name, llm_results, rm.metrics
+                )
+                if result is None:
                     row.append("-")
                 else:
-                    row.append(_format_value(m.value, m.unit))
-                    values.append(m.value)
-                    unit = m.unit
+                    val, u = result
+                    row.append(_format_value(val, u))
+                    values.append(val)
+                    unit = u
             if values:
                 avg = sum(values) / len(values)
                 row.append(_format_value(avg, unit))
@@ -878,20 +1050,32 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
 
             lines.append("")
 
-        # 3.3 该画像各轮明细（原有指标）
-        lines.append("#### 各轮明细（规则计算指标）")
+        # 3.3 该画像各轮明细
+        lines.append("#### 各轮明细")
         lines.append("")
         for rm in p.rounds:
             lines.append(f"**round-{rm.round_num:02d}**")
             lines.append("")
             for category_name, metric_names in METRIC_CATEGORIES:
+                lines.append(f"**{category_name}**")
+                lines.append("")
                 for name in metric_names:
+                    # 规则计算指标
                     m = next((x for x in rm.metrics if x.name == name), None)
-                    if m is None:
-                        continue
-                    lines.append(f"- **{m.name}**: {_format_value(m.value, m.unit)}")
-                    for k, v in m.detail.items():
-                        lines.append(f"    - {k}: {_format_detail(v)}")
+                    if m is not None:
+                        lines.append(f"- **{m.name}**: {_format_value(m.value, m.unit)}")
+                        for k, v in m.detail.items():
+                            lines.append(f"    - {k}: {_format_detail(v)}")
+                    # 外部 LLM 指标 (M7)
+                    elif name == "资源形态评估":
+                        m7_scores = _get_m7_resource_scores(letter, rm.round_num, llm_results)
+                        if m7_scores:
+                            value = m7_scores.get("value", 0)
+                            unit = m7_scores.get("unit", "分")
+                            lines.append(f"- **{name}**: {_format_value(value, unit)}")
+                            detail = m7_scores.get("detail", {})
+                            for k, v in detail.items():
+                                lines.append(f"    - {k}: {_format_detail(v)}")
             lines.append("")
 
         # 3.4 外部 LLM 评估详情
@@ -1012,6 +1196,9 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
                 f"| `{name}` | {_format_value(grand_avg, unit)} | {per_profile_str} |"
             )
         lines.append("")
+
+    # 五、证据表
+    _append_evidence_tables(lines)
 
     lines.append("---")
     lines.append("")

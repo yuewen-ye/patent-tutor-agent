@@ -178,7 +178,11 @@ def _do_metrics(profile_ids: list[str], learner_prefix: str = "multi") -> None:
 
 
 def _do_metrics_one(profile_id: str, learner_prefix: str = "multi") -> None:
-    """单个画像的指标计算（默认所有轮次）。"""
+    """单个画像的指标计算（默认所有轮次）。
+
+    跨轮累计 history_nodes 用于 M3 累计覆盖率；
+    跨轮传递 prev_profile_update 用于 M11 动态迭代判定。
+    """
     letter = common.profile_letter_from_id(profile_id)
 
     # 1. 查找测试快照目录（multi-{letter}）
@@ -198,8 +202,11 @@ def _do_metrics_one(profile_id: str, learner_prefix: str = "multi") -> None:
     print(f"\n[{profile_id}] 可用轮次: {', '.join(f'round-{r:02d}' for r in available_rounds)}")
     print(f"[{profile_id}] 默认计算所有 {len(rounds_to_calc)} 个轮次")
 
-    # 4. 逐轮计算
+    # 4. 逐轮计算（跨轮累计 history_nodes 和 prev_profile_update）
     all_results: list[calculate.RoundMetrics] = []
+    history_nodes: set[str] = set()
+    prev_profile_update: str | None = None  # 上一轮的 learner_profile_update.md 内容
+
     for r in rounds_to_calc:
         print(f"\n{'─' * 50}")
         print(f"[{profile_id}] 计算 round-{r:02d} ...")
@@ -208,6 +215,8 @@ def _do_metrics_one(profile_id: str, learner_prefix: str = "multi") -> None:
                 profile_letter=letter,
                 round_num=r,
                 session_dir=session_dir,
+                history_nodes=history_nodes,
+                prev_profile_update=prev_profile_update,
             )
         except FileNotFoundError as exc:
             print(f"  ❌ {exc}")
@@ -217,6 +226,25 @@ def _do_metrics_one(profile_id: str, learner_prefix: str = "multi") -> None:
             continue
         print(calculate.format_result(rm))
         all_results.append(rm)
+
+        # 累计 knowledge_points 节点（从 "本节知识点覆盖率" 的 detail 获取实际覆盖节点）
+        for m in rm.metrics:
+            if m.name == "本节知识点覆盖率":
+                actual_covered = m.detail.get("实际覆盖(含祖先)", [])
+                if isinstance(actual_covered, list):
+                    history_nodes.update(actual_covered)
+                break
+
+        # 更新 prev_profile_update 供下一轮 M11 使用
+        round_dir = session_dir / f"round-{r:02d}"
+        feedback_dir = round_dir / "feedback"
+        profile_update_path = feedback_dir / "learner_profile_update.md"
+        if profile_update_path.exists():
+            prev_profile_update = profile_update_path.read_text(encoding="utf-8")
+        else:
+            alt_path = round_dir / "learner_profile_update.md"
+            if alt_path.exists():
+                prev_profile_update = alt_path.read_text(encoding="utf-8")
 
     # 5. 多轮汇总（如果有 >1 轮）
     if len(all_results) > 1:

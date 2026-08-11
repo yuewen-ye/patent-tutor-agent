@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>专利代理师考试 · 知识库 DAG 全貌</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<style>
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; margin: 0; background: #f7f8fa; color: #1a1a1a; }
+  header { background: #1f2d3d; color: #fff; padding: 18px 28px; }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 6px 0 0; color: #b9c4d0; font-size: 13px; }
+  .wrap { padding: 20px 28px; }
+  .stats { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 18px; }
+  .stat { background: #fff; border: 1px solid #e3e7ec; border-radius: 8px; padding: 12px 16px; min-width: 150px; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+  .stat h4 { margin: 0 0 8px; font-size: 13px; color: #555; }
+  .stat ul { margin: 0; padding-left: 18px; font-size: 13px; }
+  .legend { background:#fff; border:1px solid #e3e7ec; border-radius:8px; padding:12px 16px; margin-bottom:18px; font-size:13px; }
+  .legend span { display:inline-block; margin-right:16px; }
+  .sw { display:inline-block; width:12px; height:12px; border-radius:3px; vertical-align:middle; margin-right:5px; }
+  .diagram { background:#fff; border:1px solid #e3e7ec; border-radius:8px; padding: 16px; overflow:auto; }
+  .tree { background:#fff; border:1px solid #e3e7ec; border-radius:8px; padding: 16px 24px; margin-top:18px; }
+  .tree h3 { font-size:15px; border-bottom:2px solid #e3e7ec; padding-bottom:6px; margin:18px 0 8px; }
+  .tree ul { columns: 2; column-gap: 28px; font-size:13px; }
+  .tree li { break-inside: avoid; margin-bottom:4px; }
+  .tag { background:#eef2f7; border-radius:4px; padding:1px 6px; font-size:11px; color:#456; margin-left:4px; }
+  .muted { color:#888; font-size:12px; }
+  h2 { font-size:16px; margin: 24px 0 10px; }
+</style></head>
+<body>
+<header>
+  <h1>专利代理师考试 · 系统知识库 DAG 全貌</h1>
+  <p>来源: knowledge-dag.json · version 1.0.0 · 领域组预建，非学情/LLM 生成 · 由 planner 用作 A* 路径规划搜索空间</p>
+</header>
+<div class="wrap">
+  <div class="stats">
+    <div class='stat'><h4>节点按层级 (level)</h4><ul><li><b>1</b>: 10</li><li><b>2</b>: 33</li><li><b>3</b>: 24</li><li><b>4</b>: 2</li></ul></div>
+    <div class='stat'><h4>节点按类别 (category)</h4><ul><li><b>专利代理实务</b>: 4</li><li><b>专利审查指南</b>: 8</li><li><b>专利法</b>: 50</li><li><b>相关法律</b>: 7</li></ul></div>
+    <div class='stat'><h4>节点按考试权重</h4><ul><li><b>中</b>: 25</li><li><b>低</b>: 9</li><li><b>高</b>: 35</li></ul></div>
+    <div class="stat"><h4>边规模</h4><ul>
+      <li><b>总边</b>: 73</li>
+      <li>contains(包含): 59</li>
+      <li>prerequisite(前置): 14</li>
+    </ul></div>
+  </div>
+
+  <div class="legend">
+    <b>图例</b><br>
+    <span><span class="sw" style="background:#DCE6F1;border:1px solid #4C72B0"></span>专利法</span>
+    <span><span class="sw" style="background:#D8ECDD;border:1px solid #55A868"></span>专利审查指南</span>
+    <span><span class="sw" style="background:#F5DCDC;border:1px solid #C44E52"></span>相关法律</span>
+    <span><span class="sw" style="background:#E8E0F0;border:1px solid #8172B3"></span>专利代理实务</span>
+    <br><span>实线 <code>--&gt;</code> = contains（父子包含）　|　虚线 <code>-.-&gt;</code> = prerequisite（前置依赖）</span>
+  </div>
+
+  <h2>① 完整 DAG 可视化（可缩放 / 拖动）</h2>
+  <div class="diagram"><div class="mermaid">
+flowchart TD
+    %% 实线 = contains(包含) ; 虚线 = prerequisite(前置依赖)
+    subgraph sg_patent-law-foundation[第一章 · 专利法律制度基础]
+        patent-law-foundation[&quot;专利法律制度基础&lt;br/&gt;L1 · 低难度0.25&quot;]:::c_pa
+        patent-law-framework[&quot;专利法律体系&lt;br/&gt;L2 · 低难度0.2&quot;]:::c_pa
+        patent-rights-nature[&quot;专利权的性质与特征&lt;br/&gt;L2 · 低难度0.3&quot;]:::c_pa
+        patent-system-overview[&quot;专利制度概论&lt;br/&gt;L2 · 低难度0.15&quot;]:::c_pa
+    end
+    subgraph sg_patentability-substantive[第二章 · 专利授权实质条件]
+        patentability-substantive[&quot;专利授权实质条件&lt;br/&gt;L1 · 高难度0.6&quot;]:::c_pa
+        design-patentability[&quot;外观设计授权条件&lt;br/&gt;L2 · 中难度0.45&quot;]:::c_pa
+        inventive-step[&quot;创造性&lt;br/&gt;L2 · 高难度0.7&quot;]:::c_pa
+        non-patentable-subject[&quot;不授予专利权的主题&lt;br/&gt;L2 · 高难度0.5&quot;]:::c_pa
+        novelty[&quot;新颖性&lt;br/&gt;L2 · 高难度0.55&quot;]:::c_pa
+        practical-applicability[&quot;实用性&lt;br/&gt;L2 · 中难度0.25&quot;]:::c_pa
+        conflicting-application[&quot;抵触申请&lt;br/&gt;L3 · 高难度0.65&quot;]:::c_pa
+        general-consumer[&quot;一般消费者&lt;br/&gt;L3 · 中难度0.3&quot;]:::c_pa
+        grace-period[&quot;不丧失新颖性的宽限期&lt;br/&gt;L3 · 中难度0.45&quot;]:::c_pa
+        medical-method-exclusion[&quot;疾病诊疗方法的排除&lt;br/&gt;L3 · 中难度0.55&quot;]:::c_pa
+        person-skilled-in-art[&quot;所属技术领域的技术人员&lt;br/&gt;L3 · 低难度0.3&quot;]:::c_pa
+        prior-art-definition[&quot;现有技术认定&lt;br/&gt;L3 · 中难度0.4&quot;]:::c_pa
+        public-order-morality[&quot;公共秩序与道德条款&lt;br/&gt;L3 · 低难度0.35&quot;]:::c_pa
+        scientific-discovery-vs-invention[&quot;科学发现与发明创造的区分&lt;br/&gt;L3 · 中难度0.5&quot;]:::c_pa
+        three-step-method[&quot;创造性三步法判断&lt;br/&gt;L3 · 高难度0.75&quot;]:::c_pa
+    end
+    subgraph sg_patent-application-process[第三章 · 专利申请程序]
+        patent-application-process[&quot;专利申请程序&lt;br/&gt;L1 · 高难度0.55&quot;]:::c_pa
+        pct-system[&quot;PCT国际申请&lt;br/&gt;L1 · 中难度0.5&quot;]:::c_pa
+        application-documents[&quot;专利申请文件要求&lt;br/&gt;L2 · 高难度0.45&quot;]:::c_pa
+        divisional-application[&quot;分案申请&lt;br/&gt;L2 · 中难度0.55&quot;]:::c_pa
+        filing-date[&quot;申请日的确定&lt;br/&gt;L2 · 中难度0.35&quot;]:::c_pa
+        pct-filing[&quot;PCT国际申请程序&lt;br/&gt;L2 · 中难度0.45&quot;]:::c_pa
+        pct-national-phase[&quot;PCT国家阶段&lt;br/&gt;L2 · 中难度0.55&quot;]:::c_pa
+        priority-right[&quot;优先权制度&lt;br/&gt;L2 · 高难度0.6&quot;]:::c_pa
+        claims-drafting-basics[&quot;权利要求书撰写基础&lt;br/&gt;L3 · 高难度0.65&quot;]:::c_pa
+        domestic-priority[&quot;本国优先权&lt;br/&gt;L3 · 高难度0.6&quot;]:::c_pa
+        foreign-priority[&quot;外国优先权&lt;br/&gt;L3 · 高难度0.55&quot;]:::c_pa
+        specification-requirements[&quot;说明书撰写要求&lt;br/&gt;L3 · 高难度0.5&quot;]:::c_pa
+        dependent-claim[&quot;从属权利要求&lt;br/&gt;L4 · 高难度0.5&quot;]:::c_pa
+        independent-claim[&quot;独立权利要求&lt;br/&gt;L4 · 高难度0.6&quot;]:::c_pa
+    end
+    subgraph sg_patent-examination[第四~六章 · 审查 / 复审 / 无效]
+        patent-examination[&quot;专利审查流程&lt;br/&gt;L1 · 高难度0.55&quot;]:::c_pe
+        patent-invalidation[&quot;专利无效宣告&lt;br/&gt;L1 · 高难度0.6&quot;]:::c_pa
+        patent-reexamination[&quot;专利复审程序&lt;br/&gt;L1 · 高难度0.5&quot;]:::c_pe
+        collegial-review[&quot;合议审查与复审决定&lt;br/&gt;L2 · 高难度0.55&quot;]:::c_pe
+        invalidation-grounds[&quot;无效宣告理由&lt;br/&gt;L2 · 高难度0.6&quot;]:::c_pa
+        office-action-response[&quot;审查意见答复&lt;br/&gt;L2 · 高难度0.65&quot;]:::c_pe
+        oral-proceeding[&quot;口头审理程序&lt;br/&gt;L2 · 中难度0.45&quot;]:::c_pa
+        preliminary-examination[&quot;初步审查&lt;br/&gt;L2 · 中难度0.35&quot;]:::c_pe
+        reexamination-request[&quot;复审请求的提出&lt;br/&gt;L2 · 中难度0.4&quot;]:::c_pe
+        substantive-examination[&quot;实质审查&lt;br/&gt;L2 · 高难度0.7&quot;]:::c_pe
+        amendment-limits[&quot;专利申请文件的修改限制&lt;br/&gt;L3 · 高难度0.7&quot;]:::c_pe
+    end
+    subgraph sg_patent-rights-protection[第七章 · 专利权保护]
+        patent-rights-protection[&quot;专利权保护&lt;br/&gt;L1 · 高难度0.6&quot;]:::c_pa
+        infringement-defenses[&quot;侵权抗辩事由&lt;br/&gt;L2 · 高难度0.55&quot;]:::c_pa
+        infringement-types[&quot;专利侵权行为类型&lt;br/&gt;L2 · 高难度0.55&quot;]:::c_pa
+        protection-scope[&quot;专利权保护范围&lt;br/&gt;L2 · 高难度0.65&quot;]:::c_pa
+        remedies[&quot;侵权救济&lt;br/&gt;L2 · 高难度0.55&quot;]:::c_pa
+        bolar-exemption[&quot;Bolar例外&lt;br/&gt;L3 · 中难度0.45&quot;]:::c_pa
+        claim-interpretation[&quot;权利要求解释规则&lt;br/&gt;L3 · 中难度0.6&quot;]:::c_pa
+        direct-infringement[&quot;直接侵权&lt;br/&gt;L3 · 高难度0.5&quot;]:::c_pa
+        doctrine-of-equivalents[&quot;等同原则&lt;br/&gt;L3 · 高难度0.75&quot;]:::c_pa
+        exhaustion-of-rights[&quot;权利用尽&lt;br/&gt;L3 · 中难度0.5&quot;]:::c_pa
+        implied-license[&quot;默示许可&lt;br/&gt;L3 · 低难度0.55&quot;]:::c_pa
+        indirect-infringement[&quot;间接侵权&lt;br/&gt;L3 · 中难度0.6&quot;]:::c_pa
+        prior-use-right[&quot;先用权&lt;br/&gt;L3 · 高难度0.55&quot;]:::c_pa
+        scientific-research-exemption[&quot;科学实验使用例外&lt;br/&gt;L3 · 中难度0.35&quot;]:::c_pa
+    end
+    subgraph sg_patent-agency-practice[实务卷 · 专利代理实务]
+        patent-agency-practice[&quot;专利代理实务&lt;br/&gt;L1 · 高难度0.65&quot;]:::c_pr
+        claims-drafting-advanced[&quot;权利要求撰写实务&lt;br/&gt;L2 · 高难度0.75&quot;]:::c_pr
+        invalidation-practice[&quot;无效宣告实务&lt;br/&gt;L2 · 高难度0.75&quot;]:::c_pr
+        oa-response-practice[&quot;审查意见答复实务&lt;br/&gt;L2 · 高难度0.7&quot;]:::c_pr
+    end
+    subgraph sg_related-laws[法律卷 · 相关法律知识]
+        related-laws[&quot;相关法律知识&lt;br/&gt;L1 · 中难度0.4&quot;]:::c_rl
+        administrative-procedure[&quot;行政法与行政诉讼&lt;br/&gt;L2 · 中难度0.4&quot;]:::c_rl
+        civil-law-basics[&quot;民法基础&lt;br/&gt;L2 · 低难度0.3&quot;]:::c_rl
+        civil-procedure[&quot;民事诉讼程序&lt;br/&gt;L2 · 中难度0.35&quot;]:::c_rl
+        contract-law-tech[&quot;技术合同法&lt;br/&gt;L2 · 中难度0.45&quot;]:::c_rl
+        trips-agreement[&quot;TRIPS协定&lt;br/&gt;L2 · 低难度0.35&quot;]:::c_rl
+        employee-invention[&quot;职务发明&lt;br/&gt;L3 · 中难度0.45&quot;]:::c_rl
+    end
+    patent-law-foundation --&gt; patent-system-overview
+    patent-law-foundation --&gt; patent-law-framework
+    patent-law-foundation --&gt; patent-rights-nature
+    patent-law-foundation -.-&gt; patentability-substantive
+    patent-law-foundation -.-&gt; patent-application-process
+    patent-law-foundation -.-&gt; patent-rights-protection
+    patent-law-foundation -.-&gt; related-laws
+    patentability-substantive --&gt; novelty
+    patentability-substantive --&gt; inventive-step
+    patentability-substantive --&gt; practical-applicability
+    patentability-substantive --&gt; design-patentability
+    patentability-substantive --&gt; non-patentable-subject
+    novelty --&gt; prior-art-definition
+    novelty --&gt; conflicting-application
+    novelty --&gt; grace-period
+    inventive-step --&gt; three-step-method
+    inventive-step --&gt; person-skilled-in-art
+    non-patentable-subject --&gt; scientific-discovery-vs-invention
+    non-patentable-subject --&gt; medical-method-exclusion
+    non-patentable-subject --&gt; public-order-morality
+    patent-application-process --&gt; application-documents
+    patent-application-process --&gt; priority-right
+    patent-application-process --&gt; filing-date
+    patent-application-process --&gt; divisional-application
+    patent-application-process -.-&gt; patent-examination
+    patent-application-process -.-&gt; pct-system
+    application-documents --&gt; specification-requirements
+    application-documents --&gt; claims-drafting-basics
+    patent-examination --&gt; preliminary-examination
+    patent-examination --&gt; substantive-examination
+    patent-examination --&gt; office-action-response
+    patent-examination -.-&gt; patent-reexamination
+    patent-examination -.-&gt; patent-invalidation
+    office-action-response --&gt; amendment-limits
+    patent-reexamination --&gt; reexamination-request
+    patent-reexamination --&gt; collegial-review
+    patent-invalidation --&gt; invalidation-grounds
+    patent-invalidation --&gt; oral-proceeding
+    patent-rights-protection --&gt; protection-scope
+    patent-rights-protection --&gt; infringement-types
+    patent-rights-protection --&gt; infringement-defenses
+    patent-rights-protection --&gt; remedies
+    protection-scope --&gt; doctrine-of-equivalents
+    protection-scope --&gt; claim-interpretation
+    infringement-defenses --&gt; bolar-exemption
+    infringement-defenses --&gt; prior-use-right
+    patent-application-process -.-&gt; patent-agency-practice
+    patent-examination -.-&gt; patent-agency-practice
+    patent-rights-protection -.-&gt; patent-agency-practice
+    patent-agency-practice --&gt; claims-drafting-advanced
+    patent-agency-practice --&gt; oa-response-practice
+    patent-agency-practice --&gt; invalidation-practice
+    claims-drafting-basics -.-&gt; claims-drafting-advanced
+    office-action-response -.-&gt; oa-response-practice
+    patent-invalidation -.-&gt; invalidation-practice
+    related-laws --&gt; civil-law-basics
+    related-laws --&gt; contract-law-tech
+    related-laws --&gt; administrative-procedure
+    related-laws --&gt; civil-procedure
+    related-laws --&gt; trips-agreement
+    pct-system --&gt; pct-filing
+    pct-system --&gt; pct-national-phase
+    priority-right --&gt; foreign-priority
+    priority-right --&gt; domestic-priority
+    infringement-defenses --&gt; scientific-research-exemption
+    infringement-types --&gt; direct-infringement
+    infringement-types --&gt; indirect-infringement
+    claims-drafting-basics --&gt; independent-claim
+    claims-drafting-basics --&gt; dependent-claim
+    contract-law-tech --&gt; employee-invention
+    infringement-defenses --&gt; exhaustion-of-rights
+    infringement-defenses --&gt; implied-license
+    design-patentability --&gt; general-consumer
+  </div></div>
+
+  <h2>② 按章节的文字结构树（无网也能看）</h2>
+  <div class="tree">
+<div class="ch"><h3>第一章 · 专利法律制度基础 <span class="muted">(4 节点)</span></h3><ul>
+<li><b>专利法律制度基础</b> <span class="tag">L1</span> <span class="tag">难度 0.25</span> <span class="tag">低权重</span> <span class="muted">第一章</span> <span class="muted">→ 专利制度概论, 专利法律体系, 专利权的性质与特征, 专利授权实质条件, 专利申请程序, 专利权保护, 相关法律知识</span></li>
+<li><b>专利法律体系</b> <span class="tag">L2</span> <span class="tag">难度 0.2</span> <span class="tag">低权重</span> <span class="muted">第一章</span></li>
+<li><b>专利权的性质与特征</b> <span class="tag">L2</span> <span class="tag">难度 0.3</span> <span class="tag">低权重</span> <span class="muted">第一章</span></li>
+<li><b>专利制度概论</b> <span class="tag">L2</span> <span class="tag">难度 0.15</span> <span class="tag">低权重</span> <span class="muted">第一章</span></li>
+</ul></div>
+<div class="ch"><h3>第二章 · 专利授权实质条件 <span class="muted">(15 节点)</span></h3><ul>
+<li><b>专利授权实质条件</b> <span class="tag">L1</span> <span class="tag">难度 0.6</span> <span class="tag">高权重</span> <span class="muted">第二章</span> <span class="muted">→ 新颖性, 创造性, 实用性, 外观设计授权条件, 不授予专利权的主题</span></li>
+<li><b>外观设计授权条件</b> <span class="tag">L2</span> <span class="tag">难度 0.45</span> <span class="tag">中权重</span> <span class="muted">第二章 §5</span> <span class="muted">→ 一般消费者</span></li>
+<li><b>创造性</b> <span class="tag">L2</span> <span class="tag">难度 0.7</span> <span class="tag">高权重</span> <span class="muted">第二章 §3</span> <span class="muted">→ 创造性三步法判断, 所属技术领域的技术人员</span></li>
+<li><b>不授予专利权的主题</b> <span class="tag">L2</span> <span class="tag">难度 0.5</span> <span class="tag">高权重</span> <span class="muted">第二章 §1</span> <span class="muted">→ 科学发现与发明创造的区分, 疾病诊疗方法的排除, 公共秩序与道德条款</span></li>
+<li><b>新颖性</b> <span class="tag">L2</span> <span class="tag">难度 0.55</span> <span class="tag">高权重</span> <span class="muted">第二章 §2</span> <span class="muted">→ 现有技术认定, 抵触申请, 不丧失新颖性的宽限期</span></li>
+<li><b>实用性</b> <span class="tag">L2</span> <span class="tag">难度 0.25</span> <span class="tag">中权重</span> <span class="muted">第二章 §4</span></li>
+<li><b>抵触申请</b> <span class="tag">L3</span> <span class="tag">难度 0.65</span> <span class="tag">高权重</span> <span class="muted">第二章 §2.2</span></li>
+<li><b>一般消费者</b> <span class="tag">L3</span> <span class="tag">难度 0.3</span> <span class="tag">中权重</span> <span class="muted">第二章 §5.1</span></li>
+<li><b>不丧失新颖性的宽限期</b> <span class="tag">L3</span> <span class="tag">难度 0.45</span> <span class="tag">中权重</span> <span class="muted">第二章 §2.3</span></li>
+<li><b>疾病诊疗方法的排除</b> <span class="tag">L3</span> <span class="tag">难度 0.55</span> <span class="tag">中权重</span> <span class="muted">第二章 §1.2</span></li>
+<li><b>所属技术领域的技术人员</b> <span class="tag">L3</span> <span class="tag">难度 0.3</span> <span class="tag">低权重</span> <span class="muted">第二章 §3.2</span></li>
+<li><b>现有技术认定</b> <span class="tag">L3</span> <span class="tag">难度 0.4</span> <span class="tag">中权重</span> <span class="muted">第二章 §2.1</span></li>
+<li><b>公共秩序与道德条款</b> <span class="tag">L3</span> <span class="tag">难度 0.35</span> <span class="tag">低权重</span> <span class="muted">第二章 §1.3</span></li>
+<li><b>科学发现与发明创造的区分</b> <span class="tag">L3</span> <span class="tag">难度 0.5</span> <span class="tag">中权重</span> <span class="muted">第二章 §1.1</span></li>
+<li><b>创造性三步法判断</b> <span class="tag">L3</span> <span class="tag">难度 0.75</span> <span class="tag">高权重</span> <span class="muted">第二章 §3.1</span></li>
+</ul></div>
+<div class="ch"><h3>第三章 · 专利申请程序 <span class="muted">(14 节点)</span></h3><ul>
+<li><b>专利申请程序</b> <span class="tag">L1</span> <span class="tag">难度 0.55</span> <span class="tag">高权重</span> <span class="muted">第三章</span> <span class="muted">→ 专利申请文件要求, 优先权制度, 申请日的确定, 分案申请, 专利审查流程, PCT国际申请, 专利代理实务</span></li>
+<li><b>PCT国际申请</b> <span class="tag">L1</span> <span class="tag">难度 0.5</span> <span class="tag">中权重</span> <span class="muted">国际专题</span> <span class="muted">→ PCT国际申请程序, PCT国家阶段</span></li>
+<li><b>专利申请文件要求</b> <span class="tag">L2</span> <span class="tag">难度 0.45</span> <span class="tag">高权重</span> <span class="muted">第三章 §1</span> <span class="muted">→ 说明书撰写要求, 权利要求书撰写基础</span></li>
+<li><b>分案申请</b> <span class="tag">L2</span> <span class="tag">难度 0.55</span> <span class="tag">中权重</span> <span class="muted">第三章 §4</span></li>
+<li><b>申请日的确定</b> <span class="tag">L2</span> <span class="tag">难度 0.35</span> <span class="tag">中权重</span> <span class="muted">第三章 §3</span></li>
+<li><b>PCT国际申请程序</b> <span class="tag">L2</span> <span class="tag">难度 0.45</span> <span class="tag">中权重</span> <span class="muted">国际专题 §1</span></li>
+<li><b>PCT国家阶段</b> <span class="tag">L2</span> <span class="tag">难度 0.55</span> <span class="tag">中权重</span> <span class="muted">国际专题 §2</span></li>
+<li><b>优先权制度</b> <span class="tag">L2</span> <span class="tag">难度 0.6</span> <span class="tag">高权重</span> <span class="muted">第三章 §2</span> <span class="muted">→ 外国优先权, 本国优先权</span></li>
+<li><b>权利要求书撰写基础</b> <span class="tag">L3</span> <span class="tag">难度 0.65</span> <span class="tag">高权重</span> <span class="muted">第三章 §1.2</span> <span class="muted">→ 权利要求撰写实务, 独立权利要求, 从属权利要求</span></li>
+<li><b>本国优先权</b> <span class="tag">L3</span> <span class="tag">难度 0.6</span> <span class="tag">高权重</span> <span class="muted">第三章 §2.2</span></li>
+<li><b>外国优先权</b> <span class="tag">L3</span> <span class="tag">难度 0.55</span> <span class="tag">高权重</span> <span class="muted">第三章 §2.1</span></li>
+<li><b>说明书撰写要求</b> <span class="tag">L3</span> <span class="tag">难度 0.5</span> <span class="tag">高权重</span> <span class="muted">第三章 §1.1</span></li>
+<li><b>从属权利要求</b> <span class="tag">L4</span> <span class="tag">难度 0.5</span> <span class="tag">高权重</span> <span class="muted">第三章 §1.2b</span></li>
+<li><b>独立权利要求</b> <span class="tag">L4</span> <span class="tag">难度 0.6</span> <span class="tag">高权重</span> <span class="muted">第三章 §1.2a</span></li>
+</ul></div>
+<div class="ch"><h3>第四~六章 · 审查 / 复审 / 无效 <span class="muted">(11 节点)</span></h3><ul>
+<li><b>专利审查流程</b> <span class="tag">L1</span> <span class="tag">难度 0.55</span> <span class="tag">高权重</span> <span class="muted">第四章</span> <span class="muted">→ 初步审查, 实质审查, 审查意见答复, 专利复审程序, 专利无效宣告, 专利代理实务</span></li>
+<li><b>专利无效宣告</b> <span class="tag">L1</span> <span class="tag">难度 0.6</span> <span class="tag">高权重</span> <span class="muted">第六章</span> <span class="muted">→ 无效宣告理由, 口头审理程序, 无效宣告实务</span></li>
+<li><b>专利复审程序</b> <span class="tag">L1</span> <span class="tag">难度 0.5</span> <span class="tag">高权重</span> <span class="muted">第五章</span> <span class="muted">→ 复审请求的提出, 合议审查与复审决定</span></li>
+<li><b>合议审查与复审决定</b> <span class="tag">L2</span> <span class="tag">难度 0.55</span> <span class="tag">高权重</span> <span class="muted">第五章 §2</span></li>
+<li><b>无效宣告理由</b> <span class="tag">L2</span> <span class="tag">难度 0.6</span> <span class="tag">高权重</span> <span class="muted">第六章 §1</span></li>
+<li><b>审查意见答复</b> <span class="tag">L2</span> <span class="tag">难度 0.65</span> <span class="tag">高权重</span> <span class="muted">第四章 §3</span> <span class="muted">→ 专利申请文件的修改限制, 审查意见答复实务</span></li>
+<li><b>口头审理程序</b> <span class="tag">L2</span> <span class="tag">难度 0.45</span> <span class="tag">中权重</span> <span class="muted">第六章 §2</span></li>
+<li><b>初步审查</b> <span class="tag">L2</span> <span class="tag">难度 0.35</span> <span class="tag">中权重</span> <span class="muted">第四章 §1</span></li>
+<li><b>复审请求的提出</b> <span class="tag">L2</span> <span class="tag">难度 0.4</span> <span class="tag">中权重</span> <span class="muted">第五章 §1</span></li>
+<li><b>实质审查</b> <span class="tag">L2</span> <span class="tag">难度 0.7</span> <span class="tag">高权重</span> <span class="muted">第四章 §2</span></li>
+<li><b>专利申请文件的修改限制</b> <span class="tag">L3</span> <span class="tag">难度 0.7</span> <span class="tag">高权重</span> <span class="muted">第四章 §3.1</span></li>
+</ul></div>
+<div class="ch"><h3>第七章 · 专利权保护 <span class="muted">(14 节点)</span></h3><ul>
+<li><b>专利权保护</b> <span class="tag">L1</span> <span class="tag">难度 0.6</span> <span class="tag">高权重</span> <span class="muted">第七章</span> <span class="muted">→ 专利权保护范围, 专利侵权行为类型, 侵权抗辩事由, 侵权救济, 专利代理实务</span></li>
+<li><b>侵权抗辩事由</b> <span class="tag">L2</span> <span class="tag">难度 0.55</span> <span class="tag">高权重</span> <span class="muted">第七章 §3</span> <span class="muted">→ Bolar例外, 先用权, 科学实验使用例外, 权利用尽, 默示许可</span></li>
+<li><b>专利侵权行为类型</b> <span class="tag">L2</span> <span class="tag">难度 0.55</span> <span class="tag">高权重</span> <span class="muted">第七章 §2</span> <span class="muted">→ 直接侵权, 间接侵权</span></li>
+<li><b>专利权保护范围</b> <span class="tag">L2</span> <span class="tag">难度 0.65</span> <span class="tag">高权重</span> <span class="muted">第七章 §1</span> <span class="muted">→ 等同原则, 权利要求解释规则</span></li>
+<li><b>侵权救济</b> <span class="tag">L2</span> <span class="tag">难度 0.55</span> <span class="tag">高权重</span> <span class="muted">第七章 §4</span></li>
+<li><b>Bolar例外</b> <span class="tag">L3</span> <span class="tag">难度 0.45</span> <span class="tag">中权重</span> <span class="muted">第七章 §3.1</span></li>
+<li><b>权利要求解释规则</b> <span class="tag">L3</span> <span class="tag">难度 0.6</span> <span class="tag">中权重</span> <span class="muted">第七章 §1.2</span></li>
+<li><b>直接侵权</b> <span class="tag">L3</span> <span class="tag">难度 0.5</span> <span class="tag">高权重</span> <span class="muted">第七章 §2.1</span></li>
+<li><b>等同原则</b> <span class="tag">L3</span> <span class="tag">难度 0.75</span> <span class="tag">高权重</span> <span class="muted">第七章 §1.1</span></li>
+<li><b>权利用尽</b> <span class="tag">L3</span> <span class="tag">难度 0.5</span> <span class="tag">中权重</span> <span class="muted">第七章 §3.4</span></li>
+<li><b>默示许可</b> <span class="tag">L3</span> <span class="tag">难度 0.55</span> <span class="tag">低权重</span> <span class="muted">第七章 §3.5</span></li>
+<li><b>间接侵权</b> <span class="tag">L3</span> <span class="tag">难度 0.6</span> <span class="tag">中权重</span> <span class="muted">第七章 §2.2</span></li>
+<li><b>先用权</b> <span class="tag">L3</span> <span class="tag">难度 0.55</span> <span class="tag">高权重</span> <span class="muted">第七章 §3.2</span></li>
+<li><b>科学实验使用例外</b> <span class="tag">L3</span> <span class="tag">难度 0.35</span> <span class="tag">中权重</span> <span class="muted">第七章 §3.3</span></li>
+</ul></div>
+<div class="ch"><h3>实务卷 · 专利代理实务 <span class="muted">(4 节点)</span></h3><ul>
+<li><b>专利代理实务</b> <span class="tag">L1</span> <span class="tag">难度 0.65</span> <span class="tag">高权重</span> <span class="muted">实务卷</span> <span class="muted">→ 权利要求撰写实务, 审查意见答复实务, 无效宣告实务</span></li>
+<li><b>权利要求撰写实务</b> <span class="tag">L2</span> <span class="tag">难度 0.75</span> <span class="tag">高权重</span> <span class="muted">实务卷 §1</span></li>
+<li><b>无效宣告实务</b> <span class="tag">L2</span> <span class="tag">难度 0.75</span> <span class="tag">高权重</span> <span class="muted">实务卷 §3</span></li>
+<li><b>审查意见答复实务</b> <span class="tag">L2</span> <span class="tag">难度 0.7</span> <span class="tag">高权重</span> <span class="muted">实务卷 §2</span></li>
+</ul></div>
+<div class="ch"><h3>法律卷 · 相关法律知识 <span class="muted">(7 节点)</span></h3><ul>
+<li><b>相关法律知识</b> <span class="tag">L1</span> <span class="tag">难度 0.4</span> <span class="tag">中权重</span> <span class="muted">法律卷</span> <span class="muted">→ 民法基础, 技术合同法, 行政法与行政诉讼, 民事诉讼程序, TRIPS协定</span></li>
+<li><b>行政法与行政诉讼</b> <span class="tag">L2</span> <span class="tag">难度 0.4</span> <span class="tag">中权重</span> <span class="muted">法律卷 §3</span></li>
+<li><b>民法基础</b> <span class="tag">L2</span> <span class="tag">难度 0.3</span> <span class="tag">低权重</span> <span class="muted">法律卷 §1</span></li>
+<li><b>民事诉讼程序</b> <span class="tag">L2</span> <span class="tag">难度 0.35</span> <span class="tag">中权重</span> <span class="muted">法律卷 §4</span></li>
+<li><b>技术合同法</b> <span class="tag">L2</span> <span class="tag">难度 0.45</span> <span class="tag">中权重</span> <span class="muted">法律卷 §2</span> <span class="muted">→ 职务发明</span></li>
+<li><b>TRIPS协定</b> <span class="tag">L2</span> <span class="tag">难度 0.35</span> <span class="tag">低权重</span> <span class="muted">法律卷 §5</span></li>
+<li><b>职务发明</b> <span class="tag">L3</span> <span class="tag">难度 0.45</span> <span class="tag">中权重</span> <span class="muted">法律卷 §2.1</span></li>
+</ul></div>
+  </div>
+</div>
+<script>mermaid.initialize({ startOnLoad: true, flowchart: { rankSpacing: 40, nodeSpacing: 30, curve: 'basis' }, theme: 'base', themeVariables: { fontFamily: 'PingFang SC, Microsoft YaHei, sans-serif' } });</script>
+</body></html>

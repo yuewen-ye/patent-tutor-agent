@@ -402,6 +402,9 @@ def save_round_artifacts(
     if session_result is not None and round_idx > 0:
         sys_session_dir = SYS_ARTIFACTS_DIR / session_result.session_id
         sys_round_dir = sys_session_dir / f"round-{round_idx:02d}"
+        # 回退：后端每个 session 的产物都存到 round-01/（workflow.py 硬编码 round_number=1）
+        if not sys_round_dir.is_dir():
+            sys_round_dir = sys_session_dir / "round-01"
         if sys_round_dir.is_dir():
             for f in sys_round_dir.glob("*.md"):
                 shutil.copy2(f, round_dir / f.name)
@@ -748,6 +751,81 @@ def delete_run_results(profile_id: str, *, wipe_mysql: bool = True) -> None:
         wipe_learner_mysql(learner_id)
 
 
+# ── Knowledge DAG & learner profile helpers (for M2/M3/M11) ────────────────
+
+_KNOWLEDGE_DAG_PATH = PROJECT_ROOT / "backend" / "app" / "curriculum" / "data" / "knowledge-dag.json"
+
+
+def load_knowledge_dag() -> dict:
+    """加载 knowledge-dag.json，供 M3 祖先匹配用。"""
+    try:
+        return json.loads(_KNOWLEDGE_DAG_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {"nodes": [], "edges": []}
+
+
+def parse_learner_profile_pl(profile_text: str, node_id: str) -> float | None:
+    """从 learner_profile_update.md 中解析 five_dimensions[node_id].pl。
+
+    Args:
+        profile_text: learner_profile_update.md 的原始文本（JSON 格式）
+        node_id: 目标节点 ID
+
+    Returns:
+        pl 值 (float)，解析失败返回 None
+    """
+    try:
+        data = json.loads(profile_text)
+        five_dims = data.get("five_dimensions", {})
+        if node_id in five_dims:
+            dims = five_dims[node_id]
+            if isinstance(dims, dict) and "pl" in dims:
+                return float(dims["pl"])
+    except (json.JSONDecodeError, TypeError, ValueError):
+        pass
+    return None
+
+
+def load_feedback_md(round_dir: Path) -> dict[str, str]:
+    """统一读取 feedback/ 目录下的产物文件。
+
+    Args:
+        round_dir: 轮次目录路径
+
+    Returns:
+        dict，key 为文件名（不含路径），value 为文件内容。
+        不存在的文件不会出现在 dict 中。
+    """
+    result: dict[str, str] = {}
+    feedback_dir = round_dir / "feedback"
+
+    # 要读取的文件列表
+    filenames = [
+        "learner_profile_update.md",
+        "feedback_report.md",
+        "grading_report.md",
+    ]
+
+    for fname in filenames:
+        # 优先从 feedback/ 目录读取
+        fpath = feedback_dir / fname
+        if fpath.exists():
+            try:
+                result[fname] = fpath.read_text(encoding="utf-8")
+            except Exception:
+                pass
+        else:
+            # 兼容：检查根目录
+            alt_path = round_dir / fname
+            if alt_path.exists():
+                try:
+                    result[fname] = alt_path.read_text(encoding="utf-8")
+                except Exception:
+                    pass
+
+    return result
+
+
 __all__ = [
     "EVAL_DIR", "PROJECT_ROOT", "PROFILES_DIR", "CONTROL_MD", "EVAL_ARTIFACTS_DIR",
     "SYS_ARTIFACTS_DIR", "DEFAULT_BASE_URL", "POLL_INTERVAL_SEC", "POLL_TIMEOUT_SEC",
@@ -762,4 +840,6 @@ __all__ = [
     "save_round_artifacts", "clean_profile_artifacts",
     "generate_control_md", "parse_control_md", "update_profile_marker",
     "wait_for_ready_or_exit", "delete_run_results", "wipe_learner_mysql",
+    # 新增 M2/M3/M11 辅助
+    "load_knowledge_dag", "parse_learner_profile_pl", "load_feedback_md",
 ]
