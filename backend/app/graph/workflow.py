@@ -325,20 +325,17 @@ def _route_after_experts_barrier(
 def _route_after_judge(
     state: StateDict,
 ) -> Literal["expert_a_integration", "__end__"]:
-    decision = JudgeReport.model_validate(state.get("judge_report", {})).decision
-    match decision:
-        case "accept" | "accept_with_minor_revision":
-            print("▸ [路由] judge 通过 → 完成", file=sys.stderr)
-            return "__end__"
-        case "revise":
-            current_round = state.get("revision_round", 0) or 0
-            if current_round >= 3:
-                print("▸ [路由] judge 修订已达上限 3 次 → 完成（未通过）", file=sys.stderr)
-                return "__end__"
-            print("▸ [路由] judge 未通过 → expert_a_integration 重新整合", file=sys.stderr)
-            return "expert_a_integration"
-        case unreachable:
-            assert_never(unreachable)
+    report = JudgeReport.model_validate(state.get("judge_report", {}))
+    needs_revision = report.decision == "revise" or bool(report.revision_requests)
+    if not needs_revision:
+        print("▸ [路由] judge 通过 → 完成", file=sys.stderr)
+        return "__end__"
+    current_round = state.get("revision_round", 0) or 0
+    if current_round >= 3:
+        print("▸ [路由] judge 修订已达上限 3 次 → 完成（未通过）", file=sys.stderr)
+        return "__end__"
+    print("▸ [路由] judge 未通过 → expert_a_integration 重新整合", file=sys.stderr)
+    return "expert_a_integration"
 
 
 def build_workflow(

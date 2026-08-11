@@ -376,13 +376,13 @@ def test_diagnostic_repository_persists_ungraded_profile_attempt() -> None:
         idempotency_key="profile-attempt-1",
     )
 
-    attempts_insert = next(
-        sql
-        for sql, _params in database.connection.recording_cursor.executions
+    attempts_insert_sql, attempts_insert_params = next(
+        (sql, params)
+        for sql, params in database.connection.recording_cursor.executions
         if "INSERT IGNORE INTO attempts" in sql
     )
-    assert "ungraded" in attempts_insert
-    assert "diagnostic_profile" in attempts_insert
+    assert "ungraded" in attempts_insert_params
+    assert "diagnostic_profile" in attempts_insert_params
 
 
 @pytest.mark.unit

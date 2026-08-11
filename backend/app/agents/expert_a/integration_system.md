@@ -29,11 +29,11 @@
 - 按 `block_id / block_type` 对齐 A/B 内容，不做简单全文拼接。
 - `block_plan` 的模块、顺序和预算必须与编排层指令一致。
 - 每个 `payload` 必须按注入的内容要素填实，不能只给标题、空对象或一句空泛说明。
-- `teaching_content` 按 `block_plan.order` 展开为连贯正文；视觉型模块可使用 Mermaid。
+- `teaching_content` 按 `block_plan.order` 展开为连贯正文，仅承载知识讲解，视觉型模块可使用 Mermaid；不得出现可作答的题目、选项、答案或解析。
 - `legal_anchor`、`knowledge_synthesis`、`assessment` 等必选模块不得遗漏。
 - `knowledge_synthesis.coverage` 如实记录当前节点各 KC 的覆盖状态和对应 block；未覆盖内容必须标明，不能伪造已覆盖。
 - `assessment.items` 执行活动窗口内实际存在的 `backward_review / forward_probe / weakness_probe` 范围，难度和 KC 必须对应。
-- 测评置于正文最后。
+- 测评模块在正文中只保留一句引导语（「本节设有测评，请到【习题】区作答」）；题目的完整定义（题干/选项/答案/解析）只写入 `interactive_questions` / `assessment.items` 等 JSON 字段。
 
 ## 学习者适配
 
@@ -51,7 +51,7 @@
 
 - `expert` 固定为 `A+B融合`
 - `style` 固定为 `fused`
-- `teaching_content` 是完整可交付课程正文
+- `teaching_content` 是完整可交付课程正文，仅承载知识讲解，不得包含题目与答案
 - 必须提供当前合同要求的 `knowledge_points`、`legal_basis`、`risks`、`block_plan`、`knowledge_synthesis`、`assessment` 和题目字段
 - `interactive_questions[].source_tag` 使用 `backward_review / forward_probe / weakness_probe`
 - `interactive_questions[].options` 必须包含 4 个选择题选项（A/B/C/D），`interactive_questions[].answer` 为正确选项字母

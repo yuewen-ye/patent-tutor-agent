@@ -260,3 +260,18 @@ class BKTTracker:
         if self.global_answer_count <= 10:
             return min(1.0, state.p_transit_base * 1.5)
         return state.p_transit_base
+
+
+def profile_confidence_from_mastery(mastery: Mapping[str, Any]) -> float | None:
+    """画像置信度 = 已练知识点的平均确定性（基于 BKT 95% 置信区间宽度）。"""
+    kcs = [v for v in mastery.values() if isinstance(v, dict)]
+    if not kcs:
+        return None
+    observed = [k for k in kcs if int(k.get("observations", 0) or 0) > 0]
+    if not observed:
+        return 0.0
+    certainty = sum(
+        1.0 - (float(k.get("ci_high", 1.0)) - float(k.get("ci_low", 0.0)))
+        for k in observed
+    ) / len(observed)
+    return round(certainty, 4)

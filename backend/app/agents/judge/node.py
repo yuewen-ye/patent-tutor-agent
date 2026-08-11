@@ -72,6 +72,29 @@ def _normalize_judge_report(raw: object) -> object:
                 nr["target"] = _normalize_target(nr.get("target"))
                 normalized_requests.append(nr)
         normalized["revision_requests"] = normalized_requests
+    _acc = normalized.get("accuracy_score")
+    _com = normalized.get("completeness_score")
+    _ada = normalized.get("adaptation_score")
+    _gated_decision = normalized.get("decision")
+    if (
+        type(_acc) is int
+        and type(_com) is int
+        and type(_ada) is int
+        and _gated_decision in ("accept", "accept_with_minor_revision")
+    ):
+        _passes_accept = _acc == 5 and _com >= 4 and _ada >= 4
+        _passes_minor = _acc >= 4 and _com >= 3 and _ada >= 3
+        if _gated_decision == "accept" and not _passes_accept:
+            normalized["decision"] = (
+                "accept_with_minor_revision" if _passes_minor else "revise"
+            )
+        elif _gated_decision == "accept_with_minor_revision" and not _passes_minor:
+            normalized["decision"] = "revise"
+    if (
+        normalized.get("decision") in ("accept", "accept_with_minor_revision")
+        and normalized.get("revision_requests")
+    ):
+        normalized["decision"] = "revise"
     if normalized.get("decision") == "revise" and not normalized.get("revision_requests"):
         disputes = normalized.get("disputes")
         issue = "需要修订专家草稿"
