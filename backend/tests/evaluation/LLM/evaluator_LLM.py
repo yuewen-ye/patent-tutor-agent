@@ -65,6 +65,21 @@ if ENV_PATH.exists():
 
 # ── 配置加载 ──────────────────────────────────────────────────────────────────
 
+import re
+
+
+def _resolve_env_vars(value: str) -> str:
+    """解析 ${ENV_VAR} 格式的环境变量占位符。"""
+    if not isinstance(value, str):
+        return value
+
+    def _replace(match: re.Match[str]) -> str:
+        env_var = match.group(1)
+        return os.getenv(env_var, match.group(0))
+
+    return re.sub(r"\$\{(\w+)\}", _replace, value)
+
+
 def load_config() -> dict[str, Any]:
     """加载外部 LLM 配置文件。"""
     config_path = _THIS_DIR / "config" / "external_llm.yaml"
@@ -77,7 +92,9 @@ def load_config() -> dict[str, Any]:
     # 解析环境变量
     llm_config = config.get("llm", {})
     api_key = llm_config.get("api_key", "")
-    if not api_key:
+    # 解析 ${ENV_VAR} 占位符
+    api_key = _resolve_env_vars(api_key)
+    if not api_key or api_key.startswith("${"):
         api_key = os.getenv("EXTERNAL_LLM_API_KEY", "")
     if not api_key:
         print("⚠️  警告: 未配置 API Key，请在配置文件或环境变量 EXTERNAL_LLM_API_KEY 中设置")
@@ -130,6 +147,7 @@ class LLMClient:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
+            "Accept": "application/json",  # 请求非流式响应
         }
 
         last_error = None
@@ -142,13 +160,46 @@ class LLMClient:
                     timeout=self.timeout,
                 )
                 response.raise_for_status()
-                data = response.json()
+
+                raw_text = response.text
+                if not raw_text.strip():
+                    raise ValueError("LLM 返回空响应")
+
+                # 尝试解析为 JSON
+                try:
+                    data = json.loads(raw_text)
+                except json.JSONDecodeError:
+                    # 检查是否为 SSE 流式格式
+                    if raw_text.startswith("event:") or raw_text.startswith("data:"):
+                        data = self._parse_sse_response(raw_text)
+                        if data is None:
+                            # SSE 解析失败（如服务器过载），视为可重试错误
+                            error_info = self._extract_sse_error(raw_text)
+                            if "server_is_overloaded" in raw_text or "overloaded" in raw_text.lower():
+                                raise requests.exceptions.HTTPError(
+                                    "503 Server Overloaded",
+                                    response=type('Response', (), {'status_code': 503, 'text': raw_text[:200]})()
+                                )
+                            raise ValueError(f"SSE 格式异常: {raw_text[:300]}")
+                    else:
+                        raise ValueError(f"LLM 返回非 JSON 格式: {raw_text[:200]}")
+
+                # 检查错误响应
+                if "error" in data:
+                    error_msg = data.get("error", {}).get("message", str(data["error"]))
+                    error_code = data.get("error", {}).get("code", "")
+                    if error_code == "server_is_overloaded" or "overloaded" in error_msg.lower():
+                        raise requests.exceptions.HTTPError(
+                            f"503 Server Overloaded: {error_msg}",
+                            response=type('Response', (), {'status_code': 503, 'text': error_msg})()
+                        )
+                    raise ValueError(f"LLM API 错误: {error_msg}")
 
                 # 提取 assistant 消息
                 choices = data.get("choices", [])
                 if choices:
                     return choices[0]["message"]["content"]
-                raise ValueError("LLM 返回格式异常：无 choices")
+                raise ValueError(f"LLM 返回格式异常：无 choices，响应: {raw_text[:200]}")
 
             except requests.exceptions.Timeout as e:
                 last_error = e
@@ -161,9 +212,10 @@ class LLMClient:
                 status_code = e.response.status_code
                 error_text = e.response.text[:200] if e.response.text else ""
 
-                if status_code == 429:  # Rate limit
+                if status_code in (429, 503):  # Rate limit or Overloaded
                     if attempt < self.retry:
-                        print(f"    ⏳ 速率限制(429)，重试 {attempt + 1}/{self.retry}...")
+                        error_type = "速率限制" if status_code == 429 else "服务器过载"
+                        print(f"    ⏳ {error_type}({status_code})，重试 {attempt + 1}/{self.retry}...")
                         time.sleep(2 ** attempt)
                 elif status_code >= 500:
                     if attempt < self.retry:
@@ -176,6 +228,13 @@ class LLMClient:
 
             except Exception as e:
                 last_error = e
+                # 检查是否为可重试的服务器过载错误
+                error_str = str(e).lower()
+                if "overloaded" in error_str or "server_is_overloaded" in error_str:
+                    if attempt < self.retry:
+                        print(f"    ⏳ 服务器过载，重试 {attempt + 1}/{self.retry}...")
+                        time.sleep(2 ** attempt)
+                        continue
                 print(f"    ❌ 异常: {type(e).__name__}: {str(e)[:200]}")
                 break
 
@@ -206,6 +265,50 @@ class LLMClient:
             "issues": [f"LLM 调用失败: {error_msg}"],
             "suggestions": [],
         }, ensure_ascii=False)
+
+    @staticmethod
+    def _parse_sse_response(raw_text: str) -> dict | None:
+        """解析 SSE (Server-Sent Events) 格式的响应。"""
+        try:
+            # 找到所有 data: 行并拼接
+            data_lines = []
+            for line in raw_text.split("\n"):
+                if line.startswith("data:"):
+                    data_lines.append(line[5:].strip())
+            
+            if not data_lines:
+                return None
+            
+            # 解析最后一个 data 行（通常包含完整数据）
+            # 或者合并所有 data 行
+            combined_data = "\n".join(data_lines)
+            
+            try:
+                return json.loads(combined_data)
+            except json.JSONDecodeError:
+                # 尝试只解析最后一行
+                if data_lines:
+                    return json.loads(data_lines[-1])
+                return None
+        except Exception:
+            return None
+
+    @staticmethod
+    def _extract_sse_error(raw_text: str) -> str:
+        """从 SSE 响应中提取错误信息。"""
+        try:
+            for line in raw_text.split("\n"):
+                if line.startswith("data:"):
+                    data_str = line[5:].strip()
+                    try:
+                        data = json.loads(data_str)
+                        if "error" in data:
+                            return data["error"].get("message", str(data["error"]))
+                    except json.JSONDecodeError:
+                        continue
+        except Exception:
+            pass
+        return raw_text[:200]
 
 
 # ── 产物管理 ──────────────────────────────────────────────────────────────────

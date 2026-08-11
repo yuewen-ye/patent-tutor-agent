@@ -7,7 +7,6 @@ llm:
   model: "gpt-5.5"  # 根据 Krill-AI 支持的模型选择
   base_url: "https://api-slb.krill-ai.net/codex/v1"  # Krill-AI 网关
   # API Key：支持直接填写或使用环境变量
-  # 方式 1: 直接填写（不推荐 push 到远程）
   # api_key: "nb_your_api_key_here"
   # 方式 2: 使用环境变量（推荐）
   api_key: "${EXTERNAL_LLM_API_KEY}"
