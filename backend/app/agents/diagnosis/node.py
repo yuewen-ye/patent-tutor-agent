@@ -23,6 +23,7 @@ from backend.app.learner_memory.memory import (
     save_learner_memories,
     save_profile_snapshot,
 )
+from backend.app.learner_memory.bkt.model import profile_confidence_from_mastery
 from backend.app.curriculum.learning_path import load_knowledge_dag
 from backend.app.curriculum.learning_progress import deterministic_next_action
 from backend.app.schemas.context import WorkflowContext
@@ -455,7 +456,7 @@ def build_diagnosis_phase_node(llm_client: LLMClient) -> Node:
             weak_points=_derive_weak_points(knowledge),
             learning_goal=state["user_input"],
             error_pattern=agent_result.error_pattern,
-            confidence=agent_result.confidence,
+            confidence=profile_confidence_from_mastery(knowledge),
             five_dimensions=_build_five_dimensions(
                 agent_result.learner_dimensions,
                 knowledge,
@@ -584,13 +585,7 @@ def build_feedback_phase_node(llm_client: LLMClient) -> Node:
             weak_points=_derive_weak_points(knowledge),
             learning_goal=str(current_profile.get("learning_goal") or state["user_input"]),
             error_pattern=agent_result.error_pattern,
-            confidence=agent_result.confidence
-            if agent_result.confidence is not None
-            else (
-                float(current_profile["confidence"])
-                if isinstance(current_profile.get("confidence"), (int, float))
-                else None
-            ),
+            confidence=profile_confidence_from_mastery(knowledge),
             five_dimensions=five_dimensions,
         ).model_dump()
         updated_profile["profile_update_hint"] = feedback.profile_update_hint
