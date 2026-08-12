@@ -570,12 +570,19 @@ def _post_chat_completion(
             status="error",
             error_type=type(exc).__name__,
             error_message=str(exc)[:300],
+            status_code=response.status_code,
+            content_type=response.headers.get("content-type"),
+            body_preview=response.text[:300],
+            retryable=True,
             duration_ms=round((time.monotonic() - _call_start) * 1000),
         )
         raise LLMProviderError(
-                f"{config.provider} returned an invalid chat response.",
-                provider=config.provider,
-            ) from exc
+            f"{config.provider} returned an invalid chat response "
+            f"(status={response.status_code}, body_preview={response.text[:120]!r}).",
+            response.status_code,
+            provider=config.provider,
+            retryable=True,
+        ) from exc
     except httpx.TransportError as exc:
         _log_llm_call(
             provider=config.provider,
