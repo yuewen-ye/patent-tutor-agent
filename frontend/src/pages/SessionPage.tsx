@@ -187,6 +187,8 @@ export function SessionPage() {
                     expertARevision={state.expert_a_revision}
                     expertBRevision={state.expert_b_revision}
                     expertPhase={state?.expert_phase}
+                    sessionId={sessionId}
+                    artifacts={state.artifacts}
                   />
                 )}
 

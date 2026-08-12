@@ -8,7 +8,7 @@ import { ApiError } from "@/api/client";
 import { LearnerProfileCard } from "@/components/profile/LearnerProfileCard";
 import { ProfileStats } from "@/components/profile/ProfileStats";
 import { LearningStyleRadar } from "@/components/profile/LearningStyleRadar";
-import { KnowledgeLevelBar } from "@/components/profile/KnowledgeLevelBar";
+import { MasterySunburst } from "@/components/profile/MasterySunburst";
 import { ProfileTimeline } from "@/components/profile/ProfileTimeline";
 import { AchievementBadges } from "@/components/profile/AchievementBadges";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -389,25 +389,21 @@ export function LearnerPage() {
               accuracyRate={accuracyRate}
             />
 
-            {/* 画像详情 + 成就徽章 */}
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-              <div className="lg:col-span-3">
-                <LearnerProfileCard profile={latestProfile} />
-              </div>
-              <div className="lg:col-span-2">
-                <AchievementBadges
-                  mastery={learner.mastery}
-                  sessionCount={sessionCount}
-                  profilesCount={learner.profiles.length}
-                />
-              </div>
-            </div>
+            {/* 学员画像档案（单独一行） */}
+            <LearnerProfileCard profile={latestProfile} />
 
-            {/* 掌握度柱状图 + 学习风格雷达 */}
+            {/* 学习成就 + 学习风格分析（左右共占一行） */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <KnowledgeLevelBar profile={latestProfile} mastery={learner.mastery} />
+              <AchievementBadges
+                mastery={learner.mastery}
+                sessionCount={sessionCount}
+                profilesCount={learner.profiles.length}
+              />
               <LearningStyleRadar learningStyle={latestProfile?.learning_style} />
             </div>
+
+            {/* 知识掌握度旭日图（单独一行） */}
+            <MasterySunburst mastery={learner.mastery} />
 
             {/* 时间线（全宽） + 最近会话 横向嵌入 */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
