@@ -2,26 +2,32 @@
 
 计算 10 个指标（按单轮定义，多轮取算术平均值）：
 
-幻觉率：
+M1 幻觉率（系统自评）：
   ① 专家互评异议率 = (🔴+🟡) / 总批注数 × 100%
   ② 裁判准确性评分 = 直接取 judge_report.md 中 准确性：X/5
 
-匹配度：
+M2 匹配度：
   ① 难度符合度 = L_low ≤ 题.difficulty ≤ L_high 的题数 / 总题数 × 100%
-  ② 情感使用度 = 情感支持板块数 / 总板块数 × 100%
+     - L_low: pl < 0.65 → L1; pl ≥ 0.65 → L2; 再封顶 difficulty_cap
+     - 角色特例: weakness → L3, forward_probe → L1
+     - L_high: 节点难度上限 (difficulty_cap)
+  ② 资源形态评估（外部 LLM 优先，回退脚本计算）
 
-覆盖率：
+M3 覆盖率：
   ① 本节知识点覆盖率（累计路径 + 祖先匹配）
   ② 薄弱点命中率
   ③ 混淆对覆盖率
 
-对话质量：
-  ④ 异议闭环率（外部 LLM 判定）
+M8 对话质量：
+  异议闭环率（外部 LLM 判定）
 
-动态迭代：
-  ⑤ 动态迭代触发率
+M10 PII 合规：
+  learner_profile_update.md / session_snapshot.json 正则白名单扫描
 
-M10 PII 泄露指标已按讨论调整方案取消。
+M11 动态迭代：
+  动态迭代触发率（跨轮 pl 跃升判定）
+
+M1/M9 外部 LLM 评估指标单独展示，不合并加权。
 
 CLI 用法：
   uv run python backend/tests/evaluation/program/calculate.py --profile B --round 1
@@ -163,6 +169,7 @@ def _parse_course_package(text: str) -> dict[str, Any]:
     result: dict[str, Any] = {
         "block_types": [],           # 教学模块清单中的 block_type 列
         "question_levels": [],       # 测评题目的难度标记 L1/L2/L3
+        "question_roles": [],         # 每个题目的角色 (source_tag): backward_review/forward_probe/weakness_probe
         "knowledge_node_ids": [],    # 结构化数据中的 node_id
         "current_node_id": None,     # 当前教学节点
         "full_text": text,
@@ -194,8 +201,8 @@ def _parse_course_package(text: str) -> dict[str, Any]:
                     bt = cells[1].strip(" `")
                     result["block_types"].append(bt)
 
-    # 3. 测评题目的难度标记
-    # 优先从 interactive_questions 结构化数据提取 difficulty 字段
+    # 3. 测评题目的难度标记和角色
+    # 优先从 interactive_questions 结构化数据提取
     iq_match = re.search(
         r"## interactive_questions\s*```json\s*(\[.*?\])\s*```",
         text,
@@ -208,12 +215,16 @@ def _parse_course_package(text: str) -> dict[str, Any]:
                 diff = item.get("difficulty", "")
                 if diff in ("L1", "L2", "L3"):
                     result["question_levels"].append(diff)
+                    # 提取 source_tag（角色）用于 M2 交叉校验
+                    role = item.get("source_tag", item.get("role", ""))
+                    result["question_roles"].append(role)
         except (json.JSONDecodeError, TypeError):
             pass
     # 回退：从正文匹配 **题目1（L1，...）** 或 **Q1（L1，...）**
     if not result["question_levels"]:
         for m in re.finditer(r"(?:题目|Q)\d+[（(]\s*(L[123])", text):
             result["question_levels"].append(m.group(1))
+            result["question_roles"].append("")  # 回退时无角色信息
 
     # 4. 结构化数据中的 knowledge_points
     kp_match = re.search(
@@ -267,33 +278,33 @@ def _parse_learning_path_nodes(path_text: str) -> set[str]:
 
 
 def _expand_with_ancestors(nodes: set[str], dag: dict[str, Any]) -> set[str]:
-    """扩展节点集：基于 knowledge-dag.json 的父子关系，覆盖子节点视为覆盖父节点。"""
+    """扩展节点集：基于 knowledge-dag.json 的 predecessors 关系，覆盖子节点视为覆盖父节点。
+
+    knowledge-dag.json 中每个节点有 predecessors 列表（前置依赖），
+    即如果节点 A 的 predecessors 包含 B，说明 A 依赖于 B，B 是 A 的父节点。
+    因此：覆盖子节点 A → 视为覆盖其父节点 B。
+    """
     expanded = set(nodes)
     nodes_data = dag.get("nodes", [])
-    edges = dag.get("edges", [])
 
-    # 构建 node_id -> node_name 映射
-    id_to_name = {n["node_id"]: n["node_name"] for n in nodes_data}
-    name_to_id = {n["node_name"]: n["node_id"] for n in nodes_data}
+    # 构建 node_id -> predecessors 映射
+    # 即 child_id -> [parent_id, parent_id, ...]
+    predecessors_map: dict[str, list[str]] = {}
+    for node in nodes_data:
+        node_id = node.get("node_id", "")
+        preds = node.get("predecessors", [])
+        if node_id and preds:
+            predecessors_map[node_id] = preds
 
-    # 构建 parent -> children 映射
-    children_map: dict[str, list[str]] = {}
-    for edge in edges:
-        if edge.get("relation") == "prerequisite":
-            child_id = edge.get("from")
-            parent_id = edge.get("to")
-            if child_id and parent_id:
-                children_map.setdefault(parent_id, []).append(child_id)
-
-    # 查找所有被覆盖节点的祖先
+    # 查找所有被覆盖节点的祖先（父节点、祖父节点...）
     def get_ancestors(node_id: str) -> set[str]:
-        ancestors = set()
-        # BFS 向上查找
+        ancestors: set[str] = set()
         queue = [node_id]
         while queue:
             current = queue.pop(0)
-            for parent, children in children_map.items():
-                if current in children and parent not in ancestors:
+            parents = predecessors_map.get(current, [])
+            for parent in parents:
+                if parent not in ancestors:
                     ancestors.add(parent)
                     queue.append(parent)
         return ancestors
@@ -306,9 +317,14 @@ def _expand_with_ancestors(nodes: set[str], dag: dict[str, Any]) -> set[str]:
 
 
 def _load_knowledge_dag() -> dict[str, Any]:
-    """加载 knowledge-dag.json。"""
+    """加载 knowledge-dag.json，返回 dag 子对象（含 nodes）。
+
+    knowledge-dag.json 顶层结构: {"meta": {...}, "dag": {"nodes": [...]}}
+    本函数返回 data["dag"]，使调用方可直接访问 nodes。
+    """
     try:
-        return json.loads(_KNOWLEDGE_DAG.read_text(encoding="utf-8"))
+        data = json.loads(_KNOWLEDGE_DAG.read_text(encoding="utf-8"))
+        return data.get("dag", {"nodes": [], "edges": []})
     except Exception:
         return {"nodes": [], "edges": []}
 
@@ -317,9 +333,10 @@ def _load_node_name_map() -> dict[str, str]:
     """加载 knowledge-dag.json 的 node_id → node_name 映射。"""
     try:
         data = json.loads(_KNOWLEDGE_DAG.read_text(encoding="utf-8"))
+        dag_data = data.get("dag", {})
         return {
             node["node_id"]: node["node_name"]
-            for node in data.get("nodes", [])
+            for node in dag_data.get("nodes", [])
         }
     except Exception:
         return {}
@@ -350,29 +367,51 @@ def _extract_node_pls(profile_text: str) -> dict[str, float]:
     return pls
 
 
-def _get_learner_difficulty_lower(profile_text: str | None, node_id: str, is_weakness: bool = False) -> str:
-    """从 learner_profile_update.md 获取学员能力下限。
-    
-    pl < 0.15 → L1
-    0.15 ≤ pl < 0.30 → L2
-    pl ≥ 0.30 → L3
-    薄弱点强制 ≥ L3
+def _get_learner_difficulty_lower(
+    profile_text: str | None,
+    node_id: str,
+    difficulty_cap: str = "L3",
+    source_tag: str = "",
+) -> str:
+    """从 learner_profile_update.md 获取学员能力下限（与系统 _review_difficulty 对齐）。
+
+    规则：
+    - pl < 0.65 → L1
+    - pl ≥ 0.65 → L2
+    - 再封顶到 difficulty_cap: min(cap_rank, difficulty_rank)
+    - 角色特例：
+      - weakness / weakness_probe → 强制 L3
+      - forward_probe → 强制 L1
+      - backward_review → 不高于当前掌握（由调用方交叉校验）
+
+    Args:
+        profile_text: learner_profile_update.md 内容
+        node_id: 当前教学节点 ID
+        difficulty_cap: 节点难度上限（默认 L3）
+        source_tag: 题目角色 (backward_review/forward_probe/weakness_probe)
     """
-    if is_weakness:
+    source_tag_lower = source_tag.lower() if source_tag else ""
+
+    # 角色特例：薄弱点 → L3
+    if "weak" in source_tag_lower:
         return "L3"
+
+    # 角色特例：forward probe → L1
+    if "forward" in source_tag_lower and "probe" in source_tag_lower:
+        return "L1"
 
     if not profile_text:
-        return "L1"  # 默认学员能力下限低
-
-    pls = _extract_node_pls(profile_text)
-    pl = pls.get(node_id, 0.0)
-
-    if pl < 0.15:
-        return "L1"
-    elif pl < 0.30:
-        return "L2"
+        base_diff = "L1"
     else:
-        return "L3"
+        pls = _extract_node_pls(profile_text)
+        pl = pls.get(node_id, 0.0)
+        base_diff = "L1" if pl < 0.65 else "L2"
+
+    # 封顶到 difficulty_cap
+    cap_rank = DIFFICULTY_ORDER.get(difficulty_cap, 3)
+    diff_rank = DIFFICULTY_ORDER.get(base_diff, 1)
+    capped_rank = min(cap_rank, diff_rank)
+    return f"L{capped_rank}"
 
 
 def _check_difficulty_dropped(course_text: str, node_id: str) -> bool:
@@ -424,17 +463,40 @@ def calc_hallucination_judge_accuracy(judge_text: str) -> MetricResult:
     )
 
 
+def _get_node_difficulty_cap(path_text: str, node_id: str, node_name_map: dict[str, str]) -> str:
+    """从 learning_path.md 获取指定节点的 difficulty_cap（习题难度上限）。"""
+    difficulty_limits = _parse_learning_path(path_text)
+    node_name = node_name_map.get(node_id, node_id)
+    if node_name and node_name in difficulty_limits:
+        cap = difficulty_limits[node_name]
+        if cap in ("L1", "L2", "L3"):
+            return cap
+    # 回退：返回第一个找到的难度上限
+    if difficulty_limits:
+        first_cap = list(difficulty_limits.values())[0]
+        if first_cap in ("L1", "L2", "L3"):
+            return first_cap
+    return "L3"
+
+
 def calc_matching_difficulty(
     course_text: str, path_text: str,
     node_name_map: dict[str, str],
     profile_update_text: str | None = None,
     current_node_id: str | None = None,
 ) -> MetricResult:
-    """匹配度①：难度符合度 = L_low ≤ 题.difficulty ≤ L_high 的题数 / 总题数 × 100%
-    
-    双边区间匹配：
-    - L_high: 从 learning_path 获取的节点难度上限
-    - L_low: 从 learner_profile_update 获取的学员能力下限（pl 映射）
+    """M2 难度适配准确率：双边区间匹配。
+
+    公式：L_low ≤ 题.difficulty ≤ L_high 的题数 / 总题数 × 100%
+
+    - L_high: 从 learning_path 获取的节点难度上限 (difficulty_cap)
+    - L_low: 从 learner_profile_update 获取的学员能力下限
+      - pl < 0.65 → L1; pl ≥ 0.65 → L2; 封顶 difficulty_cap
+      - 角色特例: weakness → L3, forward_probe → L1
+    - 角色交叉校验：
+      - forward_probe 应为 L1
+      - weakness_probe 应 ≥ L3
+      - backward_review 不应高于当前掌握
     """
     course = _parse_course_package(course_text)
 
@@ -443,31 +505,70 @@ def calc_matching_difficulty(
         current_node_id = course["current_node_id"] or ""
 
     # 获取难度上限 (L_high)
-    L_high = _get_node_max_difficulty(path_text, current_node_id, node_name_map)
-    high_val = DIFFICULTY_ORDER.get(L_high, 2)
-
-    # 获取学员能力下限 (L_low)
-    L_low = _get_learner_difficulty_lower(profile_update_text, current_node_id)
-    low_val = DIFFICULTY_ORDER.get(L_low, 1)
+    L_high = _get_node_difficulty_cap(path_text, current_node_id, node_name_map)
+    high_val = DIFFICULTY_ORDER.get(L_high, 3)
 
     question_levels = course["question_levels"]
+    question_roles = course.get("question_roles", [])
+
     if not question_levels:
         return MetricResult(
             name="难度符合度",
             value=0.0,
             unit="%",
             detail={
-                "难度下限(L_low)": L_low,
                 "难度上限(L_high)": L_high,
+                "节点难度上限(difficulty_cap)": L_high,
                 "error": "未找到测评题目难度标记",
             },
         )
 
-    # 双边匹配：L_low ≤ 题.difficulty ≤ L_high
-    matched = sum(
-        1 for q in question_levels
-        if low_val <= DIFFICULTY_ORDER.get(q, 0) <= high_val
-    )
+    matched = 0
+    role_violations: list[str] = []
+    role_details: list[dict[str, str]] = []
+
+    for idx, q_diff in enumerate(question_levels):
+        q_val = DIFFICULTY_ORDER.get(q_diff, 0)
+        q_role = question_roles[idx] if idx < len(question_roles) else ""
+
+        # 获取该题的 L_low（基于题目角色和学员状态）
+        L_low = _get_learner_difficulty_lower(
+            profile_update_text, current_node_id,
+            difficulty_cap=L_high,
+            source_tag=q_role,
+        )
+        low_val = DIFFICULTY_ORDER.get(L_low, 1)
+
+        # 双边匹配：L_low ≤ 题.difficulty ≤ L_high
+        is_matched = low_val <= q_val <= high_val
+        if is_matched:
+            matched += 1
+
+        # 角色交叉校验
+        q_role_lower = q_role.lower() if q_role else ""
+        violation = None
+        if "forward" in q_role_lower and "probe" in q_role_lower:
+            if q_diff != "L1":
+                violation = f"forward_probe 应为 L1，实际 {q_diff}"
+        elif "weak" in q_role_lower:
+            if q_val < 3:  # L3 = 3
+                violation = f"weakness_probe 应 ≥ L3，实际 {q_diff}"
+        elif "backward" in q_role_lower and "review" in q_role_lower:
+            if q_val < low_val:
+                violation = f"backward_review 难度({q_diff}) 低于学员能力下限({L_low})"
+
+        if violation:
+            role_violations.append(f"题{idx + 1}: {violation}")
+
+        role_details.append({
+            "题序号": str(idx + 1),
+            "难度": q_diff,
+            "角色": q_role or "无角色",
+            "L_low": L_low,
+            "L_high": L_high,
+            "匹配": "✓" if is_matched else "✗",
+        })
+
     rate = matched / len(question_levels) * 100
 
     return MetricResult(
@@ -475,13 +576,15 @@ def calc_matching_difficulty(
         value=round(rate, 1),
         unit="%",
         detail={
-            "难度下限(L_low)": L_low,
-            "难度上限(L_high)": L_high,
-            "学员pl映射": f"{L_low} ~ {L_high}",
+            "学员适配下限(L_low)规则": "pl < 0.65→L1; pl ≥ 0.65→L2; 封顶 difficulty_cap",
+            "节点难度上限(L_high/difficulty_cap)": L_high,
             "当前节点": current_node_id or "未知",
             "总题数": len(question_levels),
             "符合题数": matched,
-            "各题难度": question_levels,
+            "双边匹配公式": "L_low ≤ 题.difficulty ≤ L_high",
+            "角色交叉校验": f"通过 {len(question_levels) - len(role_violations)}/{len(question_levels)}",
+            "角色违规": role_violations if role_violations else ["无违规"],
+            "各题详情": role_details,
         },
     )
 
@@ -575,15 +678,9 @@ def calc_coverage_section(
 
     # 祖先匹配：加载知识图谱进行扩展
     try:
-        import sys
-        sys.path.insert(0, str(_PROJECT_ROOT / "backend"))
-        from app.curriculum.data.knowledge_dag import load_knowledge_graph
-        dag_nodes = load_knowledge_graph()
-        # 构建简化的 dag 结构供 _expand_with_ancestors 使用
-        dag = {
-            "nodes": [{"node_id": n.id, "node_name": n.name} for n in dag_nodes],
-            "edges": [],
-        }
+        dag = _load_knowledge_dag()
+        if not dag.get("nodes"):
+            raise ValueError("知识图谱为空")
     except Exception:
         dag = {"nodes": [], "edges": []}
 
@@ -756,6 +853,135 @@ def check_artifact_completeness(
             "缺失类别": missing_categories,
             "各类详情": category_details,
             "备注": "结尾轮（最后一轮）豁免诊断反馈类文件",
+        },
+    )
+
+
+# ── M10 PII 泄露检测 ──────────────────────────────────────────────────────────
+
+# PII 检测模式（正则表达式）
+PII_PATTERNS: list[tuple[str, str]] = [
+    ("身份证号", r"\b\d{17}[\dXx]\b"),
+    ("手机号", r"\b1[3-9]\d{9}\b"),
+    ("邮箱", r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b"),
+    ("银行卡号", r"\b\d{16,19}\b"),
+    ("地址（省/市/区）", r"[\u4e00-\u9fa5]{2,3}(省|市|自治区|特别行政区)[\u4e00-\u9fa5]{0,4}(区|县|市辖区)"),
+    ("真实姓名模式", r"(?:张|王|李|赵|陈|刘|杨|黄|周|吴|徐|孙|马|朱|胡|郭|林|何|高|罗|郑|梁|谢|宋|唐|韩|曹|许|邓|萧|冯|曾|程|蔡|彭|潘|袁|于|董|余|苏|叶|吕|魏|蒋|田|杜|丁|沈|姜|范|江|傅|钟|卢|汪|戴|崔|任|陆|廖|姚|方|金|邱|夏|谭|石|贺|龚|雷|龙|段|郝|孔|邵|孟|万|段|钱|汤|尹|黎|易|常|武|乔|贺|赖|龚|文|黎|段)[\u4e00-\u9fa5]{1,3}(?:[-\s][\u4e00-\u9fa5]{1,2})?"),
+]
+
+# PII 白名单（已知安全的词，不应标记为 PII）
+PII_WHITELIST: set[str] = {
+    "专利", "商标", "著作权", "知识产权",
+    "实施例", "对比文件", "现有技术",
+    "小明", "小红", "张三", "李四", "王五",  # 通用占位名
+    "A公司", "B公司", "C公司",  # 匿名公司
+}
+
+# 已知的测试/演示数据的脱敏 ID 模式
+ANONYMIZED_ID_PATTERN = re.compile(r"^(profile_|learner_|multi-)[A-Z]+-\d+$")
+
+
+def scan_pii_leaks(
+    round_dir: Path,
+    profile_letter: str,
+    round_num: int,
+) -> MetricResult:
+    """M10 PII 泄露检测。
+
+    扫描 learner_profile_update.md 和 session_snapshot.json 中的个人身份信息。
+    采用正则白名单扫描：仅检测与 PII_PATTERNS 匹配且不在白名单中的内容。
+
+    数据源：
+      - learner_profile_update.md（feedback/ 或根目录）
+      - session_snapshot.json
+
+    Returns:
+        MetricResult: PII 泄露指标，value = 泄露条目数（越低越好，0 为理想）
+    """
+    files_to_scan: list[tuple[str, str]] = []
+
+    # 收集要扫描的文件
+    profile_update_paths = [
+        round_dir / "feedback" / "learner_profile_update.md",
+        round_dir / "learner_profile_update.md",
+    ]
+    for p in profile_update_paths:
+        if p.exists() and p.stat().st_size > 0:
+            files_to_scan.append(("learner_profile_update.md", str(p)))
+
+    snapshot_path = round_dir / "session_snapshot.json"
+    if snapshot_path.exists() and snapshot_path.stat().st_size > 0:
+        files_to_scan.append(("session_snapshot.json", str(snapshot_path)))
+
+    if not files_to_scan:
+        return MetricResult(
+            name="PII泄露条数",
+            value=0.0,
+            unit="条",
+            detail={
+                "说明": "无可扫描文件",
+                "扫描文件数": 0,
+                "profile_letter": profile_letter,
+                "round_num": round_num,
+            },
+        )
+
+    leaks: list[dict[str, str]] = []
+    files_scanned = 0
+
+    for file_label, file_path in files_to_scan:
+        try:
+            content = Path(file_path).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+
+        files_scanned += 1
+
+        for pattern_name, pattern in PII_PATTERNS:
+            for m in re.finditer(pattern, content):
+                matched_text = m.group(0)
+
+                # 白名单检查
+                if matched_text in PII_WHITELIST:
+                    continue
+
+                # 匿名 ID 模式检查（如 profile_B-001）
+                if ANONYMIZED_ID_PATTERN.match(matched_text):
+                    continue
+
+                # 检查上下文是否为已知安全场景
+                start = max(0, m.start() - 20)
+                end = min(len(content), m.end() + 20)
+                context = content[start:end]
+                if any(w in context for w in PII_WHITELIST):
+                    continue
+
+                leaks.append({
+                    "file": file_label,
+                    "pattern": pattern_name,
+                    "match": matched_text,
+                    "context": context.strip()[:80],
+                })
+
+    leak_count = len(leaks)
+    # PII 指标 = 泄露条目数（越低越好）
+    # 理想值为 0，阈值为 0（不应有任何真实 PII）
+
+    return MetricResult(
+        name="PII泄露条数",
+        value=float(leak_count),
+        unit="条",
+        detail={
+            "扫描文件数": files_scanned,
+            "扫描文件列表": [f[0] for f in files_to_scan],
+            "泄露总数": leak_count,
+            "泄露详情": leaks[:20],  # 最多显示 20 条
+            "说明": "检测 learner_profile_update.md 和 session_snapshot.json 中的真实个人信息",
+            "检测模式": [p[0] for p in PII_PATTERNS],
+            "白名单词数": len(PII_WHITELIST),
+            "profile_letter": profile_letter,
+            "round_num": round_num,
+            "评估结论": "✅ 未检测到 PII" if leak_count == 0 else f"⚠️ 检测到 {leak_count} 条疑似 PII",
         },
     )
 
@@ -1131,11 +1357,56 @@ def calculate_round(
             )
         )
 
+    # M10 PII 泄露检测
+    rm.metrics.append(
+        scan_pii_leaks(round_dir, profile_letter, round_num)
+    )
+
     return rm
 
 
-def format_result(rm: RoundMetrics) -> str:
-    """格式化输出结果。"""
+# M1 外部LLM评估器维度（5个评估器概念，由 judge_*.json 提供）
+_M1_LLM_DIMENSIONS: list[tuple[str, str]] = [
+    ("context_correctness", "上下文正确性(Context Correctness)"),
+    ("correctness", "答案正确性(Correctness)"),
+    ("hallucination", "幻觉评估(Hallucination)"),
+    ("helpfulness", "有用性(Helpfulness)"),
+    ("relevance", "相关性(Relevance)"),
+]
+
+
+def _get_llm_dim_score(
+    profile_letter: str,
+    round_num: int,
+    dim_key: str,
+    llm_results: dict[str, Any] | None,
+) -> tuple[float, str] | None:
+    """从外部 LLM 评估结果获取指定维度的分数。"""
+    if not llm_results:
+        return None
+    profile_data = llm_results.get(profile_letter, {})
+    round_data = profile_data.get(round_num, {})
+    judge_data = round_data.get("judge_eval", {})
+    overall = judge_data.get("overall_evaluation", {})
+    scores = overall.get("scores", {})
+    dim_data = scores.get(dim_key, {})
+    score = dim_data.get("score", 0)
+    max_score = dim_data.get("max", 100)
+    if score <= 0:
+        return None
+    return score, f"/{max_score}"
+
+
+def format_result(
+    rm: RoundMetrics,
+    llm_results: dict[str, Any] | None = None,
+) -> str:
+    """格式化输出结果。
+
+    Args:
+        rm: 轮次指标计算结果
+        llm_results: 外部 LLM 评估结果（可选），用于展示 M1 的 5 个评估器维度
+    """
     lines = [
         f"\n{'=' * 60}",
         f"画像: profile_{rm.profile_letter}  轮次: round-{rm.round_num:02d}",
@@ -1172,11 +1443,27 @@ def format_result(rm: RoundMetrics) -> str:
         ["本节知识点覆盖率", "薄弱点命中率", "混淆对覆盖率"],
     )
 
-    # M1 & M9 外部 LLM 评估
-    _append_group("幻觉率 — 外部LLM", ["专业知识谬误率", "知识溯源可验证率"])
+    # M1 & M9 外部 LLM 评估（陈述级）
+    _append_group("幻觉率 — 外部LLM(陈述级)", ["专业知识谬误率", "知识溯源可验证率"])
+
+    # M1 外部LLM评估器维度（5个评估器概念）
+    lines.append("")
+    lines.append("【M1 外部LLM评估器维度（5概念）】")
+    llm_dims_found = False
+    for dim_key, dim_label in _M1_LLM_DIMENSIONS:
+        result = _get_llm_dim_score(
+            rm.profile_letter, rm.round_num, dim_key, llm_results
+        )
+        if result is not None:
+            llm_dims_found = True
+            val, u = result
+            lines.append(f"  {dim_label}: {val}{u}")
+    if not llm_dims_found:
+        lines.append("  (无外部LLM评估数据，请先运行外部LLM评估)")
 
     _append_group("对话质量", ["异议闭环率"])
     _append_group("动态迭代", ["动态迭代触发率"])
+    _append_group("PII合规检测", ["PII泄露条数"])
 
     return "\n".join(lines)
 

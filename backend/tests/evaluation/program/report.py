@@ -50,12 +50,35 @@ import calculate  # noqa: E402
 REPORTS_DIR = _EVAL_DIR / "results" / "reports"
 
 # 指标分类（按 calculate.py 顺序，与 doc/指标草案.md 对齐）
+# 注意: 带 [LLM] 后缀的指标名表示该值来自外部 LLM 评估结果（judge_*.json），
+# 而非 calculate.py 直接计算的 MetricResult。
+_M1_LLM_DIMENSIONS: list[str] = [
+    "上下文正确性(Context Correctness)",
+    "答案正确性(Correctness)",
+    "幻觉评估(Hallucination)",
+    "有用性(Helpfulness)",
+    "相关性(Relevance)",
+]
+
+# LLM 维度 label → key 映射（用于从 judge_*.json 中提取分数）
+_LLM_DIM_KEY_MAP: dict[str, str] = {
+    "上下文正确性(Context Correctness)": "context_correctness",
+    "答案正确性(Correctness)": "correctness",
+    "幻觉评估(Hallucination)": "hallucination",
+    "有用性(Helpfulness)": "helpfulness",
+    "相关性(Relevance)": "relevance",
+}
+
 METRIC_CATEGORIES: list[tuple[str, list[str]]] = [
-    ("幻觉率 — 系统自评", ["专家互评异议率", "裁判准确性评分"]),
-    ("匹配度", ["难度符合度", "资源形态评估"]),  # 替换原 情感使用度
-    ("覆盖率", ["本节知识点覆盖率", "薄弱点命中率", "混淆对覆盖率"]),
-    ("幻觉率 — 外部LLM", ["专业知识谬误率", "知识溯源可验证率"]),
-    ("对话质量", ["异议闭环率", "动态迭代触发率"]),
+    ("M1 幻觉率 — 系统自评", ["专家互评异议率", "裁判准确性评分"]),
+    ("M1 幻觉率 — 外部LLM评估器维度", list(_M1_LLM_DIMENSIONS)),
+    ("M1 幻觉率 — 陈述级外部LLM", ["专业知识谬误率"]),
+    ("M2 匹配度", ["难度符合度", "资源形态评估"]),
+    ("M3 覆盖率", ["本节知识点覆盖率", "薄弱点命中率", "混淆对覆盖率"]),
+    ("M9 知识溯源可验证率", ["知识溯源可验证率"]),
+    ("M8 对话质量", ["异议闭环率"]),
+    ("M11 动态迭代", ["动态迭代触发率"]),
+    ("M10 PII合规", ["PII泄露条数"]),
 ]
 
 # 指标说明：name -> (计算公式, 数据来源)
@@ -69,11 +92,11 @@ METRIC_META: dict[str, tuple[str, str]] = {
         "judge_report.md",
     ),
     "难度符合度": (
-        "L_low ≤ 题.difficulty ≤ L_high 的题数 / 总题数 × 100%",
-        "course_package.md (Q难度) + learning_path.md (难度上限表) + learner_profile_update.md (pl)",
+        "L_low ≤ 题.difficulty ≤ L_high 的题数 / 总题数 × 100%（双边区间）",
+        "course_package.md (Q难度+角色) + learning_path.md (difficulty_cap) + learner_profile_update.md (pl)",
     ),
     "资源形态评估": (
-        "外部 LLM 判定：资源形态覆盖率 + 学员画像适配度",
+        "外部 LLM 判定：资源形态覆盖率 × 0.4 + 核心覆盖 × 0.6",
         "resource_morphology_*.json (外部 LLM 评估)",
     ),
     "本节知识点覆盖率": (
@@ -89,11 +112,11 @@ METRIC_META: dict[str, tuple[str, str]] = {
         "course_package.md (全文匹配 node_name) + expected_*.json (confusable_pairs)",
     ),
     "专业知识谬误率": (
-        "错误陈述数 / 总可核验陈述数 × 100%",
+        "错误陈述数 / 总可核验陈述数 × 100%；100分制平均正确率",
         "course_package.md (legal_basis / risks / 教学正文) → 外部 LLM 判定",
     ),
     "知识溯源可验证率": (
-        "(条号真实且内容对应的引用数) / 抽样引用总数 × 100%",
+        "完全验证的带来源陈述数 / 带来源陈述总数 × 100%；100分制平均溯源得分",
         "course_package.md (legal_basis.source) → 外部 LLM 核验",
     ),
     "异议闭环率": (
@@ -103,6 +126,31 @@ METRIC_META: dict[str, tuple[str, str]] = {
     "动态迭代触发率": (
         "pl从弱升至已掌握的节点数 / r01弱状态节点数 × 100%",
         "learner_profile_update.md (跨轮比对) + course_package.md (难度变化)",
+    ),
+    "PII泄露条数": (
+        "正则白名单扫描 learner_profile_update.md / session_snapshot.json",
+        "learner_profile_update.md + session_snapshot.json",
+    ),
+    # M1 外部LLM评估器维度（5个评估器概念）
+    "上下文正确性(Context Correctness)": (
+        "外部LLM评估：事实准确性 + 关键信息完整性（0-100分）",
+        "judge_*.json (外部LLM评估 scores.context_correctness)",
+    ),
+    "答案正确性(Correctness)": (
+        "外部LLM评估：生成内容与专利法/实践/逻辑的一致性（0-100分）",
+        "judge_*.json (外部LLM评估 scores.correctness)",
+    ),
+    "幻觉评估(Hallucination)": (
+        "外部LLM评估：与客观事实/可验证数据/逻辑推理相违背的内容比例（0-100分）",
+        "judge_*.json (外部LLM评估 scores.hallucination)",
+    ),
+    "有用性(Helpfulness)": (
+        "外部LLM评估：内容对学员的实际帮助程度，含清晰性/友好性（0-100分）",
+        "judge_*.json (外部LLM评估 scores.helpfulness)",
+    ),
+    "相关性(Relevance)": (
+        "外部LLM评估：内容与学习主题的聚焦程度，无冗余/跑题（0-100分）",
+        "judge_*.json (外部LLM评估 scores.relevance)",
     ),
 }
 
@@ -158,6 +206,7 @@ class ReportContext:
     session_dir: Path
     rounds: list[calculate.RoundMetrics]
     generated_at: str
+    llm_results: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -172,8 +221,9 @@ class FullReportContext:
 
 LLM_EVAL_RESULTS_DIR = _EVAL_DIR / "LLM" / "results"
 
-# 外部 LLM 评分维度（与 evaluator_system.md 对齐）
+# 外部 LLM 评分维度（与 evaluator_system.md 对齐，包含用户指定的 5 个评估器概念）
 LLM_SCORING_DIMENSIONS: list[tuple[str, str]] = [
+    # 原始 9 维度
     ("goal_coverage", "目标覆盖度"),
     ("factual_accuracy", "事实/法律准确性"),
     ("case_accuracy", "案例准确性"),
@@ -183,6 +233,12 @@ LLM_SCORING_DIMENSIONS: list[tuple[str, str]] = [
     ("learner_fit", "学员匹配度"),
     ("knowledge_completeness", "知识完整性"),
     ("weakness_addressing", "薄弱点针对性"),
+    # 用户指定的 5 个评估器概念（M1 子维度）
+    ("context_correctness", "上下文正确性(Context Correctness)"),
+    ("correctness", "答案正确性(Correctness)"),
+    ("hallucination", "幻觉评估(Hallucination)"),
+    ("helpfulness", "有用性(Helpfulness)"),
+    ("relevance", "相关性(Relevance)"),
 ]
 
 
@@ -381,7 +437,7 @@ def _all_metric_names(profiles: list[ProfileReport],
                     names.append(m.name)
                     seen.add(m.name)
     
-    # 2. 收集外部 LLM 评估指标（如资源形态评估）
+    # 2. 收集外部 LLM 指标 (M7)
     if llm_results:
         for profile_letter in llm_results:
             for round_num in llm_results[profile_letter]:
@@ -389,6 +445,13 @@ def _all_metric_names(profiles: list[ProfileReport],
                     if "资源形态评估" not in seen:
                         names.append("资源形态评估")
                         seen.add("资源形态评估")
+    
+    # 3. 收集 M1 LLM 评估器维度（5个评估器概念）
+    if llm_results:
+        for dim_name in _M1_LLM_DIMENSIONS:
+            if dim_name not in seen:
+                names.append(dim_name)
+                seen.add(dim_name)
                         
     return names
 
@@ -403,13 +466,31 @@ def _get_metric_value_for_round(
     """获取特定画像特定轮次的指标值。
     
     优先从规则计算指标中查找，若不存在则尝试从外部 LLM 结果中获取。
+    支持 5 种来源：
+      1. calculate.py 计算的 MetricResult（从 round_metrics 查找）
+      2. M7 资源形态评估（从 m7_resource LLM 结果）
+      3. M1 外部LLM评估器维度（从 judge_eval LLM 结果）
+      4. M1 陈述级专业知识谬误率（从 statement_judge LLM 结果，由 calculate 加载）
+      5. M9 知识溯源可验证率（从 statement_judge LLM 结果，由 calculate 加载）
     """
+    # 0. LLM 评估器维度（5个评估器概念）：从 judge_*.json 提取
+    if metric_name in _LLM_DIM_KEY_MAP:
+        dim_key = _LLM_DIM_KEY_MAP[metric_name]
+        overall = _get_llm_overall_scores(profile_letter, round_num, llm_results)
+        if overall:
+            dim_data = overall.get(dim_key, {})
+            score = dim_data.get("score", 0)
+            max_score = dim_data.get("max", 100)
+            if score > 0:
+                return score, f"/{max_score}"
+        return None
+
     # 1. 查找规则计算指标
     for m in round_metrics:
         if m.name == metric_name:
             return m.value, m.unit
     
-    # 2. 查找外部 LLM 指标
+    # 2. 查找外部 LLM 指标 (M7)
     if metric_name == "资源形态评估":
         m7_scores = _get_m7_resource_scores(profile_letter, round_num, llm_results)
         if m7_scores:
@@ -426,8 +507,17 @@ def _metric_avg_for_profile(
     """计算单个画像某指标的跨轮平均值。"""
     values_with_unit: list[tuple[float, str]] = []
     
-    # 检查是否为外部 LLM 指标
-    if metric_name == "资源形态评估" and llm_results:
+    # LLM 评估器维度：从 judge_*.json 提取
+    if metric_name in _LLM_DIM_KEY_MAP and llm_results:
+        for rm in profile.rounds:
+            result = _get_metric_value_for_round(
+                profile.profile_letter, rm.round_num, metric_name, 
+                llm_results, rm.metrics
+            )
+            if result is not None:
+                values_with_unit.append(result)
+    # 外部 LLM 指标 (M7)
+    elif metric_name == "资源形态评估" and llm_results:
         for rm in profile.rounds:
             result = _get_metric_value_for_round(
                 profile.profile_letter, rm.round_num, metric_name, 
@@ -506,11 +596,15 @@ def generate_report(
         print(f"  ❌ 画像 {profile_letter} 无可用的指标数据")
         return None
 
+    # 加载外部 LLM 评估结果
+    llm_results = _load_llm_eval_results()
+
     ctx = ReportContext(
         profile_letter=profile_letter,
         session_dir=session_dir,
         rounds=pr.rounds,
         generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        llm_results=llm_results,
     )
     md = _render_markdown_single(ctx)
 
@@ -610,12 +704,14 @@ def _render_markdown_single(ctx: ReportContext) -> str:
     """渲染单画像 Markdown 报告。"""
     lines: list[str] = []
     rounds = ctx.rounds
+    llm_results = ctx.llm_results or {}
+    profile_letter = ctx.profile_letter
 
-    lines.append(f"# 评估报告 — profile_{ctx.profile_letter}")
+    lines.append(f"# 评估报告 — profile_{profile_letter}")
     lines.append("")
     lines.append("## 概览")
     lines.append("")
-    lines.append(f"- 画像：`profile_{ctx.profile_letter}`")
+    lines.append(f"- 画像：`profile_{profile_letter}`")
     lines.append(f"- 测试快照目录：`{ctx.session_dir}`")
     lines.append(f"- 测试轮次数：{len(rounds)}")
     lines.append(f"- 轮次列表：{', '.join(f'round-{rm.round_num:02d}' for rm in rounds)}")
@@ -652,19 +748,27 @@ def _render_markdown_single(ctx: ReportContext) -> str:
             if m.name not in seen:
                 all_metric_names.append(m.name)
                 seen.add(m.name)
+    # 加入 LLM 评估器维度
+    for dim_name in _M1_LLM_DIMENSIONS:
+        if dim_name not in seen:
+            all_metric_names.append(dim_name)
+            seen.add(dim_name)
 
     for name in all_metric_names:
         row = [f"`{name}`"]
         values: list[float] = []
         unit = ""
         for rm in rounds:
-            m = next((x for x in rm.metrics if x.name == name), None)
-            if m is None:
+            result = _get_metric_value_for_round(
+                profile_letter, rm.round_num, name, llm_results, rm.metrics
+            )
+            if result is None:
                 row.append("-")
             else:
-                row.append(_format_value(m.value, m.unit))
-                values.append(m.value)
-                unit = m.unit
+                val, u = result
+                row.append(_format_value(val, u))
+                values.append(val)
+                unit = u
         if values:
             avg = sum(values) / len(values)
             row.append(_format_value(avg, unit))
@@ -686,12 +790,20 @@ def _render_markdown_single(ctx: ReportContext) -> str:
             lines.append(f"**{category_name}**")
             lines.append("")
             for name in metric_names:
+                # 先尝试从 rm.metrics 查找
                 m = next((x for x in rm.metrics if x.name == name), None)
-                if m is None:
-                    continue
-                lines.append(f"- **{m.name}**: {_format_value(m.value, m.unit)}")
-                for k, v in m.detail.items():
-                    lines.append(f"    - {k}: {_format_detail(v)}")
+                if m is not None:
+                    lines.append(f"- **{m.name}**: {_format_value(m.value, m.unit)}")
+                    for k, v in m.detail.items():
+                        lines.append(f"    - {k}: {_format_detail(v)}")
+                else:
+                    # 尝试从 LLM 结果查找
+                    result = _get_metric_value_for_round(
+                        profile_letter, rm.round_num, name, llm_results, rm.metrics
+                    )
+                    if result is not None:
+                        val, u = result
+                        lines.append(f"- **{name}**: {_format_value(val, u)}")
             lines.append("")
         lines.append("---")
         lines.append("")
@@ -703,15 +815,13 @@ def _render_markdown_single(ctx: ReportContext) -> str:
         lines.append(f"**{category_name}**")
         lines.append("")
         for name in metric_names:
-            values_with_unit: list[tuple[float, str]] = []
-            for rm in rounds:
-                m = next((x for x in rm.metrics if x.name == name), None)
-                if m is not None:
-                    values_with_unit.append((m.value, m.unit))
-            if not values_with_unit:
+            result = _metric_avg_for_profile(
+                ProfileReport(profile_letter, ctx.session_dir, rounds),
+                name, llm_results,
+            )
+            if result is None:
                 continue
-            avg = sum(v for v, _ in values_with_unit) / len(values_with_unit)
-            unit = values_with_unit[0][1]
+            avg, unit = result
             lines.append(f"- **{name}** 平均 {_format_value(avg, unit)}")
         lines.append("")
 
@@ -835,6 +945,7 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
 
             for dim_key in llm_dim_keys:
                 scores: list[float] = []
+                max_score = 100
                 for rm in p.rounds:
                     overall = _get_llm_overall_scores(
                         letter, rm.round_num, llm_results
@@ -842,11 +953,12 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
                     if overall:
                         dim_data = overall.get(dim_key, {})
                         score = dim_data.get("score", 0)
+                        dim_max = dim_data.get("max", 100)
                         if score > 0:
                             scores.append(score)
+                            max_score = dim_max
                 if scores:
                     avg = sum(scores) / len(scores)
-                    max_score = 5  # 除了 overall_score 都是 5 分制
                     row_cells.append(f"{avg:.1f}/{max_score}")
                 else:
                     row_cells.append("-")
@@ -1001,6 +1113,7 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
             for dim_key, dim_label in LLM_SCORING_DIMENSIONS:
                 row_cells = [f"`{dim_label}`"]
                 scores: list[float] = []
+                max_score = 100
                 for rm in p.rounds:
                     overall = _get_llm_overall_scores(
                         letter, rm.round_num, llm_results
@@ -1008,17 +1121,18 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
                     if overall:
                         dim_data = overall.get(dim_key, {})
                         score = dim_data.get("score", 0)
-                        max_score = dim_data.get("max", 5)
+                        dim_max = dim_data.get("max", 100)
                         if score > 0:
-                            row_cells.append(f"{score}/{max_score}")
+                            row_cells.append(f"{score}/{dim_max}")
                             scores.append(score)
+                            max_score = dim_max
                         else:
                             row_cells.append("-")
                     else:
                         row_cells.append("-")
                 if scores:
                     avg = sum(scores) / len(scores)
-                    row_cells.append(f"{avg:.1f}/5")
+                    row_cells.append(f"{avg:.1f}/{max_score}")
                 else:
                     row_cells.append("-")
                 lines.append("| " + " | ".join(row_cells) + " |")
@@ -1066,6 +1180,14 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
                         lines.append(f"- **{m.name}**: {_format_value(m.value, m.unit)}")
                         for k, v in m.detail.items():
                             lines.append(f"    - {k}: {_format_detail(v)}")
+                    # LLM 评估器维度（5个评估器概念）
+                    elif name in _LLM_DIM_KEY_MAP:
+                        result = _get_metric_value_for_round(
+                            letter, rm.round_num, name, llm_results, rm.metrics
+                        )
+                        if result is not None:
+                            val, u = result
+                            lines.append(f"- **{name}**: {_format_value(val, u)}")
                     # 外部 LLM 指标 (M7)
                     elif name == "资源形态评估":
                         m7_scores = _get_m7_resource_scores(letter, rm.round_num, llm_results)
@@ -1113,7 +1235,7 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
                     for dim_key in llm_dim_keys:
                         dim_data = overall_scores.get(dim_key, {})
                         score = dim_data.get("score", 0)
-                        max_score = dim_data.get("max", 5)
+                        max_score = dim_data.get("max", 100)
                         comment = dim_data.get("comment", "")
                         if score > 0:
                             lines.append(f"- {llm_dim_labels.get(dim_key, dim_key)}: "
@@ -1182,7 +1304,7 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
             per_profile_avgs: list[float] = []
             unit = ""
             for p in profiles:
-                result = _metric_avg_for_profile(p, name)
+                result = _metric_avg_for_profile(p, name, llm_results)
                 if result is not None:
                     per_profile_avgs.append(result[0])
                     unit = result[1]
