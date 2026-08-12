@@ -16,7 +16,7 @@ from backend.app.agents.common import (
     normalize_key_aliases,
     schema_note,
 )
-from backend.app.core.llm import LLMClient
+from backend.app.core.llm import LLMClient, LLMProviderError
 from backend.app.learner_memory.memory import (
     load_mastery_snapshot,
     load_profile_memories,
@@ -520,23 +520,34 @@ def build_feedback_phase_node(llm_client: LLMClient) -> Node:
         mastery_snapshot = input_payload.get("mastery_snapshot", {})
         progress_update = input_payload.get("learning_progress_update", {})
         progress_decision = input_payload.get("learning_progress_decision", {})
-        agent_result = generate_validated_json(
-            llm_client,
-            messages=messages_from_prompt(
-                prompt,
-                user_input=state["user_input"],
-                learner_profile=current_profile,
-                judge_report=state.get("judge_report", {}),
-                exercise_responses=json.dumps(responses, ensure_ascii=False),
-                bkt_updates=json.dumps(bkt_updates, ensure_ascii=False),
-                mastery_snapshot=json.dumps(mastery_snapshot, ensure_ascii=False),
-            ),
-            temperature=agent_temperature("diagnosis_feedback", 0.5),
-            agent="diagnosis_feedback",
-            output_model=FeedbackAgentResult,
-            normalize=_normalize_feedback_agent_payload,
-            schema_name="FeedbackAgentResult",
-        )
+        feedback_degraded = False
+        try:
+            agent_result = generate_validated_json(
+                llm_client,
+                messages=messages_from_prompt(
+                    prompt,
+                    user_input=state["user_input"],
+                    learner_profile=current_profile,
+                    judge_report=state.get("judge_report", {}),
+                    exercise_responses=json.dumps(responses, ensure_ascii=False),
+                    bkt_updates=json.dumps(bkt_updates, ensure_ascii=False),
+                    mastery_snapshot=json.dumps(mastery_snapshot, ensure_ascii=False),
+                ),
+                temperature=agent_temperature("diagnosis_feedback", 0.5),
+                agent="diagnosis_feedback",
+                output_model=FeedbackAgentResult,
+                normalize=_normalize_feedback_agent_payload,
+                schema_name="FeedbackAgentResult",
+            )
+        except LLMProviderError:
+            feedback_degraded = True
+            agent_result = FeedbackAgentResult(
+                questionnaire=["请用自己的话复述本轮练习的要点，并指出仍不确定的地方"],
+                next_action=deterministic_next_action(
+                    progress_decision if isinstance(progress_decision, dict) else {}
+                ),
+                profile_update_hint="LLM 服务暂时不可用，已仅依据后端 BKT 计算结果更新画像",
+            )
         persisted_mastery = load_mastery_snapshot(runtime)
         knowledge = _authoritative_knowledge(
             mastery_snapshot if isinstance(mastery_snapshot, dict) and mastery_snapshot else persisted_mastery
@@ -615,7 +626,11 @@ def build_feedback_phase_node(llm_client: LLMClient) -> Node:
             "events": [
                 completed_event(
                     "diagnosis_feedback",
-                    "updated profile from backend BKT and LLM non-knowledge feedback",
+                    (
+                        "degraded mode: LLM unavailable, returned grading and backend-computed updates"
+                        if feedback_degraded
+                        else "updated profile from backend BKT and LLM non-knowledge feedback"
+                    ),
                 )
             ],
         }
