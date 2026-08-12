@@ -36,9 +36,9 @@ models/
 temp_clone/
 
 # 评估产物（运行时生成，不入库）
-backend/tests/evaluation/results/
-backend/tests/evaluation/LLM/results/
+backend/tests/evaluation/results/*
+backend/tests/evaluation/LLM/results/*
 backend/tests/evaluation/LLM/config/external_llm.yaml
-backend/tests/evaluation/doc/reference
+backend/tests/evaluation/doc/reference/*
 backend/tests/evaluation/export_data.sql
 backend/tests/evaluation/results/reports/report_full.md
