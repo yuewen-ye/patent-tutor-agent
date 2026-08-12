@@ -13,7 +13,7 @@ import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { sessionsApi } from "@/api/sessions";
 import { getAuth } from "@/api/auth";
 import { BookOpen, Wrench, ListChecks, FileText, Scale, Lightbulb, CheckCircle2, XCircle, Loader2, Send, RefreshCw, ArrowRight } from "lucide-react";
-import type { MarkdownArtifact, ExerciseSubmission } from "@/types";
+import type { MarkdownArtifact, ExerciseSubmission, ExerciseResponseItem, SessionsListResponse } from "@/types";
 
 interface CourseResourceTabsProps {
   sessionId: string;
@@ -306,6 +306,49 @@ export function CourseResourceTabs({ sessionId, coursePackage, artifacts }: Cour
 const SUBJECTIVE_QID = "lecture_feedback_subjective";
 const SUBJECTIVE_QUESTION = "你对本讲义有什么建议？";
 
+function normalizeLetterAnswer(answer: string | undefined | null): string {
+  if (!answer) return "";
+  return answer
+    .toUpperCase()
+    .replace(/[^A-Z]/g, "")
+    .split("")
+    .sort()
+    .join("");
+}
+
+function answersMatch(userAnswer: string, correctAnswer: string): boolean {
+  const normUser = normalizeLetterAnswer(userAnswer);
+  const normCorrect = normalizeLetterAnswer(correctAnswer);
+  if (normCorrect.length > 0) return normUser === normCorrect;
+  return userAnswer.trim() === correctAnswer.trim();
+}
+
+function isMultiSelect(question: InteractiveQuestion): boolean {
+  if (question.question.includes("多选")) return true;
+  if (/multiple\s*choice/i.test(question.question)) return true;
+  return normalizeLetterAnswer(question.answer).length > 1;
+}
+
+const OPTION_LINE_RE = /^([A-Ea-e])[.、,，)）]?\s*(.*)$/;
+
+function extractInlineOptions(question: string): { cleaned: string; options: string[] } {
+  const lines = question.split(/\n/);
+  const options: string[] = [];
+  const nonOptionLines: string[] = [];
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    const match = line.match(OPTION_LINE_RE);
+    if (match) {
+      options.push(match[2].trim());
+    } else {
+      nonOptionLines.push(rawLine);
+    }
+  }
+  const cleaned = nonOptionLines.join("\n").trim();
+  return { cleaned, options };
+}
+
 interface SubmissionResult {
   question_id: string;
   is_correct: boolean;
@@ -335,10 +378,10 @@ function ExercisePanel({
       // 简单前端判分（后端也会判分，这里仅用于即时反馈）
       const newResults: Record<string, SubmissionResult> = {};
       questions.forEach((q) => {
-        const userAnswer = answers[q.qid] || "";
+        const userAnswer = (answers[q.qid] || "").trim();
         if (!userAnswer) return;
         const correctAnswer = q.answer || "";
-        const isCorrect = userAnswer === correctAnswer;
+        const isCorrect = answersMatch(userAnswer, correctAnswer);
         newResults[q.qid] = {
           question_id: q.qid,
           is_correct: isCorrect,
@@ -368,7 +411,7 @@ function ExercisePanel({
 
   const handleSubmit = () => {
     if (!learnerId) return;
-    const responses = questions
+    const responses: ExerciseResponseItem[] = questions
       .filter((q) => answers[q.qid])
       .map((q) => ({
         question_id: q.qid,
@@ -395,11 +438,21 @@ function ExercisePanel({
     reteachMutation.mutate();
   };
 
-  const handleGotoNewSession = () => {
-    if (reteachSessionId) navigate(`/course/${reteachSessionId}`);
+  const handleGotoNewSession = async () => {
+    if (!learnerId) return;
+    const data = await queryClient.fetchQuery<SessionsListResponse>({
+      queryKey: ["sessions", learnerId],
+      queryFn: () => sessionsApi.list({ learner_id: learnerId, limit: 50 }),
+    });
+    const sessions = data.sessions || [];
+    if (sessions.length === 0) return;
+    const latest = [...sessions].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )[0];
+    if (latest) navigate(`/course/${latest.session_id}`);
   };
 
-  const answeredCount = questions.filter((q) => answers[q.qid]).length;
+  const answeredCount = questions.filter((q) => answers[q.qid]?.trim()).length;
   const allAnswered = answeredCount === questions.length;
   const isSubmitted = results !== null;
   const correctCount = results ? Object.values(results).filter((r) => r.is_correct).length : 0;
@@ -531,8 +584,40 @@ function ExerciseCard({
   };
   const diffClass = difficultyColors[question.difficulty] || "text-muted-foreground";
   const diffLabel: Record<string, string> = { L1: "基础", L2: "进阶", L3: "挑战" };
-  const options = question.options || [];
+
+  const { cleaned: questionText, options } = useMemo(() => {
+    if (question.options && question.options.length > 0) {
+      return { cleaned: question.question, options: question.options };
+    }
+    return extractInlineOptions(question.question);
+  }, [question.options, question.question]);
+
+  const multi = useMemo(() => isMultiSelect(question), [question]);
   const hasOptions = options.length > 0;
+
+  const normalizedCorrect = useMemo(
+    () => normalizeLetterAnswer(result?.correct_answer),
+    [result]
+  );
+  const normalizedUser = useMemo(
+    () => normalizeLetterAnswer(result?.user_answer),
+    [result]
+  );
+
+  const isSelected = (letter: string) =>
+    multi ? selectedAnswer.includes(letter) : selectedAnswer === letter;
+
+  const toggleOption = (letter: string) => {
+    if (disabled) return;
+    if (multi) {
+      const set = new Set(selectedAnswer.split(""));
+      if (set.has(letter)) set.delete(letter);
+      else set.add(letter);
+      onSelect(Array.from(set).sort().join(""));
+    } else {
+      onSelect(letter);
+    }
+  };
 
   return (
     <div className={`rounded-lg border bg-secondary/20 p-4 transition-all duration-200 ${
@@ -562,39 +647,48 @@ function ExerciseCard({
       </div>
 
       {/* 题目 */}
-      <p className="text-sm leading-relaxed text-foreground/90 mb-3">{question.question}</p>
+      <p className="text-sm leading-relaxed text-foreground/90 mb-3">{questionText}</p>
 
-      {/* 选择题选项 */}
+      {/* 选项或文本作答 */}
       {hasOptions ? (
         <div className="space-y-2">
           {options.map((rawOpt, i) => {
             const letter = String.fromCharCode(65 + i);
-            // Strip any existing "A." / "A)" / "A、" prefix from the option text
             const optText = String(rawOpt).replace(/^\s*[A-Z][.、)）]\s*/, "").trim();
-            const isCorrectAnswer = result && result.correct_answer === letter;
-            const isUserWrong = result && result.user_answer === letter && !result.is_correct;
-            const isSelected = selectedAnswer === letter;
+            const selected = isSelected(letter);
+
+            let statusClass = "";
+            let showCheck = false;
+            let showX = false;
+            if (result) {
+              const correctSet = new Set(normalizedCorrect);
+              const userSet = new Set(normalizedUser);
+              if (correctSet.has(letter)) {
+                statusClass = "border-green-500/40 bg-green-500/10";
+                showCheck = true;
+              } else if (userSet.has(letter)) {
+                statusClass = "border-red-500/40 bg-red-500/10";
+                showX = true;
+              }
+            } else if (selected) {
+              statusClass = "border-primary/40 bg-primary/5";
+            }
+
             return (
               <label
                 key={i}
                 className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors cursor-pointer ${
                   disabled ? "cursor-default" : ""
                 } ${
-                  isCorrectAnswer
-                    ? "border-green-500/40 bg-green-500/10"
-                    : isUserWrong
-                    ? "border-red-500/40 bg-red-500/10"
-                    : isSelected
-                    ? "border-primary/40 bg-primary/5"
-                    : "border-border/30 hover:border-border/50"
+                  statusClass || "border-border/30 hover:border-border/50"
                 }`}
               >
                 <input
-                  type="radio"
+                  type={multi ? "checkbox" : "radio"}
                   name={`q-${question.qid}`}
                   value={letter}
-                  checked={isSelected}
-                  onChange={() => !disabled && onSelect(letter)}
+                  checked={selected}
+                  onChange={() => toggleOption(letter)}
                   disabled={disabled}
                   className="h-4 w-4 accent-primary flex-shrink-0"
                 />
@@ -602,14 +696,20 @@ function ExerciseCard({
                   <span className="font-medium text-muted-foreground mr-1.5">{letter}.</span>
                   {optText}
                 </span>
-                {isCorrectAnswer && <CheckCircle2 className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />}
-                {isUserWrong && <XCircle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />}
+                {showCheck && <CheckCircle2 className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />}
+                {showX && <XCircle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />}
               </label>
             );
           })}
         </div>
       ) : (
-        <p className="text-xs text-muted-foreground">（此题无选项）</p>
+        <Textarea
+          value={selectedAnswer}
+          onChange={(e) => !disabled && onSelect(e.target.value)}
+          placeholder="请输入你的答案..."
+          disabled={disabled}
+          className="min-h-[100px] resize-y text-sm"
+        />
       )}
 
       {/* 提交后显示答案解析 */}
@@ -621,6 +721,11 @@ function ExerciseCard({
           <p className="text-xs text-muted-foreground">
             正确答案：<span className="font-medium text-foreground/80">{result.correct_answer}</span>
           </p>
+          {!result.is_correct && (
+            <p className="text-xs text-muted-foreground mt-1">
+              你的答案：<span className="font-medium text-foreground/80">{result.user_answer || "（未作答）"}</span>
+            </p>
+          )}
         </div>
       )}
     </div>

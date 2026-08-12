@@ -42,7 +42,10 @@ function getRiskStyle(risk: number) {
 
 export function ConfusionRiskPanel({ items }: ConfusionRiskPanelProps) {
   const [page, setPage] = useState(1);
-  const activeItems = useMemo(() => items?.filter((i) => i.is_active) || [], [items]);
+  const activeItems = useMemo(
+    () => items?.filter((i) => i.is_active).sort((a, b) => b.learner_risk - a.learner_risk) || [],
+    [items]
+  );
 
   if (activeItems.length === 0) {
     return (

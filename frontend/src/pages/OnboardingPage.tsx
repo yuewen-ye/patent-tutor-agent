@@ -32,18 +32,6 @@ const EDUCATION_OPTIONS = [
   { value: "其他", label: "其他" },
 ];
 
-function knowledgeStateLabel(state: string): string {
-  switch (state) {
-    case "learned":
-      return "已掌握";
-    case "learning":
-      return "学习中";
-    case "unlearned":
-    default:
-      return "未掌握";
-  }
-}
-
 function knowledgeStateColor(state: string): string {
   switch (state) {
     case "learned":
@@ -459,7 +447,7 @@ export function OnboardingPage() {
                             {nodeIdToName(nodeId)}
                           </span>
                           <span className={`text-xs tracking-wide ${knowledgeStateColor(node.state)}`}>
-                            {knowledgeStateLabel(node.state)} · {percent}%
+                            掌握度 · {percent}%
                           </span>
                         </div>
                         <Progress value={percent} className="h-1.5" />
@@ -701,16 +689,6 @@ export function OnboardingPage() {
                         完成诊断并生成课程
                       </>
                     )}
-                  </Button>
-                )}
-                {!isProfilePhase && (
-                  <Button
-                    variant="outline"
-                    onClick={completeDiagnostic}
-                    disabled={submitting}
-                    size="lg"
-                  >
-                    提前结束
                   </Button>
                 )}
               </div>

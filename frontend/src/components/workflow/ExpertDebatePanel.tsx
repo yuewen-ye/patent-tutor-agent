@@ -1,8 +1,19 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { ExpertDraft, CrossReview, KnowledgePoint } from "@/types";
-import { User, Scale, FileEdit, MessageSquare, AlertCircle, CheckCircle2, ArrowRight, Circle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { artifactsApi } from "@/api/artifacts";
+import { MarkdownRenderer } from "@/components/MarkdownRenderer";
+import type { ExpertDraft, CrossReview, KnowledgePoint, MarkdownArtifact } from "@/types";
+import { User, Scale, FileEdit, MessageSquare, AlertCircle, CheckCircle2, ArrowRight, Circle, BookOpenText, Loader2 } from "lucide-react";
 
 interface ExpertDebatePanelProps {
   expertADraft?: ExpertDraft;
@@ -12,6 +23,13 @@ interface ExpertDebatePanelProps {
   expertARevision?: ExpertDraft;
   expertBRevision?: ExpertDraft;
   expertPhase?: string;
+  sessionId?: string;
+  artifacts?: MarkdownArtifact[];
+}
+
+/** 把 manifest 里的完整路径裁成会话内相对路径（与 artifacts API 约定一致）。 */
+function stripArtifactPrefix(path: string): string {
+  return path.replace(/^artifacts\/sessions\/[^/]+\//, "");
 }
 
 export function ExpertDebatePanel({
@@ -22,7 +40,16 @@ export function ExpertDebatePanel({
   expertARevision,
   expertBRevision,
   expertPhase,
+  sessionId,
+  artifacts,
 }: ExpertDebatePanelProps) {
+  /** 解析某稿件的全文 Markdown 路径：优先草稿内嵌索引，其次 artifacts 清单，最后按约定路径兜底。 */
+  const resolvePath = (stem: string, embedded?: MarkdownArtifact): string | undefined => {
+    if (embedded?.path) return stripArtifactPrefix(embedded.path);
+    const found = artifacts?.find((a) => a.path.includes(`/${stem}`));
+    if (found?.path) return stripArtifactPrefix(found.path);
+    return `round-01/${stem}.md`;
+  };
   const hasAny =
     expertADraft || expertBDraft || expertACrossReview || expertBCrossReview || expertARevision || expertBRevision;
 
@@ -131,22 +158,52 @@ export function ExpertDebatePanel({
 
           <TabsContent value="draft" className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
-              <DraftCard title="专家 A 草稿" draft={expertADraft} color="cyan" />
-              <DraftCard title="专家 B 草稿" draft={expertBDraft} color="amber" />
+              <DraftCard
+                title="专家 A 草稿"
+                draft={expertADraft}
+                color="cyan"
+                sessionId={sessionId}
+              />
+              <DraftCard
+                title="专家 B 草稿"
+                draft={expertBDraft}
+                color="amber"
+                sessionId={sessionId}
+              />
             </div>
           </TabsContent>
 
           <TabsContent value="review" className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
-              <ReviewCard title="A 对 B 的互评" review={expertACrossReview} />
-              <ReviewCard title="B 对 A 的互评" review={expertBCrossReview} />
+              <ReviewCard
+                title="A 对 B 的互评"
+                review={expertACrossReview}
+                sessionId={sessionId}
+                artifactPath={resolvePath("expert_a_cross_review")}
+              />
+              <ReviewCard
+                title="B 对 A 的互评"
+                review={expertBCrossReview}
+                sessionId={sessionId}
+                artifactPath={resolvePath("expert_b_cross_review")}
+              />
             </div>
           </TabsContent>
 
           <TabsContent value="revision" className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
-              <RevisionCard title="专家 A 修订" draft={expertARevision} />
-              <RevisionCard title="专家 B 修订" draft={expertBRevision} />
+              <RevisionCard
+                title="专家 A 修订"
+                draft={expertARevision}
+                sessionId={sessionId}
+                artifactPath={resolvePath("expert_a_revision", expertARevision?.markdown_artifact)}
+              />
+              <RevisionCard
+                title="专家 B 修订"
+                draft={expertBRevision}
+                sessionId={sessionId}
+                artifactPath={resolvePath("expert_b_revision", expertBRevision?.markdown_artifact)}
+              />
             </div>
           </TabsContent>
 
@@ -170,10 +227,14 @@ function DraftCard({
   title,
   draft,
   color,
+  sessionId,
+  artifactPath,
 }: {
   title: string;
   draft?: ExpertDraft;
   color: "cyan" | "amber";
+  sessionId?: string;
+  artifactPath?: string;
 }) {
   if (!draft) {
     return (
@@ -240,12 +301,23 @@ function DraftCard({
             )) || <li>无</li>}
           </ul>
         </div>
+        <FullTextButton sessionId={sessionId} artifactPath={artifactPath} title={`${title} · 教学正文`} fallbackContent={draft.teaching_content} />
       </CardContent>
     </Card>
   );
 }
 
-function ReviewCard({ title, review }: { title: string; review?: CrossReview }) {
+function ReviewCard({
+  title,
+  review,
+  sessionId,
+  artifactPath,
+}: {
+  title: string;
+  review?: CrossReview;
+  sessionId?: string;
+  artifactPath?: string;
+}) {
   if (!review) {
     return (
       <Card className="border-border/30 bg-card/80">
@@ -255,6 +327,17 @@ function ReviewCard({ title, review }: { title: string; review?: CrossReview }) 
       </Card>
     );
   }
+  const reviewFallback = [
+    review.overall_assessment,
+    ...(review.positive_confirmation
+      ? [`**肯定确认**：${review.positive_confirmation}`]
+      : []),
+    ...(review.review_opinions ?? []).map(
+      (op) =>
+        `- **${op.category}**（${op.location}）\n  - 问题：${op.problem}\n  - 建议：${op.suggestion}`
+    ),
+  ].join("\n\n");
+
   return (
     <Card className="border-border/40 bg-card shadow-soft">
       <CardHeader className="pb-3">
@@ -282,12 +365,23 @@ function ReviewCard({ title, review }: { title: string; review?: CrossReview }) 
             </div>
           ))}
         </div>
+        <FullTextButton sessionId={sessionId} artifactPath={artifactPath} title={`${title} · 全文`} fallbackContent={reviewFallback} />
       </CardContent>
     </Card>
   );
 }
 
-function RevisionCard({ title, draft }: { title: string; draft?: ExpertDraft }) {
+function RevisionCard({
+  title,
+  draft,
+  sessionId,
+  artifactPath,
+}: {
+  title: string;
+  draft?: ExpertDraft;
+  sessionId?: string;
+  artifactPath?: string;
+}) {
   if (!draft) {
     return (
       <Card className="border-border/30 bg-card/80">
@@ -357,7 +451,74 @@ function RevisionCard({ title, draft }: { title: string; draft?: ExpertDraft }) 
             )) || <li>无</li>}
           </ul>
         </div>
+        <FullTextButton sessionId={sessionId} artifactPath={artifactPath} title={`${title} · 全文`} fallbackContent={draft.teaching_content} />
       </CardContent>
     </Card>
+  );
+}
+
+/** “阅读全文”按钮：优先通过 artifacts API 拉取稿件 Markdown 全文；产物不可用时回退到会话状态中的全文。 */
+function FullTextButton({
+  sessionId,
+  artifactPath,
+  title,
+  fallbackContent,
+}: {
+  sessionId?: string;
+  artifactPath?: string;
+  title: string;
+  fallbackContent?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["artifact", sessionId, artifactPath],
+    queryFn: () => artifactsApi.getArtifact(sessionId!, artifactPath!),
+    enabled: open && !!sessionId && !!artifactPath,
+  });
+
+  if (!sessionId || (!artifactPath && !fallbackContent)) return null;
+
+  return (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full border-dashed"
+        onClick={() => setOpen(true)}
+      >
+        <BookOpenText className="h-3.5 w-3.5 mr-1.5" />
+        阅读全文
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+          </DialogHeader>
+          {isLoading && artifactPath && (
+            <div className="flex items-center gap-2 text-muted-foreground py-10 justify-center">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              加载全文中...
+            </div>
+          )}
+          {!artifactPath && fallbackContent && (
+            <MarkdownRenderer content={fallbackContent} />
+          )}
+          {error &&
+            (fallbackContent ? (
+              <>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Markdown 产物不可用（会话在其他环境运行或产物已清理），以下为会话状态中保存的全文：
+                </p>
+                <MarkdownRenderer content={fallbackContent} />
+              </>
+            ) : (
+              <div className="text-destructive py-6 text-sm">
+                读取全文失败：{error instanceof Error ? error.message : String(error)}
+              </div>
+            ))}
+          {data && <MarkdownRenderer content={data} />}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

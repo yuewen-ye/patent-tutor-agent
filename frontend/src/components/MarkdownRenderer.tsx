@@ -12,7 +12,11 @@ function cleanMarkdownContent(content: string): string {
   let cleaned = content
     .replace(/```json[\s\S]*?```/g, "")
     .replace(/```[\s\S]*?```/g, "")
-    .replace(/\$\{[\s\S]*?\}/g, "");
+    .replace(/\$\{[\s\S]*?\}/g, "")
+    // 去掉产物末尾“结构化字段/结构化数据”区的标题（内容块已在上面剥除）
+    .replace(/^##\s*(?:结构化字段|结构化数据)\s*$/gm, "")
+    // 去掉 raw 字段名标题（如 ## teaching_content / ## block_plan 等 snake_case 键名）
+    .replace(/^##\s*[a-z][a-z0-9_]*\s*$/gm, "");
 
   jsonFields.forEach((field) => {
     cleaned = cleaned.replace(new RegExp(`\\b${field}\\b\\s*[:：]?\\s*["'\\[]?[\\s\\S]*?(?=\\n\\n|$|\\b${jsonFields.find((f) => f !== field && cleaned.includes(f))}\\b)`, "g"), "");
