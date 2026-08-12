@@ -1365,11 +1365,15 @@ def calculate_round(
     return rm
 
 
-# M1 外部LLM评估器维度（5个评估器概念，由 judge_*.json 提供）
+# M1 外部LLM评估器维度（3个核心概念，由 judge_*.json 提供）
 _M1_LLM_DIMENSIONS: list[tuple[str, str]] = [
     ("context_correctness", "上下文正确性(Context Correctness)"),
     ("correctness", "答案正确性(Correctness)"),
     ("hallucination", "幻觉评估(Hallucination)"),
+]
+
+# M2 匹配度外部LLM维度（从原 M1 移入的有用性/相关性）
+_M2_LLM_DIMENSIONS: list[tuple[str, str]] = [
     ("helpfulness", "有用性(Helpfulness)"),
     ("relevance", "相关性(Relevance)"),
 ]
@@ -1426,10 +1430,19 @@ def format_result(
         if not found:
             lines.append("  (无数据)")
 
-    _append_group("幻觉率 — 系统自评", ["专家互评异议率", "裁判准确性评分"])
-    _append_group("匹配度", ["难度符合度", "资源形态评估"])
+    _append_group("幻觉率 — 系统自评", ["专家互评异议率", "裁判准确性评分", "异议闭环率"])
+    _append_group("匹配度 — 难度符合度", ["难度符合度"])
 
-    # M6 产物完整率（特殊位置）
+    # M7 资源形态评估（独立主指标）
+    m7 = next((m for m in rm.metrics if m.name == "资源形态评估"), None)
+    if m7:
+        lines.append("")
+        lines.append("【M7 资源形态】")
+        lines.append(f"  {m7.name}: {m7.value}{m7.unit}")
+        for k, v in m7.detail.items():
+            lines.append(f"    · {k}: {v}")
+
+    # M6 产物完整率
     m6 = next((m for m in rm.metrics if m.name == "产物完整率"), None)
     if m6:
         lines.append("")
@@ -1439,31 +1452,47 @@ def format_result(
             lines.append(f"    · {k}: {v}")
 
     _append_group(
-        "覆盖率",
+        "M3 覆盖率",
         ["本节知识点覆盖率", "薄弱点命中率", "混淆对覆盖率"],
     )
 
-    # M1 & M9 外部 LLM 评估（陈述级）
-    _append_group("幻觉率 — 外部LLM(陈述级)", ["专业知识谬误率", "知识溯源可验证率"])
+    # M1 陈述级外部LLM
+    _append_group("M1 幻觉率 — 陈述级外部LLM", ["专业知识谬误率", "知识溯源可验证率"])
 
-    # M1 外部LLM评估器维度（5个评估器概念）
+    # M1 外部LLM评估器维度（3个核心概念）
     lines.append("")
-    lines.append("【M1 外部LLM评估器维度（5概念）】")
-    llm_dims_found = False
+    lines.append("【M1 幻觉率 — 外部LLM评估器维度(3概念)】")
+    m1_dims_found = False
     for dim_key, dim_label in _M1_LLM_DIMENSIONS:
         result = _get_llm_dim_score(
             rm.profile_letter, rm.round_num, dim_key, llm_results
         )
         if result is not None:
-            llm_dims_found = True
+            m1_dims_found = True
             val, u = result
             lines.append(f"  {dim_label}: {val}{u}")
-    if not llm_dims_found:
+    if not m1_dims_found:
         lines.append("  (无外部LLM评估数据，请先运行外部LLM评估)")
 
-    _append_group("对话质量", ["异议闭环率"])
-    _append_group("动态迭代", ["动态迭代触发率"])
-    _append_group("PII合规检测", ["PII泄露条数"])
+    # M2 外部LLM维度（有用性/相关性）
+    lines.append("")
+    lines.append("【M2 匹配度 — 外部LLM维度】")
+    m2_dims_found = False
+    for dim_key, dim_label in _M2_LLM_DIMENSIONS:
+        result = _get_llm_dim_score(
+            rm.profile_letter, rm.round_num, dim_key, llm_results
+        )
+        if result is not None:
+            m2_dims_found = True
+            val, u = result
+            lines.append(f"  {dim_label}: {val}{u}")
+    if not m2_dims_found:
+        lines.append("  (无外部LLM评估数据)")
+
+    # M1 其他吸收指标
+    _append_group("M1 幻觉率 — 知识溯源(M9吸收)", ["知识溯源可验证率"])
+    _append_group("M1 幻觉率 — PII合规检测(M10吸收)", ["PII泄露条数"])
+    _append_group("M2 匹配度 — 动态迭代(M11吸收)", ["动态迭代触发率"])
 
     return "\n".join(lines)
 

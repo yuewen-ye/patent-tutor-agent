@@ -2,7 +2,12 @@
 
 ## 一、测试目的简述
 
-本方案旨在制定对于系统的多个核心指标——**幻觉率、输出与画像匹配度、知识点覆盖率、对话质量**——以及其他测试指标的测量方法。
+本方案旨在制定对于系统的核心指标——**幻觉率、匹配度、覆盖率、产物完整率、资源形态**——的测量方法。
+
+**指标体系重构说明**：
+- 原 M8/M9/M10/M11 编号删除，内容分别吸收至 M1/M2
+- M4/M5 降级为概念说明，不再计算
+- 最终评估指标编号为 **M1–M7**（M4/M5 仅概念保留）
 
 测试数据来源于系统过程化产出（profile / path / round-** 全套产物）。整套测试通过模块化的评估脚本驱动系统完成多轮 teach + feedback 循环，自动收集每轮产物，再依据预设答案与系统产物计算各项指标。
 
@@ -12,22 +17,25 @@
 
 > 以下公式均按**单轮**计算。每个画像运行 n 轮，每轮对应一个预设答案文件 `expected_{学员首字母}_{轮次编号}.json`，最终结果取各轮的算术平均值。
 
-### 指标一：幻觉率 — 系统自评
+### M1 幻觉率（核心指标，扩展）
 
-衡量输出内容中事实性错误和逻辑瑕疵的比例。通过系统内置的"专家 Agent 互评 + 裁判 Agent 决策"机制实现。
+衡量输出内容中事实性错误、逻辑瑕疵、溯源可验证性及PII合规的综合指标。整合了过程异议、内容准确性、外部LLM评估、溯源验证和PII合规五个维度。
 
-**子维度 1：专家互评异议率**
+#### 1.1 系统自评
+
+**子维度 ①：专家互评异议率（含原 M8 异议闭环率）**
 
 计算公式：
 ```
-专家互评异议率 = (🔴 标记数 + 🟡 标记数) / 总批注数 × 100%
+异议率 = (🔴 标记数 + 🟡 标记数) / 总批注数 × 100%
+闭环率 = 闭环条数 / 总🔴条数 × 100%
 ```
 
 字段来源：
-- `"🔴"` 和 `"🟡"` — 来源：`expert_a_cross_review.md` 和 `expert_b_cross_review.md` 的批改意见表格中，`类别` 列的标记符号
-- 总批注数 — 来源：同上，两份互评文件批改意见表格的行数总和（含 🔴 / 🟡 / 🟢 / 🔵 全部标记）
+- 🔴 和 🟡 — `expert_a_cross_review.md` 和 `expert_b_cross_review.md` 的 `类别` 列标记符号
+- 闭环判定 — 外部 LLM 评估（`objection_loop_*.json`）
 
-**子维度 2：裁判准确性评分**
+**子维度 ②：裁判准确性评分**
 
 计算公式：
 ```
@@ -35,92 +43,45 @@
 ```
 
 字段来源：
-- `"准确性"` — 来源：`judge_report.md`，形如 `准确性：5/5`
+- "准确性" — `judge_report.md`，形如 `准确性：5/5`
 
----
+#### 1.2 外部LLM评估器维度（3个核心概念）
 
-### 指标二：匹配度
+通过外部大语言模型（LLM）对课程内容进行核心维度评估，每个维度 100 分制。
 
-衡量课程内容与学员画像的契合程度。
-
-**子维度 1：难度符合度**
+**子维度 ①：上下文正确性（Context Correctness）**
 
 计算公式：
 ```
-难度符合度 = L_low ≤ 题.difficulty ≤ L_high 的题数 / 总题数 × 100%
+外部LLM评估：事实准确性 + 关键信息完整性（0–100分）
 ```
 
 字段来源：
-- 分子：从 `course_package.md` 的 `assessment` 板块正文中解析每道题的难度标记（`L1` / `L2` / `L3`，形如 `题目1（理解，L1，backward_review）`），与 `learning_path.md` 中的难度上限比对，难度 ≤ 上限的题数即为分子
-- 分母：同上，`assessment` 板块中的总题目数
-- 难度上限分阶规则（来源：`learning_path.md`）：`P(L)<0.15 → L1`；`0.15≤P(L)<0.30 → L2`；`P(L)≥0.30 → L3`；薄弱点强制 ≥ L3
+- `judge_*.json` → `overall_evaluation.scores.context_correctness`
 
-**子维度 2：资源形态评估**
-
-通过外部 LLM 评估课程中资源形态的覆盖度及其与学员画像的适配程度。
+**子维度 ②：答案正确性（Correctness）**
 
 计算公式：
 ```
-综合评分 = 资源形态覆盖率 × 40% + 学员画像适配度 × 60%
+外部LLM评估：生成内容与专利法/实践/逻辑的一致性（0–100分）
 ```
 
-评估维度：
-- **资源形态覆盖率**：课程中出现的资源形态类型数 / 预设核心类型总数
-- **学员画像适配度**：外部 LLM 对资源形态与学员知识水平、学习风格匹配度的综合评分
-
 字段来源：
-- 来源：`resource_morphology_*.json`（外部 LLM 评估结果）
-- 核心资源形态包括：
-  - **讲义**：`knowledge_synthesis` / `verbal_explanation` / `global_framework` / `summary_card` / `mnemonic`
-  - **实操指南**：`worked_example` / `decision_flow` / `anchor_scenario` / `common_pitfall`
-  - **分阶题**：`assessment` / `predict_activate` / `reflect_prompt` / `legal_anchor`
+- `judge_*.json` → `overall_evaluation.scores.correctness`
 
----
-
-### 指标三：覆盖率
-
-衡量课程内容对预设知识节点和薄弱点的覆盖程度。
-
-**子维度 1：本节知识点覆盖率**
+**子维度 ③：幻觉评估（Hallucination）**
 
 计算公式：
 ```
-本节知识点覆盖率 = 课程已覆盖的子知识点数 / 预定义子知识点总数 × 100%
+外部LLM评估：与客观事实/可验证数据/逻辑推理相违背的内容比例（0–100分）
 ```
 
 字段来源：
-- 分子 `"knowledge_points[].node_id"` — 来源：`course_package.md` 结构化数据段
-- 分母 `"section_kcs[]"` — 来源：`expected_{学员首字母}_{轮次编号}.json` → `expected_course_content.section_kcs`
+- `judge_*.json` → `overall_evaluation.scores.hallucination`
 
-**子维度 2：薄弱点命中率**
+#### 1.3 陈述级外部LLM
 
-计算公式：
-```
-薄弱点命中率 = 课程命中的薄弱知识点数 / 薄弱知识点总数 × 100%
-```
-
-字段来源：
-- 分子：从 `course_package.md` 正文板块中匹配预设答案中的薄弱知识点名称
-- 分母 `"weakness_kcs[]"` — 来源：`expected_{学员首字母}_{轮次编号}.json` → `expected_course_content.weakness_kcs`
-
-**子维度 3：混淆对覆盖率**
-
-计算公式：
-```
-混淆风险覆盖率 = 课程辨析的高风险混淆对数 / 高风险混淆对总数 × 100%
-```
-
-字段来源：
-- 分子：从 `course_package.md` 正文中匹配预设答案中的混淆对
-- 分母 `"confusable_pairs[]"` — 来源：`expected_{学员首字母}_{轮次编号}.json` → `expected_course_content.confusable_pairs`
-
----
-
-### 指标四：幻觉率 — 外部 LLM
-
-通过外部大语言模型（LLM）对课程内容进行事实性核查。
-
-**子维度 1：专业知识谬误率**
+**子维度：专业知识谬误率**
 
 计算公式：
 ```
@@ -128,41 +89,72 @@
 ```
 
 字段来源：
-- 来源：`course_package.md` (legal_basis / risks / 教学正文) → 外部 LLM 判定
-- 评估方式：`statement_evaluator.md` 提示词
+- `course_package.md` (legal_basis / risks / 教学正文) → 外部 LLM 判定
+- 存储：`statement_judge_{model}_{profile}_{round:02d}.json`
 
-**子维度 2：知识溯源可验证率**
+#### 1.4 知识溯源可验证率（原 M9 吸收）
 
 计算公式：
 ```
-知识溯源可验证率 = (条号真实且内容对应的引用数) / 抽样引用总数 × 100%
+知识溯源可验证率 = 完全验证的带来源陈述数 / 带来源陈述总数 × 100%
 ```
 
 字段来源：
-- 来源：`course_package.md` (legal_basis.source) → 外部 LLM 核验
-- 评估方式：`statement_evaluator.md` 提示词
+- `course_package.md` (legal_basis.source) → 外部 LLM 核验
+- 存储：`statement_judge_{model}_{profile}_{round:02d}.json`（与 1.3 共文件）
+
+#### 1.5 PII合规检测（原 M10 吸收）
+
+计算公式：
+```
+PII泄露条数 = 正则白名单扫描 learner_profile_update.md / session_snapshot.json 的匹配数
+```
+
+字段来源：
+- `learner_profile_update.md` + `session_snapshot.json`
+- 6 种 PII 模式：身份证号、手机号、邮箱、银行卡号、地址、真实姓名
+- ⚠️ 该指标不完善，仅作为辅助参考
 
 ---
 
-### 指标五：对话质量
+### M2 匹配度（扩展）
 
-衡量多轮对话的交互质量和动态调整能力。
+衡量课程内容与学员画像、学习目标的契合程度。
 
-**子维度 1：异议闭环率**
-
-通过外部 LLM 评估专家提出的异议是否形成完整闭环。
+#### 2.1 难度符合度（双边区间匹配）
 
 计算公式：
 ```
-异议闭环率 = 闭环条数 / 总🔴条数 × 100%
+难度符合度 = L_low ≤ 题.difficulty ≤ L_high 的题数 / 总题数 × 100%
 ```
 
 字段来源：
-- 来源：`cross_review.md` + `judge_report.md` + `revision.md` (外部 LLM 判定)
-- 闭环逻辑：异议提出 → 裁判采纳 → 修订修正 → 复核通过
-- 评估方式：`objection_loop_evaluator.md` 提示词
+- 分子：`course_package.md` 中每道题的难度标记（L1/L2/L3）
+- 分母：`course_package.md` 中的总题目数
+- L_low 规则：pl < 0.65 → L1；pl ≥ 0.65 → L2；角色特例（weakness→L3, forward_probe→L1）
+- L_high：`learning_path.md` 中的节点难度上限
 
-**子维度 2：动态迭代触发率**
+#### 2.2 有用性（Helpfulness）
+
+计算公式：
+```
+外部LLM评估：内容对学员的实际帮助程度（0–100分）
+```
+
+字段来源：
+- `judge_*.json` → `overall_evaluation.scores.helpfulness`
+
+#### 2.3 相关性（Relevance）
+
+计算公式：
+```
+外部LLM评估：内容与学习主题的聚焦程度（0–100分）
+```
+
+字段来源：
+- `judge_*.json` → `overall_evaluation.scores.relevance`
+
+#### 2.4 动态迭代触发率（原 M11 吸收）
 
 计算公式：
 ```
@@ -170,33 +162,110 @@
 ```
 
 字段来源：
-- 来源：`learner_profile_update.md` (跨轮比对) + `course_package.md` (难度变化)
+- `learner_profile_update.md` (跨轮比对) + `course_package.md` (难度变化)
+- 进阶判定：r01 中 pl < 0.30 的节点 → r02 中 pl ≥ 0.30
 
 ---
 
-## 三、M1 多指标加权方案（待定）
+### M3 覆盖率
 
-为了更综合地评估幻觉率，计划将 M1（专业知识谬误率）与 M8（异议闭环率）、M9（知识溯源可验证率）等指标结合，计算加权幻觉率。
+衡量课程内容对预设知识节点、薄弱点和混淆对的覆盖程度。
 
-**计划公式**：
+#### 3.1 本节知识点覆盖率
+
+计算公式：
 ```
-加权幻觉率 = (M1 × a) + ((1-M9) × b) + ((1-M8) × c) + ((1-M2) × d)
+本节知识点覆盖率 = 课程已覆盖的子知识点数(含祖先) / 预定义子知识点总数 × 100%
 ```
 
-**说明**：
-- M1：专业知识谬误率（核心指标）
-- M8：异议闭环率（反向指标，异议未闭环说明存在风险）
-- M9：知识溯源可验证率（反向指标，引用错误说明内容存疑）
-- M2：难度符合度（辅助指标，难度不适配可能影响学习效果）
-- 权重 a, b, c, d 待后续确定
+字段来源：
+- 分子 `"knowledge_points[].node_id"` — `course_package.md` 结构化数据段，经 `knowledge-dag.json` 祖先扩展
+- 分母 `"section_kcs[]"` — `expected_{学员首字母}_{轮次编号}.json` → `expected_course_content.section_kcs`
 
-**实施计划**：将在最终报告生成前完成此方案的实现。
+#### 3.2 薄弱点命中率
+
+计算公式：
+```
+薄弱点命中率 = 课程命中的薄弱知识点数 / 薄弱知识点总数 × 100%
+```
+
+字段来源：
+- 分子：从 `course_package.md` 正文中匹配预设答案中的薄弱知识点名称
+- 分母 `"weakness_kcs[]"` — `expected_{学员首字母}_{轮次编号}.json` → `expected_course_content.weakness_kcs`
+
+#### 3.3 混淆对覆盖率
+
+计算公式：
+```
+混淆对覆盖率 = 课程辨析的高风险混淆对数 / 高风险混淆对总数 × 100%
+```
+
+字段来源：
+- 分子：从 `course_package.md` 正文中匹配预设答案中的混淆对
+- 分母 `"confusable_pairs[]"` — `expected_{学员首字母}_{轮次编号}.json` → `expected_course_content.confusable_pairs`
 
 ---
 
-## 四、测试流程
+### M4 差异化画像（仅概念保留）
 
-### 4.1 环境准备
+- 指标要求：差异化画像组数 ≥ 3
+- 说明：本指标降级为概念说明，不再进行自动化计算
+- 概念验证：10 组画像（B/C/G/H/M/P/R/S/T/W），覆盖「知识背景档 × 学习目标 × 最大盲区 × 偏好场景」四维差异
+- 证据文件：`doc/reference/M4_画像对照表.md`
+
+### M5 知识库覆盖（仅概念保留）
+
+- 指标要求：知识库切片数 ≥ 1
+- 说明：本指标降级为概念说明，不再进行自动化计算
+- 概念验证：3768 条切片 / 10 份专利法律领域权威文档
+- 证据文件：`doc/reference/M5_知识库切片清单.md`
+
+---
+
+### M6 产物完整率
+
+衡量每轮各类产物的完整性。
+
+计算公式：
+```
+产物完整率 = 完整类别数 / 需要检查的类别数 × 100%
+```
+
+字段来源：
+- 五类产物代表文件：
+  - 规划：`path_decision.md` + `learning_path.md` + `course_package.md`
+  - 专家A：`expert_a_draft.md` + `expert_a_cross_review.md` + `expert_a_revision.md`
+  - 专家B：`expert_b_draft.md` + `expert_b_cross_review.md` + `expert_b_revision.md`
+  - 裁判：`judge_report.md`
+  - 诊断反馈：`feedback/learner_profile_update.md` + `feedback/grading_report.md` + `feedback/feedback_report.md`
+- 结尾轮（最后一轮）豁免诊断反馈类
+
+---
+
+### M7 资源形态（主指标）
+
+评估课程中资源形态的覆盖度。
+
+#### 7.1 资源形态评估
+
+计算公式：
+```
+综合评分 = 资源形态覆盖率 × 0.4 + 核心覆盖 × 0.6
+```
+
+字段来源：
+- 外部 LLM：`resource_morphology_*.json`
+- 回退脚本：统计 `course_package.md` 中出现的 13 种资源形态类型
+- 三类核心形态（必覆盖）：
+  - 讲义类：`knowledge_synthesis` / `verbal_explanation` / `global_framework` / `summary_card` / `mnemonic`
+  - 实操指南类：`worked_example` / `decision_flow` / `anchor_scenario` / `common_pitfall`
+  - 分阶题类：`assessment` / `predict_activate` / `reflect_prompt` / `legal_anchor`
+
+---
+
+## 三、测试流程
+
+### 3.1 环境准备
 
 1. **Python 依赖**：
    ```powershell
@@ -215,7 +284,7 @@
    uv run python backend/main.py
    ```
 
-### 4.2 执行测试
+### 3.2 执行测试
 
 #### 主控脚本
 
@@ -229,16 +298,16 @@ uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py
 
 1. **外部 LLM 评估**：
    ```powershell
-   # 整体评估
+   # 整体评估（14维度评分）
    uv run python backend/tests/evaluation/LLM/evaluator_LLM.py --mode overall
 
-   # M1/M9 陈述级评估
+   # M1陈述级评估（专业知识谬误率 + 知识溯源可验证率）
    uv run python backend/tests/evaluation/LLM/evaluator_LLM.py --mode statement
 
-   # M7 资源形态评估
+   # M7资源形态评估
    uv run python backend/tests/evaluation/LLM/evaluator_LLM.py --mode m7
 
-   # M8 异议闭环率评估
+   # M1异议闭环率评估
    uv run python backend/tests/evaluation/LLM/evaluator_LLM.py --mode m8
    ```
 
@@ -256,7 +325,7 @@ uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py
    uv run python backend/tests/evaluation/program/report.py --profile B
    ```
 
-### 4.3 产物结构
+### 3.3 产物结构
 
 每轮执行后，系统自动在以下位置生成产物：
 
@@ -268,5 +337,27 @@ backend/tests/evaluation/artifacts/{learner_id}/round_{NN}/
 ├── learning_path.md                # 学习路径
 ├── expert_a_cross_review.md        # 专家 A 评审
 ├── expert_b_cross_review.md        # 专家 B 评审
+├── feedback/
+│   ├── learner_profile_update.md   # 学员画像更新
+│   ├── grading_report.md           # 评分报告
+│   └── feedback_report.md          # 反馈报告
 └── ...                             # 其他过程产物
 ```
+
+### 3.4 重构变更对照表
+
+| 原指标 | 变更类型 | 新归属 | 说明 |
+|---|---|---|---|
+| M1 幻觉率 | 扩展 | 吸收 M9/M10 | 新增 1.4 知识溯源、1.5 PII合规 |
+| M1 的有用性/相关性 | 移出 | → M2 匹配度 | 归属于匹配度更恰当 |
+| M2 匹配度 | 扩展 | 吸收 M11 | 新增 2.4 动态迭代触发率 |
+| M2.2 资源形态 | 独立 | → M7 | 升级为主指标 |
+| M3 覆盖率 | 不变 | — | 保持原有结构 |
+| M4 差异化画像 | 降级 | 仅概念保留 | 不再计算 |
+| M5 知识库覆盖 | 降级 | 仅概念保留 | 不再计算 |
+| M6 产物完整率 | 不变 | — | 保持原有结构 |
+| M7 资源形态 | 新增 | 吸收 M2.2 | 独立为 M7 |
+| M8 对话质量 | 删除 | → M1 | 异议闭环率并入 M1 系统自评 |
+| M9 知识溯源 | 删除 | → M1 | 归入 M1 幻觉率 |
+| M10 PII合规 | 删除 | → M1 | 归入 M1 幻觉率（标注不完善） |
+| M11 动态迭代 | 删除 | → M2 | 归入 M2 匹配度 |

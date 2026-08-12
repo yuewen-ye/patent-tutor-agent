@@ -49,43 +49,57 @@ import calculate  # noqa: E402
 
 REPORTS_DIR = _EVAL_DIR / "results" / "reports"
 
-# 指标分类（按 calculate.py 顺序，与 doc/指标草案.md 对齐）
+# 指标分类（重构后：M1扩展、M2扩展、M7独立、M8/M9/M10/M11删除）
 # 注意: 带 [LLM] 后缀的指标名表示该值来自外部 LLM 评估结果（judge_*.json），
 # 而非 calculate.py 直接计算的 MetricResult。
+
+# M1 幻觉率 — 外部LLM评估器维度（3个核心概念，原5个移除有用性/相关性）
 _M1_LLM_DIMENSIONS: list[str] = [
     "上下文正确性(Context Correctness)",
     "答案正确性(Correctness)",
     "幻觉评估(Hallucination)",
+]
+
+# M2 匹配度 — 外部LLM评估器维度（从原M1移入的有用性/相关性）
+_M2_LLM_DIMENSIONS: list[str] = [
     "有用性(Helpfulness)",
     "相关性(Relevance)",
 ]
 
 # LLM 维度 label → key 映射（用于从 judge_*.json 中提取分数）
 _LLM_DIM_KEY_MAP: dict[str, str] = {
+    # M1 维度
     "上下文正确性(Context Correctness)": "context_correctness",
     "答案正确性(Correctness)": "correctness",
     "幻觉评估(Hallucination)": "hallucination",
+    # M2 维度
     "有用性(Helpfulness)": "helpfulness",
     "相关性(Relevance)": "relevance",
 }
 
 METRIC_CATEGORIES: list[tuple[str, list[str]]] = [
-    ("M1 幻觉率 — 系统自评", ["专家互评异议率", "裁判准确性评分"]),
-    ("M1 幻觉率 — 外部LLM评估器维度", list(_M1_LLM_DIMENSIONS)),
+    ("M1 幻觉率 — 系统自评", ["专家互评异议率", "裁判准确性评分", "异议闭环率"]),
+    ("M1 幻觉率 — 外部LLM评估器维度(3概念)", list(_M1_LLM_DIMENSIONS)),
     ("M1 幻觉率 — 陈述级外部LLM", ["专业知识谬误率"]),
-    ("M2 匹配度", ["难度符合度", "资源形态评估"]),
+    ("M1 幻觉率 — 知识溯源(M9吸收)", ["知识溯源可验证率"]),
+    ("M1 幻觉率 — PII合规检测(M10吸收)", ["PII泄露条数"]),
+    ("M2 匹配度 — 难度符合度", ["难度符合度"]),
+    ("M2 匹配度 — 外部LLM维度", list(_M2_LLM_DIMENSIONS)),
+    ("M2 匹配度 — 动态迭代(M11吸收)", ["动态迭代触发率"]),
     ("M3 覆盖率", ["本节知识点覆盖率", "薄弱点命中率", "混淆对覆盖率"]),
-    ("M9 知识溯源可验证率", ["知识溯源可验证率"]),
-    ("M8 对话质量", ["异议闭环率"]),
-    ("M11 动态迭代", ["动态迭代触发率"]),
-    ("M10 PII合规", ["PII泄露条数"]),
+    ("M6 产物完整率", ["产物完整率"]),
+    ("M7 资源形态", ["资源形态评估"]),
 ]
 
 # 指标说明：name -> (计算公式, 数据来源)
 METRIC_META: dict[str, tuple[str, str]] = {
     "专家互评异议率": (
-        "(🔴+🟡) / 总批注数 × 100%",
-        "expert_a_cross_review.md + expert_b_cross_review.md",
+        "(🔴+🟡) / 总批注数 × 100%；含异议闭环率",
+        "expert_a_cross_review.md + expert_b_cross_review.md + 外部LLM闭环判定",
+    ),
+    "异议闭环率": (
+        "闭环条数 / 总🔴条数 × 100%（外部LLM判定）",
+        "objection_loop_*.json (外部LLM评估结果)",
     ),
     "裁判准确性评分": (
         "直接取 X/5",
@@ -119,10 +133,6 @@ METRIC_META: dict[str, tuple[str, str]] = {
         "完全验证的带来源陈述数 / 带来源陈述总数 × 100%；100分制平均溯源得分",
         "course_package.md (legal_basis.source) → 外部 LLM 核验",
     ),
-    "异议闭环率": (
-        "闭环条数 / 总🔴条数 × 100%",
-        "cross_review.md + judge_report.md + revision.md (外部 LLM 判定)",
-    ),
     "动态迭代触发率": (
         "pl从弱升至已掌握的节点数 / r01弱状态节点数 × 100%",
         "learner_profile_update.md (跨轮比对) + course_package.md (难度变化)",
@@ -131,7 +141,7 @@ METRIC_META: dict[str, tuple[str, str]] = {
         "正则白名单扫描 learner_profile_update.md / session_snapshot.json",
         "learner_profile_update.md + session_snapshot.json",
     ),
-    # M1 外部LLM评估器维度（5个评估器概念）
+    # M1 外部LLM评估器维度（3个核心概念）
     "上下文正确性(Context Correctness)": (
         "外部LLM评估：事实准确性 + 关键信息完整性（0-100分）",
         "judge_*.json (外部LLM评估 scores.context_correctness)",
@@ -144,6 +154,7 @@ METRIC_META: dict[str, tuple[str, str]] = {
         "外部LLM评估：与客观事实/可验证数据/逻辑推理相违背的内容比例（0-100分）",
         "judge_*.json (外部LLM评估 scores.hallucination)",
     ),
+    # M2 匹配度外部LLM维度（从原M1移入）
     "有用性(Helpfulness)": (
         "外部LLM评估：内容对学员的实际帮助程度，含清晰性/友好性（0-100分）",
         "judge_*.json (外部LLM评估 scores.helpfulness)",
@@ -221,9 +232,13 @@ class FullReportContext:
 
 LLM_EVAL_RESULTS_DIR = _EVAL_DIR / "LLM" / "results"
 
-# 外部 LLM 评分维度（与 evaluator_system.md 对齐，包含用户指定的 5 个评估器概念）
+# 外部 LLM 评分维度（与 evaluator_system.md 对齐，14个维度）
+# 归属说明：
+#   M1 幻觉率: context_correctness, correctness, hallucination
+#   M2 匹配度: helpfulness, relevance
+#   通用（不归属特定M编号）: 其余9个维度
 LLM_SCORING_DIMENSIONS: list[tuple[str, str]] = [
-    # 原始 9 维度
+    # 通用维度（9个）
     ("goal_coverage", "目标覆盖度"),
     ("factual_accuracy", "事实/法律准确性"),
     ("case_accuracy", "案例准确性"),
@@ -233,10 +248,11 @@ LLM_SCORING_DIMENSIONS: list[tuple[str, str]] = [
     ("learner_fit", "学员匹配度"),
     ("knowledge_completeness", "知识完整性"),
     ("weakness_addressing", "薄弱点针对性"),
-    # 用户指定的 5 个评估器概念（M1 子维度）
+    # M1 幻觉率维度（3个）
     ("context_correctness", "上下文正确性(Context Correctness)"),
     ("correctness", "答案正确性(Correctness)"),
     ("hallucination", "幻觉评估(Hallucination)"),
+    # M2 匹配度维度（2个）
     ("helpfulness", "有用性(Helpfulness)"),
     ("relevance", "相关性(Relevance)"),
 ]
@@ -446,9 +462,9 @@ def _all_metric_names(profiles: list[ProfileReport],
                         names.append("资源形态评估")
                         seen.add("资源形态评估")
     
-    # 3. 收集 M1 LLM 评估器维度（5个评估器概念）
+    # 3. 收集 M1 & M2 LLM 评估器维度（按新指标体系，从 judge_*.json 提取）
     if llm_results:
-        for dim_name in _M1_LLM_DIMENSIONS:
+        for dim_name in _M1_LLM_DIMENSIONS + _M2_LLM_DIMENSIONS:
             if dim_name not in seen:
                 names.append(dim_name)
                 seen.add(dim_name)
@@ -748,8 +764,8 @@ def _render_markdown_single(ctx: ReportContext) -> str:
             if m.name not in seen:
                 all_metric_names.append(m.name)
                 seen.add(m.name)
-    # 加入 LLM 评估器维度
-    for dim_name in _M1_LLM_DIMENSIONS:
+    # 加入 M1 & M2 LLM 评估器维度
+    for dim_name in _M1_LLM_DIMENSIONS + _M2_LLM_DIMENSIONS:
         if dim_name not in seen:
             all_metric_names.append(dim_name)
             seen.add(dim_name)
@@ -999,7 +1015,7 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
                             all_scores.append(score)
             if all_scores:
                 grand_avg = sum(all_scores) / len(all_scores)
-                grand_cells.append(f"{grand_avg:.1f}/5")
+                grand_cells.append(f"{grand_avg:.1f}/100")
             else:
                 grand_cells.append("-")
 
@@ -1180,7 +1196,7 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
                         lines.append(f"- **{m.name}**: {_format_value(m.value, m.unit)}")
                         for k, v in m.detail.items():
                             lines.append(f"    - {k}: {_format_detail(v)}")
-                    # LLM 评估器维度（5个评估器概念）
+                    # LLM 评估器维度（M1/M2 的 3+2 概念）
                     elif name in _LLM_DIM_KEY_MAP:
                         result = _get_metric_value_for_round(
                             letter, rm.round_num, name, llm_results, rm.metrics
