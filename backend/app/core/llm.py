@@ -604,15 +604,18 @@ def _post_chat_completion(
             client.close()
 
 
-def _call_with_retries(
-    config: LLMProviderConfig,
+def call_llm(
+    *,
+    provider: LLMProvider = DEFAULT_PROVIDER,
     messages: list[LLMMessage],
-    temperature: float,
-    json_mode: bool,
-    http_client: httpx.Client | None,
-    schema_name: str | None,
-    json_schema: dict[str, object] | None,
+    temperature: float = 0.5,
+    json_mode: bool = False,
+    http_client: httpx.Client | None = None,
+    model_name: str | None = None,
+    schema_name: str | None = None,
+    json_schema: dict[str, object] | None = None,
 ) -> str:
+    config = load_provider_config(provider, model_name=model_name)
     retrying = retry(
         stop=stop_after_attempt(config.retry_times),
         wait=wait_exponential(multiplier=0.5, min=0.5, max=4),
@@ -628,86 +631,6 @@ def _call_with_retries(
         schema_name,
         json_schema,
     )
-
-
-def _failover_candidates(primary: LLMProvider) -> list[LLMProvider]:
-    raw = os.getenv("LLM_FAILOVER_PROVIDERS")
-    if raw is not None and raw.strip():
-        names = [part.strip().lower() for part in raw.split(",") if part.strip()]
-        if names and names[0] in {"none", "off", "disabled"}:
-            return []
-        candidates: list[LLMProvider] = []
-        for name in names:
-            if name in DEFAULT_CONFIG and name != primary and name not in candidates:
-                candidates.append(cast(LLMProvider, name))
-        return candidates
-    return [cast(LLMProvider, name) for name in DEFAULT_CONFIG if name != primary]
-
-
-def call_llm(
-    *,
-    provider: LLMProvider = DEFAULT_PROVIDER,
-    messages: list[LLMMessage],
-    temperature: float = 0.5,
-    json_mode: bool = False,
-    http_client: httpx.Client | None = None,
-    model_name: str | None = None,
-    schema_name: str | None = None,
-    json_schema: dict[str, object] | None = None,
-) -> str:
-    config = load_provider_config(provider, model_name=model_name)
-    try:
-        return _call_with_retries(
-            config, messages, temperature, json_mode, http_client, schema_name, json_schema
-        )
-    except (LLMProviderError, httpx.TransportError) as exc:
-        candidates = _failover_candidates(provider)
-        if not candidates:
-            raise
-        _log_llm_call(
-            provider=provider,
-            status="failover_start",
-            reason=str(exc)[:300],
-            candidates=",".join(candidates),
-        )
-        for candidate in candidates:
-            try:
-                candidate_config = load_provider_config(candidate)
-            except LLMConfigurationError as skip_exc:
-                _log_llm_call(
-                    provider=candidate, status="failover_skip", reason=str(skip_exc)[:300]
-                )
-                continue
-            candidate_schema = json_schema
-            candidate_schema_name = schema_name
-            if candidate_schema is not None and not provider_supports_strict_schema(candidate):
-                candidate_schema = None
-                candidate_schema_name = None
-            try:
-                result = _call_with_retries(
-                    candidate_config,
-                    messages,
-                    temperature,
-                    json_mode,
-                    http_client,
-                    candidate_schema_name,
-                    candidate_schema,
-                )
-            except (LLMProviderError, httpx.TransportError) as candidate_exc:
-                _log_llm_call(
-                    provider=candidate,
-                    status="failover_failed",
-                    error_message=str(candidate_exc)[:300],
-                )
-                continue
-            _log_llm_call(
-                provider=provider, status="failover_success", failover_to=candidate
-            )
-            return result
-        _log_llm_call(
-            provider=provider, status="failover_exhausted", candidates=",".join(candidates)
-        )
-        raise
 
 
 def _strip_json_fence(content: str) -> str:
