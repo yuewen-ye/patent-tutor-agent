@@ -4,21 +4,18 @@
   "learning_goal": "我想学习医药化合物专利的新颖性与创造性判断，结合新药研发真实案例",
   "expected_course_content": {
     "section_kcs": [
-      "patent-law-foundation"
+      "patentability-substantive"
     ],
     "weakness_kcs": [
       "新颖性",
-      "创造性",
-      "说明书撰写要求",
-      "审查意见答复",
-      "分案申请"
+      "现有技术认定",
+      "创造性"
     ],
     "confusable_pairs": [
       [
-        "prior-use-right",
-        "patent-rights-nature"
+        "novelty",
+        "inventive-step"
       ]
     ]
-  },
-  "_design_notes": "DRAFT·需教师校准 | section_kcs←当前节点patent-law-foundation的章节patent-law-foundation(专利法律制度基础); weakness_kcs←Q47自述+偏离分析(6候选取5); confusable_pairs←按考试频率取1对 | 偏离题: Q6(学选D/标B),Q9(学选B/标A),Q11(学选A/标C),Q16(学选B/标C),Q18(学选C/标A)"
+  }
 }

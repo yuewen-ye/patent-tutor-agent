@@ -1,0 +1,19 @@
+{
+  "profile_id": "profile_T",
+  "round": 4,
+  "learning_goal": "我想补齐专利实体法与侵权诉讼规则，从法务视角打通民法与专利",
+  "expected_course_content": {
+    "section_kcs": [
+      "patent-invalidation"
+    ],
+    "weakness_kcs": [
+      "无效宣告理由"
+    ],
+    "confusable_pairs": [
+      [
+        "patent-reexamination",
+        "patent-invalidation"
+      ]
+    ]
+  }
+}

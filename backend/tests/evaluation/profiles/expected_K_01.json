@@ -1,0 +1,21 @@
+{
+  "profile_id": "profile_K",
+  "round": 1,
+  "learning_goal": "以IP管理者评审视角，独立评判代理所提交文件与答复意见的质量",
+  "expected_course_content": {
+    "section_kcs": [
+      "patentability-substantive"
+    ],
+    "weakness_kcs": [
+      "创造性",
+      "创造性三步法判断",
+      "所属技术领域的技术人员"
+    ],
+    "confusable_pairs": [
+      [
+        "novelty",
+        "inventive-step"
+      ]
+    ]
+  }
+}

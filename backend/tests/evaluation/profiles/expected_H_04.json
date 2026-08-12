@@ -1,0 +1,21 @@
+{
+  "profile_id": "profile_H",
+  "round": 4,
+  "learning_goal": "我想学习材料领域专利申请的审查规则，尤其是新颖性和创造性判断",
+  "expected_course_content": {
+    "section_kcs": [
+      "patent-application-process"
+    ],
+    "weakness_kcs": [
+      "优先权制度",
+      "申请日的确定",
+      "分案申请"
+    ],
+    "confusable_pairs": [
+      [
+        "grace-period",
+        "priority-right"
+      ]
+    ]
+  }
+}

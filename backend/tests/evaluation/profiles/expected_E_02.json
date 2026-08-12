@@ -1,0 +1,22 @@
+{
+  "profile_id": "profile_E",
+  "round": 2,
+  "learning_goal": "从研发视角搞懂创造性评价与权利要求边界，把技术交底书写到位",
+  "expected_course_content": {
+    "section_kcs": [
+      "patentability-substantive"
+    ],
+    "weakness_kcs": [
+      "创造性",
+      "创造性三步法判断",
+      "所属技术领域的技术人员",
+      "现有技术认定"
+    ],
+    "confusable_pairs": [
+      [
+        "novelty",
+        "inventive-step"
+      ]
+    ]
+  }
+}

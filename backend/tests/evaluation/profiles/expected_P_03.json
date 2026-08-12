@@ -4,29 +4,18 @@
   "learning_goal": "我想掌握创造性论证和权利要求撰写技巧，通过真实案件拆解",
   "expected_course_content": {
     "section_kcs": [
-      "patent-agency-practice"
+      "patent-examination"
     ],
     "weakness_kcs": [
-      "创造性",
-      "专利申请文件的修改限制",
-      "无效宣告理由",
       "审查意见答复",
-      "分案申请"
+      "专利申请文件的修改限制",
+      "审查意见答复实务"
     ],
     "confusable_pairs": [
       [
         "amendment-limits",
         "claims-drafting-advanced"
-      ],
-      [
-        "independent-claim",
-        "dependent-claim"
-      ],
-      [
-        "specification-requirements",
-        "claims-drafting-basics"
       ]
     ]
-  },
-  "_design_notes": "DRAFT·需教师校准 | section_kcs←推测首轮章节patent-agency-practice(专利代理实务)[节点缺失-待重跑校准]; weakness_kcs←Q47自述+偏离分析(6候选取5); confusable_pairs←按考试频率取3对 | 偏离题: Q9(学选B/标A),Q14(学选A/标B)"
+  }
 }

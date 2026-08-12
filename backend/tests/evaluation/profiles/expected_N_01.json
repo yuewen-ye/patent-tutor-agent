@@ -1,0 +1,21 @@
+{
+  "profile_id": "profile_N",
+  "round": 1,
+  "learning_goal": "以审查与代理双视角复盘专利实务，并跟踪审查实践与跨法域新动向",
+  "expected_course_content": {
+    "section_kcs": [
+      "patentability-substantive"
+    ],
+    "weakness_kcs": [
+      "创造性",
+      "创造性三步法判断",
+      "所属技术领域的技术人员"
+    ],
+    "confusable_pairs": [
+      [
+        "novelty",
+        "inventive-step"
+      ]
+    ]
+  }
+}

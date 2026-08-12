@@ -1,0 +1,21 @@
+{
+  "profile_id": "profile_N",
+  "round": 3,
+  "learning_goal": "以审查与代理双视角复盘专利实务，并跟踪审查实践与跨法域新动向",
+  "expected_course_content": {
+    "section_kcs": [
+      "patent-agency-practice"
+    ],
+    "weakness_kcs": [
+      "权利要求撰写实务",
+      "审查意见答复实务",
+      "说明书撰写要求"
+    ],
+    "confusable_pairs": [
+      [
+        "specification-requirements",
+        "claims-drafting-basics"
+      ]
+    ]
+  }
+}

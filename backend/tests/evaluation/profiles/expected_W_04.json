@@ -1,0 +1,20 @@
+{
+  "profile_id": "profile_W",
+  "round": 4,
+  "learning_goal": "我想系统掌握专利法律知识，并与商标著作权作对比",
+  "expected_course_content": {
+    "section_kcs": [
+      "patent-rights-protection"
+    ],
+    "weakness_kcs": [
+      "等同原则",
+      "专利权保护范围"
+    ],
+    "confusable_pairs": [
+      [
+        "doctrine-of-equivalents",
+        "claim-interpretation"
+      ]
+    ]
+  }
+}

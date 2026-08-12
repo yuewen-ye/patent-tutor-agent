@@ -1,0 +1,24 @@
+{
+  "profile_id": "profile_C",
+  "round": 4,
+  "learning_goal": "我想学习医药化合物专利的新颖性与创造性判断，结合新药研发真实案例",
+  "expected_course_content": {
+    "section_kcs": [
+      "related-laws"
+    ],
+    "weakness_kcs": [
+      "技术合同法",
+      "TRIPS协定"
+    ],
+    "confusable_pairs": [
+      [
+        "employee-invention",
+        "contract-law-tech"
+      ],
+      [
+        "trips-agreement",
+        "pct-system"
+      ]
+    ]
+  }
+}

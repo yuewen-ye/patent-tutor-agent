@@ -1,0 +1,21 @@
+{
+  "profile_id": "profile_K",
+  "round": 4,
+  "learning_goal": "以IP管理者评审视角，独立评判代理所提交文件与答复意见的质量",
+  "expected_course_content": {
+    "section_kcs": [
+      "patent-examination"
+    ],
+    "weakness_kcs": [
+      "审查意见答复",
+      "专利申请文件的修改限制",
+      "实质审查"
+    ],
+    "confusable_pairs": [
+      [
+        "preliminary-examination",
+        "substantive-examination"
+      ]
+    ]
+  }
+}

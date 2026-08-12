@@ -1,0 +1,22 @@
+{
+  "profile_id": "profile_E",
+  "round": 3,
+  "learning_goal": "从研发视角搞懂创造性评价与权利要求边界，把技术交底书写到位",
+  "expected_course_content": {
+    "section_kcs": [
+      "patent-application-process"
+    ],
+    "weakness_kcs": [
+      "权利要求书撰写基础",
+      "说明书撰写要求",
+      "专利申请文件要求",
+      "分案申请"
+    ],
+    "confusable_pairs": [
+      [
+        "specification-requirements",
+        "claims-drafting-basics"
+      ]
+    ]
+  }
+}

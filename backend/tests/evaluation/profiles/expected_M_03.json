@@ -4,29 +4,18 @@
   "learning_goal": "我想学习专利新颖性判断和侵权判定，能结合智能制造领域的真实案例",
   "expected_course_content": {
     "section_kcs": [
-      "patentability-substantive"
+      "patent-rights-protection"
     ],
     "weakness_kcs": [
-      "不授予专利权的主题",
-      "新颖性",
-      "专利侵权行为类型",
       "等同原则",
-      "优先权制度"
+      "专利权保护范围",
+      "权利要求解释规则"
     ],
     "confusable_pairs": [
       [
-        "novelty",
-        "inventive-step"
-      ],
-      [
-        "conflicting-application",
-        "prior-art-definition"
-      ],
-      [
-        "grace-period",
-        "priority-right"
+        "doctrine-of-equivalents",
+        "claim-interpretation"
       ]
     ]
-  },
-  "_design_notes": "DRAFT·需教师校准 | section_kcs←推测首轮章节patentability-substantive(专利授权实质条件)[节点缺失-待重跑校准]; weakness_kcs←Q47自述+偏离分析(16候选取5); confusable_pairs←按考试频率取3对 | 偏离题: Q1(学选A/标B),Q2(学选A/标D),Q3(学选B/标D),Q4(学选B/标A),Q5(学选C/标B),Q6(学选A/标B),Q7(学选C/标B),Q8(学选A/标C),Q9(学选B/标A),Q10(学选C/标A),Q11(学选A/标C),Q12(学选A/标B),Q13(学选B/标C),Q14(学选A/标B),Q15(学选C/标A),Q16(学选A/标C),Q17(学选B/标D),Q18(学选C/标A),Q19(学选B/标D),Q20(学选C/标A),Q21(学选C/标B)"
+  }
 }

@@ -1,0 +1,21 @@
+{
+  "profile_id": "profile_K",
+  "round": 2,
+  "learning_goal": "以IP管理者评审视角，独立评判代理所提交文件与答复意见的质量",
+  "expected_course_content": {
+    "section_kcs": [
+      "patent-agency-practice"
+    ],
+    "weakness_kcs": [
+      "权利要求撰写实务",
+      "审查意见答复实务",
+      "说明书撰写要求"
+    ],
+    "confusable_pairs": [
+      [
+        "specification-requirements",
+        "claims-drafting-basics"
+      ]
+    ]
+  }
+}

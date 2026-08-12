@@ -4,29 +4,18 @@
   "learning_goal": "我想系统掌握专利法法理与创造性争辩，结合机械车辆领域科研实例",
   "expected_course_content": {
     "section_kcs": [
-      "patentability-substantive"
+      "patent-examination"
     ],
     "weakness_kcs": [
-      "创造性",
-      "权利要求书撰写基础",
-      "所属技术领域的技术人员",
-      "民事诉讼程序",
-      "审查意见答复"
+      "审查意见答复",
+      "专利申请文件的修改限制",
+      "实质审查"
     ],
     "confusable_pairs": [
       [
-        "novelty",
-        "inventive-step"
-      ],
-      [
-        "conflicting-application",
-        "prior-art-definition"
-      ],
-      [
-        "grace-period",
-        "priority-right"
+        "preliminary-examination",
+        "substantive-examination"
       ]
     ]
-  },
-  "_design_notes": "DRAFT·需教师校准 | section_kcs←推测首轮章节patentability-substantive(专利授权实质条件)[节点缺失-待重跑校准]; weakness_kcs←Q47自述+偏离分析(7候选取5); confusable_pairs←按考试频率取3对 | 偏离题: Q6(学选D/标B),Q10(学选B/标A),Q14(学选A/标B),Q18(学选B/标A)"
+  }
 }

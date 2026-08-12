@@ -1,0 +1,21 @@
+{
+  "profile_id": "profile_N",
+  "round": 2,
+  "learning_goal": "以审查与代理双视角复盘专利实务，并跟踪审查实践与跨法域新动向",
+  "expected_course_content": {
+    "section_kcs": [
+      "patent-examination"
+    ],
+    "weakness_kcs": [
+      "审查意见答复",
+      "专利申请文件的修改限制",
+      "实质审查"
+    ],
+    "confusable_pairs": [
+      [
+        "preliminary-examination",
+        "substantive-examination"
+      ]
+    ]
+  }
+}
