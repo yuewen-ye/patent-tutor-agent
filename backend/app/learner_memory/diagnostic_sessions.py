@@ -156,6 +156,33 @@ class DiagnosticSessionManager:
             self._sessions[diagnostic_session_id] = session
         return session
 
+    def list_running_sessions(self, learner_id: str) -> list[dict[str, Any]]:
+        running: list[dict[str, Any]] = []
+        with self._lock:
+            for session in self._sessions.values():
+                if session.learner_id == learner_id and session.status == "running":
+                    running.append(self._session_summary(session))
+        list_loader = getattr(self._store, "list_diagnostic_sessions", None)
+        if callable(list_loader):
+            persisted = list_loader(learner_id)
+            seen = {item["diagnostic_session_id"] for item in running}
+            for item in persisted:
+                if item["diagnostic_session_id"] in seen:
+                    continue
+                if item.get("status") == "running":
+                    running.append(item)
+                seen.add(item["diagnostic_session_id"])
+        return running
+
+    def _session_summary(self, session: DiagnosticSession) -> dict[str, Any]:
+        return {
+            "diagnostic_session_id": session.diagnostic_session_id,
+            "status": session.status,
+            "updated_at": session.updated_at,
+            "answered_questions": len(session.answer_log),
+            "phase": session.phase,
+        }
+
     def submit_answer(
         self,
         diagnostic_session_id: str,
@@ -296,6 +323,17 @@ class DiagnosticSessionManager:
                 "correct_answer": answer_result.get("correct_answer"),
                 "explanation": answer_result.get("explanation"),
             }
+        public_answer_log = [
+            {
+                "question_id": entry["question_id"],
+                "user_answer": entry.get("user_answer"),
+                "correct_answer": entry.get("correct_answer"),
+                "is_correct": entry.get("is_correct"),
+                "timestamp": entry.get("timestamp"),
+                "explanation": entry.get("explanation"),
+            }
+            for entry in session.answer_log
+        ]
         profile_total = (
             session.profile_answered_questions + len(self._profile_sequence(session))
             if session.phase == "profile"
@@ -315,6 +353,7 @@ class DiagnosticSessionManager:
             "course_session_id": session.course_session_id,
             "knowledge_snapshot": knowledge_snapshot,
             "answer_result": public_answer,
+            "answer_log": public_answer_log,
         }
 
     def _persist_session(self, session: DiagnosticSession) -> None:

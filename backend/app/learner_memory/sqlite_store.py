@@ -522,6 +522,22 @@ class SQLiteLearnerStore:
                 (diagnostic_session_id,),
             ).fetchall()
 
+    def list_diagnostic_sessions(self, learner_id: str) -> list[dict[str, Any]]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT diagnostic_session_id, status, updated_at FROM diagnostic_sessions "
+                "WHERE learner_id=? ORDER BY updated_at DESC",
+                (learner_id,),
+            ).fetchall()
+        return [
+            {
+                "diagnostic_session_id": str(row["diagnostic_session_id"]),
+                "status": str(row["status"]),
+                "updated_at": str(row["updated_at"]),
+            }
+            for row in rows
+        ]
+
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.path, timeout=5)
         connection.row_factory = sqlite3.Row

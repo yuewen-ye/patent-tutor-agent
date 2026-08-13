@@ -87,7 +87,13 @@ export function CourseResourceTabs({ sessionId, coursePackage, artifacts }: Cour
   const irac = (coursePackage?.irac as IracStructure) || null;
   const knowledgeSynthesis = (coursePackage?.knowledge_synthesis as {
     coverage?: Array<{ node_id?: string }>;
-    confusable_pairs?: Array<{ pair?: string }>;
+    confusable_pairs?: Array<{
+      pair?: string;
+      pair_id?: string;
+      title?: string;
+      node_a?: string;
+      node_b?: string;
+    }>;
   }) || {};
   const interactiveQuestions = (coursePackage?.interactive_questions as InteractiveQuestion[]) || [];
   const exercises = (coursePackage?.exercises as InteractiveQuestion[]) || [];
@@ -267,11 +273,14 @@ export function CourseResourceTabs({ sessionId, coursePackage, artifacts }: Cour
                   <span className="text-xs text-muted-foreground mb-1.5 block">易混淆概念</span>
                   <div className="flex flex-wrap gap-1.5">
                     {knowledgeSynthesis.confusable_pairs.map((cp, i) => {
-                      const obj = cp as Record<string, unknown>;
-                      const pair = obj.pair as string | undefined;
-                      const nodeA = obj.node_a as string | undefined;
-                      const nodeB = obj.node_b as string | undefined;
-                      const label = pair || (nodeA && nodeB ? `${nodeA} ⇄ ${nodeB}` : String(cp));
+                      const pair = cp.pair || cp.title;
+                      const label = pair
+                        ? String(pair)
+                        : cp.node_a && cp.node_b
+                        ? `${cp.node_a} ⇄ ${cp.node_b}`
+                        : cp.pair_id
+                        ? String(cp.pair_id)
+                        : String(cp);
                       return (
                         <Badge key={i} variant="outline" className="text-xs text-amber-600">
                           {label}

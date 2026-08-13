@@ -590,3 +590,74 @@ def test_swagger_post_examples_are_executable(
     response = client.post(path, json=examples[0])
 
     assert response.status_code == 200, response.text
+
+
+def test_diagnostic_progress_includes_answer_log(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, _ = _client(tmp_path, monkeypatch)
+    learner_id = "learner-answer-log"
+    started = client.post(
+        f"/learners/{learner_id}/diagnostic-sessions",
+        json={
+            "learning_goal": "系统掌握专利新颖性判断",
+            "education_background": "理工背景+有研发经验",
+            "responses": [{"question_id": "Q23", "answer": "B"}],
+        },
+    ).json()
+    diagnostic_session_id = started["diagnostic_session_id"]
+    question = started["current_question"]
+    selected = next(iter(question["options"]))
+
+    submitted = client.post(
+        f"/learners/{learner_id}/diagnostic-sessions/"
+        f"{diagnostic_session_id}/responses",
+        json={
+            "question_id": question["question_id"],
+            "answer": selected,
+            "response_ms": 1200,
+            "idempotency_key": "answer-log-1",
+        },
+    ).json()
+
+    assert submitted["answered_questions"] == 1
+    assert len(submitted["answer_log"]) == 1
+    assert submitted["answer_log"][0]["question_id"] == question["question_id"]
+    assert submitted["answer_log"][0]["user_answer"] == selected
+    assert "correct_answer" in submitted["answer_log"][0]
+
+    progress = client.get(
+        f"/learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}"
+    ).json()
+    assert len(progress["answer_log"]) == 1
+
+
+def test_list_running_diagnostic_sessions(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client, _ = _client(tmp_path, monkeypatch)
+    learner_id = "learner-list-running"
+    started = client.post(
+        f"/learners/{learner_id}/diagnostic-sessions",
+        json={
+            "learning_goal": "系统掌握专利新颖性判断",
+            "education_background": "理工背景+有研发经验",
+            "responses": [{"question_id": "Q23", "answer": "B"}],
+        },
+    ).json()
+
+    listed = client.get(f"/learners/{learner_id}/diagnostic-sessions").json()
+    assert len(listed) == 1
+    assert listed[0]["diagnostic_session_id"] == started["diagnostic_session_id"]
+    assert listed[0]["status"] == "running"
+    assert listed[0]["answered_questions"] == 0
+
+    client.post(
+        f"/learners/{learner_id}/diagnostic-sessions/"
+        f"{started['diagnostic_session_id']}/complete"
+    )
+
+    completed_list = client.get(f"/learners/{learner_id}/diagnostic-sessions").json()
+    assert completed_list == []

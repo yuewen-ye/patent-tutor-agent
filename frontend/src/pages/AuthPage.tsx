@@ -65,12 +65,27 @@ export function AuthPage() {
     display_name: "",
     email: "",
   });
+  const [loginIdError, setLoginIdError] = useState<string>("");
 
   const navigate = useNavigate();
+
+  const validateLoginId = (value: string) => {
+    if (mode !== "register") return "";
+    if (value.length > 0 && value.length < 3) {
+      return "用户名至少需要 3 位字符";
+    }
+    return "";
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (mode === "register" && formData.login_id.length < 3) {
+      setLoginIdError("用户名至少需要 3 位字符");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -100,6 +115,9 @@ export function AuthPage() {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    if (field === "login_id") {
+      setLoginIdError(validateLoginId(value));
+    }
   };
 
   return (
@@ -143,6 +161,7 @@ export function AuthPage() {
                       onClick={() => {
                         setMode("login");
                         setError("");
+                        setLoginIdError("");
                       }}
                       className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all ${
                         mode === "login"
@@ -157,6 +176,7 @@ export function AuthPage() {
                       onClick={() => {
                         setMode("register");
                         setError("");
+                        setLoginIdError("");
                       }}
                       className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all ${
                         mode === "register"
@@ -197,9 +217,22 @@ export function AuthPage() {
                         placeholder="请输入登录账号"
                         value={formData.login_id}
                         onChange={(e) => handleInputChange("login_id", e.target.value)}
-                        className="h-11 border-[#E5C9AB] bg-white/80 placeholder:text-[#B8957A] focus-visible:ring-[#D9773E]"
+                        className={`h-11 border-[#E5C9AB] bg-white/80 placeholder:text-[#B8957A] focus-visible:ring-[#D9773E] ${
+                          loginIdError ? "border-red-400 focus-visible:ring-red-400" : ""
+                        }`}
                         disabled={loading}
                       />
+                      {mode === "register" && (
+                        <p
+                          className={`text-xs ${
+                            loginIdError
+                              ? "text-red-600"
+                              : "text-[#9A6A4A]"
+                          }`}
+                        >
+                          {loginIdError || "用户名至少需要 3 位字符"}
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
@@ -285,7 +318,12 @@ export function AuthPage() {
                     <Button
                       type="submit"
                       className="h-12 w-full text-base"
-                      disabled={loading || !formData.login_id || !formData.password}
+                      disabled={
+                        loading ||
+                        !formData.login_id ||
+                        !formData.password ||
+                        (mode === "register" && formData.login_id.length < 3)
+                      }
                     >
                       {loading ? (
                         <span className="flex items-center gap-2">
