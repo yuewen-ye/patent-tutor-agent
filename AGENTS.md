@@ -174,10 +174,11 @@ def build_<name>_node(llm_client: LLMClient) -> Node:
 - per-Agent provider/model/temperature/tool temperature/top_k
 
 API keys and machine-local paths belong in `.env`. The `LLMProvider` literal supports `deepseek`,
-`qwen`, `glm`, `gpt`, `luna`, `terra`, `grok`, and `yangmao`; per-provider availability is tracked in
-`config/agents.example.yaml`. `AgentLLMRouter` supports explicit `{AGENT}_PROVIDER` environment
-overrides for incident recovery. Planner uses the default provider unless a dedicated runtime setting
-is added.
+`deepseek_pro`, `grok`, `gpt`, `mistral`, and `minimax`; the recommended per-Agent mapping
+(route=mistral, chat_answer=minimax, planner/diagnosis=deepseek, expert_b=deepseek_pro,
+expert_a=grok, judge=gpt) is documented in `config/agents.example.yaml`. `AgentLLMRouter` supports
+explicit `{AGENT}_PROVIDER` environment overrides for incident recovery. Planner uses the default
+provider unless a dedicated runtime setting is added.
 
 ## State And Contracts
 
