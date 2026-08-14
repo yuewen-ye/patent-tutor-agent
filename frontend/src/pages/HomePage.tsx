@@ -40,6 +40,13 @@ export function HomePage() {
     }
   };
 
+  const primaryButtonClass =
+    "w-full bg-gradient-to-r from-[#D9773E] to-[#C15B27] hover:from-[#C15B27] hover:to-[#A64A1F] text-white shadow-md group-hover:shadow-lg transition-all";
+  const outlineButtonClass =
+    "w-full border-[#D9773E]/30 text-[#C15B27] hover:bg-[#FFE8D0]/60 group-hover:shadow-md transition-all";
+
+  const hasCourse = !!latestSession;
+
   return (
     <div className="container mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 md:py-16 animate-fade-in">
       <div className="w-full max-w-6xl mx-auto space-y-12">
@@ -55,6 +62,11 @@ export function HomePage() {
           </div>
           <p className="text-[#8B5A3C] text-base md:text-lg max-w-2xl mx-auto">
             基于 BKT 算法的个性化学习路径规划，让专利学习像养成游戏一样轻松有趣。
+          </p>
+          <p className="inline-flex items-center gap-2 text-sm font-medium text-[#D9773E] bg-[#FFF7ED] border border-[#FFE8D0] rounded-full px-4 py-1.5 shadow-sm">
+            <Sparkles className="h-4 w-4" />
+            建议新用户从「自评诊断」开始，系统会为你定制学习路径
+            <ArrowRight className="h-4 w-4" />
           </p>
         </div>
 
@@ -72,11 +84,16 @@ export function HomePage() {
               <p className="text-sm text-[#8B5A3C]">
                 基于 CAT 自适应测试算法动态出题，结合 BKT 掌握度模型评估专利法知识点水平，生成专属学员画像与薄弱点分析。
               </p>
-              <Button className="w-full group-hover:shadow-md transition-all" asChild>
+              <Button
+                size="lg"
+                variant={hasCourse ? "outline" : "default"}
+                className={hasCourse ? outlineButtonClass : primaryButtonClass}
+                asChild
+              >
                 <Link to="/onboarding">
-                  <GraduationCap className="h-4 w-4 mr-2" />
+                  <GraduationCap className="h-5 w-5 mr-2" />
                   开始诊断
-                  <ArrowRight className="h-4 w-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <ArrowRight className="h-5 w-5 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </Link>
               </Button>
             </CardContent>
@@ -143,10 +160,15 @@ export function HomePage() {
                   <p className="text-sm text-[#8B5A3C]">
                     最近完成的课程：<span className="font-medium text-[#5C3A26]">{latestSession.course?.title || "专利学习"}</span>
                   </p>
-                  <Button className="w-full group-hover:shadow-md transition-all" onClick={handleContinue}>
-                    <BookOpen className="h-4 w-4 mr-2" />
+                  <Button
+                    size="lg"
+                    variant={hasCourse ? "default" : "outline"}
+                    className={hasCourse ? primaryButtonClass : outlineButtonClass}
+                    onClick={handleContinue}
+                  >
+                    <BookOpen className="h-5 w-5 mr-2" />
                     继续学习讲义
-                    <ArrowRight className="h-4 w-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ArrowRight className="h-5 w-5 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </Button>
                 </>
               ) : (
@@ -154,9 +176,10 @@ export function HomePage() {
                   <p className="text-sm text-[#8B5A3C]">
                     还没有完成的教学会话。开始一次诊断，系统将为你生成专属学习路径。
                   </p>
-                  <Button variant="outline" className="w-full border-[#D9773E]/30 text-[#C15B27] hover:bg-[#FFE8D0]/60 group-hover:shadow-md transition-all" onClick={handleContinue}>
-                    <GraduationCap className="h-4 w-4 mr-2" />
+                  <Button variant="outline" className={outlineButtonClass} onClick={handleContinue}>
+                    <GraduationCap className="h-5 w-5 mr-2" />
                     前往自评诊断
+                    <ArrowRight className="h-5 w-5 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </Button>
                 </>
               )}

@@ -2,6 +2,7 @@ import { api } from "@/api/client";
 import type {
   CreateDiagnosticSessionRequest,
   DiagnosticProgress,
+  DiagnosticSessionSummary,
   SubmitDiagnosticResponseRequest,
 } from "@/types";
 
@@ -10,6 +11,10 @@ export const diagnosticApi = {
     api.post<DiagnosticProgress>(
       `/learners/${encodeURIComponent(learnerId)}/diagnostic-sessions`,
       request
+    ),
+  list: (learnerId: string) =>
+    api.get<DiagnosticSessionSummary[]>(
+      `/learners/${encodeURIComponent(learnerId)}/diagnostic-sessions`
     ),
   get: (learnerId: string, diagnosticSessionId: string) =>
     api.get<DiagnosticProgress>(

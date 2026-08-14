@@ -165,14 +165,14 @@ export interface ChatAnswer {
 }
 
 export interface DiagnosticAnswerLogItem {
-  skills: string[];
-  timestamp: string;
-  is_correct: boolean;
-  explanation: string;
+  skills?: string[];
+  timestamp?: string;
+  is_correct: boolean | null;
+  explanation: string | null;
   question_id: string;
-  user_answer: string;
-  correct_answer: string;
-  response_time_ms?: number;
+  user_answer: string | null;
+  correct_answer: string | null;
+  response_time_ms?: number | null;
   direct_steps?: Array<Record<string, unknown>>;
   inferred_changes?: Array<Record<string, unknown>>;
 }
@@ -344,6 +344,14 @@ export interface KnowledgeNodeSnapshot {
   state: "unlearned" | "learning" | "learned";
 }
 
+export interface DiagnosticSessionSummary {
+  diagnostic_session_id: string;
+  status: "running" | "completed";
+  updated_at: string;
+  answered_questions: number;
+  phase: "knowledge" | "profile" | "completed";
+}
+
 export interface DiagnosticProgress {
   diagnostic_session_id: string;
   learner_id: string;
@@ -358,6 +366,7 @@ export interface DiagnosticProgress {
   course_session_id: string | null;
   knowledge_snapshot: Record<string, KnowledgeNodeSnapshot> | null;
   answer_result: DiagnosticAnswerResult | null;
+  answer_log: DiagnosticAnswerLogItem[];
 }
 
 export interface CreateDiagnosticSessionRequest {

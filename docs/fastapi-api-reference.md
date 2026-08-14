@@ -17,6 +17,7 @@ JSON 请求和响应使用 UTF-8。成功创建后台任务时，接口立即返
 | GET | `/sessions/{session_id}` | 查询会话详情 |
 | DELETE | `/sessions/{session_id}` | 取消会话 |
 | POST | `/learners/{learner_id}/diagnostic-sessions` | 创建诊断会话 |
+| GET | `/learners/{learner_id}/diagnostic-sessions` | 列出进行中的诊断会话 |
 | GET | `/learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}` | 查询诊断进度 |
 | POST | `/learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}/responses` | 提交诊断答案 |
 | POST | `/learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}/complete` | 完成诊断 |
@@ -230,9 +231,15 @@ Q1–Q21 按标准答案判分后写入 `student_node_mastery` 与 `mastery_even
   },
   "course_session_id": null,
   "knowledge_snapshot": null,
-  "answer_result": null
+  "answer_result": null,
+  "answer_log": []
 }
 ```
+
+`answer_log` 为学员已提交答案的公开摘要，按答题顺序排列。每个条目包含 `question_id`、
+`user_answer`、用户可见的 `correct_answer`、`is_correct`、`explanation` 与 `timestamp`。
+客户端可用它展示"已答 X 题"摘要或做题历史；具体 BKT 更新细节（`direct_steps`、
+`inferred_changes`）不暴露给前端。
 
 诊断会话为同会话两阶段：`phase="knowledge"` 阶段由 CAT 自适应出知识题（`question_type="knowledge"`，
 带 `skills`）；知识阶段自然终止后进入 `phase="profile"` 画像阶段，固定顺序呈现问卷 Q23–Q46
@@ -241,6 +248,12 @@ Q1–Q21 按标准答案判分后写入 `student_node_mastery` 与 `mastery_even
 `max_questions` 是知识阶段算法允许的上限；`profile_total_questions` 是本会话画像阶段待答/已答的
 题数（不含预筛已答）。前端只应使用 `current_question.question_id`、`question_text`、`options` 与
 `question_type` 展示当前题。
+
+### `GET /learners/{learner_id}/diagnostic-sessions`
+
+用途：列出该学员所有进行中的 CAT 诊断会话，供客户端在首页/诊断入口判断是否存在可恢复的未完成作业。
+
+返回 `DiagnosticSessionSummary[]`，每个条目仅包含 `diagnostic_session_id`、`status`、`updated_at`、`answered_questions`、`phase`。已完成的诊断会话不会出现在列表中。学员不匹配返回 `403`。
 
 ### `GET /learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}`
 

@@ -118,10 +118,11 @@ export function SessionsPage() {
             </div>
             <p className="text-sm text-[#8B5A3C]">查看和管理我的学习会话</p>
           </div>
-          <Button asChild>
+          <Button size="lg" asChild className="bg-gradient-to-r from-[#D9773E] to-[#C15B27] hover:from-[#C15B27] hover:to-[#A64A1F] text-white shadow-md">
             <Link to="/onboarding">
-              <FileText className="h-4 w-4 mr-2" />
+              <FileText className="h-5 w-5 mr-2" />
               新建会话
+              <ArrowRight className="h-5 w-5 ml-2" />
             </Link>
           </Button>
         </div>
@@ -135,11 +136,16 @@ export function SessionsPage() {
 
         {sessions && allSessions.length === 0 && (
           <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200">
-            <CardContent className="py-12 text-center text-muted-foreground">
+            <CardContent className="py-12 text-center">
               <PixelMascot size={56} className="mx-auto mb-4 opacity-80" />
-              <p className="text-[#8B5A3C]">暂无会话记录</p>
-              <Button variant="outline" className="mt-4" asChild>
-                <Link to="/onboarding">创建第一个会话</Link>
+              <p className="text-[#5C3A26] font-medium">还没有学习会话</p>
+              <p className="text-sm text-[#9A6A4A] mt-1 mb-4">从自评诊断开始，系统会为你生成专属学习路径</p>
+              <Button size="lg" className="bg-gradient-to-r from-[#D9773E] to-[#C15B27] hover:from-[#C15B27] hover:to-[#A64A1F] text-white shadow-lg" asChild>
+                <Link to="/onboarding">
+                  <FileText className="h-5 w-5 mr-2" />
+                  创建第一个会话
+                  <ArrowRight className="h-5 w-5 ml-2" />
+                </Link>
               </Button>
             </CardContent>
           </Card>

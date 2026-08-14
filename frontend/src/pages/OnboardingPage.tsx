@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { diagnosticApi } from "@/api/diagnostic";
 import { getAuth } from "@/api/auth";
@@ -18,9 +18,15 @@ import {
   XCircle,
   Sparkles,
   AlertTriangle,
+  Save,
+  RotateCcw,
+  History,
+  ArrowRight,
   } from "lucide-react";
 import { PixelMascot } from "@/components/auth/PixelMascot";
-import type { DiagnosticProgress } from "@/types";
+import type { DiagnosticProgress, DiagnosticAnswerLogItem } from "@/types";
+
+const SAVED_DIAGNOSTIC_KEY = "patent_tutor_diagnostic_session_id";
 
 type Phase = "config" | "testing" | "completed";
 
@@ -154,6 +160,8 @@ export function OnboardingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>("");
   const [showExplanation, setShowExplanation] = useState(false);
+  const [savedSessionId, setSavedSessionId] = useState<string | null>(null);
+  const [showResumePrompt, setShowResumePrompt] = useState(false);
 
   const startDiagnostic = useCallback(async () => {
     if (!learnerId) {
@@ -277,6 +285,56 @@ export function OnboardingPage() {
     }
   }, [progress, navigate]);
 
+  // 页面加载时检查本地保存的未完成诊断会话
+  useEffect(() => {
+    if (!learnerId) return;
+    const saved = localStorage.getItem(SAVED_DIAGNOSTIC_KEY);
+    if (saved) {
+      setSavedSessionId(saved);
+      setShowResumePrompt(true);
+    }
+  }, [learnerId]);
+
+  const resumeSession = useCallback(async () => {
+    if (!savedSessionId || !learnerId) return;
+    setError("");
+    setSubmitting(true);
+    try {
+      const result = await diagnosticApi.get(learnerId, savedSessionId);
+      if (result.status === "completed") {
+        localStorage.removeItem(SAVED_DIAGNOSTIC_KEY);
+        setSavedSessionId(null);
+        setShowResumePrompt(false);
+      }
+      setProgress(result);
+      setPhase(result.status === "completed" ? "completed" : "testing");
+      setQuestionStartedAt(Date.now());
+      setSelectedOption("");
+      setOpenText("");
+      setShowExplanation(false);
+      setShowResumePrompt(false);
+    } catch (err) {
+      setError(resolveError(err));
+      localStorage.removeItem(SAVED_DIAGNOSTIC_KEY);
+      setSavedSessionId(null);
+    } finally {
+      setSubmitting(false);
+    }
+  }, [savedSessionId, learnerId]);
+
+  const discardSavedSession = useCallback(() => {
+    localStorage.removeItem(SAVED_DIAGNOSTIC_KEY);
+    setSavedSessionId(null);
+    setShowResumePrompt(false);
+  }, []);
+
+  const saveAndExit = useCallback(() => {
+    if (progress?.diagnostic_session_id) {
+      localStorage.setItem(SAVED_DIAGNOSTIC_KEY, progress.diagnostic_session_id);
+    }
+    navigate("/");
+  }, [progress, navigate]);
+
   // ===== 配置阶段 =====
   if (phase === "config") {
     return (
@@ -294,6 +352,48 @@ export function OnboardingPage() {
               精准评估各知识节点的掌握程度，生成专属学习路径。
             </p>
           </div>
+
+          {showResumePrompt && savedSessionId && (
+            <Card className="border-amber-200 bg-amber-50/80 shadow-soft">
+              <CardContent className="p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <RotateCcw className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-amber-900">
+                        检测到未完成的诊断会话
+                      </p>
+                      <p className="text-xs text-amber-700 mt-1">
+                        你可以继续上一次的作答进度，之前的答案已自动保存。
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 sm:flex-shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={discardSavedSession}
+                      disabled={submitting}
+                    >
+                      重新开始
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={resumeSession}
+                      disabled={submitting}
+                    >
+                      {submitting ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : (
+                        <RotateCcw className="h-4 w-4 mr-1" />
+                      )}
+                      继续诊断
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200">
             <CardHeader className="pb-4">
@@ -359,21 +459,25 @@ export function OnboardingPage() {
           <Button
             onClick={startDiagnostic}
             disabled={submitting || !learnerId || !learningGoal.trim()}
-            className="w-full"
+            className="w-full bg-gradient-to-r from-[#D9773E] to-[#C15B27] hover:from-[#C15B27] hover:to-[#A64A1F] text-white shadow-lg"
             size="lg"
           >
             {submitting ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                 正在初始化诊断...
               </>
             ) : (
               <>
-                <Sparkles className="h-4 w-4 mr-2" />
+                <Sparkles className="h-5 w-5 mr-2" />
                 开始 CAT 诊断
+                <ArrowRight className="h-5 w-5 ml-2" />
               </>
             )}
           </Button>
+          <p className="text-center text-xs text-[#9A6A4A]">
+            诊断过程中可随时保存并退出，已答题目会自动保留
+          </p>
         </div>
       </div>
     );
@@ -468,9 +572,10 @@ export function OnboardingPage() {
 
           <div className="flex gap-3">
             {progress.course_session_id && (
-              <Button onClick={goToCourse} className="flex-1" size="lg">
-                <Sparkles className="h-4 w-4 mr-2" />
+              <Button onClick={goToCourse} className="flex-1 bg-gradient-to-r from-[#D9773E] to-[#C15B27] hover:from-[#C15B27] hover:to-[#A64A1F] text-white shadow-lg" size="lg">
+                <Sparkles className="h-5 w-5 mr-2" />
                 进入课程学习
+                <ArrowRight className="h-5 w-5 ml-2" />
               </Button>
             )}
             <Button
@@ -531,6 +636,20 @@ export function OnboardingPage() {
               <span className="text-sm text-muted-foreground">{progressLabel}</span>
             </div>
             <Progress value={progressPercent} className="h-1.5" />
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
+              <p className="text-xs text-muted-foreground">
+                已答 {progress?.answered_questions ?? 0} 题，答案会自动保存
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={saveAndExit}
+                disabled={submitting}
+              >
+                <Save className="h-4 w-4 mr-1.5" />
+                保存并退出
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -695,8 +814,64 @@ export function OnboardingPage() {
             </CardContent>
           </Card>
         )}
+
+        {progress?.answer_log && progress.answer_log.length > 0 && (
+          <AnswerHistoryCard answerLog={progress.answer_log} />
+        )}
       </div>
     </div>
+  );
+}
+
+function AnswerHistoryCard({ answerLog }: { answerLog: DiagnosticAnswerLogItem[] }) {
+  return (
+    <Card className="border-white/70 bg-white/90 shadow-soft">
+      <CardHeader className="pb-4">
+        <CardTitle className="text-base font-medium flex items-center gap-2">
+          <History className="h-4 w-4 text-primary" />
+          已答题目
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {answerLog.map((entry, index) => (
+          <div
+            key={`${entry.question_id}-${index}`}
+            className="flex items-start gap-3 p-3 rounded-lg bg-secondary/20"
+          >
+            <div className="flex-shrink-0 mt-0.5">
+              {entry.is_correct == null ? (
+                <CheckCircle2 className="h-4 w-4 text-sky-600" />
+              ) : entry.is_correct ? (
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+              ) : (
+                <XCircle className="h-4 w-4 text-destructive" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground">
+                第 {index + 1} 题 · {entry.question_id}
+              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <span>
+                  你的答案：
+                  <span className="text-foreground font-medium">
+                    {entry.user_answer ?? "—"}
+                  </span>
+                </span>
+                {entry.correct_answer != null && (
+                  <span>
+                    正确答案：
+                    <span className="text-foreground font-medium">
+                      {entry.correct_answer}
+                    </span>
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -715,6 +890,7 @@ const REASON_MESSAGES: Record<string, string> = {
   diagnostic_progress_error: "诊断进度查询异常",
   diagnostic_submit_error: "答题提交异常",
   diagnostic_complete_error: "诊断完成异常",
+  diagnostic_list_error: "诊断会话列表查询异常",
 };
 
 function resolveError(err: unknown): string {

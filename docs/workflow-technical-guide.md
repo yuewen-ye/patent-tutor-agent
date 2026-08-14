@@ -167,3 +167,7 @@ artifacts/sessions/{session_id}/
 - 导出图：`uv run python backend/scripts/show_workflow.py`
 
 Studio 的 `Interact` 节点记录由本地 API 提供；顶部 `Trace` 由 LangSmith 提供，浏览器必须登录对应账号。仓库启动脚本默认关闭热重载，防止新旧 Dev 进程争用 `.langgraph_api/store.pckl.tmp`；代码变化后手动重启。`AgentLLMRouter` 允许显式环境变量覆盖 YAML Provider，便于 Provider 5xx 时临时切换，例如 `EXPERT_A_PROVIDER=qwen`；覆盖 Provider 时不会沿用原 Provider 的 YAML 模型名。
+
+LLM 请求层会基于最终 provider 和模型名过滤不受支持的参数；当前 GPT-5.6 系列不会发送
+`temperature`。YAML 中的共享 Agent 温度配置仍可保留；环境变量或会话级 provider 覆盖后，
+请求层按最终模型兜底过滤，忽略无效温度值且不阻止会话启动。
