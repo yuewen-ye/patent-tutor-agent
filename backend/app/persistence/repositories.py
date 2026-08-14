@@ -950,6 +950,25 @@ class MySQLLearnerStore:
         state = _json_load(row["state_json"], {}) if row else None
         return state.get("diagnostic") if isinstance(state, dict) else None
 
+    def list_diagnostic_sessions(self, learner_id: str) -> list[dict[str, Any]]:
+        with self.database.transaction() as connection:
+            cursor = connection.cursor()
+            cursor.execute(
+                "SELECT session_id, status, updated_at FROM sessions "
+                "WHERE student_id=%s AND workflow_mode='diagnose' "
+                "ORDER BY updated_at DESC",
+                (learner_id,),
+            )
+            rows = cursor.fetchall()
+        return [
+            {
+                "diagnostic_session_id": str(row["session_id"]),
+                "status": str(row["status"]),
+                "updated_at": _iso(row["updated_at"]),
+            }
+            for row in rows
+        ]
+
     def save_diagnostic_attempt(
         self,
         *,

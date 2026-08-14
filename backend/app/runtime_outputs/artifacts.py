@@ -846,6 +846,34 @@ def _course_package_markdown(title: str, value: dict[str, Any]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def course_teaching_content_full(value: dict[str, Any]) -> str:
+    """返回「教学正文」完整版：teaching_content（叙事引言）+ 各 block payload 详细内容，
+    按 block_plan 顺序穿插（测评置末）。与 ``_course_package_markdown`` 内「教学正文」段一致，
+    供前端讲义 tab 渲染完整课程（而非只有 teaching_content 字段的引言部分）。
+
+    - 无可用 block payload 时退回 teaching_content 本身，避免重复内容。
+    - 不修改入参 ``value``。
+    """
+    if not isinstance(value, dict):
+        return ""
+    teaching = value.get("teaching_content")
+    block_plan = value.get("block_plan")
+    blocks = block_plan.get("blocks") if isinstance(block_plan, dict) else None
+    detail = ""
+    if isinstance(blocks, list) and blocks:
+        order_index = {str(b.get("block_id")): i for i, b in enumerate(blocks)}
+        ordered = sorted(blocks, key=lambda b: order_index.get(str(b.get("block_id")), 999))
+        non_ass = [b for b in ordered if str(b.get("block_type")) != "assessment"]
+        ass = [b for b in ordered if str(b.get("block_type")) == "assessment"]
+        detail = _render_block_details(non_ass + ass)
+    parts: list[str] = []
+    if teaching:
+        parts.append(str(teaching))
+    if detail:
+        parts.append(detail)
+    return "\n\n".join(parts).strip()
+
+
 def _expert_draft_markdown(title: str, value: dict[str, Any]) -> str:
     """专家 A/B 草稿渲染：与 course_package 同样的『模块穿插 + 测评末 + Mermaid』标准。
 

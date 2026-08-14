@@ -26,6 +26,7 @@ from pathlib import Path
 _EVAL_DIR = Path(__file__).resolve().parent
 _PROGRAM_DIR = _EVAL_DIR / "program"
 _LLM_DIR = _EVAL_DIR / "LLM"
+_PROJECT_ROOT = _EVAL_DIR.parents[3]  # backend/tests/evaluation -> backend/tests -> backend -> project root
 for _p in (_EVAL_DIR, _PROGRAM_DIR, _LLM_DIR):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
@@ -377,11 +378,63 @@ def _do_llm_evaluate(profile_ids: list[str], *, force: bool = False) -> None:
         return
 
     model = config.get("llm", {}).get("model", "unknown")
+
+    # ── 评估模式选择 ─────────────────────────────────────────────────
+    mode_label_map = {
+        "1": ("overall", "整体评估（M1 三维度 + M2 有用性/相关性 + 9 通用维度）"),
+        "2": ("statement", "M1/M9/M9-b/M1.1~M1.3 陈述级评估"),
+        "3": ("m7", "M7 资源形态评估"),
+        "4": ("m8", "M8 异议闭环率评估"),
+        "5": ("m14", "M14 跨轮自洽率（需先运行 extract_m14_factpoints）"),
+        "6": ("m15", "M15 对抗稳健率（系统级）"),
+        "7": ("m16", "M16 边界拒答恰当率（系统级）"),
+        "8": ("m17", "M17 检索正确性"),
+    }
+    print(f"\n  评估模式:")
+    for k, (_, desc) in mode_label_map.items():
+        print(f"    {k}. {desc}")
+    print(f"    9. 一键运行 M15/M16 系统级探针（调用 eval_live_qa.py）")
+    print(f"    all. 全部执行（按顺序 1→8，跳过 9）")
+    raw_mode = input(f"  → 选择模式编号（默认 1）: ").strip().lower() or "1"
+
+    if raw_mode == "9":
+        # 专门用于触发 eval_live_qa.py
+        print("\n" + "=" * 60)
+        print("触发系统级探针 eval_live_qa.py...")
+        print("=" * 60)
+        try:
+            import subprocess
+            cmd = [sys.executable, str(_PROGRAM_DIR / "eval_live_qa.py"), "--direct"]
+            print(f"执行命令: {' '.join(cmd)}")
+            # 直接执行脚本并等待完成
+            result = subprocess.run(cmd, cwd=str(_PROJECT_ROOT))
+            if result.returncode == 0:
+                print("✅ eval_live_qa.py 执行成功！")
+                print("接下来请选择 6 (M15) 或 7 (M16) 进行评估。")
+                return
+            else:
+                print(f"❌ eval_live_qa.py 执行失败 (exit code: {result.returncode})")
+                return
+        except Exception as e:
+            print(f"❌ 无法执行 eval_live_qa.py: {e}")
+            return
+
+    mode_labels = list(mode_label_map.keys())
+    selected_mode_keys: list[str]
+    if raw_mode == "all":
+        selected_mode_keys = mode_labels
+    elif raw_mode in mode_label_map:
+        selected_mode_keys = [raw_mode]
+    else:
+        print(f"  ⚠️ 无效选择，回退到整体评估")
+        selected_mode_keys = ["1"]
+
     print(f"\n{'='*60}")
     print(f"外部 LLM 评估")
     print(f"{'='*60}")
     print(f"  模型: {model}")
     print(f"  画像: {len(profile_ids)} 个")
+    print(f"  模式: {', '.join(mode_label_map[k][1].split('（')[0] for k in selected_mode_keys)}")
     print(f"  强制重跑: {force}")
     print(f"{'='*60}")
 
@@ -389,49 +442,17 @@ def _do_llm_evaluate(profile_ids: list[str], *, force: bool = False) -> None:
     skip_count = 0
     fail_count = 0
 
-    for pid in profile_ids:
-        letter = common.profile_letter_from_id(pid)
-        rounds = _list_available_rounds(common.EVAL_ARTIFACTS_DIR / f"multi-{letter}")
+    for mode_key in selected_mode_keys:
+        mode, mode_desc = mode_label_map[mode_key]
+        print(f"\n── 模式 {mode_key}: {mode_desc} ──")
 
-        if not rounds:
-            print(f"\n📋 {pid}: 无可用轮次，跳过")
-            skip_count += 1
-            continue
-
-        print(f"\n📋 {pid} ({len(rounds)} 个轮次):")
-        for r in rounds:
-            print(f"  R{r:02d}", end="")
-
-        # 选择轮次
-        print(f"\n  可选: all（全部）或 1 到 {max(rounds)}")
-        while True:
-            raw = input(f"  → 选择轮次（all 或数字，exit 跳过）: ").strip().lower()
-            if raw in {"exit", "quit", "q"}:
-                break
-            if raw == "all":
-                eval_rounds = rounds
-                break
+        # 系统级单次评估（m15/m16）：忽略画像/轮次
+        if mode in ("m15", "m16"):
             try:
-                r = int(raw)
-            except ValueError:
-                print("  请输入 all 或数字")
-                continue
-            if r not in rounds:
-                print(f"  轮次 R{r:02d} 不存在")
-                continue
-            eval_rounds = [r]
-            break
-
-        if raw in {"exit", "quit", "q"}:
-            skip_count += len(rounds)
-            continue
-
-        for r in eval_rounds:
-            print(f"\n  评估 R{r:02d}...")
-            try:
-                result = llm_evaluator.evaluate_profile_round(
-                    letter, r, config, force=force
-                )
+                if mode == "m15":
+                    result = llm_evaluator.evaluate_m15(config, force=force)
+                else:
+                    result = llm_evaluator.evaluate_m16(config, force=force)
                 if result is None:
                     skip_count += 1
                 else:
@@ -439,6 +460,58 @@ def _do_llm_evaluate(profile_ids: list[str], *, force: bool = False) -> None:
             except Exception as exc:  # noqa: BLE001
                 print(f"  ❌ 异常: {type(exc).__name__}: {exc}")
                 fail_count += 1
+            continue
+
+        for pid in profile_ids:
+            letter = common.profile_letter_from_id(pid)
+            rounds = _list_available_rounds(common.EVAL_ARTIFACTS_DIR / f"multi-{letter}")
+
+            if not rounds:
+                print(f"\n📋 {pid}: 无可用轮次，跳过")
+                skip_count += 1
+                continue
+
+            # M14 跨轮自洽：每画像仅运行一次（跨轮聚合）
+            if mode == "m14":
+                print(f"\n📋 {pid} (跨轮聚合)...")
+                try:
+                    result = llm_evaluator.evaluate_m14(letter, config, force=force)
+                    if result is None:
+                        skip_count += 1
+                    else:
+                        success_count += 1
+                except Exception as exc:  # noqa: BLE001
+                    print(f"  ❌ 异常: {type(exc).__name__}: {exc}")
+                    fail_count += 1
+                continue
+
+            # 其他按画像 × 轮次评估
+            print(f"\n📋 {pid} ({len(rounds)} 个轮次):")
+            for r in rounds:
+                print(f"  R{r:02d}", end="")
+            print()
+
+            eval_rounds = rounds  # 默认评估所有轮次
+            for r in eval_rounds:
+                print(f"\n  评估 R{r:02d}...")
+                try:
+                    if mode == "statement":
+                        result = llm_evaluator.evaluate_m1_m9(letter, r, config, force=force)
+                    elif mode == "m7":
+                        result = llm_evaluator.evaluate_m7_resource_morphology(letter, r, config, force=force)
+                    elif mode == "m8":
+                        result = llm_evaluator.evaluate_m8_objection_loop(letter, r, config, force=force)
+                    elif mode == "m17":
+                        result = llm_evaluator.evaluate_m17(letter, r, config, force=force)
+                    else:
+                        result = llm_evaluator.evaluate_profile_round(letter, r, config, force=force)
+                    if result is None:
+                        skip_count += 1
+                    else:
+                        success_count += 1
+                except Exception as exc:  # noqa: BLE001
+                    print(f"  ❌ 异常: {type(exc).__name__}: {exc}")
+                    fail_count += 1
 
     print(f"\n{'='*60}")
     print(f"外部 LLM 评估完成")

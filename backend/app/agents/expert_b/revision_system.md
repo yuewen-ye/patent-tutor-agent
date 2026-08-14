@@ -20,6 +20,8 @@
 - `style` 固定为 `accessible`
 - 保留并更新原稿的 `knowledge_points`、`legal_basis`、`teaching_content`、`risks`、`interactive_questions`、`block_plan`、`knowledge_synthesis` 和 `assessment`
 - 题目 `category`、`difficulty`、`source_tag` 和 `kc_node_id` 必须符合当前合同与活动窗口
+- **题目客观性（必查）**：`interactive_questions` 每条必须含 `options`（≥4 个选项）且 `answer` 为选项字母；`assessment.items` 每条必须有唯一确定答案、不得为开放作答或自由论述；发现无选项 / 开放 / 自由论述类题目即视为必须修改项。
+- **语言（硬性）**：`teaching_content` 全部正文、`block_plan` 各 block `payload` 的讲解文本、`knowledge_points` / `legal_basis` / `risks` / `knowledge_synthesis` 的说明文字、`interactive_questions` 的题干与选项文本、`assessment.items` 的题干与解析等所有自然语言文字字段**必须用中文撰写**，不得用英文作答。保留 schema 定义的枚举与标识符字段（如 `expert`、`style`、`category`、`difficulty`、`source_tag`、选项字母 `A/B/C/D`、`node_id` 等知识图标识符）原样，不得翻译或改写。
 - 字段名、枚举和嵌套结构严格遵守调用方提供的 JSON Schema，不得增加合同外字段
 
 ## 注意事项（铁律）

@@ -646,7 +646,7 @@ def wipe_learner_mysql(learner_id: str) -> int:
     Safe no-op if ``PATENT_TUTOR_MYSQL_URL`` is not configured.
     Returns a count of deleted rows (informational only, not a contract).
     """
-    import mysql.connector  # type: ignore[import-untyped]
+    import pymysql  # type: ignore[import-untyped]
 
     ensure_dotenv()
     url = os.environ.get("PATENT_TUTOR_MYSQL_URL")
@@ -656,15 +656,16 @@ def wipe_learner_mysql(learner_id: str) -> int:
 
     # mysql://user:password@host:port/database
     m = re.match(
-        r"mysql(?:\+mysqlconnector)?://(?P<u>[^:]+):(?P<p>[^@]+)@(?P<h>[^:]+):(?P<port>\d+)/(?P<db>[^/?]+)",
+        r"mysql(?:\+\w+)?://(?P<u>[^:]+):(?P<p>[^@]+)@(?P<h>[^:]+):(?P<port>\d+)/(?P<db>[^/?]+)",
         url,
     )
     if not m:
         raise ValueError(f"无法解析 PATENT_TUTOR_MYSQL_URL: {url!r}")
 
-    conn = mysql.connector.connect(
+    conn = pymysql.connect(
         user=unquote(m.group("u")), password=unquote(m.group("p")),
         host=m.group("h"), port=int(m.group("port")), database=m.group("db"),
+        charset="utf8mb4",
     )
     try:
         cur = conn.cursor()
@@ -677,7 +678,7 @@ def wipe_learner_mysql(learner_id: str) -> int:
         try:
             cur.execute("DELETE FROM session_directives WHERE student_id=%s", (learner_id,))
             total += max(cur.rowcount, 0)
-        except mysql.connector.Error:
+        except pymysql.MySQLError:
             pass  # older schema without session_directives — ignore
         # 3. Tables reachable only through plan_id
         cur.execute(
@@ -702,12 +703,12 @@ def wipe_learner_mysql(learner_id: str) -> int:
             try:
                 cur.execute(f"DELETE FROM {table} WHERE student_id=%s", (learner_id,))
                 total += max(cur.rowcount, 0)
-            except mysql.connector.Error:
+            except pymysql.MySQLError:
                 pass
         try:
             cur.execute("DELETE FROM students WHERE student_id=%s", (learner_id,))
             total += max(cur.rowcount, 0)
-        except mysql.connector.Error:
+        except pymysql.MySQLError:
             pass
         conn.commit()
         cur.close()

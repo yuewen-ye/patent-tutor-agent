@@ -124,14 +124,33 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
             }
         if _should_integrate(state):
             judge_report_state = state.get("judge_report", {}) or {}
-            revision_requests = judge_report_state.get("revision_requests") or []
             _judge_decision = (judge_report_state.get("decision") or "").strip().lower()
             _rev_round = state.get("revision_round", 0) or 0
+            # 跨轮累积：汇总 judge_report_history 中所有历史必须修改项 + 当前轮，
+            # 按 (target, issue, required_change) 去重，避免跨轮打地鼠 / 微改项不落地。
+            _history = state.get("judge_report_history") or []
+            _accumulated: list[dict[str, Any]] = []
+            _seen: set[tuple[object, object, object]] = set()
+            for _rep in (*_history, judge_report_state):
+                if not isinstance(_rep, dict):
+                    continue
+                for _r in (_rep.get("revision_requests") or []):
+                    if not isinstance(_r, dict):
+                        continue
+                    _key = (_r.get("target"), _r.get("issue"), _r.get("required_change"))
+                    if _key in _seen:
+                        continue
+                    _seen.add(_key)
+                    _accumulated.append(_r)
+            revision_requests = _accumulated
             _revision_directive = ""
             if _judge_decision == "revise" and revision_requests:
                 _revision_directive = (
                     f"\n这是第 {_rev_round} 次修订。上一轮整合稿已在专家A草稿中，"
-                    "请以它为基准，仅针对 revision_requests 逐条修改对应内容，"
+                    "请以它为基准，**针对下方全部累积必须修改项逐条定点修改对应内容点**；"
+                    "不动文档整体结构与 block 布局，结构化模块归 block，"
+                    "teaching_content 保持连贯叙事；"
+                    "禁止把模块名切片塞进 teaching_content、禁止重排结构；"
                     "保留其余部分不变，禁止重新生成全文。\n"
                 )
 

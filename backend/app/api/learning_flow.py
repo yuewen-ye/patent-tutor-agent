@@ -6,7 +6,10 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.app.api.models import SessionCreatedResponse
-from backend.app.learner_memory.bkt.contracts import DiagnosticProgress
+from backend.app.learner_memory.bkt.contracts import (
+    DiagnosticProgress,
+    DiagnosticSessionSummary,
+)
 from backend.app.onboarding.questionnaire import onboarding_questionnaire
 from backend.app.services.session_service import SessionService
 
@@ -203,6 +206,20 @@ def create_learning_flow_router(session_service: SessionService) -> APIRouter:
                 detail={"error": "diagnostic_creation_error", "reason": str(exc)},
             ) from exc
         return DiagnosticProgress.model_validate(progress)
+
+    @router.get(
+        "/learners/{learner_id}/diagnostic-sessions",
+        response_model=list[DiagnosticSessionSummary],
+    )
+    def list_diagnostic_sessions(learner_id: str) -> list[DiagnosticSessionSummary]:
+        try:
+            sessions = session_service.list_diagnostic_sessions(learner_id=learner_id)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={"error": "diagnostic_list_error", "reason": str(exc)},
+            ) from exc
+        return [DiagnosticSessionSummary.model_validate(session) for session in sessions]
 
     @router.get(
         "/learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}",

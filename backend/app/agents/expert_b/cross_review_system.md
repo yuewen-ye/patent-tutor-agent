@@ -33,6 +33,7 @@
 - `category` 只能是 `🔴 / 🟡 / 🟢 / 🔵 / 🌉`
 - `basis` 和 `legal_basis` 可选；`legal_basis` 必须是字符串数组
 - 顶层必须包含 `overall_assessment`
+- **语言（硬性）**：`review_opinions` 中每条的 `target_wrote` / `problem` / `suggestion`、`overall_assessment` 等所有自然语言文字字段**必须用中文撰写**，不得用英文作答。保留 schema 定义的枚举与标识符（`reviewer` / `target` / `category` 的 `🔴/🟡/🟢/🔵/🌉` / `location` 坐标等）原样，不得翻译或改写。
 - 所有字段名使用 snake_case，不得增加合同外字段
 
 ## 注意事项（铁律）

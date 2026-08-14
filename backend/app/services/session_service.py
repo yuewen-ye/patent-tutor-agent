@@ -270,6 +270,9 @@ class SessionService:
             raise PermissionError("Learner does not own the diagnostic session.")
         return self._diagnostics.public_progress(session)
 
+    def list_diagnostic_sessions(self, *, learner_id: str) -> list[dict[str, Any]]:
+        return self._diagnostics.list_running_sessions(learner_id)
+
     def submit_diagnostic_response(
         self,
         *,

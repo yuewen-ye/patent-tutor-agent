@@ -47,6 +47,14 @@ class DiagnosticAnswer(DiagnosticContract):
     skip: bool = Field(default=False, description="开放题跳过标记；仅画像阶段的开放题有效。")
 
 
+class DiagnosticSessionSummary(DiagnosticContract):
+    diagnostic_session_id: str
+    status: Literal["running", "completed"]
+    updated_at: str
+    answered_questions: int = Field(default=0, ge=0)
+    phase: Literal["knowledge", "profile", "completed"] = "knowledge"
+
+
 class DiagnosticProgress(DiagnosticContract):
     diagnostic_session_id: str
     learner_id: str
@@ -61,3 +69,4 @@ class DiagnosticProgress(DiagnosticContract):
     course_session_id: str | None = None
     knowledge_snapshot: dict[str, dict[str, Any]] | None = None
     answer_result: dict[str, Any] | None = None
+    answer_log: list[dict[str, Any]] = Field(default_factory=list)
