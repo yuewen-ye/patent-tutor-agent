@@ -30,7 +30,7 @@
 
 | 文件 | 用途 |
 |---|---|
-| `backend-system-design.md` | 当前后端系统设计说明；覆盖工作流、学情、模型适配、持久化与接口，不含 RAG 设计 |
+| `backend-system-design.md` | 当前后端核心设计说明；覆盖技术选型、工作流、节点职责与个性化学习闭环，不含 RAG 设计 |
 | `architecture/workflow.mmd` | 由 `backend/scripts/show_workflow.py` 生成的当前图结构 |
 | `architecture/system-architecture-ascii.md` | 当前系统分层概览 |
 | `new-architecture.png` | 产品架构需求参考图，不作为运行时节点清单 |
