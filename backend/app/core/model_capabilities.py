@@ -4,12 +4,6 @@ from typing import Literal
 
 LLMRequestParameter = Literal["temperature"]
 
-TEMPERATURE_CONFIG_FIELDS = (
-    "temperature",
-    "tool_temperature",
-    "integration_temperature",
-)
-
 _PROVIDERS_WITHOUT_TEMPERATURE = frozenset({"luna", "terra"})
 _MODEL_PREFIXES_WITHOUT_TEMPERATURE = ("gpt-5.6",)
 

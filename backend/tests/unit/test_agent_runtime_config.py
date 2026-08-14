@@ -8,7 +8,6 @@ from backend.app.agents import rag_tools
 from backend.app.agents.expert_b.node import build_expert_b_node
 from backend.app.agents.planner.node import build_planner_node
 from backend.app.core.agent_runtime_config import (
-    AgentRuntimeConfigError,
     clear_agent_runtime_config_cache,
     load_agent_runtime_config,
 )
@@ -190,7 +189,7 @@ def test_yaml_config_controls_router_provider_and_model(
     "temperature_field",
     ["temperature", "tool_temperature", "integration_temperature"],
 )
-def test_yaml_config_rejects_temperature_for_gpt56_provider(
+def test_yaml_config_keeps_temperature_for_gpt56_provider(
     tmp_path, monkeypatch: pytest.MonkeyPatch, temperature_field: str
 ) -> None:
     config_path = tmp_path / "agents.yaml"
@@ -204,14 +203,12 @@ def test_yaml_config_rejects_temperature_for_gpt56_provider(
     )
     monkeypatch.setenv("AGENT_CONFIG_PATH", str(config_path))
 
-    with pytest.raises(
-        AgentRuntimeConfigError,
-        match=rf"cannot configure {temperature_field}.*does not support temperature",
-    ):
-        load_agent_runtime_config()
+    settings = load_agent_runtime_config().agents["expert_a"]
+
+    assert getattr(settings, temperature_field) == 0.2
 
 
-def test_yaml_config_rejects_temperature_for_gpt56_model_override(
+def test_yaml_config_keeps_temperature_for_gpt56_model_override(
     tmp_path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     config_path = tmp_path / "agents.yaml"
@@ -228,8 +225,10 @@ def test_yaml_config_rejects_temperature_for_gpt56_model_override(
     )
     monkeypatch.setenv("AGENT_CONFIG_PATH", str(config_path))
 
-    with pytest.raises(AgentRuntimeConfigError, match="gpt-5.6-sol"):
-        load_agent_runtime_config()
+    config = load_agent_runtime_config()
+
+    assert config.providers["gpt"].model_name == "gpt-5.6-sol"
+    assert config.agents["route"].temperature == 0.0
 
 
 def test_yaml_config_allows_non_model_parameters_for_gpt56_provider(

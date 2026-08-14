@@ -92,6 +92,32 @@ def test_call_llm_omits_temperature_for_gpt56_model(monkeypatch) -> None:
     assert "temperature" not in body
 
 
+def test_gpt_provider_keeps_temperature_for_supported_model(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "backend.app.core.llm.provider_runtime_config",
+        lambda _provider: ProviderRuntimeConfig(),
+    )
+    monkeypatch.setenv("GPT_API_KEY", "gpt-key")
+    monkeypatch.setenv("GPT_BASE_URL", "https://gateway.example/v1")
+    captured: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = json.loads(request.content.decode("utf-8"))
+        return _json_response("ok")
+
+    result = call_llm(
+        provider="gpt",
+        model_name="gpt-5.5",
+        messages=[LLMMessage(role="user", content="你好")],
+        temperature=0.2,
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    assert result == "ok"
+    body = cast(dict[str, Any], captured["body"])
+    assert body["temperature"] == 0.2
+
+
 @pytest.mark.parametrize(
     ("provider", "key_name", "model_name", "base_url"),
     [
