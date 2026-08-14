@@ -9,7 +9,9 @@ import json
 from typing import Any
 
 import httpx
+import pytest
 
+from backend.app.core.agent_runtime_config import ProviderRuntimeConfig
 from backend.app.core.llm import (
     AgentLLMRouter,
     AgentName,
@@ -20,6 +22,8 @@ from backend.app.core.llm import (
     ToolDefinition,
     call_llm_tools,
 )
+
+pytestmark = pytest.mark.unit
 
 
 class TestToolCallDataclass:
@@ -202,6 +206,35 @@ class TestCallLlmToolsWithMockTransport:
         assert result.tool_calls[0].id == "call_abc"
         assert result.tool_calls[0].name == "rag_retrieve"
         assert result.tool_calls[0].arguments == {"query": "新颖性", "top_k": 3}
+
+    def test_omits_temperature_for_gpt56_provider(self, monkeypatch) -> None:
+        monkeypatch.setattr(
+            "backend.app.core.llm.provider_runtime_config",
+            lambda _provider: ProviderRuntimeConfig(),
+        )
+        monkeypatch.setenv("TERRA_API_KEY", "terra-key")
+        monkeypatch.setenv("TERRA_BASE_URL", "https://gateway.example/v1")
+        captured_body: dict[str, Any] = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            captured_body.update(json.loads(request.content.decode("utf-8")))
+            return httpx.Response(
+                200,
+                json={"choices": [{"message": {"role": "assistant", "content": "ok"}}]},
+            )
+
+        with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+            result = call_llm_tools(
+                provider="terra",
+                messages=[LLMMessage(role="user", content="test query")],
+                tools=[],
+                temperature=0.3,
+                http_client=client,
+            )
+
+        assert result.content == "ok"
+        assert captured_body["model"] == "gpt-5.6-terra"
+        assert "temperature" not in captured_body
 
     def test_no_tool_calls_in_response(self) -> None:
         """Response without tool_calls — returns empty list."""

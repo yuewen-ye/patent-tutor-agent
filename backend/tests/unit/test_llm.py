@@ -65,6 +65,33 @@ def test_call_llm_posts_to_configured_openai_compatible_provider(monkeypatch) ->
     }
 
 
+def test_call_llm_omits_temperature_for_gpt56_model(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "backend.app.core.llm.provider_runtime_config",
+        lambda _provider: ProviderRuntimeConfig(),
+    )
+    monkeypatch.setenv("GPT_API_KEY", "gpt-key")
+    monkeypatch.setenv("GPT_BASE_URL", "https://gateway.example/v1")
+    captured: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = json.loads(request.content.decode("utf-8"))
+        return _json_response("ok")
+
+    result = call_llm(
+        provider="gpt",
+        model_name="gpt-5.6-sol",
+        messages=[LLMMessage(role="user", content="你好")],
+        temperature=0.2,
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    assert result == "ok"
+    body = cast(dict[str, Any], captured["body"])
+    assert body["model"] == "gpt-5.6-sol"
+    assert "temperature" not in body
+
+
 @pytest.mark.parametrize(
     ("provider", "key_name", "model_name", "base_url"),
     [

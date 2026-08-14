@@ -7,7 +7,12 @@ from typing import Final
 
 import yaml
 from dotenv import load_dotenv
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+
+from backend.app.core.model_capabilities import (
+    TEMPERATURE_CONFIG_FIELDS,
+    model_supports_request_parameter,
+)
 
 DEFAULT_AGENT_CONFIG_PATH: Final = Path("config/agents.yaml")
 AGENT_CONFIG_PATH_ENV: Final = "AGENT_CONFIG_PATH"
@@ -50,6 +55,38 @@ class AgentRuntimeConfig(BaseModel):
     llm: LLMRuntimeConfig = Field(default_factory=LLMRuntimeConfig)
     providers: dict[str, ProviderRuntimeConfig] = Field(default_factory=dict)
     agents: dict[str, AgentRuntimeSettings] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def reject_unsupported_model_parameters(self) -> AgentRuntimeConfig:
+        default_provider = self.llm.default_provider or "deepseek"
+        for agent_name, settings in self.agents.items():
+            configured_temperature_fields = [
+                field
+                for field in TEMPERATURE_CONFIG_FIELDS
+                if getattr(settings, field) is not None
+            ]
+            if not configured_temperature_fields:
+                continue
+
+            provider = settings.provider or default_provider
+            provider_settings = self.providers.get(provider)
+            model_name = settings.model_name or (
+                provider_settings.model_name if provider_settings is not None else None
+            )
+            if model_supports_request_parameter(
+                provider=provider,
+                model_name=model_name,
+                parameter="temperature",
+            ):
+                continue
+
+            fields = ", ".join(configured_temperature_fields)
+            model_label = model_name or f"{provider} default model"
+            raise ValueError(
+                f"agents.{agent_name} cannot configure {fields}: "
+                f"provider={provider} model={model_label} does not support temperature"
+            )
+        return self
 
 
 def clear_agent_runtime_config_cache() -> None:

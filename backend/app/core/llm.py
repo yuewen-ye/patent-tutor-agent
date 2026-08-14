@@ -1,4 +1,4 @@
-"""Unified OpenAI-compatible LLM calls for DeepSeek, Qwen, and GLM."""
+"""Unified OpenAI-compatible LLM calls with model-aware request parameters."""
 
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ from backend.app.core.agent_runtime_config import (
     llm_runtime_config,
     provider_runtime_config,
 )
+from backend.app.core.model_capabilities import model_supports_request_parameter
 
 LLMProvider = Literal["deepseek", "qwen", "glm", "gpt", "luna", "terra", "grok", "yangmao"]
 LLMRole = Literal["system", "user", "assistant", "tool"]
@@ -292,9 +293,8 @@ def _log_llm_call(**kwargs: object) -> None:
     record.update(kwargs)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     line = json.dumps(record, ensure_ascii=False, default=str, separators=(",", ":")) + chr(10)
-    with _LLM_LOG_LOCK:
-        with log_path.open("a", encoding="utf-8") as f:
-            f.write(line)
+    with _LLM_LOG_LOCK, log_path.open("a", encoding="utf-8") as f:
+        f.write(line)
 
 
 def _validate_provider(value: str, source: str) -> LLMProvider:
@@ -406,9 +406,14 @@ def _build_chat_body(
     body: dict[str, object] = {
         "model": config.model,
         "messages": [{"role": m.role, "content": m.content} for m in messages],
-        "temperature": temperature,
         "stream": stream,
     }
+    if model_supports_request_parameter(
+        provider=config.provider,
+        model_name=config.model,
+        parameter="temperature",
+    ):
+        body["temperature"] = temperature
     if json_schema is not None:
         if not schema_name:
             raise ValueError("schema_name is required when json_schema is provided")
@@ -445,7 +450,6 @@ def _build_chat_body_with_tools(
     body: dict[str, object] = {
         "model": config.model,
         "messages": [_serialize_message(m) for m in messages],
-        "temperature": temperature,
         "stream": stream,
         "tools": [
             {
@@ -459,6 +463,12 @@ def _build_chat_body_with_tools(
             for t in tools
         ],
     }
+    if model_supports_request_parameter(
+        provider=config.provider,
+        model_name=config.model,
+        parameter="temperature",
+    ):
+        body["temperature"] = temperature
     return body
 
 

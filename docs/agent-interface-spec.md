@@ -141,6 +141,10 @@ Planner 必须：
 - 真实 Provider 调用使用 OpenAI 兼容的 `response_format.type=json_schema`，携带完整 Pydantic
   JSON Schema 和 `strict=true`；同时把完整 Schema 注入模型上下文，以兼容接受参数但不真正
   强制 Schema 的网关，不再只依赖 `json_object` 与提示词示例。
+- OpenAI 兼容请求必须按最终 `provider + model_name` 的能力组装。GPT-5.6 系列（包括
+  `luna`、`terra` provider 别名）不发送 `temperature`；若对应 Agent 在
+  `config/agents.yaml` 显式配置 `temperature`、`tool_temperature` 或
+  `integration_temperature`，配置加载必须失败，而不是静默接受无效设置。
 - Provider 返回结果仍须经过字段别名归一化与 Pydantic 二次校验；首次校验失败时，系统把具体
   校验错误回传模型并自动修复一次，第二次仍失败才终止节点。
 - `agent_output_json_schemas()` 导出全部实际结构化输出合同：诊断、反馈、Planner、专家 A/B

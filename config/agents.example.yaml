@@ -3,6 +3,9 @@
 #
 # config/agents.yaml is intentionally ignored by Git. Keep API keys in .env,
 # and tune local provider endpoints, models, and per-agent settings there.
+# `temperature`, `tool_temperature`, and `integration_temperature` may only be configured for
+# models that support temperature. GPT-5.6 aliases (`luna`/`terra`) reject those fields at load
+# time, and the HTTP adapter also omits temperature for every `gpt-5.6*` model.
 
   ## 请尽可能避免在输出内容较多的节点中使用 qwen/glm ，可能会导致 Gateway Timeout 发生
   
