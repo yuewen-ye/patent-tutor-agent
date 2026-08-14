@@ -70,7 +70,8 @@ uv export --format requirements-txt --output-file requirements.txt
 │   ├── scripts/                 # workflow runner, graph export, memory migration
 │   ├── tests/                   # unit and real-provider integration tests
 │   └── main.py                  # FastAPI entry point
-├── config/agents.yaml           # provider, model, temperature and top_k settings
+├── frontend/                    # React 18 + TypeScript + Vite UI (pages, API client, components)
+├── config/agents.example.yaml   # provider/model/temperature template; copy to config/agents.yaml (ignored)
 ├── docs/                        # active contracts, guides, architecture and output examples
 ├── scripts/                     # Studio start/stop scripts
 ├── artifacts/                   # ignored runtime Markdown, manifests and logs
@@ -172,9 +173,11 @@ def build_<name>_node(llm_client: LLMClient) -> Node:
 - provider base URLs and default model names
 - per-Agent provider/model/temperature/tool temperature/top_k
 
-API keys and machine-local paths belong in `.env`. Supported providers are `deepseek`, `qwen`, and
-`glm`. `AgentLLMRouter` supports explicit `{AGENT}_PROVIDER` environment overrides for incident
-recovery. Planner uses the default provider unless a dedicated runtime setting is added.
+API keys and machine-local paths belong in `.env`. The `LLMProvider` literal supports `deepseek`,
+`qwen`, `glm`, `gpt`, `luna`, `terra`, `grok`, and `yangmao`; per-provider availability is tracked in
+`config/agents.example.yaml`. `AgentLLMRouter` supports explicit `{AGENT}_PROVIDER` environment
+overrides for incident recovery. Planner uses the default provider unless a dedicated runtime setting
+is added.
 
 ## State And Contracts
 
@@ -261,8 +264,8 @@ artifacts/sessions/{session_id}/
   workflow.log.jsonl
   onboarding/{questionnaire,submission}.md
   profile/learner_profile.md
-  path/{dual_axis_snapshot,learning_path}.md
-  round-01/{expert drafts,cross reviews,revisions,course_package,judge_report}.md
+  path/{dual_axis_snapshot,learning_path,path_decision}.md
+  round-01/{retrieval_context,expert drafts,cross reviews,revisions,course_package,judge_report}.md
   feedback/{feedback_report,learner_profile_update,grading_report}.md
 ```
 
@@ -274,6 +277,7 @@ no final Markdown file; `course_package.md` is the integrated course process art
 
 `backend/main.py` serves:
 
+- auth: `POST /auth/register`, `POST /auth/login`
 - health: `GET /health`, `GET /health/ready`
 - onboarding: `GET /questionnaires/onboarding`
 - learner flow: questionnaire submission and exercise submission endpoints
@@ -324,10 +328,12 @@ requires them or the user asks for a complete integration run.
 
 ## Graphify
 
-The repository knowledge graph lives in `graphify-out/`.
+The repository knowledge graph is generated locally by
+[graphify](https://github.com/yuewen-ye/graphify) into `graphify-out/`. That directory is
+Git-ignored, so it is absent from a fresh checkout until `graphify update .` builds it.
 
-- Always read `graphify-out/GRAPH_REPORT.md` before source exploration or codebase answers.
-- If `graphify-out/wiki/index.md` exists, navigate it before raw files.
+- If `graphify-out/GRAPH_REPORT.md` exists, read it before source exploration or codebase answers;
+  if `graphify-out/wiki/index.md` exists, navigate it before raw files.
 - Prefer `graphify query/path/explain` for cross-module relationship questions.
 - Run `graphify update .` after source or active documentation changes.
 
