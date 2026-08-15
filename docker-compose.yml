@@ -1,0 +1,94 @@
+# Patent Tutor 一键部署：MySQL 8 + 后端 FastAPI + 前端 nginx
+# 启动：docker compose up -d --build
+# 停止：docker compose down
+# 日志：docker compose logs -f backend
+# 说明：LLM key / 模型路径等密钥变量来自仓库根目录 .env（env_file）
+#       MySQL 密码默认 patent_tutor_pw，可在 .env 里用 MYSQL_PASSWORD / MYSQL_ROOT_PASSWORD 覆盖
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: patent-tutor-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-patent_tutor_pw}
+      MYSQL_DATABASE: patent_tutor
+      MYSQL_USER: patent_tutor
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-patent_tutor_pw}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - mysqladmin ping -h localhost -u root -p"$$MYSQL_ROOT_PASSWORD" --silent
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    networks:
+      - patent-tutor-net
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: patent-tutor-backend:latest
+    container_name: patent-tutor-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # 容器内数据库地址指向 mysql 服务（覆盖 .env 里的 127.0.0.1 占位）
+      PATENT_TUTOR_MYSQL_URL: mysql://patent_tutor:${MYSQL_PASSWORD:-patent_tutor_pw}@mysql:3306/patent_tutor
+      PATENT_TUTOR_MYSQL_AUTO_MIGRATE: "true"
+      PATENT_TUTOR_ENV: production
+      # RAG 模型目录（首次启动自动从 ModelScope 下载到 models 卷）
+      RAG_EMBEDDING_MODEL_PATH: /app/models/bge-m3
+      RAG_RERANKER_MODEL_PATH: /app/models/bge-reranker-v2-m3
+      # 产物目录
+      ARTIFACT_ROOT: /app/artifacts
+      WORKFLOW_LOG_ROOT: /app/artifacts
+    volumes:
+      - models:/app/models
+      - artifacts:/app/artifacts
+      # 配置文件热挂载：改 config/agents.yaml 后只需 docker compose restart backend，
+      # 无需重新 build（镜像内同名文件被此挂载覆盖）
+      - ./config/agents.yaml:/app/config/agents.yaml:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx,sys; sys.exit(0 if httpx.get('http://127.0.0.1:8000/health/ready', timeout=5).json().get('ready') else 1)"]
+      interval: 15s
+      timeout: 10s
+      retries: 30
+      start_period: 300s
+    networks:
+      - patent-tutor-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: patent-tutor-frontend:latest
+    container_name: patent-tutor-frontend
+    restart: unless-stopped
+    ports:
+      - "${PATENT_TUTOR_WEB_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - patent-tutor-net
+
+volumes:
+  mysql-data:
+  models:
+  artifacts:
+
+networks:
+  patent-tutor-net:
+    driver: bridge
