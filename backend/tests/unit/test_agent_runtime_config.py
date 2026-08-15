@@ -161,7 +161,7 @@ def test_yaml_config_controls_router_provider_and_model(
     config_path = tmp_path / "agents.yaml"
     config_path.write_text(
         "llm:\n"
-        "  default_provider: deepseek\n"
+        "  default_provider: qwen\n"
         "agents:\n"
         "  diagnosis_feedback:\n"
         "    provider: qwen\n"
@@ -172,7 +172,7 @@ def test_yaml_config_controls_router_provider_and_model(
         encoding="utf-8",
     )
     monkeypatch.setenv("AGENT_CONFIG_PATH", str(config_path))
-    monkeypatch.setenv("DEFAULT_LLM_PROVIDER", "deepseek")
+    monkeypatch.setenv("DEFAULT_LLM_PROVIDER", "qwen")
     monkeypatch.setenv("DIAGNOSIS_FEEDBACK_PROVIDER", "")
     monkeypatch.setenv("EXPERT_B_PROVIDER", "")
 
@@ -238,7 +238,7 @@ def test_yaml_config_allows_non_model_parameters_for_gpt56_provider(
     config_path.write_text(
         "agents:\n"
         "  expert_b:\n"
-        "    provider: terra\n"
+        "    provider: luna\n"
         "    top_k: 7\n",
         encoding="utf-8",
     )
@@ -246,7 +246,7 @@ def test_yaml_config_allows_non_model_parameters_for_gpt56_provider(
 
     settings = load_agent_runtime_config().agents["expert_b"]
 
-    assert settings.provider == "terra"
+    assert settings.provider == "luna"
     assert settings.top_k == 7
 
 
@@ -256,11 +256,11 @@ def test_provider_environment_override_takes_precedence_over_yaml(
     config_path = tmp_path / "agents.yaml"
     config_path.write_text(
         "llm:\n"
-        "  default_provider: deepseek\n"
+        "  default_provider: gpt\n"
         "agents:\n"
         "  expert_a:\n"
-        "    provider: deepseek\n"
-        "    model_name: deepseek-v4-flash\n",
+        "    provider: gpt\n"
+        "    model_name: gpt-5.5\n",
         encoding="utf-8",
     )
     monkeypatch.setenv("AGENT_CONFIG_PATH", str(config_path))

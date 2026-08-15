@@ -538,5 +538,5 @@ async def arun_workflow(
 
 
 def export_workflow_mermaid(workflow: Any | None = None) -> str:
-    compiled = workflow or build_workflow(llm_client=DefaultLLMClient(provider="deepseek"))
+    compiled = workflow or build_workflow(llm_client=DefaultLLMClient(provider="qwen"))
     return cast(str, compiled.get_graph().draw_mermaid())

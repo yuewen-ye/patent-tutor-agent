@@ -1,0 +1,38 @@
+# Patent Tutor 后端镜像构建排除项（docker build 上下文根目录）
+.git
+.venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.uv-cache
+.uv-python
+.langgraph_api
+graphify-out
+dist
+build
+logs
+node_modules
+frontend/node_modules
+frontend/dist
+
+# 密钥不打进镜像（运行时经 env_file 注入）
+.env
+.env.local
+
+# RAG 模型与产物运行时挂载卷，不打包进镜像（避免镜像膨胀到数 GB）
+models/
+artifacts/
+
+# Milvus Lite 运行痕迹（预置知识库数据本身保留在镜像内）
+backend/app/rag/data/milvus_lite.db/LOCK
+backend/app/rag/data/milvus_lite.db/**/wal/
+backend/app/rag/data/milvus_lite.db/**/*.prev
+
+# 本地 SQLite / 临时文件
+data/*.sqlite3
+data/*.sqlite3-wal
+data/*.sqlite3-shm
+.DS_Store
+*.bak

@@ -70,8 +70,12 @@ Copy-Item .env.example .env
 # LangSmith — LangGraph Studio 连接需要（在 https://smith.langchain.com 获取）
 LANGSMITH_API_KEY=lsv2_pt_...
 
-# LLM Provider — 至少填一个 API Key
-DEEPSEEK_API_KEY=sk-your-key-here
+# LLM Provider — 至少填一个 API Key（全部走 Krill 单端点，5 个变量用同一 key）
+QWEN_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
+GLM_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
+GPT_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
+LUNA_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
+GROK_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
 
 # 非密钥模型参数从 YAML 读取
 AGENT_CONFIG_PATH=config/agents.yaml
@@ -81,31 +85,35 @@ PATENT_TUTOR_MYSQL_POOL_SIZE=5
 PATENT_TUTOR_MYSQL_AUTO_MIGRATE=true
 ```
 
-支持 `deepseek`、`qwen`、`glm` 三个 provider。每个 Agent 的 provider、model、temperature、top_k 等非密钥参数在 `config/agents.yaml` 里调整。首次本地运行前执行 `Copy-Item config/agents.example.yaml config/agents.yaml`；后者是本机配置，刻意不纳入 Git。
+支持 `qwen`、`glm`、`gpt`、`luna`、`grok` 五个主力 provider，统一走
+`https://api-slb.krill-ai.net/codex/v1`（可用模型：gpt-5.5 / gpt-5.6-luna / grok-4.5 /
+qwen3.7-plus / GLM-5.2）；另有保留的 `yangmao`（DeepSeek Flash）独立通道，需要请求 DeepSeek 时
+通过 `{AGENT}_PROVIDER=yangmao` 或 `agents.<agent>.provider: yangmao` 使用。每个 Agent 的
+provider、model、temperature、top_k 等非密钥参数在 `config/agents.yaml` 里调整。首次本地运行前执行 `Copy-Item config/agents.example.yaml config/agents.yaml`；后者是本机配置，刻意不纳入 Git。
 
 配置分两层：`providers.<name>.model_name` 是该供应商的默认模型；`agents.<agent>.model_name` 只是单个 Agent 的覆盖项，通常不用重复写：
 
 ```yaml
 providers:
-  deepseek:
-    model_name: deepseek-v4-flash
-    base_url: https://api.deepseek.com
   qwen:
-    model_name: qwen3.7-max-2026-05-17
-    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    model_name: qwen3.7-plus
+    base_url: https://api-slb.krill-ai.net/codex/v1
+  gpt:
+    model_name: gpt-5.5
+    base_url: https://api-slb.krill-ai.net/codex/v1
 
 agents:
   planner:
-    provider: deepseek
+    provider: gpt
     temperature: 0.5
   expert_b:
-    provider: qwen
+    provider: luna
     temperature: 0.7
     tool_temperature: 0.3
     top_k: 5
   judge:
-    provider: deepseek
-    model_name: deepseek-reasoner  # 只有需要覆盖 provider 默认模型时才写
+    provider: gpt
+    model_name: gpt-5.5  # 只有需要覆盖 provider 默认模型时才写
     temperature: 0.0
 ```
 
@@ -365,42 +373,45 @@ bash scripts/langgraph-stop.sh 8124
 
 复制 `.env.example` 为 `.env`，填入真实 key。**不要提交 `.env` 或任何密钥。**
 
-`.env` 只放密钥和本机路径；模型、provider、temperature、top_k 等非密钥参数放在 `config/agents.yaml`。当前支持 provider：`deepseek`、`qwen`、`glm`。
+`.env` 只放密钥和本机路径；模型、provider、temperature、top_k 等非密钥参数放在 `config/agents.yaml`。当前支持 provider：`qwen`、`glm`、`gpt`、`luna`、`grok`（统一走 Krill 单端点）与 `yangmao`（DeepSeek Flash）。
 
 ```env
-DEEPSEEK_API_KEY=sk-...
-QWEN_API_KEY=
-GLM_API_KEY=
+QWEN_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
+GLM_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
+GPT_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
+LUNA_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
+GROK_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
+YANGMAO_API_KEY=sk-2026-yangmao-001-wobuzhidao
 AGENT_CONFIG_PATH=config/agents.yaml
 ```
 
 ```yaml
 llm:
-  default_provider: deepseek
+  default_provider: qwen
   timeout_seconds: 90
   retry_times: 3
 
 providers:
-  deepseek:
-    model_name: deepseek-v4-flash
-    base_url: https://api.deepseek.com
+  qwen:
+    model_name: qwen3.7-plus
+    base_url: https://api-slb.krill-ai.net/codex/v1
   glm:
-    model_name: glm-5.2
-    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    model_name: GLM-5.2
+    base_url: https://api-slb.krill-ai.net/codex/v1
 
 agents:
   judge:
-    provider: deepseek
+    provider: gpt
     temperature: 0.0
   expert_a:
-    provider: deepseek
+    provider: grok
     temperature: 0.4
     tool_temperature: 0.2
     integration_temperature: 0.3
     top_k: 5
   expert_b:
-    provider: glm
-    model_name: glm-5.1-air  # 可选：只在单个 agent 需要不同模型时覆盖
+    provider: luna
+    model_name: gpt-5.6-luna  # 可选：只在单个 agent 需要不同模型时覆盖
     temperature: 0.7
 ```
 
@@ -456,6 +467,146 @@ PY
 - `call_llm_json()` / `call_llm_tools()` 把 `model_name` 传给 `load_provider_config()`。
 - `_build_chat_body()` / `_build_chat_body_with_tools()` 最终组装 `model`、`messages`、`temperature`、`tools`。
 - `top_k` 不进模型请求体；它在 `backend/app/agents/rag_tools.py` 和 `backend/app/graph/workflow.py` 里控制检索片段数。
+
+## Docker 部署（docker compose 一键启动）
+
+仓库自带 `Dockerfile`（后端）、`frontend/Dockerfile`（前端）、`docker-compose.yml`（编排），
+一次构建即可在任意装有 Docker 的机器上以「MySQL 8 + 后端 FastAPI + 前端 nginx」三容器方式运行。
+
+### 1. 前置条件
+
+- Docker Engine 20.10+ 与 Docker Compose v2（`docker compose version` 确认）。
+- 服务器可访问外网（构建时拉基础镜像与 Python 依赖；首次启动后端还会从 ModelScope 下载 RAG 模型）。
+
+### 2. 准备配置
+
+```bash
+cp .env.example .env          # 已存在 .env 则跳过
+cp config/agents.example.yaml config/agents.yaml
+```
+
+编辑 `.env`，至少确认以下项：
+
+```env
+# LLM key（全部走 Krill 单端点，5 个变量用同一 key；另有 YANGMAO_API_KEY）
+QWEN_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
+GLM_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
+GPT_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
+LUNA_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
+GROK_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
+```
+
+- 数据库连接串不需要改：compose 会覆盖 `PATENT_TUTOR_MYSQL_URL` 指向容器内的 `mysql` 服务。
+- MySQL 密码默认 `patent_tutor_pw`，可在 `.env` 里追加 `MYSQL_PASSWORD=...` 与
+  `MYSQL_ROOT_PASSWORD=...` 覆盖（两者都要改，保持与连接串一致）。
+- 前端端口默认 `8080`，可用 `PATENT_TUTOR_WEB_PORT` 覆盖（compose 变量，写在 `.env` 或 shell 环境均可）。
+
+### 3. 构建并启动
+
+```bash
+docker compose up -d --build
+```
+
+首次构建较慢（后端要装 torch / transformers 等大依赖，前端要 `npm ci`），之后增量构建很快。
+查看启动过程：
+
+```bash
+docker compose logs -f backend
+```
+
+启动顺序由 compose 的 `depends_on` 保证：MySQL 健康检查通过 → 后端启动 → 前端 nginx 就绪。
+
+### 4. 首次启动自动下载 RAG 模型
+
+后端容器入口（`docker/entrypoint.sh`）会检查 `RAG_EMBEDDING_MODEL_PATH`（默认
+`/app/models/bge-m3`）；若不存在 `config.json`，自动执行 `backend/scripts/download_models.py`
+从 ModelScope 下载 bge-m3 与 bge-reranker-v2-m3（约 2GB+，只发生一次，持久化在 `models` 卷）。
+期间 `/health/ready` 返回 not_ready，前端会等待后端就绪后再代理请求。
+
+如需跳过下载（例如改用 `RAG_RETRIEVAL_MODE=mock`），在 `.env` 里设置：
+
+```env
+RAG_RETRIEVAL_MODE=mock
+```
+
+### 5. 验证
+
+```bash
+docker compose ps                                  # 三个容器均 healthy
+curl -s http://127.0.0.1:8080/api/docs -o /dev/null -w "%{http_code}\n"   # Swagger
+curl -s http://127.0.0.1:8080/api/health/ready     # {"ready": true}
+```
+
+浏览器打开 `http://<服务器IP>:8080/`（前端）与 `http://<服务器IP>:8080/api/docs`（接口文档）。
+
+### 6. 常用运维命令
+
+```bash
+docker compose ps                                  # 状态
+docker compose logs -f backend                     # 后端日志（LLM 调用、会话）
+docker compose logs -f frontend                    # nginx 日志
+docker compose restart backend                     # 重启后端
+docker compose down                                # 停止（保留数据卷）
+docker compose down -v                             # 停止并删除数据卷（MySQL/模型需重新初始化）
+```
+
+#### 改配置后如何生效（重要）
+
+| 改动 | 生效命令 | 说明 |
+|---|---|---|
+| 改 `config/agents.yaml`（provider/模型/温度等） | `docker compose restart backend` | 该文件已通过 bind mount 挂载进容器，重启后端即重新读取，无需 rebuild |
+| 改 `.env`（API key、密码、RAG 模式等） | `docker compose up -d backend` | `.env` 在容器**创建时**注入，restart 不会刷新环境变量，必须 recreate 容器 |
+| 改后端代码（`backend/`、`pyproject.toml`、`uv.lock`） | `docker compose up -d --build backend` | 代码打进镜像，需重新构建 |
+| 改前端代码（`frontend/`） | `docker compose up -d --build frontend` | 同上 |
+
+**为什么命令不一样（一句话记忆）**：
+
+> **restart 重读文件，up -d 重建容器。** `config/agents.yaml` 是运行时会重新读取的
+> 挂载文件 → 重启进程即可；`.env` 是容器创建时的环境变量快照 → 必须重建容器才重新注入。
+
+**改 `agents.yaml` 能直接用 `up -d` 吗？** 能，但有个陷阱：compose 判断"要不要重建容器"
+看的是配置是否变化，而 bind mount 只记录**挂载路径**、不记录**文件内容**——所以只改
+`agents.yaml` 内容时，`docker compose up -d` **检测不到变化、不会重建容器**，命令看似成功
+实则配置未生效。必须加 `--force-recreate`：
+
+```bash
+docker compose up -d --force-recreate backend   # 强制重建，agents.yaml 才生效
+```
+
+因此日常建议：
+
+- 只改 `agents.yaml` → `docker compose restart backend`（最快最轻）
+- 只改 `.env` → `docker compose up -d backend`
+- 两者都改了 / 不确定 → `docker compose up -d --force-recreate backend`（必然生效）
+
+验证配置是否真的生效：
+
+```bash
+docker exec patent-tutor-backend printenv <环境变量>   # 验证 .env
+docker exec patent-tutor-backend python -c "from backend.app.core.llm import AgentLLMRouter; from backend.app.core.agent_runtime_config import clear_agent_runtime_config_cache; clear_agent_runtime_config_cache(); r=AgentLLMRouter.from_env(); print(r.provider_for('planner'))"   # 验证 agents.yaml 的路由
+```
+
+数据持久化位置：
+
+| 卷 | 内容 |
+|---|---|
+| `mysql-data` | MySQL 业务数据（会话、画像、BKT、计划） |
+| `models` | RAG 模型（bge-m3 / bge-reranker-v2-m3） |
+| `artifacts` | 会话 Markdown 产物与工作流日志 |
+
+### 7. 端口与网络
+
+- 前端对外暴露 `PATENT_TUTOR_WEB_PORT`（默认 `8080`），nginx 同源反代 `/api/*` 到后端
+  `backend:8000`（含 `/openapi.json` 精确代理，保证 Swagger 正常渲染），无需额外 CORS 配置。
+- 后端与 MySQL 只在 compose 内部网络 `patent-tutor-net` 通信，不直接暴露公网端口。
+- 后端健康检查：`/health/ready`；MySQL 健康检查：`mysqladmin ping`。
+
+### 8. 与现有裸机部署的关系
+
+`patent-tutor-deployment-guide.md` 记录的是当前服务器的 systemd + nginx + 手动前端构建方案。
+Docker 方案是等价替代：同一个 `config/agents.yaml`、`.env` 与 Milvus Lite 预置知识库
+（`backend/app/rag/data/milvus_lite.db` 随镜像带入），切换部署形态不改变运行行为。
+若服务器上已存在裸机部署，迁移前先停掉 systemd 服务与 80/8000 端口占用，避免端口冲突。
 
 ## RAG 工具函数
 

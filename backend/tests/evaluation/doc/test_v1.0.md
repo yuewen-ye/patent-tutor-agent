@@ -196,9 +196,11 @@ uv pip install mysql-connector-python
 
 | 环境变量 | 说明 |
 |----------|------|
-| `DEEPSEEK_API_KEY` | DeepSeek API 密钥 |
-| `QWEN_API_KEY` | 阿里百炼 Qwen API 密钥 |
-| `GLM_API_KEY` | 智谱 GLM API 密钥 |
+| `QWEN_API_KEY` | Krill 网关 Qwen 密钥（qwen3.7-plus） |
+| `GLM_API_KEY` | Krill 网关 GLM 密钥（GLM-5.2） |
+| `GPT_API_KEY` | Krill 网关 GPT 密钥（gpt-5.5） |
+| `LUNA_API_KEY` | Krill 网关 Luna 密钥（gpt-5.6-luna） |
+| `GROK_API_KEY` | Krill 网关 Grok 密钥（grok-4.5） |
 
 Provider 的 `base_url`、`model_name`、`temperature` 等在 `config/agents.yaml` 中配置。
 

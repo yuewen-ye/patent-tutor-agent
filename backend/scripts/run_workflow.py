@@ -63,13 +63,13 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--provider",
-        choices=["deepseek", "qwen", "glm"],
+        choices=["qwen", "glm", "gpt", "luna", "grok", "yangmao"],
         help="Override DEFAULT_LLM_PROVIDER for Agent nodes without a specific provider.",
     )
     for agent in AGENT_PROVIDER_ENV:
         parser.add_argument(
             f"--{agent.replace('_', '-')}-provider",
-            choices=["deepseek", "qwen", "glm"],
+            choices=["qwen", "glm", "gpt", "luna", "grok", "yangmao"],
             help=f"Override {AGENT_PROVIDER_ENV[agent]} for this run.",
         )
     parser.add_argument("--session-id", default="local-llm-smoke")
