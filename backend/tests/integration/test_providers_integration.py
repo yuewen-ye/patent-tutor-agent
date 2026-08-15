@@ -26,7 +26,7 @@ MESSAGES = [
 ]
 
 
-@pytest.mark.parametrize("provider", ["deepseek", "qwen", "glm"])
+@pytest.mark.parametrize("provider", ["qwen", "glm", "gpt"])
 def test_provider_returns_valid_json(provider: str) -> None:
     try:
         result = call_llm_json(

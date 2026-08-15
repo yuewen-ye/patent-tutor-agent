@@ -121,14 +121,14 @@ def test_gpt_provider_keeps_temperature_for_supported_model(monkeypatch) -> None
 @pytest.mark.parametrize(
     ("provider", "key_name", "model_name", "base_url"),
     [
-        ("deepseek", "DEEPSEEK_API_KEY", "deepseek-v4-flash", "https://api.deepseek.com"),
+        ("qwen", "QWEN_API_KEY", "qwen3.7-plus", "https://api-slb.krill-ai.net/codex/v1"),
         (
-            "qwen",
-            "QWEN_API_KEY",
-            "qwen3.7-max",
-            "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            "glm",
+            "GLM_API_KEY",
+            "GLM-5.2",
+            "https://api-slb.krill-ai.net/codex/v1",
         ),
-        ("glm", "GLM_API_KEY", "glm-5.1", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
+        ("gpt", "GPT_API_KEY", "gpt-5.5", "https://api-slb.krill-ai.net/codex/v1"),
     ],
 )
 def test_call_llm_supports_three_configured_providers(
@@ -165,9 +165,9 @@ def test_call_llm_supports_three_configured_providers(
 
 
 def test_call_llm_json_adds_json_mode_and_parses_response(monkeypatch) -> None:
-    monkeypatch.setenv("DEEPSEEK_API_KEY", "deepseek-key")
-    monkeypatch.setenv("DEEPSEEK_MODEL", "deepseek-v4-flash")
-    monkeypatch.setenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+    monkeypatch.setenv("QWEN_API_KEY", "qwen-key")
+    monkeypatch.setenv("QWEN_MODEL", "qwen3.7-plus")
+    monkeypatch.setenv("QWEN_BASE_URL", "https://api-slb.krill-ai.net/codex/v1")
     captured: dict[str, object] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -175,7 +175,7 @@ def test_call_llm_json_adds_json_mode_and_parses_response(monkeypatch) -> None:
         return _json_response('{"answer": "json"}')
 
     result = call_llm_json(
-        provider="deepseek",
+        provider="qwen",
         messages=[LLMMessage(role="system", content="只输出 json")],
         http_client=httpx.Client(transport=httpx.MockTransport(handler)),
     )
@@ -185,7 +185,7 @@ def test_call_llm_json_adds_json_mode_and_parses_response(monkeypatch) -> None:
 
 
 def test_call_llm_json_sends_strict_json_schema(monkeypatch) -> None:
-    monkeypatch.setenv("DEEPSEEK_API_KEY", "deepseek-key")
+    monkeypatch.setenv("QWEN_API_KEY", "qwen-key")
     captured: dict[str, object] = {}
     schema: dict[str, object] = {
         "type": "object",
@@ -199,7 +199,7 @@ def test_call_llm_json_sends_strict_json_schema(monkeypatch) -> None:
         return _json_response('{"ok": true}')
 
     result = call_llm_json(
-        provider="deepseek",
+        provider="qwen",
         messages=[LLMMessage(role="system", content="return structured output")],
         schema_name="StrictProbe",
         json_schema=schema,
@@ -237,9 +237,9 @@ def test_call_llm_uses_explicit_model_name_override(monkeypatch) -> None:
 
 
 def test_call_llm_wraps_provider_error_body(monkeypatch) -> None:
-    monkeypatch.setenv("DEEPSEEK_API_KEY", "deepseek-key")
-    monkeypatch.setenv("DEEPSEEK_MODEL", "deepseek-v4-flash")
-    monkeypatch.setenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+    monkeypatch.setenv("QWEN_API_KEY", "qwen-key")
+    monkeypatch.setenv("QWEN_MODEL", "qwen3.7-plus")
+    monkeypatch.setenv("QWEN_BASE_URL", "https://api-slb.krill-ai.net/codex/v1")
 
     client = httpx.Client(
         transport=httpx.MockTransport(
@@ -249,17 +249,17 @@ def test_call_llm_wraps_provider_error_body(monkeypatch) -> None:
 
     with pytest.raises(LLMProviderError, match="bad request detail"):
         call_llm(
-            provider="deepseek", messages=[LLMMessage(role="user", content="x")], http_client=client
+            provider="qwen", messages=[LLMMessage(role="user", content="x")], http_client=client
         )
 
 
 def test_call_llm_normalizes_socks_proxy(monkeypatch) -> None:
-    monkeypatch.setenv("DEEPSEEK_API_KEY", "deepseek-key")
+    monkeypatch.setenv("QWEN_API_KEY", "qwen-key")
     monkeypatch.setenv("HTTP_PROXY", "socks://127.0.0.1:64193/")
     monkeypatch.setenv("HTTPS_PROXY", "socks://127.0.0.1:64193/")
 
     call_llm(
-        provider="deepseek",
+        provider="qwen",
         messages=[LLMMessage(role="user", content="ping")],
         http_client=httpx.Client(
             transport=httpx.MockTransport(lambda request: _json_response("ok"))
@@ -274,7 +274,7 @@ def test_agent_llm_router_reads_agent_specific_provider_config(monkeypatch, tmp_
     monkeypatch.setenv("AGENT_CONFIG_PATH", str(tmp_path / "missing-agents.yaml"))
     for env_name in AGENT_PROVIDER_ENV.values():
         monkeypatch.setenv(env_name, "")
-    monkeypatch.setenv("DEFAULT_LLM_PROVIDER", "deepseek")
+    monkeypatch.setenv("DEFAULT_LLM_PROVIDER", "qwen")
     monkeypatch.setenv("DIAGNOSIS_FEEDBACK_PROVIDER", "qwen")
     monkeypatch.setenv("EXPERT_B_PROVIDER", "glm")
 
@@ -293,17 +293,17 @@ def test_load_provider_config_env_timeout_overrides_yaml(monkeypatch) -> None:
         retry_times = 5
 
     class _ProvCfg:
-        model_name = "deepseek-v4-flash"
+        model_name = "qwen3.7-plus"
         base_url = None
 
     monkeypatch.setattr("backend.app.core.llm.load_dotenv", lambda *a, **k: None)
     monkeypatch.setattr("backend.app.core.llm.llm_runtime_config", lambda: _LlmCfg())
     monkeypatch.setattr("backend.app.core.llm.provider_runtime_config", lambda p: _ProvCfg())
-    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
+    monkeypatch.setenv("QWEN_API_KEY", "test-key")
     monkeypatch.setenv("LLM_TIMEOUT_SECONDS", "600")
     monkeypatch.setenv("LLM_RETRY_TIMES", "7")
 
-    cfg = load_provider_config("deepseek")
+    cfg = load_provider_config("qwen")
 
     assert cfg.timeout_seconds == 600.0
     assert cfg.retry_times == 7
@@ -316,17 +316,17 @@ def test_load_provider_config_falls_back_to_yaml_when_env_unset(monkeypatch) -> 
         retry_times = 5
 
     class _ProvCfg:
-        model_name = "deepseek-v4-flash"
+        model_name = "qwen3.7-plus"
         base_url = None
 
     monkeypatch.setattr("backend.app.core.llm.load_dotenv", lambda *a, **k: None)
     monkeypatch.setattr("backend.app.core.llm.llm_runtime_config", lambda: _LlmCfg())
     monkeypatch.setattr("backend.app.core.llm.provider_runtime_config", lambda p: _ProvCfg())
-    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
+    monkeypatch.setenv("QWEN_API_KEY", "test-key")
     monkeypatch.delenv("LLM_TIMEOUT_SECONDS", raising=False)
     monkeypatch.delenv("LLM_RETRY_TIMES", raising=False)
 
-    cfg = load_provider_config("deepseek")
+    cfg = load_provider_config("qwen")
 
     assert cfg.timeout_seconds == 90.0
     assert cfg.retry_times == 5

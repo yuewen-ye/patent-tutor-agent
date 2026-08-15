@@ -205,13 +205,15 @@ JSONL 日志（started/completed/error）、Markdown artifact 落盘与 `manifes
 
 ### 5.1 Provider 体系（`core/llm.py`）
 
-`LLMProvider` 现为 6 个真实模型直连：`deepseek`、`deepseek_pro`、`grok`、`gpt`、`mistral`、
-`minimax`。其中 deepseek*/gpt/mistral/minimax 统一走 GreatRouter 单端点（单 key，
-`DEEPSEEK_API_KEY`），grok 走 Krill 端点（`KRILL_API_KEY`）。
+`LLMProvider` 现为 5 个主力模型直连 + 1 个 DeepSeek 通道：`qwen`、`glm`、`gpt`、`luna`、`grok`
+统一走 Krill 单端点（`https://api-slb.krill-ai.net/codex/v1`，单 key，见 `.env` 的
+`QWEN_API_KEY` / `GLM_API_KEY` / `GPT_API_KEY` / `LUNA_API_KEY` / `GROK_API_KEY`，
+5 个变量均为同一 Krill key）；`yangmao` 为保留的 DeepSeek Flash 通道
+（`yangmao-main`，独立 `YANGMAO_API_KEY` 与 base_url）。
 
 `AgentLLMRouter` 按 Agent 路由 provider（`config/agents.yaml` 的 `agents.<agent>.provider`，
 可用 `{AGENT}_PROVIDER` 环境变量应急覆盖）；Planner 使用默认 provider。推荐映射：
-route=mistral、chat_answer=minimax、planner/diagnosis=deepseek、expert_b=deepseek_pro、
+route=qwen、chat_answer=qwen、diagnosis_feedback=qwen、planner=gpt、expert_b=luna、
 expert_a=grok、judge=gpt。
 
 ### 5.2 调用层与容错

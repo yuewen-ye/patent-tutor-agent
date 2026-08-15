@@ -173,12 +173,15 @@ def build_<name>_node(llm_client: LLMClient) -> Node:
 - provider base URLs and default model names
 - per-Agent provider/model/temperature/tool temperature/top_k
 
-API keys and machine-local paths belong in `.env`. The `LLMProvider` literal supports `deepseek`,
-`deepseek_pro`, `grok`, `gpt`, `mistral`, and `minimax`; the recommended per-Agent mapping
-(route=mistral, chat_answer=minimax, planner/diagnosis=deepseek, expert_b=deepseek_pro,
-expert_a=grok, judge=gpt) is documented in `config/agents.example.yaml`. `AgentLLMRouter` supports
-explicit `{AGENT}_PROVIDER` environment overrides for incident recovery. Planner uses the default
-provider unless a dedicated runtime setting is added.
+API keys and machine-local paths belong in `.env`. The `LLMProvider` literal supports `qwen`,
+`glm`, `gpt`, `luna`, `grok`, and `yangmao`; the recommended per-Agent mapping
+(route=qwen, chat_answer=qwen, diagnosis_feedback=qwen, planner=gpt, expert_b=luna,
+expert_a=grok, judge=gpt) is documented in `config/agents.example.yaml`. The five Krill providers
+share the same endpoint (`https://api-slb.krill-ai.net/codex/v1`) and a single key set through the
+five `*_API_KEY` variables in `.env`; `yangmao` is the retained DeepSeek Flash channel
+(`yangmao-main`, separate `YANGMAO_API_KEY`/base_url) for DeepSeek requests. `AgentLLMRouter`
+supports explicit `{AGENT}_PROVIDER` environment overrides for incident recovery. Planner uses the
+default provider unless a dedicated runtime setting is added.
 
 ## State And Contracts
 

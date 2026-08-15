@@ -184,7 +184,7 @@ def check_test_environment(
         items.append(("backend /health/ready", f"UNREACHABLE: {exc}  → start with: uv run python backend/main.py"))
 
     # 5. LLM provider env (non-fatal, informative only)
-    providers = [p for p in ("DEEPSEEK_API_KEY", "QWEN_API_KEY", "GLM_API_KEY") if os.environ.get(p)]
+    providers = [p for p in ("QWEN_API_KEY", "GLM_API_KEY", "GPT_API_KEY", "LUNA_API_KEY", "GROK_API_KEY") if os.environ.get(p)]
     items.append(("LLM API keys set", ", ".join(providers) if providers else "NONE — teach sessions will likely fail"))
 
     return EnvReport(ok, items)

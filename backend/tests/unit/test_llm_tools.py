@@ -142,7 +142,7 @@ class TestCallLlmToolsWithMockTransport:
 
         with httpx.Client(transport=httpx.MockTransport(handler)) as client:
             _result = call_llm_tools(
-                provider="deepseek",
+                provider="qwen",
                 messages=messages,
                 tools=tools,
                 temperature=0.0,
@@ -193,7 +193,7 @@ class TestCallLlmToolsWithMockTransport:
 
         with httpx.Client(transport=httpx.MockTransport(handler)) as client:
             result = call_llm_tools(
-                provider="deepseek",
+                provider="qwen",
                 messages=messages,
                 tools=tools,
                 temperature=0.0,
@@ -212,8 +212,8 @@ class TestCallLlmToolsWithMockTransport:
             "backend.app.core.llm.provider_runtime_config",
             lambda _provider: ProviderRuntimeConfig(),
         )
-        monkeypatch.setenv("TERRA_API_KEY", "terra-key")
-        monkeypatch.setenv("TERRA_BASE_URL", "https://gateway.example/v1")
+        monkeypatch.setenv("LUNA_API_KEY", "luna-key")
+        monkeypatch.setenv("LUNA_BASE_URL", "https://gateway.example/v1")
         captured_body: dict[str, Any] = {}
 
         def handler(request: httpx.Request) -> httpx.Response:
@@ -225,7 +225,7 @@ class TestCallLlmToolsWithMockTransport:
 
         with httpx.Client(transport=httpx.MockTransport(handler)) as client:
             result = call_llm_tools(
-                provider="terra",
+                provider="luna",
                 messages=[LLMMessage(role="user", content="test query")],
                 tools=[],
                 temperature=0.3,
@@ -233,7 +233,7 @@ class TestCallLlmToolsWithMockTransport:
             )
 
         assert result.content == "ok"
-        assert captured_body["model"] == "gpt-5.6-terra"
+        assert captured_body["model"] == "gpt-5.6-luna"
         assert "temperature" not in captured_body
 
     def test_no_tool_calls_in_response(self) -> None:
@@ -265,7 +265,7 @@ class TestCallLlmToolsWithMockTransport:
 
         with httpx.Client(transport=httpx.MockTransport(handler)) as client:
             result = call_llm_tools(
-                provider="deepseek",
+                provider="qwen",
                 messages=messages,
                 tools=tools,
                 temperature=0.0,
@@ -279,13 +279,13 @@ class TestCallLlmToolsWithMockTransport:
 class TestLLMClientGenerateWithTools:
     def test_default_llm_client_has_method(self) -> None:
         """DefaultLLMClient implements generate_with_tools."""
-        client = DefaultLLMClient(provider="deepseek")
+        client = DefaultLLMClient(provider="qwen")
         assert hasattr(client, "generate_with_tools")
         assert callable(client.generate_with_tools)
 
     def test_agent_router_has_method(self) -> None:
         """AgentLLMRouter implements generate_with_tools."""
-        router = AgentLLMRouter(default_provider="deepseek")
+        router = AgentLLMRouter(default_provider="qwen")
         assert hasattr(router, "generate_with_tools")
         assert callable(router.generate_with_tools)
 
