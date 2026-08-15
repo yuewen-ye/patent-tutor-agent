@@ -13,7 +13,7 @@ evaluation entry points:
 * ``progress.inspect_plan``        – read current_node / completed_nodes / plan_nodes
 * ``progress.advance_bkt``         – register N correct observations on a node
 
-All runnable scripts (``eval_course_gen.py``, ``eval_learn_sim.py`` and
+All runnable scripts (``run_course_gen.py``, ``run_learning_sim.py`` and
 ``evaluation_test_v1.1_bootrun.py``) import from this single common module so
 the core logic is defined once and only the CLI orchestration differs.
 """
@@ -40,7 +40,7 @@ from dotenv import load_dotenv
 # NOTE: This module now lives under evaluation/program/.  EVAL_DIR is still
 # the evaluation/ root (one level up) because that's where run_control.md,
 # profiles/, results/, etc. live.  We also insert evaluation/ into sys.path
-# so the in-tree "import eval_common as common" pattern keeps working.
+# so the in-tree "import _common as common" pattern keeps working.
 
 _THIS_DIR = Path(__file__).resolve().parent
 EVAL_DIR = _THIS_DIR.parent  # backend/tests/evaluation/
@@ -498,7 +498,7 @@ def generate_control_md(preserve_previous: bool = True) -> None:
         "",
         "## 使用说明",
         "",
-        "这个控制文件是 **eval_course_gen、eval_learn_sim、evaluation_test_v1.1_bootrun.py** 共用的。",
+        "这个控制文件是 **run_course_gen、run_learning_sim、evaluation_test_v1.1_bootrun.py** 共用的。",
         "无论单独运行哪一个流程，都是读取/修改这一个文件。",
         "",
         "使用方式：",

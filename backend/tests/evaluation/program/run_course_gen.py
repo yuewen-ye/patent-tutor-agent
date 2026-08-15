@@ -5,13 +5,13 @@ Two strictly separated entry points:
 1. **First-round launch** (POST questionnaire → background teach session)
    ::
 
-       uv run python backend/tests/evaluation/eval_course_gen.py \\
+       uv run python backend/tests/evaluation/run_course_gen.py \\
            --round first --profile B [--base-url ...] [--artifact-dir ...]
 
 2. **Subsequent round launch** (POST /sessions mode=teach → Planner reuses active plan)
    ::
 
-       uv run python backend/tests/evaluation/eval_course_gen.py \\
+       uv run python backend/tests/evaluation/run_course_gen.py \\
            --round subsequent --profile B [--base-url ...] [--artifact-dir ...]
 
 The library functions :func:`run_first_round` and :func:`run_subsequent_round`
@@ -30,7 +30,7 @@ from pathlib import Path
 
 _THIS_DIR = Path(__file__).resolve().parent
 # Now lives under evaluation/program/.  Inject program first so bare
-# `import eval_common` resolves to the real implementation inside program/
+# `import _common` resolves to the real implementation inside program/
 # even after the root-level forwarders are removed.
 _EVAL_DIR = _THIS_DIR.parent
 for _p in (_THIS_DIR, _EVAL_DIR):
@@ -38,7 +38,7 @@ for _p in (_THIS_DIR, _EVAL_DIR):
     if _ps not in sys.path:
         sys.path.insert(0, _ps)
 
-import eval_common as common  # noqa: E402
+import _common as common  # noqa: E402
 
 
 @dataclass

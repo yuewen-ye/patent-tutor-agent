@@ -58,7 +58,7 @@ for _p in (_THIS_DIR, _EVAL_DIR, _PROJECT_ROOT):
     if _ps not in sys.path:
         sys.path.insert(0, _ps)
 
-import eval_common as common  # noqa: E402
+import _common as common  # noqa: E402
 
 _SYS_ARTIFACTS_DIR = common.SYS_ARTIFACTS_DIR
 _EVAL_ARTIFACTS_DIR = common.EVAL_ARTIFACTS_DIR
@@ -251,6 +251,38 @@ def _load_node_name_map() -> dict[str, str]:
     except (json.JSONDecodeError, OSError, KeyError):
         return {}
 
+def _load_node_id_by_name() -> dict[str, str]:
+    """加载 node_name -> node_id 反向映射（用于中文节点名查找）。"""
+    if not _KNOWLEDGE_DAG.exists():
+        return {}
+    try:
+        data = json.loads(_KNOWLEDGE_DAG.read_text(encoding="utf-8"))
+        result: dict[str, str] = {}
+        for n in data.get("nodes", []):
+            nid = n.get("node_id", "")
+            name = n.get("node_name", "")
+            if nid and name:
+                result[name] = nid
+            for sub in n.get("knowledge_sub_nodes", []):
+                if sub:
+                    result[sub] = sub
+        return result
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+def _resolve_to_node_id(raw: str, name_to_id: dict[str, str]) -> str:
+    """将任意输入（node_id 或中文显示名）解析为 node_id。"""
+    if not raw:
+        return ""
+    if raw in name_to_id:
+        return name_to_id[raw]
+    if raw in name_to_id.values():
+        return raw
+    for name, nid in name_to_id.items():
+        if name in raw or raw in name:
+            return nid
+    return raw
+
 def _load_knowledge_dag() -> dict[str, Any]:
     if not _KNOWLEDGE_DAG.exists():
         return {"nodes": []}
@@ -408,12 +440,19 @@ def calc_coverage_section(
     if not expected_nodes:
         return MetricResult(name="本节知识点覆盖率", value=0.0, unit="%", detail={"note": "无预期知识点"})
 
+    name_to_id = _load_node_id_by_name()
     expected_ids: set[str] = set()
+    raw_expected: list[str] = []
     for n in expected_nodes:
         if isinstance(n, str):
-            expected_ids.add(n)
+            resolved = _resolve_to_node_id(n, name_to_id)
+            expected_ids.add(resolved)
+            raw_expected.append(n)
         elif isinstance(n, dict):
-            expected_ids.add(n.get("node_id", ""))
+            nid = n.get("node_id", "")
+            if nid:
+                expected_ids.add(nid)
+                raw_expected.append(nid)
     if not expected_ids:
         return MetricResult(name="本节知识点覆盖率", value=0.0, unit="%", detail={"note": "无预期知识点"})
     covered = expanded_nodes & expected_ids
@@ -422,6 +461,7 @@ def calc_coverage_section(
         name="本节知识点覆盖率", value=rate, unit="%",
         detail={
             "预期节点数": len(expected_ids),
+            "预期节点": raw_expected,
             "覆盖节点数": len(covered),
             "覆盖节点": [node_name_map.get(nid, nid) for nid in covered],
             "本轮覆盖": len(course_node_ids),
@@ -438,17 +478,25 @@ def calc_coverage_weakness(course_text: str, expected_content: dict[str, Any]) -
     if not expected_weakpoints:
         return MetricResult(name="薄弱点命中率", value=0.0, unit="%", detail={"note": "无薄弱点"})
 
+    name_to_id = _load_node_id_by_name()
     expected_wp_ids: set[str] = set()
+    raw_expected: list[str] = []
     for w in expected_weakpoints:
         if isinstance(w, str):
-            expected_wp_ids.add(w)
+            resolved = _resolve_to_node_id(w, name_to_id)
+            expected_wp_ids.add(resolved)
+            raw_expected.append(w)
         elif isinstance(w, dict):
-            expected_wp_ids.add(w.get("node_id", ""))
+            nid = w.get("node_id", "")
+            if nid:
+                expected_wp_ids.add(nid)
+                raw_expected.append(nid)
     hit = course_kp_ids & expected_wp_ids
     rate = round(len(hit) / len(expected_wp_ids) * 100, 2) if expected_wp_ids else 0.0
     return MetricResult(
         name="薄弱点命中率", value=rate, unit="%",
-        detail={"预期薄弱点数": len(expected_wp_ids), "命中数": len(hit), "命中节点": list(hit)}
+        detail={"预期薄弱点数": len(expected_wp_ids), "预期薄弱点": raw_expected,
+                "命中数": len(hit), "命中节点": list(hit)}
     )
 
 def calc_coverage_confusable(course_text: str, expected_content: dict[str, Any], node_name_map: dict[str, str]) -> MetricResult:
@@ -465,12 +513,14 @@ def calc_coverage_confusable(course_text: str, expected_content: dict[str, Any],
     total_pairs = len(confusable_pairs)
     covered_pairs = 0
     pair_details = []
+    name_to_id = _load_node_id_by_name()
     for pair in confusable_pairs:
         if isinstance(pair, list) and len(pair) >= 2:
-            node_a, node_b = str(pair[0]), str(pair[1])
+            node_a = _resolve_to_node_id(str(pair[0]), name_to_id)
+            node_b = _resolve_to_node_id(str(pair[1]), name_to_id)
         elif isinstance(pair, dict):
-            node_a = pair.get("node_a", "")
-            node_b = pair.get("node_b", "")
+            node_a = _resolve_to_node_id(pair.get("node_a", ""), name_to_id)
+            node_b = _resolve_to_node_id(pair.get("node_b", ""), name_to_id)
         else:
             continue
         a_covered = node_a in expanded
@@ -544,24 +594,59 @@ def scan_pii_leaks(round_dir: Path, profile_letter: str, round_num: int) -> Metr
         detail={"泄露文件数": len(files_to_scan), "泄露详情": leak_details[:20]}
     )
 
+def _extract_bkt_pl_map(text: str) -> dict[str, float]:
+    """从 learner_profile_update.md 中提取 knowledge 维度的 node_id → pl 映射。"""
+    pl_map: dict[str, float] = {}
+
+    json_text: str | None = None
+    m = re.search(r"## five_dimensions\s*```json\s*(\{.*?\})\s*```", text, re.DOTALL)
+    if m:
+        json_text = m.group(1)
+    else:
+        m2 = re.search(r"```json\s*(\{.*?\})\s*```", text, re.DOTALL)
+        if m2:
+            json_text = m2.group(1)
+        else:
+            stripped = text.strip()
+            if stripped.startswith("{"):
+                json_text = stripped
+
+    if not json_text:
+        return pl_map
+
+    try:
+        data = json.loads(json_text)
+    except (json.JSONDecodeError, TypeError):
+        return pl_map
+
+    knowledge = data.get("knowledge", data)
+    if isinstance(knowledge, dict):
+        for node_id, node_data in knowledge.items():
+            if isinstance(node_data, dict) and "pl" in node_data:
+                try:
+                    pl_map[node_id] = float(node_data["pl"])
+                except (ValueError, TypeError):
+                    pass
+
+    return pl_map
+
+
 def calc_bkt_advancement(prev_text: str | None, curr_text: str | None, course_text: str) -> MetricResult:
     """M11 动态迭代触发率。"""
     if not prev_text or not curr_text:
         return MetricResult(name="动态迭代触发率", value=0.0, unit="%", detail={"note": "缺少前后轮 profile_update"})
 
-    prev_pls: dict[str, float] = {}
-    curr_pls: dict[str, float] = {}
-    for text, target_dict in [(prev_text, prev_pls), (curr_text, curr_pls)]:
-        matches = re.findall(r'"([^"]+)":\s*([0-9.]+)', text)
-        for node_id, pl_str in matches:
-            try:
-                target_dict[node_id] = float(pl_str)
-            except ValueError:
-                pass
+    prev_pls = _extract_bkt_pl_map(prev_text)
+    curr_pls = _extract_bkt_pl_map(curr_text)
 
+    if not prev_pls and not curr_pls:
+        return MetricResult(name="动态迭代触发率", value=0.0, unit="%",
+                            detail={"note": "BKT 数据解析为空，无法比较"})
+
+    all_nodes = set(prev_pls.keys()) | set(curr_pls.keys())
     advanced_nodes: list[str] = []
     dropped_nodes: list[str] = []
-    for nid in set(prev_pls.keys()) | set(curr_pls.keys()):
+    for nid in all_nodes:
         prev_pl = prev_pls.get(nid, 0.0)
         curr_pl = curr_pls.get(nid, 0.0)
         if curr_pl - prev_pl >= 0.15 and curr_pl >= 0.30:
@@ -569,7 +654,7 @@ def calc_bkt_advancement(prev_text: str | None, curr_text: str | None, course_te
         elif prev_pl - curr_pl >= 0.15:
             dropped_nodes.append(nid)
 
-    total_nodes = len(set(prev_pls.keys()) | set(curr_pls.keys()))
+    total_nodes = len(all_nodes)
     rate = round(len(advanced_nodes) / total_nodes * 100, 2) if total_nodes else 0.0
     return MetricResult(
         name="动态迭代触发率", value=rate, unit="%",
@@ -587,7 +672,7 @@ def calc_bkt_advancement(prev_text: str | None, curr_text: str | None, course_te
 def load_m7_external_result(profile_letter: str, round_num: int) -> MetricResult | None:
     """加载 M7 资源形态外部 LLM 评估结果。"""
     llm_dir = _EVAL_DIR / "LLM" / "results"
-    pattern = f"m7_resource_morphology_*_{profile_letter}_{round_num:02d}.json"
+    pattern = f"resource_morphology_*_{profile_letter}_{round_num:02d}.json"
     matching = sorted(llm_dir.glob(pattern))
     if not matching:
         return None
@@ -595,16 +680,19 @@ def load_m7_external_result(profile_letter: str, round_num: int) -> MetricResult
         data = json.loads(matching[0].read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return None
-    overall = data.get("overall_score", data.get("morphology_score", 0))
+    raw = data.get("raw_llm_response", {})
+    overall = raw.get("overall_score", data.get("overall_score", 0))
     return MetricResult(
         name="资源形态评估", value=float(overall), unit="%",
-        detail={"评估方式": "外部 LLM", "原始文件": matching[0].name}
+        detail={"评估方式": "外部 LLM", "原始文件": matching[0].name,
+                "覆盖分": raw.get("coverage_score", 0),
+                "适配分": raw.get("fit_score", 0)}
     )
 
 def load_m8_external_result(profile_letter: str, round_num: int) -> MetricResult | None:
     """加载 M8 异议闭环率外部 LLM 评估结果。"""
     llm_dir = _EVAL_DIR / "LLM" / "results"
-    pattern = f"m8_objection_loop_*_{profile_letter}_{round_num:02d}.json"
+    pattern = f"objection_loop_*_{profile_letter}_{round_num:02d}.json"
     matching = sorted(llm_dir.glob(pattern))
     if not matching:
         return None
@@ -612,9 +700,15 @@ def load_m8_external_result(profile_letter: str, round_num: int) -> MetricResult
         data = json.loads(matching[0].read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return None
+    raw = data.get("raw_llm_response", {})
+    total = raw.get("total_objections", 0)
+    closed = raw.get("closed_loop_count", 0)
+    rate = round(closed / total * 100, 2) if total > 0 else 0.0
     return MetricResult(
-        name="异议闭环率", value=float(data.get("closure_rate", 0)), unit="%",
-        detail={"评估方式": "外部 LLM", "原始文件": matching[0].name, "详情": data.get("details", {})}
+        name="异议闭环率", value=rate, unit="%",
+        detail={"评估方式": "外部 LLM", "原始文件": matching[0].name,
+                "总异议数": total, "闭环数": closed,
+                "整体评分": raw.get("overall_score", 0)}
     )
 
 def load_m1_m9_external_result(profile_letter: str, round_num: int) -> tuple[MetricResult | None, MetricResult | None]:
@@ -792,9 +886,22 @@ def calc_m17(data: dict[str, Any] | None, profile_letter: str, round_num: int) -
             _placeholder_metric("M17-a 检索准确率", "m17"),
             _placeholder_metric("M17-b 检索完整率", "m17"),
         ]
+    total = data.get("total_chunks", 0)
+    accurate = data.get("accurate", 0)
+    complete = data.get("complete", 0)
+    accurate_rate = data.get("accurate_rate", 0.0)
+    complete_rate = data.get("complete_rate", 0.0)
+
+    if (accurate == 0 and complete == 0 and total > 0):
+        evaluations = data.get("evaluations", [])
+        accurate = sum(1 for e in evaluations if e.get("accuracy_verdict") == "accurate")
+        complete = sum(1 for e in evaluations if e.get("completeness_verdict") == "complete")
+        accurate_rate = round(accurate / total * 100, 2) if total else 0.0
+        complete_rate = round(complete / total * 100, 2) if total else 0.0
+
     return [
-        MetricResult(name="M17-a 检索准确率", value=data.get("accurate_rate", 0.0), unit="%", detail={"computed": True, "chunk数": data.get("total_chunks", 0), "准确数": data.get("accurate", 0)}),
-        MetricResult(name="M17-b 检索完整率", value=data.get("complete_rate", 0.0), unit="%", detail={"computed": True, "chunk数": data.get("total_chunks", 0), "完整数": data.get("complete", 0)}),
+        MetricResult(name="M17-a 检索准确率", value=accurate_rate, unit="%", detail={"computed": True, "chunk数": total, "准确数": accurate}),
+        MetricResult(name="M17-b 检索完整率", value=complete_rate, unit="%", detail={"computed": True, "chunk数": total, "完整数": complete}),
     ]
 
 def calculate_profile_level_metrics(profile_letter: str) -> list[MetricResult]:

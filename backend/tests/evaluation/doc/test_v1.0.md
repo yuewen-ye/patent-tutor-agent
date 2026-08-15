@@ -342,11 +342,11 @@ expected_{学员首字母}_03.json    # 第 3 轮的预设答案
 
 ```powershell
 # 单独跑课程生成
-& .venv/Scripts/python.exe backend/tests/evaluation/eval_course_gen.py --round first --profile B
-& .venv/Scripts/python.exe backend/tests/evaluation/eval_course_gen.py --round subsequent --profile B
+& .venv/Scripts/python.exe backend/tests/evaluation/program/run_course_gen.py --round first --profile B
+& .venv/Scripts/python.exe backend/tests/evaluation/program/run_course_gen.py --round subsequent --profile B
 
 # 单独跑学习模拟（答题灌输）
-& .venv/Scripts/python.exe backend/tests/evaluation/eval_learn_sim.py --profile B --correct 3
+& .venv/Scripts/python.exe backend/tests/evaluation/program/run_learning_sim.py --profile B --correct 3
 ```
 
 #### 3.2.2 控制文件 run_control.md

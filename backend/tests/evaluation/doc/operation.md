@@ -140,10 +140,10 @@ uv run python backend/main.py
 
 | 步骤 | 脚本动作 | 对应 API / 模块 |
 |------|---------|----------------|
-| 1 | 读取 `profile_B.json` 问卷数据 | `eval_course_gen.run_first_round()` |
+| 1 | 读取 `profile_B.json` 问卷数据 | `run_course_gen.run_first_round()` |
 | 2 | 提交问卷，启动 teach 会话 | `POST /learners/multi-B/questionnaire-responses` |
 | 3 | 轮询会话状态直到 completed | 每 5 秒 `GET /sessions/{session_id}` |
-| 4 | 保存首轮产物到 `artifacts/multi-B/round-01/` | `eval_common.save_round_artifacts()` |
+| 4 | 保存首轮产物到 `artifacts/multi-B/round-01/` | `_common.save_round_artifacts()` |
 
 ### 3.4 子菜单 2：运行系统（多轮自动循环）
 
@@ -218,8 +218,8 @@ backend/tests/evaluation/artifacts/
 
 | 文件名 | 来源 | 用途 |
 |--------|------|------|
-| `adversarial_answers_system.json` | `eval_live_qa.py` 生成 | 包含 22 道对抗题的系统回答，供 M15 评估使用 |
-| `boundary_answers_system.json` | `eval_live_qa.py` 生成 | 包含 18 道边界题的系统回答，供 M16 评估使用 |
+| `adversarial_answers_system.json` | `prepare_probe.py` 生成 | 包含 22 道对抗题的系统回答，供 M15 评估使用 |
+| `boundary_answers_system.json` | `prepare_probe.py` 生成 | 包含 18 道边界题的系统回答，供 M16 评估使用 |
 
 ---
 
@@ -330,10 +330,10 @@ backend/tests/evaluation/artifacts/
 
 ```powershell
 # 对单个画像
-uv run python backend/tests/evaluation/program/extract_m14_factpoints.py --profile B
+uv run python backend/tests/evaluation/program/prepare_m14.py --profile B
 
 # 对所有画像
-uv run python backend/tests/evaluation/program/extract_m14_factpoints.py
+uv run python backend/tests/evaluation/program/prepare_m14.py
 ```
 
 该脚本遍历所有轮次结果，抽取与"权利要求新颖性"相关的事实点，输出到 `results/m14_factpoints/` 目录。
@@ -342,10 +342,10 @@ uv run python backend/tests/evaluation/program/extract_m14_factpoints.py
 
 ```powershell
 # 使用默认题库（22 道对抗题 + 18 道边界题）
-uv run python backend/tests/evaluation/program/eval_live_qa.py --direct
+uv run python backend/tests/evaluation/program/prepare_probe.py --direct
 
 # 或通过 HTTP 调用运行中的 FastAPI
-uv run python backend/tests/evaluation/program/eval_live_qa.py --base-url http://127.0.0.1:8000
+uv run python backend/tests/evaluation/program/prepare_probe.py --base-url http://127.0.0.1:8000
 ```
 
 该脚本将题库中的题目发送给系统，获取真实回答并保存为 JSON 文件，供后续 LLM 评估使用。
@@ -361,12 +361,12 @@ uv run python backend/tests/evaluation/program/eval_live_qa.py --base-url http:/
     2. M1/M9/M9-b/M1.1~M1.3 陈述级评估
     3. M7 资源形态评估
     4. M8 异议闭环率评估
-    5. M14 跨轮自洽率（需先运行 extract_m14_factpoints）
-    6. M15 对抗稳健率（系统级）
-    7. M16 边界拒答恰当率（系统级）
+    5. M14 跨轮自洽率（前置 prepare_m14 自动执行）
+    6. M15 对抗稳健率（系统级，前置 prepare_probe 自动执行）
+    7. M16 边界拒答恰当率（系统级，前置 prepare_probe 自动执行）
     8. M17 检索正确性
-    9. 一键运行 M15/M16 系统级探针（调用 eval_live_qa.py）
-    all. 全部执行（按顺序 1→8，跳过 9）
+    9. 仅执行前置数据准备（prepare_m14 + prepare_probe，不做 LLM 评估）
+    all. 全部执行（按顺序 1→8，前置准备自动触发）
 → 选择模式编号（默认 1）:
 ```
 
@@ -382,7 +382,7 @@ uv run python backend/tests/evaluation/program/eval_live_qa.py --base-url http:/
 | `6` (m15) | M15 对抗稳健率 | `m15_adversarial_{model}_system.json` | **系统级仅一次** |
 | `7` (m16) | M16 边界拒答恰当率 | `m16_boundary_{model}_system.json` | **系统级仅一次** |
 | `8` (m17) | M17 检索正确性 | `m17_retrieval_{model}_{profile}_{round:02d}.json` | 画像 × 轮次 |
-| `9` (probe) | 运行系统级探针 | `adversarial_answers_system.json` / `boundary_answers_system.json` | 单次调用 `eval_live_qa.py` |
+| `9` (probe) | 仅执行前置数据准备 | `adversarial_answers_system.json` / `boundary_answers_system.json` / `m14_factpoints_*.json` | 单次调用 `prepare_m14.py` + `prepare_probe.py` |
 | `all` | 全部 1~8 顺序执行 | 上述所有文件 | 按上述规则 |
 
 ### 8.4 独立运行方式
@@ -448,11 +448,11 @@ uv run python backend/tests/evaluation/LLM/evaluator_LLM.py evaluate --mode m17 
 
 （8）编写第 2、3 轮预设答案（expected_{X}_02.json、expected_{X}_03.json）
 
-（9）【可选】抽取 M14 事实点
-   └─ uv run python .../extract_m14_factpoints.py
+（9）【可选/自动】抽取 M14 事实点
+   └─ 选择模式 5 或 all 时自动触发，也可独立运行 `prepare_m14.py`
 
-（10）【可选】运行 M15/M16 系统级探针
-   └─ 主菜单 5 → 选择模式 9（或独立运行 eval_live_qa.py）
+（10）【可选/自动】运行 M15/M16 系统级探针
+   └─ 选择模式 6、7 或 all 时自动触发，也可独立运行 `prepare_probe.py`
 
 （11）运行外部 LLM 评估
    └─ 主菜单 5 → 选择评估模式（建议 all 全部运行）
@@ -470,14 +470,14 @@ uv run python backend/tests/evaluation/LLM/evaluator_LLM.py evaluate --mode m17 
 
 | 模块 | 入口（主菜单） | 核心功能 | 调用的底层模块 |
 |------|---------------|---------|---------------|
-| 运行系统 | 4 | 初始化画像（首轮课程生成） | `eval_course_gen.run_first_round()` |
-| 运行系统 | 4 → 子菜单 1 | 后续轮课程生成（复用计划） | `eval_course_gen.run_subsequent_round()` |
-| 运行系统 | 4 → 子菜单 2 | 灌输全对答案（多轮循环第一步） | `eval_learn_sim.infuse_learning_results()` |
-| 删除数据 | 1 | 清理文件 + MySQL 运行痕迹 | `eval_common.delete_run_results()` |
+| 运行系统 | 4 | 初始化画像（首轮课程生成） | `run_course_gen.run_first_round()` |
+| 运行系统 | 4 → 子菜单 1 | 后续轮课程生成（复用计划） | `run_course_gen.run_subsequent_round()` |
+| 运行系统 | 4 → 子菜单 2 | 灌输全对答案（多轮循环第一步） | `run_learning_sim.infuse_learning_results()` |
+| 删除数据 | 1 | 清理文件 + MySQL 运行痕迹 | `_common.delete_run_results()` |
 | 计算指标 | 2 | 所有指标逐轮计算 + 多轮平均 | `calculate.calculate_round()` |
 | 生成报告 | 3 | 跨画像跨轮次汇总报告 | `report.generate_full_report()` |
 | 外部 LLM 评估 | 5 | M1~M17 全指标补充评估 | `evaluator_LLM.evaluate_*()` |
-| 事实点抽取 | 5 → 模式 9 前置 | M14 前置：跨轮事实点抽取 | `extract_m14_factpoints.main()` |
-| 系统级探针 | 5 → 模式 9 | M15/M16 前置：真实问答探针 | `eval_live_qa.run_probe()` |
+| 事实点抽取 | 5 → 模式 5/all 自动 | M14 前置：跨轮事实点抽取 | `prepare_m14.main()` |
+| 系统级探针 | 5 → 模式 6/7/all 自动 | M15/M16 前置：真实问答探针 | `prepare_probe.main()` |
 
 所有底层模块均位于 `backend/tests/evaluation/program/` 和 `backend/tests/evaluation/LLM/` 目录下，可单独调用（非交互模式）供自动化测试脚本集成。

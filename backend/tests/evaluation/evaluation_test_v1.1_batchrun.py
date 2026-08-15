@@ -32,9 +32,9 @@ for _p in (_EVAL_DIR, _PROGRAM_DIR):
     if _ps not in sys.path:
         sys.path.insert(0, _ps)
 
-import program.eval_common as common  # noqa: E402
-import program.eval_course_gen as course_gen  # noqa: E402
-import program.eval_learn_sim as learn_sim  # noqa: E402
+import program._common as common  # noqa: E402
+import program.run_course_gen as course_gen  # noqa: E402
+import program.run_learning_sim as learn_sim  # noqa: E402
 
 
 # ── helpers ─────────────────────────────────────────────────────────────────

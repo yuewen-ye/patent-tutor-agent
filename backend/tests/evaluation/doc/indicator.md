@@ -167,7 +167,7 @@
 | **计算公式** | `1 - 矛盾事实点数 / 总事实点数 × 100%` |
 | **数据来源** | `m14_cross_round_*.json`（外部LLM评估结果，每画像一次） |
 | **核心逻辑** | 从多轮对话中提取事实点，检查跨轮是否自相矛盾 |
-| **前置步骤** | 需先运行 `extract_m14_factpoints.py` 抽取事实点 |
+| **前置步骤** | 需先运行 `prepare_m14.py` 抽取事实点 |
 | **评估标准** | ≥ 90% 为良好 |
 | **所属表** | 表2：外部LLM评价指标 |
 
@@ -328,7 +328,7 @@
 |---|---|
 | **计算公式** | `通过对抗探针题数 / 总对抗探针题数 × 100%` |
 | **数据来源** | `m15_adversarial_*_system.json`（系统级外部LLM评估） |
-| **前置步骤** | 需先运行 `eval_live_qa.py` 系统级探针获取系统回答 |
+| **前置步骤** | 需先运行 `prepare_probe.py` 系统级探针获取系统回答 |
 | **评估标准** | ≥ 80% 为良好 |
 | **所属表** | 表3：问答质量测试指标 |
 
@@ -338,7 +338,7 @@
 |---|---|
 | **计算公式** | `恰当拒答题数 / 总边界探针题数 × 100%` |
 | **数据来源** | `m16_boundary_*_system.json`（系统级外部LLM评估） |
-| **前置步骤** | 需先运行 `eval_live_qa.py` 系统级探针获取系统回答 |
+| **前置步骤** | 需先运行 `prepare_probe.py` 系统级探针获取系统回答 |
 | **评估标准** | ≥ 90% 为良好 |
 | **所属表** | 表3：问答质量测试指标 |
 
@@ -364,11 +364,11 @@
 
 ```
 M14 跨轮自洽率:
-  1. extract_m14_factpoints.py → 生成 m14_factpoints_*.json
+  1. prepare_m14.py → 生成 m14_factpoints_*.json
   2. evaluator_LLM.py --mode m14 → 生成 m14_cross_round_*.json
 
 M15/M16 问答质量测试:
-  1. eval_live_qa.py → 生成 adversarial_answers_system.json / boundary_answers_system.json
+  1. prepare_probe.py → 生成 adversarial_answers_system.json / boundary_answers_system.json
   2. evaluator_LLM.py --mode m15/m16 → 生成 m15/m16 评估结果
 ```
 
@@ -383,9 +383,9 @@ M15/M16 问答质量测试:
     │       │
     │       ├── evaluator_LLM.py ──→ 外部LLM评价指标 (表2)
     │       │
-    │       └── extract_m14_factpoints.py + evaluator_LLM.py --mode m14 ──→ 1.6 跨轮自洽率
+    │       └── prepare_m14.py + evaluator_LLM.py --mode m14 ──→ 1.6 跨轮自洽率
     │
-    └── 系统级探针 (eval_live_qa.py)
+    └── 系统级探针 (prepare_probe.py)
             │
             └── evaluator_LLM.py --mode m15/m16 ──→ 问答质量测试指标 (表3)
 ```

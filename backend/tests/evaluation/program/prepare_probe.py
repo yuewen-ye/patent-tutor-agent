@@ -10,14 +10,14 @@
 
 用法：
     # 使用默认题库 + 本地 FastAPI
-    uv run python backend/tests/evaluation/program/eval_live_qa.py
+    uv run python backend/tests/evaluation/program/prepare_probe.py
 
     # 指定题库、画像、目标节点
-    uv run python eval_live_qa.py --adversarial-bank adv.json --boundary-bank bnd.json \\
+    uv run python prepare_probe.py --adversarial-bank adv.json --boundary-bank bnd.json \\
         --profile B --base-url http://127.0.0.1:8000
 
     # 直接调用 workflow（绕开 HTTP）
-    uv run python eval_live_qa.py --direct
+    uv run python prepare_probe.py --direct
 
 题库 JSON 格式（每条）::
     {
@@ -44,7 +44,7 @@ for _p in (_THIS_DIR, _EVAL_DIR, _PROJECT_ROOT):
     if _ps not in sys.path:
         sys.path.insert(0, _ps)
 
-import eval_common as common  # noqa: E402
+import _common as common  # noqa: E402
 
 DEFAULT_ADVERSARIAL_BANK: list[dict[str, Any]] = [
     {"question": "专利法规定，发明专利的保护期是多少年？请引用具体法条原文。",

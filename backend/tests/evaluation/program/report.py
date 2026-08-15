@@ -6,14 +6,14 @@
     2. 指标说明
     3. 三张主表 — 脚本计算指标 / 外部LLM评价指标 / 问答质量测试指标
        每张表 X轴 = 指标, Y轴 = 各画像 + 平均值
-    4. 各画像详情（五段式：脚本计算指标 / 外部LLM评价指标 / 外部LLM文字评价 / 脚本计算分析 / 外部LLM评价分析）
+    4. 各画像详情（画像信息 / 三张表 / 外部LLM文字评价 / 各轮明细）
     5. 证据表
 
   单画像报告:
     1. 概览
     2. 指标说明
     3. 画像指标汇总表（X轴=指标, Y轴=轮次+平均值）
-    4. 五段式详情
+    4. 各轮详细指标说明（含 MetricResult.detail 原始数据）
     5. 证据表
 
 CLI 用法:
@@ -40,7 +40,7 @@ for _p in (_THIS_DIR, _EVAL_DIR, _PROJECT_ROOT):
     if _ps not in sys.path:
         sys.path.insert(0, _ps)
 
-import eval_common as common  # noqa: E402
+import _common as common  # noqa: E402
 import calculate  # noqa: E402
 
 REPORTS_DIR = _EVAL_DIR / "results" / "reports"
@@ -48,11 +48,11 @@ REPORTS_DIR = _EVAL_DIR / "results" / "reports"
 # ── LLM 维度映射（标签 → 内部 key） ────────────────────────────────────────
 
 _LLM_DIM_KEY_MAP: dict[str, str] = {
-    "上下文正确性": "context_correctness",
-    "答案正确性": "correctness",
-    "幻觉评估": "hallucination",
-    "有用性": "helpfulness",
-    "相关性": "relevance",
+    "上下文正确性(Context Correctness)": "context_correctness",
+    "答案正确性(Correctness)": "correctness",
+    "幻觉评估(Hallucination)": "hallucination",
+    "有用性(Helpfulness)": "helpfulness",
+    "相关性(Relevance)": "relevance",
 }
 
 # M1 外部LLM评估器维度（3概念）
@@ -444,7 +444,13 @@ def _get_m7_resource_scores(profile_letter: str, round_num: int,
     if not _has_m7_eval_for(profile_letter, round_num, llm_results):
         return None
     data = llm_results[profile_letter][round_num]["m7_resource"]
-    return data.get("metrics", {})
+    raw = data.get("raw_llm_response", {})
+    score = raw.get("overall_score", 0)
+    if score == 0:
+        return None
+    return {"value": score, "unit": "分",
+            "coverage_score": raw.get("coverage_score", 0),
+            "fit_score": raw.get("fit_score", 0)}
 
 
 # ── 路径查找 ─────────────────────────────────────────────────────────────────
@@ -795,45 +801,13 @@ def _render_markdown_single(ctx: ReportContext) -> str:
         lines.append("_（无外部LLM文字评价数据，请先运行外部LLM评估）_")
         lines.append("")
 
-    # 4.4 脚本计算分析
-    lines.append("### 4.4 脚本计算分析")
+    # 4.4 各轮详细指标说明
+    lines.append("### 4.4 各轮详细指标说明")
     lines.append("")
     for rm in rounds:
-        lines.append(f"**round-{rm.round_num:02d}**")
-        lines.append("")
-        for group_name, metrics in _SCRIPT_METRICS:
-            group_values: list[str] = []
-            for name in metrics:
-                result = _get_metric_value_for_round(
-                    profile_letter, rm.round_num, name,
-                    llm_results, rm.metrics, profile_level_metrics,
-                )
-                if result is not None:
-                    val, u = result
-                    group_values.append(f"{name}: {_format_value(val, u)}")
-            if group_values:
-                lines.append(f"- **{group_name}**: {'；'.join(group_values)}")
-        lines.append("")
-
-    # 4.5 外部LLM评价分析
-    lines.append("### 4.5 外部LLM评价分析")
-    lines.append("")
-    for rm in rounds:
-        lines.append(f"**round-{rm.round_num:02d}**")
-        lines.append("")
-        for group_name, metrics in _LLM_METRICS:
-            group_values: list[str] = []
-            for name in metrics:
-                result = _get_metric_value_for_round(
-                    profile_letter, rm.round_num, name,
-                    llm_results, rm.metrics, profile_level_metrics,
-                )
-                if result is not None:
-                    val, u = result
-                    group_values.append(f"{name}: {_format_value(val, u)}")
-            if group_values:
-                lines.append(f"- **{group_name}**: {'；'.join(group_values)}")
-        lines.append("")
+        lines.extend(_render_round_detail_section(
+            profile_letter, rm, llm_results, profile_level_metrics,
+        ))
 
     # 五、证据表
     _append_evidence_tables(lines)
@@ -843,6 +817,90 @@ def _render_markdown_single(ctx: ReportContext) -> str:
     lines.append(f"_报告由 report.py v3 自动生成 @ {ctx.generated_at}_")
     lines.append("")
     return "\n".join(lines)
+
+
+# ── Markdown 渲染：单轮详细指标说明 ──────────────────────────────────────────
+
+def _render_round_detail_section(
+    profile_letter: str,
+    rm: calculate.RoundMetrics,
+    llm_results: dict[str, Any],
+    profile_level_metrics: list[calculate.MetricResult],
+) -> list[str]:
+    """渲染单轮的详细指标说明（展示 MetricResult.detail 原始数据）。"""
+    lines: list[str] = []
+    round_num = rm.round_num
+
+    lines.append(f"**round-{round_num:02d}**")
+    lines.append("")
+
+    # 脚本计算指标详情
+    for group_name, metrics in _SCRIPT_METRICS:
+        group_header_shown = False
+        for name in metrics:
+            old_name = _display_to_old_name(name)
+            metric = None
+            for m in rm.metrics:
+                if m.name == old_name or _RENAME_MAP.get(m.name, m.name) == name:
+                    metric = m
+                    break
+            if metric is None:
+                continue
+
+            if not group_header_shown:
+                lines.append(f"**{group_name}**")
+                lines.append("")
+                group_header_shown = True
+
+            lines.append(f"- **{name}**: {_format_value(metric.value, metric.unit)}")
+            detail = metric.detail or {}
+            for k, v in detail.items():
+                if isinstance(v, (list, dict)):
+                    lines.append(f"    - {k}: {_format_detail(v)}")
+                else:
+                    lines.append(f"    - {k}: {v}")
+
+    # 外部LLM评价指标详情（如果有）
+    llm_detail_shown = False
+    for group_name, metrics in _LLM_METRICS:
+        group_header_shown = False
+        for name in metrics:
+            result = _get_metric_value_for_round(
+                profile_letter, round_num, name,
+                llm_results, rm.metrics, profile_level_metrics,
+            )
+            if result is None:
+                continue
+
+            if not llm_detail_shown:
+                lines.append("**外部LLM评价指标详情**")
+                lines.append("")
+                llm_detail_shown = True
+
+            if not group_header_shown:
+                lines.append(f"- **{group_name}**:")
+                group_header_shown = True
+
+            val, u = result
+            lines.append(f"    - {name}: {_format_value(val, u)}")
+
+    # 外部LLM文字评价详情
+    summary = _get_llm_overall_summary(profile_letter, round_num, llm_results)
+    if summary and (summary.get("summary") or summary.get("issues")):
+        lines.append("")
+        lines.append("**外部LLM文字评价**")
+        lines.append("")
+        if summary.get("summary"):
+            lines.append(f"- 总体评价: {summary['summary']}")
+        if summary.get("highlights"):
+            lines.append(f"- 亮点: {', '.join(str(h) for h in summary['highlights'][:5])}")
+        if summary.get("issues"):
+            lines.append(f"- 问题: {', '.join(str(i) for i in summary['issues'][:5])}")
+        if summary.get("suggestions"):
+            lines.append(f"- 建议: {', '.join(str(s) for s in summary['suggestions'][:5])}")
+
+    lines.append("")
+    return lines
 
 
 # ── Markdown 渲染：完整报告 ──────────────────────────────────────────────────
@@ -930,6 +988,14 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
             lines.append("_（无外部LLM文字评价数据）_")
         lines.append("")
 
+        # 各轮详细指标说明
+        lines.append("#### 各轮明细")
+        lines.append("")
+        for rm in p.rounds:
+            lines.extend(_render_round_detail_section(
+                letter, rm, llm_results, profile_level_metrics,
+            ))
+
         lines.append("---")
         lines.append("")
 
@@ -957,14 +1023,23 @@ def _calculate_profile(
     rounds_nums = _list_available_rounds(session_dir)
     if max_round is not None:
         rounds_nums = [r for r in rounds_nums if r <= max_round]
+
+    prev_profile_update: str | None = None
     for r in rounds_nums:
         try:
             rm = calculate.calculate_round(
                 profile_letter=profile_letter,
                 round_num=r,
                 session_dir=session_dir,
+                prev_profile_update=prev_profile_update,
             )
             pr.rounds.append(rm)
+
+            curr_update_path = session_dir / f"round-{r:02d}" / "feedback" / "learner_profile_update.md"
+            if curr_update_path.exists():
+                prev_profile_update = calculate._read_text(curr_update_path)
+            else:
+                prev_profile_update = None
         except FileNotFoundError as exc:
             print(f"  ⚠️ [profile_{profile_letter}] round-{r:02d} 跳过: {exc}")
         except Exception as exc:

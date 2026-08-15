@@ -1732,7 +1732,7 @@ def _load_m14_factpoints(profile_id: str) -> list[dict[str, Any]] | None:
       1. 旧格式 JSONL：每行一个 JSON 对象，字段 ``fact_text``/``source_path``/``round_file``
          （同学版 extract_m14_factpoints 产物）
       2. 新格式 JSON：``{"factpoints": [...]}`` 字段 ``fact_point``/``round``/``topic``
-         （本仓库 extract_m14_factpoints 产物）
+         （本仓库 prepare_m14 产物）
     """
     eval_dir = _EVAL_DIR
     # 新格式（.json）候选
@@ -1794,7 +1794,7 @@ def evaluate_m14(
 ) -> dict[str, Any] | None:
     """执行 M14 跨轮自洽率评估。
 
-    输入：extract_m14_factpoints.py 生成的 m14_factpoints_{profile}.jsonl
+    输入：prepare_m14.py 生成的 m14_factpoints_{profile}.json
     输出：m14_cross_round_{model}_{profile}.json
     """
     llm_config = config.get("llm", {})
@@ -1811,7 +1811,7 @@ def evaluate_m14(
 
     factpoints = _load_m14_factpoints(profile_id)
     if not factpoints:
-        print(f"  ⚠️  未找到 m14_factpoints_{profile_id}.jsonl，请先运行 extract_m14_factpoints.py")
+        print(f"  ⚠️  未找到 m14_factpoints_{profile_id}.json，请先运行 prepare_m14.py")
         return None
 
     prompt_path = _THIS_DIR / "prompts" / "m1_cross_round_consistency.md"
@@ -1863,7 +1863,7 @@ def evaluate_m14(
 # ── M15 / M16 系统级探针评估（外部 LLM） ───────────────────────────────────────
 
 def _load_system_qa_answers(name: str) -> list[dict[str, Any]] | None:
-    """加载 eval_live_qa.py 生成的系统回答文件。"""
+    """加载 prepare_probe.py 生成的系统回答文件。"""
     candidates = [
         _EVAL_DIR / "results" / "raw" / name,
         _EVAL_DIR / name,
@@ -1950,7 +1950,7 @@ def evaluate_m15(config: dict[str, Any], force: bool = False) -> dict[str, Any] 
         return None
     answers = _load_system_qa_answers("adversarial_answers_system.json")
     if not answers:
-        print("  ⚠️  未找到 adversarial_answers_system.json，请先运行 eval_live_qa.py")
+        print("  ⚠️  未找到 adversarial_answers_system.json，请先运行 prepare_probe.py")
         return None
     prompt_path = _THIS_DIR / "prompts" / "m6_adversarial_robustness.md"
     return _evaluate_system_qa(
@@ -1975,7 +1975,7 @@ def evaluate_m16(config: dict[str, Any], force: bool = False) -> dict[str, Any] 
         return None
     answers = _load_system_qa_answers("boundary_answers_system.json")
     if not answers:
-        print("  ⚠️  未找到 boundary_answers_system.json，请先运行 eval_live_qa.py")
+        print("  ⚠️  未找到 boundary_answers_system.json，请先运行 prepare_probe.py")
         return None
     prompt_path = _THIS_DIR / "prompts" / "m6_boundary_refusal.md"
     return _evaluate_system_qa(
@@ -2047,8 +2047,8 @@ def evaluate_m17(
         })
 
     total = len(evals)
-    accurate = sum(1 for e in evals if e.get("accurate") is True)
-    complete = sum(1 for e in evals if e.get("complete") is True)
+    accurate = sum(1 for e in evals if e.get("accuracy_verdict") == "accurate")
+    complete = sum(1 for e in evals if e.get("completeness_verdict") == "complete")
     accurate_rate = round(accurate / total * 100, 2) if total else 0.0
     complete_rate = round(complete / total * 100, 2) if total else 0.0
 

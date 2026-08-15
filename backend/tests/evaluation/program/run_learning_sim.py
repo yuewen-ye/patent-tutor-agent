@@ -14,8 +14,8 @@
 
 两种调用方式：
     A. 函数调用：infuse_learning_results(profile_letter="B", correct_counts=[3])
-    B. CLI 独立运行：uv run python eval_learn_sim.py --profile B --correct 3
-    C. CLI 交互模式：uv run python eval_learn_sim.py --profile B（提示输入）
+    B. CLI 独立运行：uv run python run_learning_sim.py --profile B --correct 3
+    C. CLI 交互模式：uv run python run_learning_sim.py --profile B（提示输入）
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ for _p in (_THIS_DIR, _EVAL_DIR):
     if _ps not in sys.path:
         sys.path.insert(0, _ps)
 
-import eval_common as common  # noqa: E402
+import _common as common  # noqa: E402
 
 DEFAULT_SEPARATOR = "-"
 
