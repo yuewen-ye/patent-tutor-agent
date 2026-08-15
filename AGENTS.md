@@ -230,9 +230,10 @@ the selected window and must not add nodes outside it. Do not let an LLM bypass 
 the static confusion definitions. Production code must not read `docs/`; runtime assets belong to the
 backend domain package that owns their schema and behavior.
 
-`learning_paths` is a session-level audit snapshot. `learner_learning_plans` and
-`learner_learning_plan_nodes` are the cross-session source of truth for the full route and cursor;
-`session_directives` stores the per-session derived question/activity window.
+The full route and cursor live in `learner_learning_plans` and `learner_learning_plan_nodes`
+(cross-session source of truth). Per-session snapshots (path, activity window, `path_decision`)
+persist inside the session state JSON (`session_states`); the old `learning_paths` and
+`session_directives` tables were removed.
 
 ## Module Placement
 
