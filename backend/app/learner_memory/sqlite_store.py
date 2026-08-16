@@ -279,10 +279,12 @@ class SQLiteLearnerStore:
     ) -> list[dict[str, Any]]:
         """SQLite test-substitute for questionnaire BKT seeding.
 
-        Mirrors the MySQL path's math: graded Q1-Q21 answers are applied
-        sequentially through the same BKT step formula, then the deterministic
-        DAG inference pass propagates parent states. A per-session memory
-        marker makes re-seeding the same course session idempotent.
+        Questionnaire answers are **self-reported, not graded diagnostic
+        evidence**: they only seed a weak ``inferred`` prior (pl = p_init,
+        observations unchanged) instead of writing real BKT observations.
+        Only genuine exercise/diagnostic answers may advance ``observations``.
+        A per-session memory marker makes re-seeding the same course session
+        idempotent.
         """
 
         from backend.app.learner_memory.bkt.model import parameters_for_background
@@ -303,39 +305,28 @@ class SQLiteLearnerStore:
         results: list[dict[str, Any]] = []
         seeded_skills: list[str] = []
         with self._connect() as connection:
-            answered = self._answered_count_sqlite(connection, learner_id)
             for question_id, meta in mapping.items():
                 if question_id not in answers:
                     continue
                 kc_ids = [str(kc) for kc in meta["kc_ids"]]
                 if not kc_ids:
                     continue
-                answered += 1
-                observed = (
-                    str(meta["standard"]).strip().casefold()
-                    == str(answers[question_id]).strip().casefold()
-                )
-                effective_transit = (
-                    min(1.0, parameters.p_transit * 1.5)
-                    if answered <= 10
-                    else parameters.p_transit
-                )
+                # 问卷是自陈先验：不写真实观测，只把命中 KC 置为 inferred 弱先验（pl=p_init）
                 for kc in kc_ids:
-                    posterior = self.update_mastery(
+                    self._upsert_progress_sqlite(
+                        connection,
                         learner_id,
                         kc,
-                        observed_correct=observed,
-                        p_init=parameters.p_init,
-                        p_transit=effective_transit,
-                        p_guess=parameters.p_guess,
-                        p_slip=parameters.p_slip,
+                        pl=parameters.p_init,
+                        inferred=True,
+                        now=now,
                     )
                     results.append(
                         {
                             "skill_id": kc,
                             "question_id": question_id,
-                            "posterior_pl": posterior,
-                            "observed_correct": observed,
+                            "posterior_pl": parameters.p_init,
+                            "observed_correct": None,
                         }
                     )
                     seeded_skills.append(kc)
@@ -393,14 +384,6 @@ class SQLiteLearnerStore:
                 now,
             ),
         )
-
-    def _answered_count_sqlite(self, connection: sqlite3.Connection, learner_id: str) -> int:
-        row = connection.execute(
-            "SELECT COALESCE(SUM(observations), 0) AS total FROM skill_mastery "
-            "WHERE learner_id=?",
-            (learner_id,),
-        ).fetchone()
-        return int(row["total"]) if row else 0
 
     def _propagate_inference_sqlite(
         self,

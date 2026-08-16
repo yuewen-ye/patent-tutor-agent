@@ -372,6 +372,8 @@ def build_planner_node(llm_client: LLMClient) -> Node:
                 profile=profile,
                 learning_goal=learning_goal,
                 max_nodes=max(1, len(knowledge.get("nodes", []))),
+                # 传带 observations 的 BKT 快照，确保"已掌握"跳过闸门只信真实作答证据
+                mastery_snapshot=_knowledge_pl_map(profile),
             )
         ]
         deterministic_candidate = [
