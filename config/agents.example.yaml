@@ -5,18 +5,14 @@
 # and tune local provider endpoints, models, and per-agent settings there.
 #
 # ============================ 模型更新日志 ===============================
-# 2026.08 主力 provider 统一走 Krill 单端点 + 单 key：
+# 2026.08 主力 provider 统一走 GreatRouter 端点（https://endpoint.greatrouter.com）+ 单 key：
 #   - provider 全集与代码 LLMProvider 对齐：qwen / glm / gpt / luna / grok / yangmao / mistral / minimax / deepseek
-#   - qwen/glm/gpt/luna/grok 全部 base_url=https://api-slb.krill-ai.net/codex/v1，
-#     key 见 .env 的 QWEN_API_KEY / GLM_API_KEY / GPT_API_KEY / LUNA_API_KEY /
-#     GROK_API_KEY（5 个 *_API_KEY 均为同一 Krill key）
-#   - 可用模型：gpt-5.5 / gpt-5.6-luna / grok-4.5 / qwen3.7-plus / GLM-5.2
+#   - qwen/glm/gpt/luna/grok/mistral/minimax/deepseek 全部 base_url=https://endpoint.greatrouter.com，
+#     key 见 .env 的 *_API_KEY（均为同一 GreatRouter key）
+#   - 可用模型：gpt-5.5 / gpt-5.6-luna / grok-4.3 / qwen3.7-plus / GLM-5.2 / mistral-small-2503 / MiniMax-M2.5 / DeepSeek-V4-Flash
 #   - yangmao 保留原 DeepSeek Flash 通道（yangmao-main，独立 base_url/key），
 #     需要请求 DeepSeek 时通过 {AGENT}_PROVIDER=yangmao 或 agents.<agent>.provider 使用
 #   - 建议避免在输出内容较多的节点使用弱推理模型，防止网关超时
-# 2026.08 新增 GreatRouter 节点（https://endpoint.greatrouter.com）：
-#   - mistral / minimax / deepseek 统一走 GreatRouter 端点
-#   - key 见 .env 的 MISTRAL_API_KEY / MINIMAX_API_KEY / DEEPSEEK_API_KEY
 
 llm:
   default_provider: grok
@@ -26,23 +22,27 @@ llm:
 providers:
   qwen:
     model_name: qwen3.7-plus
-    base_url: https://api-slb.krill-ai.net/codex/v1
+    base_url: https://endpoint.greatrouter.com
     supports_strict_schema: false
   glm:
     model_name: GLM-5.2
-    base_url: https://api-slb.krill-ai.net/codex/v1
+    base_url: https://endpoint.greatrouter.com
     supports_strict_schema: false
   gpt:
     model_name: gpt-5.5
-    base_url: https://api-slb.krill-ai.net/codex/v1
+    base_url: https://endpoint.greatrouter.com
     supports_strict_schema: false
   luna:
     model_name: gpt-5.6-luna
-    base_url: https://api-slb.krill-ai.net/codex/v1
+    base_url: https://endpoint.greatrouter.com
     supports_strict_schema: false
   grok:
-    model_name: grok-4.5
-    base_url: https://api-slb.krill-ai.net/codex/v1
+    model_name: grok-4.3
+    base_url: https://endpoint.greatrouter.com
+    supports_strict_schema: false
+  terra:
+    model_name: gpt-5.6-terra
+    base_url: https://endpoint.greatrouter.com
     supports_strict_schema: false
   yangmao:
     model_name: yangmao-main
@@ -61,14 +61,13 @@ providers:
     base_url: https://endpoint.greatrouter.com
     supports_strict_schema: false
 
-# 推荐 Agent → provider 映射（对齐 llm.py 注释；可在本机 config/agents.yaml 调整）：
-#   全部节点默认 grok（planner 也走 grok，见 AGENT_PROVIDER_ENV 的 PLANNER_PROVIDER）
+# 推荐 Agent → provider 映射（按 GreatRouter 节点分配表）：
 agents:
   route:
-    provider: grok
+    provider: mistral
     temperature: 0.0
   diagnosis_feedback:
-    provider: grok
+    provider: deepseek
     temperature: 0.5
   expert_a:
     provider: grok
@@ -77,19 +76,21 @@ agents:
     integration_temperature: 0.3
     top_k: 5
   expert_b:
-    provider: grok
+    provider: deepseek
+    model_name: DeepSeek-V4-Pro
     temperature: 0.7
     tool_temperature: 0.3
     top_k: 5
   judge:
-    provider: grok
+    provider: gpt
+    model_name: gpt-5.6-luna
     temperature: 0.0
   chat_answer:
-    provider: grok
+    provider: minimax
     temperature: 0.3
     top_k: 5
   planner:
-    provider: grok
+    provider: deepseek
     temperature: 0.0
   slide_deck:
     provider: grok

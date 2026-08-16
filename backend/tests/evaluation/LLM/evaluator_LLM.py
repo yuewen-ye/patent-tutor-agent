@@ -103,9 +103,14 @@ def load_config() -> dict[str, Any]:
     provider = llm_config.get("provider", "deepseek")
     if not llm_config.get("base_url"):
         default_urls = {
-            "deepseek": "https://api.deepseek.com",
-            "qwen": "https://dashscope.aliyuncs.com",
-            "glm": "https://open.bigmodel.cn",
+            "deepseek": "https://endpoint.greatrouter.com",
+            "qwen": "https://endpoint.greatrouter.com",
+            "glm": "https://endpoint.greatrouter.com",
+            "gpt": "https://endpoint.greatrouter.com",
+            "luna": "https://endpoint.greatrouter.com",
+            "grok": "https://endpoint.greatrouter.com",
+            "mistral": "https://endpoint.greatrouter.com",
+            "minimax": "https://endpoint.greatrouter.com",
         }
         llm_config["base_url"] = default_urls.get(provider, "")
 
