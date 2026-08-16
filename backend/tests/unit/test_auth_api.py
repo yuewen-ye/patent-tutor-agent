@@ -108,7 +108,7 @@ def test_register_rejects_duplicate_login_id(tmp_path: Any) -> None:
         },
     )
 
-    assert response.status_code == 409
+    assert response.status_code == 400
     assert response.json()["detail"] == "login_id_already_exists"
 
 

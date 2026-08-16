@@ -120,6 +120,27 @@ class QueueLLMClient:
                 "rationale": "整合稿可以作为最终教学内容。",
             },
             {
+                "slides": [
+                    {
+                        "id": "slide_001",
+                        "order": 1,
+                        "type": "title",
+                        "title": "专利新颖性",
+                        "content": {"subtitle": "三性之一"},
+                        "narration": {"text": "今天我们来学习专利新颖性。"},
+                    },
+                    {
+                        "id": "slide_002",
+                        "order": 2,
+                        "type": "summary",
+                        "title": "小结",
+                        "content": {"takeaways": ["新颖性=与现有技术不同"]},
+                        "narration": {"text": "最后我们总结要点。"},
+                    },
+                ],
+                "slide_to_block_id": {},
+            },
+            {
                 "questionnaire": ["本节最容易混淆什么？"],
                 "next_action": "完成练习后复盘",
                 "profile_update_hint": "继续观察新颖性判断步骤",
@@ -286,7 +307,7 @@ def test_session_websocket_replays_agent_events_until_completion(
 
     event_nodes = [message["event"]["node"] for message in messages if message["type"] == "agent_event"]
     assert "diagnosis_feedback" in event_nodes
-    assert event_nodes[-1] == "judge"
+    assert event_nodes[-1] == "slide_deck"
     assert messages[-1]["status"] == "completed"
 
 

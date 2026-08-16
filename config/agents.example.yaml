@@ -76,3 +76,6 @@ agents:
   planner:
     provider: grok
     temperature: 0.0
+  slide_deck:
+    provider: grok
+    temperature: 0.3

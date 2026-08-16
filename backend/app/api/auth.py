@@ -52,6 +52,11 @@ def create_auth_router(session_service: SessionService) -> APIRouter:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail={"error": "authentication_failed", "reason": exc.reason},
             ) from exc
+        if result is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={"error": "authentication_failed", "reason": "invalid_credentials"},
+            )
         return AuthResponse.model_validate(result)
 
     return router

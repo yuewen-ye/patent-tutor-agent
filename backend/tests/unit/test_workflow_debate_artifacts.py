@@ -108,6 +108,29 @@ class DebateQueueLLMClient:
                     "rationale": "整合稿可以作为最终教学内容。",
                 },
             ],
+            "slide_deck": [
+                {
+                    "slides": [
+                        {
+                            "id": "slide_001",
+                            "order": 1,
+                            "type": "title",
+                            "title": "专利新颖性",
+                            "content": {"subtitle": "三性之一"},
+                            "narration": {"text": "今天我们来学习专利新颖性。"},
+                        },
+                        {
+                            "id": "slide_002",
+                            "order": 2,
+                            "type": "summary",
+                            "title": "小结",
+                            "content": {"takeaways": ["新颖性=与现有技术不同"]},
+                            "narration": {"text": "最后我们总结要点。"},
+                        },
+                    ],
+                    "slide_to_block_id": {},
+                },
+            ],
         }
 
     def generate_json(
@@ -157,7 +180,7 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     assert llm_client.tool_call_agents.count("expert_a") == 2
     assert llm_client.tool_call_agents.count("expert_b") == 1
     assert "tool_agent" not in agents
-    assert agents[-1] == "judge"
+    assert agents[-1] == "slide_deck"
     assert {
         "cross_review_a",
         "cross_review_b",
@@ -202,7 +225,7 @@ def test_workflow_revises_experts_until_judge_accepts_and_writes_artifacts(
     assert completed_log_nodes[:3] == ["route", "diagnosis_feedback", "planner"]
     assert completed_log_nodes.count("expert_a") == 4
     assert completed_log_nodes.count("expert_b") == 3
-    assert completed_log_nodes[-2:] == ["expert_a", "judge"]
+    assert completed_log_nodes[-2:] == ["judge", "slide_deck"]
     assert all(record["session_id"] == "demo-session" for record in workflow_log)
     assert all(
         isinstance(record["duration_ms"], int)

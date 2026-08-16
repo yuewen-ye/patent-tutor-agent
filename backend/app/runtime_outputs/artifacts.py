@@ -26,6 +26,7 @@ ArtifactKind = Literal[
     "cross_review",
     "expert_revision",
     "course_package",
+    "course_slides",
     "dual_axis_snapshot",
     "questionnaire",
     "questionnaire_submission",
@@ -49,6 +50,7 @@ _CREATED_BY = {
     "expert_b_revision": "expert_b",
     "learner_profile_update": "diagnosis_feedback",
     "course_package": "expert_a",
+    "course_slides": "slide_deck",
     "grading_report": "diagnosis_feedback",
 }
 _KIND_BY_FIELD: dict[str, ArtifactKind] = {
@@ -68,6 +70,7 @@ _KIND_BY_FIELD: dict[str, ArtifactKind] = {
     "expert_b_revision": "expert_revision",
     "learner_profile_update": "feedback_report",
     "course_package": "course_package",
+    "course_slides": "course_slides",
     "grading_report": "feedback_report",
 }
 _TITLE_BY_FIELD = {
@@ -87,6 +90,7 @@ _TITLE_BY_FIELD = {
     "expert_b_revision": "专家 B 修订稿",
     "learner_profile_update": "学情画像更新",
     "course_package": "整合后的课程完整内容与习题",
+    "course_slides": "结构化课件（PPT 分页 + 讲稿）",
     "grading_report": "练习评分报告",
 }
 _FILE_BY_FIELD = {
@@ -106,6 +110,7 @@ _FILE_BY_FIELD = {
     "expert_b_revision": "expert_b_revision.md",
     "learner_profile_update": "learner_profile_update.md",
     "course_package": "course_package.md",
+    "course_slides": "course_slides.md",
     "grading_report": "grading_report.md",
 }
 _ROUND_FIELDS = {
@@ -190,6 +195,8 @@ def _markdown_for(field: str, value: object) -> str:
         return _grading_markdown(title, value)
     if field == "course_package" and isinstance(value, dict):
         return _course_package_markdown(title, value)
+    if field == "course_slides" and isinstance(value, dict):
+        return _course_slides_markdown(title, value)
     if field in {"expert_a_draft", "expert_b_draft"} and isinstance(value, dict):
         return _expert_draft_markdown(title, value)
     if isinstance(value, dict):
@@ -872,6 +879,36 @@ def course_teaching_content_full(value: dict[str, Any]) -> str:
     if detail:
         parts.append(detail)
     return "\n\n".join(parts).strip()
+
+
+def _course_slides_markdown(title: str, value: dict[str, Any]) -> str:
+    """Render the structured course deck (slides + narration) as a readable Markdown artifact."""
+    slides = value.get("slides") if isinstance(value, dict) else None
+    lines: list[str] = [f"# {title}"]
+    if not isinstance(slides, list):
+        lines.append("\n（无课件分页数据）")
+        return "\n".join(lines) + "\n"
+    for slide in slides:
+        if not isinstance(slide, dict):
+            continue
+        order = slide.get("order", "?")
+        stype = slide.get("type", "")
+        stitle = slide.get("title", "")
+        lines.append(f"\n## Slide {order} · {stype} · {stitle}")
+        content = slide.get("content") or {}
+        if isinstance(content, dict) and content:
+            lines.append("\n**页面内容**")
+            lines.append("```json")
+            lines.append(json.dumps(content, ensure_ascii=False, indent=2))
+            lines.append("```")
+        narration = slide.get("narration") or {}
+        if isinstance(narration, dict) and narration.get("text"):
+            lines.append("\n**讲稿**")
+            lines.append(str(narration["text"]))
+            audio_url = narration.get("audio_url")
+            if audio_url:
+                lines.append(f"\n> 音频：{audio_url}（{narration.get('duration_sec', '?')}s）")
+    return "\n".join(lines).rstrip() + "\n"
 
 
 def _expert_draft_markdown(title: str, value: dict[str, Any]) -> str:

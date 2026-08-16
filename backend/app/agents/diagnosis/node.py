@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from copy import deepcopy
 import json
 from typing import Any, Literal, cast
@@ -43,6 +44,7 @@ from backend.app.schemas.state import (
 
 _DIAGNOSIS_PROMPT = load_prompt(__file__, "diagnosis_system.md")
 _FEEDBACK_PHASE_PROMPT = load_prompt(__file__, "feedback_system.md")
+_LOGGER = logging.getLogger(__name__)
 
 _NO_ERROR_PATTERN_ALIASES = {
     "",
@@ -449,11 +451,26 @@ def build_diagnosis_phase_node(llm_client: LLMClient) -> Node:
         ) or input_payload.get("education_background") or previous_profile.get(
             "education_background"
         ) or "未提供"
+        weak_points = _derive_weak_points(knowledge)
+        # 显式告警：有作答观测却算不出薄弱点，说明掌握度快照被推高（例如问卷播种
+        # 写入虚高 pl），弱项推导已静默失效——不再无提示地退化成"无重点"教学。
+        observed_nodes = [
+            node_id
+            for node_id, state in knowledge.items()
+            if isinstance(state, dict) and int(state.get("observations", 0)) > 0
+        ]
+        if not weak_points and observed_nodes:
+            _LOGGER.warning(
+                "diagnosis_feedback: weak_points 为空但存在 %d 个有作答观测的节点 "
+                "(pl 可能被播种虚高): %s",
+                len(observed_nodes),
+                observed_nodes[:10],
+            )
         profile = LearnerProfile(
             education_background=str(education_background),
             knowledge_level=_derive_knowledge_level(knowledge),
             learning_style=agent_result.learning_style,
-            weak_points=_derive_weak_points(knowledge),
+            weak_points=weak_points,
             learning_goal=state["user_input"],
             error_pattern=agent_result.error_pattern,
             confidence=profile_confidence_from_mastery(knowledge),

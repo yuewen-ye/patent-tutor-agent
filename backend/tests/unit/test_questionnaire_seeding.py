@@ -2,44 +2,25 @@ from __future__ import annotations
 
 import pytest
 
-from backend.app.learner_memory.bkt.model import compute_bkt_step, parameters_for_background
+from backend.app.learner_memory.bkt.model import parameters_for_background
 from backend.app.learner_memory.sqlite_store import SQLiteLearnerStore
 
 pytestmark = pytest.mark.unit
 
 
-def _expected_first_correct(parameters) -> float:
-    _, posterior = compute_bkt_step(
-        parameters.p_init,
-        observed_correct=True,
-        p_transit=min(1.0, parameters.p_transit * 1.5),
-        p_guess=parameters.p_guess,
-        p_slip=parameters.p_slip,
-    )
-    return posterior
+def test_seeding_writes_weak_inferred_prior_without_observations(tmp_path) -> None:
+    """问卷是自陈先验：只写 inferred 弱先验（pl=p_init、obs=0），不产生真实观测。
 
-
-def _expected_first_incorrect(parameters) -> float:
-    _, posterior = compute_bkt_step(
-        parameters.p_init,
-        observed_correct=False,
-        p_transit=min(1.0, parameters.p_transit * 1.5),
-        p_guess=parameters.p_guess,
-        p_slip=parameters.p_slip,
-    )
-    return posterior
-
-
-def test_seeding_applies_leaf_observations_and_propagates_parent(
-    tmp_path,
-) -> None:
+    只有真实练习/诊断作答才能累加 observations（见 update_mastery），
+    避免"零作答却 seeding 出 pl≈1.0 / obs≥2"的虚高掌握度。
+    """
     store = SQLiteLearnerStore(tmp_path / "learners.sqlite3")
     store.seed_mastery_from_questionnaire(
         learner_id="learner-1",
         session_id="session-1",
         responses=[
-            {"question_id": "Q1", "answer": "B"},  # correct -> patent-rights-nature
-            {"question_id": "Q2", "answer": "A"},  # wrong -> non-patentable-subject
+            {"question_id": "Q1", "answer": "B"},  # 命中 patent-rights-nature
+            {"question_id": "Q2", "answer": "A"},  # 命中 non-patentable-subject
             {"question_id": "Q22", "answer": "C"},  # unmapped -> ignored
         ],
         education_background=None,
@@ -47,23 +28,27 @@ def test_seeding_applies_leaf_observations_and_propagates_parent(
 
     snapshot = store.mastery_snapshot("learner-1")
     parameters = parameters_for_background("未提供")
-    expected = _expected_first_correct(parameters)
 
-    assert snapshot["patent-rights-nature"]["observations"] == 1
-    assert snapshot["patent-rights-nature"]["inferred"] is False
-    assert snapshot["patent-rights-nature"]["pl"] == pytest.approx(expected, abs=1e-4)
-
-    assert snapshot["non-patentable-subject"]["observations"] == 1
-    assert snapshot["non-patentable-subject"]["inferred"] is False
-    assert snapshot["non-patentable-subject"]["pl"] == pytest.approx(
-        _expected_first_incorrect(parameters), abs=1e-4
+    # 叶子节点：弱先验 pl=p_init，inferred=True，不写 observations
+    assert snapshot["patent-rights-nature"]["observations"] == 0
+    assert snapshot["patent-rights-nature"]["inferred"] is True
+    assert snapshot["patent-rights-nature"]["pl"] == pytest.approx(
+        parameters.p_init, abs=1e-4
     )
 
-    # Parent of patent-rights-nature is patent-law-foundation (weighted average).
-    parent = snapshot["patent-law-foundation"]
-    assert parent["inferred"] is True
-    assert parent["observations"] == 0
-    assert parent["pl"] == pytest.approx((expected * 2 + 0.10 + 0.10) / 4, abs=1e-4)
+    assert snapshot["non-patentable-subject"]["observations"] == 0
+    assert snapshot["non-patentable-subject"]["inferred"] is True
+    assert snapshot["non-patentable-subject"]["pl"] == pytest.approx(
+        parameters.p_init, abs=1e-4
+    )
+
+    # 父节点：弱先验下子节点 pl 与父节点默认值接近，推断可能不产生可见变化。
+    # 若写了父节点，必须是 inferred 且不累加 obs；不应出现 pl>=0.8 的虚高。
+    parent = snapshot.get("patent-law-foundation")
+    if parent is not None:
+        assert parent["inferred"] is True
+        assert parent["observations"] == 0
+        assert parent["pl"] < 0.8
 
 
 def test_seeding_is_idempotent_for_the_same_course_session(tmp_path) -> None:
@@ -83,10 +68,13 @@ def test_seeding_is_idempotent_for_the_same_course_session(tmp_path) -> None:
 
     assert first
     assert second == []
-    assert store.mastery_snapshot("learner-1")["patent-rights-nature"]["observations"] == 1
+    snapshot = store.mastery_snapshot("learner-1")
+    assert snapshot["patent-rights-nature"]["observations"] == 0
+    assert snapshot["patent-rights-nature"]["inferred"] is True
 
 
 def test_seeding_uses_education_background_priors(tmp_path) -> None:
+    """教育背景只影响弱先验 p_init 档位，不影响观测计数。"""
     store = SQLiteLearnerStore(tmp_path / "learners.sqlite3")
     store.seed_mastery_from_questionnaire(
         learner_id="learner-1",
@@ -96,10 +84,12 @@ def test_seeding_uses_education_background_priors(tmp_path) -> None:
     )
 
     parameters = parameters_for_background("法学背景+系统学过程序法")
-    expected = _expected_first_correct(parameters)
-    assert store.mastery_snapshot("learner-1")["patent-rights-nature"]["pl"] == pytest.approx(
-        expected, abs=1e-4
+    snapshot = store.mastery_snapshot("learner-1")
+    assert snapshot["patent-rights-nature"]["pl"] == pytest.approx(
+        parameters.p_init, abs=1e-4
     )
+    assert snapshot["patent-rights-nature"]["observations"] == 0
+    assert snapshot["patent-rights-nature"]["inferred"] is True
 
 
 def test_seeding_ignores_unanswered_questions(tmp_path) -> None:

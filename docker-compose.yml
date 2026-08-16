@@ -53,7 +53,8 @@ services:
       WORKFLOW_LOG_ROOT: /app/artifacts
     volumes:
       - models:/app/models
-      - artifacts:/app/artifacts
+      # 产物目录直接映射宿主 ./artifacts，方便本机随时查看（无需进容器）
+      - ./artifacts:/app/artifacts
       # 配置文件热挂载：改 config/agents.yaml 后只需 docker compose restart backend，
       # 无需重新 build（镜像内同名文件被此挂载覆盖）
       - ./config/agents.yaml:/app/config/agents.yaml:ro

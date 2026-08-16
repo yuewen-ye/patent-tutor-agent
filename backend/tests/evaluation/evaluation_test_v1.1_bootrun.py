@@ -566,7 +566,16 @@ def _run_course_gen(
     plan = common.inspect_plan(mem)
 
     if not plan.has_active_plan:
+        # 首轮生成前清理该 learner 的跨 run 残留（MySQL skill_mastery / 历史会话 /
+        # 文件痕迹），避免上次运行的虚高掌握度或残留计划被本次评测读回。
+        # 只在首轮清理——后续轮依赖已持久化的计划与游标，不能清。
         print(f"[course_gen/{letter}] 首轮课程生成（问卷提交）...")
+        try:
+            common.delete_run_results(
+                profile_letter=letter, learner_prefix=learner_prefix, wipe_mysql=True
+            )
+        except Exception as exc:  # noqa: BLE001 — 清理失败不应阻断评测
+            print(f"  ⚠️ 清理 {letter} 残留失败（继续）: {exc}")
         try:
             result = course_gen.run_first_round(
                 profile_letter=letter,
