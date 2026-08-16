@@ -26,7 +26,7 @@ from backend.app.core.model_capabilities import model_supports_request_parameter
 # 准确映射：provider 名 = 真实厂商/模型，不再用壳名套壳复用。
 # qwen / glm / gpt / luna / grok 经 Krill 单端点 + 单 key（nb_ 开头，
 # 5 个 *_API_KEY 已统一为该值）；yangmao 为原 DeepSeek Flash 通道（保留）。
-LLMProvider = Literal["qwen", "glm", "gpt", "luna", "grok", "yangmao"]
+LLMProvider = Literal["qwen", "glm", "gpt", "luna", "grok", "yangmao", "mistral", "minimax", "deepseek"]
 LLMRole = Literal["system", "user", "assistant", "tool"]
 AgentName = Literal[
     "diagnosis_feedback",
@@ -89,6 +89,27 @@ DEFAULT_CONFIG: dict[LLMProvider, dict[str, str]] = {
         "base_url_env": "YANGMAO_BASE_URL",
         "model": "yangmao-main",
         "base_url": "https://ai.gz404.com:54002/v1",
+    },
+    "mistral": {
+        "api_key_env": "MISTRAL_API_KEY",
+        "model_env": "MISTRAL_MODEL",
+        "base_url_env": "MISTRAL_BASE_URL",
+        "model": "mistral-small-2503",
+        "base_url": "https://endpoint.greatrouter.com",
+    },
+    "minimax": {
+        "api_key_env": "MINIMAX_API_KEY",
+        "model_env": "MINIMAX_MODEL",
+        "base_url_env": "MINIMAX_BASE_URL",
+        "model": "MiniMax-M2.5",
+        "base_url": "https://endpoint.greatrouter.com",
+    },
+    "deepseek": {
+        "api_key_env": "DEEPSEEK_API_KEY",
+        "model_env": "DEEPSEEK_MODEL",
+        "base_url_env": "DEEPSEEK_BASE_URL",
+        "model": "DeepSeek-V4-Flash",
+        "base_url": "https://endpoint.greatrouter.com",
     },
 }
 AGENT_PROVIDER_ENV: dict[AgentName, str] = {

@@ -6,7 +6,7 @@
 #
 # ============================ 模型更新日志 ===============================
 # 2026.08 主力 provider 统一走 Krill 单端点 + 单 key：
-#   - provider 全集与代码 LLMProvider 对齐：qwen / glm / gpt / luna / grok / yangmao
+#   - provider 全集与代码 LLMProvider 对齐：qwen / glm / gpt / luna / grok / yangmao / mistral / minimax / deepseek
 #   - qwen/glm/gpt/luna/grok 全部 base_url=https://api-slb.krill-ai.net/codex/v1，
 #     key 见 .env 的 QWEN_API_KEY / GLM_API_KEY / GPT_API_KEY / LUNA_API_KEY /
 #     GROK_API_KEY（5 个 *_API_KEY 均为同一 Krill key）
@@ -14,6 +14,9 @@
 #   - yangmao 保留原 DeepSeek Flash 通道（yangmao-main，独立 base_url/key），
 #     需要请求 DeepSeek 时通过 {AGENT}_PROVIDER=yangmao 或 agents.<agent>.provider 使用
 #   - 建议避免在输出内容较多的节点使用弱推理模型，防止网关超时
+# 2026.08 新增 GreatRouter 节点（https://endpoint.greatrouter.com）：
+#   - mistral / minimax / deepseek 统一走 GreatRouter 端点
+#   - key 见 .env 的 MISTRAL_API_KEY / MINIMAX_API_KEY / DEEPSEEK_API_KEY
 
 llm:
   default_provider: grok
@@ -44,6 +47,18 @@ providers:
   yangmao:
     model_name: yangmao-main
     base_url: https://ai.gz404.com:54002/v1
+    supports_strict_schema: false
+  mistral:
+    model_name: mistral-small-2503
+    base_url: https://endpoint.greatrouter.com
+    supports_strict_schema: false
+  minimax:
+    model_name: MiniMax-M2.5
+    base_url: https://endpoint.greatrouter.com
+    supports_strict_schema: false
+  deepseek:
+    model_name: DeepSeek-V4-Flash
+    base_url: https://endpoint.greatrouter.com
     supports_strict_schema: false
 
 # 推荐 Agent → provider 映射（对齐 llm.py 注释；可在本机 config/agents.yaml 调整）：

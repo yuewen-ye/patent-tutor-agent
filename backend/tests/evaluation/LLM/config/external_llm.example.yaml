@@ -3,7 +3,7 @@
 
 # LLM 配置
 llm:
-  provider: "Provider"  # deepseek/qwen/glm/gpt/luna/terra/grok
+  provider: "Provider"  # deepseek/qwen/glm/gpt/luna/terra/grok/yangmao/mistral/minimax
   model: "Model"  # 支持的模型
   base_url: "Base_url"
   api_key: "API_key"
