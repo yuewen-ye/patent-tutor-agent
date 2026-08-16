@@ -36,6 +36,7 @@ AgentName = Literal[
     "route",
     "chat_answer",
     "planner",
+    "slide_deck",
 ]
 
 DEFAULT_PROVIDER: LLMProvider = "qwen"
@@ -98,6 +99,7 @@ AGENT_PROVIDER_ENV: dict[AgentName, str] = {
     "route": "ROUTE_PROVIDER",
     "chat_answer": "CHAT_ANSWER_PROVIDER",
     "planner": "PLANNER_PROVIDER",
+    "slide_deck": "SLIDE_DECK_PROVIDER",
 }
 
 # ── Per-provider 并发信号量 ──────────────────────────────────────────────

@@ -939,6 +939,35 @@ class SessionService:
             raise FileNotFoundError(artifact_path)
         return candidate.read_text(encoding="utf-8")
 
+    def read_artifact_bytes(self, session_id: str, artifact_path: str) -> bytes:
+        """Read a session artifact as raw bytes (e.g. audio files).
+
+        Path validation mirrors ``read_artifact``; no text decoding is applied.
+        """
+        safe_session_id = normalize_artifact_path(
+            artifact_path=session_id,
+            artifact_root_name=self.artifact_root.name or "artifacts",
+            session_id=session_id,
+        )
+        if safe_session_id != Path(session_id):
+            raise InvalidArtifactPathError("Invalid session artifact directory.")
+        root = (self.artifact_root / "sessions" / safe_session_id).resolve()
+        relative_path = normalize_artifact_path(
+            artifact_path=artifact_path,
+            artifact_root_name=self.artifact_root.name or "artifacts",
+            session_id=session_id,
+        )
+        candidate = (root / relative_path).resolve()
+        try:
+            candidate.relative_to(root)
+        except ValueError as exc:
+            raise InvalidArtifactPathError(
+                "Artifact path escapes the session artifact directory."
+            ) from exc
+        if not candidate.is_file():
+            raise FileNotFoundError(artifact_path)
+        return candidate.read_bytes()
+
     def learner_memory(self, learner_id: str, *, limit: int = 10) -> dict[str, Any]:
         snapshot = learner_memory_snapshot(self._store, learner_id=learner_id, limit=limit)
         all_sessions = self.list_sessions()

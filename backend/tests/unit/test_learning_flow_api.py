@@ -121,6 +121,29 @@ class EndToEndQueueLLM:
                     "rationale": "整合课程通过审核",
                 }
             ],
+            "slide_deck": [
+                {
+                    "slides": [
+                        {
+                            "id": "slide_001",
+                            "order": 1,
+                            "type": "title",
+                            "title": "专利新颖性",
+                            "content": {"subtitle": "三性之一"},
+                            "narration": {"text": "今天我们来学习专利新颖性。"},
+                        },
+                        {
+                            "id": "slide_002",
+                            "order": 2,
+                            "type": "summary",
+                            "title": "小结",
+                            "content": {"takeaways": ["新颖性=与现有技术不同"]},
+                            "narration": {"text": "最后我们总结要点。"},
+                        },
+                    ],
+                    "slide_to_block_id": {},
+                }
+            ],
         }
         self.calls: list[str | None] = []
 

@@ -123,6 +123,7 @@ _ARTIFACT_FIELDS = (
     "expert_b_revision",
     "learner_profile_update",
     "course_package",
+    "course_slides",
     "grading_report",
 )
 
@@ -194,6 +195,23 @@ def _with_runtime_side_effects(
                     )
                     artifacts.append(artifact)
                     updates[field] = attach_markdown_artifact(updates[field], artifact)
+
+                # slide_deck 产出后：合成逐页讲稿音频并回填 audio_url/duration_sec
+                # （音频写入 artifacts/sessions/{sid}/audio/，属 graph 层效应，非节点写文件）
+                if label == "slide_deck" and "course_slides" in updates:
+                    try:
+                        from backend.app.services.course_audio import synthesize_slide_audio
+
+                        updates["course_slides"] = synthesize_slide_audio(
+                            artifact_root=artifact_root,
+                            session_id=session_id,
+                            course_slides=updates["course_slides"],
+                        )
+                    except Exception as exc:  # noqa: BLE001 - audio must not fail the workflow
+                        print(
+                            f"  ⚠️ slide_deck 音频合成失败（课程已生成，无音频）：{exc}",
+                            file=sys.stderr,
+                        )
 
                 if artifacts:
                     updates["artifacts"] = artifacts
@@ -324,16 +342,18 @@ def _route_after_experts_barrier(
 
 def _route_after_judge(
     state: StateDict,
-) -> Literal["expert_a_integration", "__end__"]:
+) -> Literal["expert_a_integration", "slide_deck", "__end__"]:
     report = JudgeReport.model_validate(state.get("judge_report", {}))
     needs_revision = report.decision == "revise" or bool(report.revision_requests)
     if not needs_revision:
-        print("▸ [路由] judge 通过 → 完成", file=sys.stderr)
-        return "__end__"
+        print("▸ [路由] judge 通过 → slide_deck 生成结构化课件", file=sys.stderr)
+        return "slide_deck"
     current_round = state.get("revision_round", 0) or 0
     if current_round >= 3:
-        print("▸ [路由] judge 修订已达上限 3 次 → 完成（未通过）", file=sys.stderr)
-        return "__end__"
+        # 修订达上限：course_package 已由 expert_a integration 生成，仍生成配套课件，
+        # 避免"有课程内容却无 slides"（workflow_status 仍为 completed）。
+        print("▸ [路由] judge 修订已达上限 3 次 → 仍生成结构化课件", file=sys.stderr)
+        return "slide_deck"
     print("▸ [路由] judge 未通过 → expert_a_integration 重新整合", file=sys.stderr)
     return "expert_a_integration"
 
@@ -389,6 +409,7 @@ def build_workflow(
     builder.add_node("_experts_barrier", _advance_expert_phase)
     builder.add_node("expert_a_integration", _wrap("expert_a", node_label="expert_a"))
     builder.add_node("judge", _wrap("judge"))
+    builder.add_node("slide_deck", _wrap("slide_deck"))
 
     # ── Edges ──
 
@@ -438,8 +459,13 @@ def build_workflow(
     builder.add_conditional_edges(
         "judge",
         _route_after_judge,
-        {"expert_a_integration": "expert_a_integration", "__end__": END},
+        {
+            "expert_a_integration": "expert_a_integration",
+            "slide_deck": "slide_deck",
+            "__end__": END,
+        },
     )
+    builder.add_edge("slide_deck", END)
 
     builder.add_edge("chat_answer", END)
 

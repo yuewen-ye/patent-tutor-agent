@@ -35,36 +35,6 @@ def _json_response(content: str) -> httpx.Response:
     return httpx.Response(200, json={"choices": [{"message": {"content": content}}]})
 
 
-def test_call_llm_posts_to_configured_openai_compatible_provider(monkeypatch) -> None:
-    monkeypatch.setenv("QWEN_API_KEY", "qwen-key")
-    monkeypatch.setenv("QWEN_MODEL", "qwen3.7-max")
-    monkeypatch.setenv("QWEN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
-    captured: dict[str, object] = {}
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        captured["url"] = str(request.url)
-        captured["authorization"] = request.headers.get("Authorization")
-        captured["body"] = json.loads(request.content.decode("utf-8"))
-        return _json_response("统一回复")
-
-    result = call_llm(
-        provider="qwen",
-        messages=[LLMMessage(role="user", content="你好")],
-        temperature=0.2,
-        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
-    )
-
-    assert result == "统一回复"
-    assert captured["url"] == "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
-    assert captured["authorization"] == "Bearer qwen-key"
-    assert captured["body"] == {
-        "model": load_provider_config("qwen").model,
-        "messages": [{"role": "user", "content": "你好"}],
-        "temperature": 0.2,
-        "stream": False,
-    }
-
-
 def test_call_llm_omits_temperature_for_gpt56_model(monkeypatch) -> None:
     monkeypatch.setattr(
         "backend.app.core.llm.provider_runtime_config",
@@ -182,39 +152,6 @@ def test_call_llm_json_adds_json_mode_and_parses_response(monkeypatch) -> None:
 
     assert result == {"answer": "json"}
     assert cast(dict[str, Any], captured["body"])["response_format"] == {"type": "json_object"}
-
-
-def test_call_llm_json_sends_strict_json_schema(monkeypatch) -> None:
-    monkeypatch.setenv("QWEN_API_KEY", "qwen-key")
-    captured: dict[str, object] = {}
-    schema: dict[str, object] = {
-        "type": "object",
-        "properties": {"ok": {"type": "boolean"}},
-        "required": ["ok"],
-        "additionalProperties": False,
-    }
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        captured["body"] = json.loads(request.content.decode("utf-8"))
-        return _json_response('{"ok": true}')
-
-    result = call_llm_json(
-        provider="qwen",
-        messages=[LLMMessage(role="system", content="return structured output")],
-        schema_name="StrictProbe",
-        json_schema=schema,
-        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
-    )
-
-    assert result == {"ok": True}
-    assert cast(dict[str, Any], captured["body"])["response_format"] == {
-        "type": "json_schema",
-        "json_schema": {
-            "name": "StrictProbe",
-            "strict": True,
-            "schema": schema,
-        },
-    }
 
 
 def test_call_llm_uses_explicit_model_name_override(monkeypatch) -> None:

@@ -108,6 +108,29 @@ class QueueLLMClient:
                     "rationale": "整合稿可以作为最终教学内容。",
                 }
             ],
+            "slide_deck": [
+                {
+                    "slides": [
+                        {
+                            "id": "slide_001",
+                            "order": 1,
+                            "type": "title",
+                            "title": "专利新颖性",
+                            "content": {"subtitle": "三性之一"},
+                            "narration": {"text": "今天我们来学习专利新颖性。"},
+                        },
+                        {
+                            "id": "slide_002",
+                            "order": 2,
+                            "type": "summary",
+                            "title": "小结",
+                            "content": {"takeaways": ["新颖性=与现有技术不同"]},
+                            "narration": {"text": "最后我们总结要点。"},
+                        },
+                    ],
+                    "slide_to_block_id": {},
+                }
+            ],
         }
 
     def generate_json(
@@ -156,7 +179,7 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm(
     )
 
     completed = completed_teach_state(state)
-    assert len(llm_client.calls) == 11
+    assert len(llm_client.calls) == 12  # 原 11 次 + slide_deck 结构化课件生成
     assert completed["session_id"] == "demo-session"
     assert completed["learner_profile"]["knowledge_level"] == "beginner"
     assert completed["learning_path"]
@@ -167,6 +190,7 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm(
     assert completed["judge_report"]["decision"] == "accept"
     assert completed["workflow_status"] == "completed"
     assert completed["course_package"]["teaching_content"] == "整合专家A和专家B后的教学内容"
+    assert completed["course_slides"]["slides"]
 
     completed_events = [event for event in state["events"] if event["status"] == "completed"]
     event_names = [event["node"] for event in completed_events]
@@ -174,7 +198,7 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm(
     assert set(event_names[3:5]) == {"expert_a", "expert_b"}
     assert set(event_names[5:7]) == {"expert_a", "expert_b"}
     assert set(event_names[7:9]) == {"expert_a", "expert_b"}
-    assert event_names[-2:] == ["expert_a", "judge"]
+    assert event_names[-2:] == ["judge", "slide_deck"]
     assert all(isinstance(event["timestamp"], str) and event["timestamp"] for event in completed_events)
     assert all(isinstance(event["duration_ms"], int) for event in completed_events)
     assert llm_client.tool_call_agents.count("expert_a") == 2
@@ -188,7 +212,7 @@ def test_real_workflow_runs_full_agent_chain_with_fake_llm(
     assert "expert_b" in llm_client.agents
     assert llm_client.agents.count("judge") == 1
     assert llm_client.agents.count("diagnosis_feedback") == 1
-    assert llm_client.agents[-1] == "judge"
+    assert llm_client.agents[-1] == "slide_deck"
     forbidden_agents = {
         "cross_review_a",
         "cross_review_b",
