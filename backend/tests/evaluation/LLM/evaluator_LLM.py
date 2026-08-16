@@ -549,7 +549,7 @@ def evaluate_profile_round(
         profile=profile_id,
         round=round_num,
     )
-    output_dir = _PROJECT_ROOT / output_config.get("dir", "backend/tests/evaluation/LLM/results")
+    output_dir = _PROJECT_ROOT / output_config.get("dir", "backend/tests/evaluation/results/record")
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / output_name
 
@@ -743,30 +743,30 @@ def cmd_evaluate(args) -> None:
         print("❌ 请指定 --round 或 --all-rounds")
         return
 
-    if not rounds and eval_mode not in ("m15", "m16"):
+    if not rounds and eval_mode not in ("m6_adversarial", "m6_boundary"):
         print("❌ 未找到任何轮次")
         return
 
     mode_label = {
-        "overall": "整体评估",
-        "statement": "M1/M9 陈述级评估",
-        "m7": "M7 资源形态评估",
-        "m8": "M8 异议闭环率评估",
-        "m14": "M14 跨轮自洽率",
-        "m15": "M15 对抗稳健率",
-        "m16": "M16 边界拒答恰当率",
-        "m17": "M17 检索正确性",
+        "overall": "整体评估（M1.3+M2.2+M2.3）",
+        "statement": "陈述级评估（M1.4+M1.5）",
+        "m1": "M1.1 异议闭环率评估",
+        "m1_cross_round": "M1.6 跨轮自洽率",
+        "m2_retrieval": "M2.5 检索正确性",
+        "m4": "M4.2 资源形态评估",
+        "m6_adversarial": "M6.1 对抗稳健率",
+        "m6_boundary": "M6.2 边界拒答恰当率",
     }.get(eval_mode, eval_mode)
 
     success_count = 0
     skip_count = 0
     fail_count = 0
 
-    # 系统级单次评估（m15/m16）：忽略画像/轮次选择
-    if eval_mode in ("m15", "m16"):
+    # 系统级单次评估（m6_adversarial/m6_boundary）：忽略画像/轮次选择
+    if eval_mode in ("m6_adversarial", "m6_boundary"):
         print(f"\n📊 系统级评估 {mode_label}（仅运行一次，所有画像共享）")
         try:
-            if eval_mode == "m15":
+            if eval_mode == "m6_adversarial":
                 result = evaluate_m15(config, force=args.force)
             else:
                 result = evaluate_m16(config, force=args.force)
@@ -792,13 +792,13 @@ def cmd_evaluate(args) -> None:
     print(f"{'='*60}")
     print(f"  模型: {model}")
     print(f"  画像: {len(profiles)} 个")
-    rounds_desc = "跨轮聚合" if eval_mode == "m14" else str(rounds)
+    rounds_desc = "跨轮聚合" if eval_mode == "m1_cross_round" else str(rounds)
     print(f"  轮次: {rounds_desc}")
     print(f"  强制重跑: {args.force}")
     print(f"{'='*60}\n")
 
     for profile_id in profiles:
-        if eval_mode == "m14":
+        if eval_mode == "m1_cross_round":
             # 每画像仅运行一次跨轮自洽率
             print(f"\n📋 multi-{profile_id} (跨轮聚合)...")
             try:
@@ -825,15 +825,15 @@ def cmd_evaluate(args) -> None:
                     result = evaluate_m1_m9(
                         profile_id, round_num, config, force=args.force
                     )
-                elif eval_mode == "m7":
+                elif eval_mode == "m4":
                     result = evaluate_m7_resource_morphology(
                         profile_id, round_num, config, force=args.force
                     )
-                elif eval_mode == "m8":
+                elif eval_mode == "m1":
                     result = evaluate_m8_objection_loop(
                         profile_id, round_num, config, force=args.force
                     )
-                elif eval_mode == "m17":
+                elif eval_mode == "m2_retrieval":
                     result = evaluate_m17(
                         profile_id, round_num, config, force=args.force
                     )
@@ -935,7 +935,7 @@ def extract_verifiable_statements(course_text: str) -> list[dict[str, Any]]:
     except (json.JSONDecodeError, TypeError):
         ks_data = None
     if ks_data:
-        for cov in ks_data.get("coverage", []):
+        for cov in (ks_data.get("coverage") or []):
             if not isinstance(cov, dict):
                 continue
             sub_concept = cov.get("sub_concept", "").strip()
@@ -950,7 +950,7 @@ def extract_verifiable_statements(course_text: str) -> list[dict[str, Any]]:
                     "context": f"知识综合: {sub_concept}",
                 })
         # 混淆对也作为可核验陈述
-        for pair in ks_data.get("confusable_pairs", []):
+        for pair in (ks_data.get("confusable_pairs") or []):
             if not isinstance(pair, dict):
                 continue
             left = pair.get("left", "").strip()
@@ -1350,7 +1350,7 @@ def evaluate_m1_m9(
     # 1. 检查输出文件
     model_name = llm_config.get("model", "unknown")
     output_name = f"statement_judge_{model_name}_{profile_id}_{round_num:02d}.json"
-    output_dir = _PROJECT_ROOT / output_config.get("dir", "backend/tests/evaluation/LLM/results")
+    output_dir = _PROJECT_ROOT / output_config.get("dir", "backend/tests/evaluation/results/record")
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / output_name
 
@@ -1448,8 +1448,8 @@ def evaluate_m8_objection_loop(
 
     # 1. 检查输出文件
     model_name = llm_config.get("model", "unknown")
-    output_name = f"objection_loop_{model_name}_{profile_id}_{round_num:02d}.json"
-    output_dir = _PROJECT_ROOT / output_config.get("dir", "backend/tests/evaluation/LLM/results")
+    output_name = f"m1_objection_loop_{model_name}_{profile_id}_{round_num:02d}.json"
+    output_dir = _PROJECT_ROOT / output_config.get("dir", "backend/tests/evaluation/results/record")
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / output_name
 
@@ -1527,18 +1527,33 @@ def evaluate_m8_objection_loop(
     parsed = parse_llm_response(llm_response)
 
     # 6. 解析结果并计算指标
-    total_objections = parsed.get("total_objections", 0)
-    closed_loop_count = parsed.get("closed_loop_count", 0)
-    adopted_count = parsed.get("adopted_count", 0)
-    overall_score = parsed.get("overall_score", 0)
+    def _to_float(val: Any, default: float = 0.0) -> float:
+        if val is None:
+            return default
+        if isinstance(val, (int, float)):
+            return float(val)
+        if isinstance(val, dict):
+            for key in ("value", "score", "rate", "numeric"):
+                if key in val and isinstance(val[key], (int, float)):
+                    return float(val[key])
+            return default
+        if isinstance(val, str):
+            try:
+                return float(val.strip().rstrip("%"))
+            except (ValueError, TypeError):
+                return default
+        return default
+
+    total_objections = _to_float(parsed.get("total_objections", 0))
+    closed_loop_count = _to_float(parsed.get("closed_loop_count", 0))
+    adopted_count = _to_float(parsed.get("adopted_count", 0))
 
     if total_objections > 0:
         loop_rate = round(closed_loop_count / total_objections * 100, 1)
     else:
-        loop_rate = 100.0  # 无异议视为满分
+        loop_rate = 100.0
 
-    # 优先使用 LLM 返回的 100 分制 overall_score
-    llm_overall_score = parsed.get("overall_score", 0)
+    llm_overall_score = _to_float(parsed.get("overall_score", 0))
     if llm_overall_score:
         final_score = round(llm_overall_score, 1)
     else:
@@ -1548,7 +1563,7 @@ def evaluate_m8_objection_loop(
         "metadata": {
             "profile_id": profile_id,
             "round": round_num,
-            "eval_type": "objection_loop_evaluation",
+            "eval_type": "m1_objection_loop_evaluation",
             "model": model_name,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         },
@@ -1598,8 +1613,8 @@ def evaluate_m7_resource_morphology(
 
     # 1. 检查输出文件
     model_name = llm_config.get("model", "unknown")
-    output_name = f"resource_morphology_{model_name}_{profile_id}_{round_num:02d}.json"
-    output_dir = _PROJECT_ROOT / output_config.get("dir", "backend/tests/evaluation/LLM/results")
+    output_name = f"m4_resource_morphology_{model_name}_{profile_id}_{round_num:02d}.json"
+    output_dir = _PROJECT_ROOT / output_config.get("dir", "backend/tests/evaluation/results/record")
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / output_name
 
@@ -1657,17 +1672,37 @@ def evaluate_m7_resource_morphology(
     parsed = parse_llm_response(llm_response)
 
     # 6. 解析结果（支持新旧两种格式）
-    coverage_rate = parsed.get("coverage_rate", 0)
-    coverage_score = parsed.get("coverage_score", 0)
-    fit_score = parsed.get("fit_score", 0)
+    def _to_float(val: Any, default: float = 0.0) -> float:
+        """安全转换为 float，处理 dict/str/None 等非数值类型。"""
+        if val is None:
+            return default
+        if isinstance(val, (int, float)):
+            return float(val)
+        if isinstance(val, dict):
+            for key in ("value", "score", "rate", "numeric"):
+                if key in val and isinstance(val[key], (int, float)):
+                    return float(val[key])
+            return default
+        if isinstance(val, str):
+            try:
+                return float(val.strip().rstrip("%"))
+            except (ValueError, TypeError):
+                return default
+        return default
+
+    coverage_rate = _to_float(parsed.get("coverage_rate", 0))
+    coverage_score = _to_float(parsed.get("coverage_score", 0))
+    fit_score = _to_float(parsed.get("fit_score", 0))
     core_shapes = parsed.get("core_shapes_status", {})
+    if not isinstance(core_shapes, dict):
+        core_shapes = {}
 
     # 优先使用 LLM 返回的 coverage_score（100 分制），否则从 coverage_rate 推导
     if not coverage_score and coverage_rate:
         coverage_score = round(coverage_rate, 1)
     
     # 如果 LLM 没有返回 overall_score，按公式计算
-    llm_overall_score = parsed.get("overall_score", 0)
+    llm_overall_score = _to_float(parsed.get("overall_score", 0))
     if llm_overall_score:
         overall_score = round(llm_overall_score, 1)
     elif coverage_score and fit_score:
@@ -1679,8 +1714,14 @@ def evaluate_m7_resource_morphology(
 
     # 核心形态检查
     core_coverage = sum(1 for v in core_shapes.values() if v)
-    if coverage_rate == 0 and parsed.get("matched_types"):
-        matched = len(parsed.get("matched_types", []))
+    matched_types = parsed.get("matched_types", [])
+    if not isinstance(matched_types, list):
+        matched_types = []
+    missing_types = parsed.get("missing_types", [])
+    if not isinstance(missing_types, list):
+        missing_types = []
+    if coverage_rate == 0 and matched_types:
+        matched = len(matched_types)
         if matched > 0:
             coverage_rate = round(matched / 13 * 100, 1)
         else:
@@ -1690,7 +1731,7 @@ def evaluate_m7_resource_morphology(
         "metadata": {
             "profile_id": profile_id,
             "round": round_num,
-            "eval_type": "resource_morphology_evaluation",
+            "eval_type": "m4_resource_morphology_evaluation",
             "model": model_name,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         },
@@ -1723,27 +1764,42 @@ def evaluate_m7_resource_morphology(
     return result
 
 
-# ── M14 跨轮自洽率（外部 LLM 评估） ────────────────────────────────────────────
+# ── M1.6 跨轮自洽率（外部 LLM 评估） ────────────────────────────────────────────
 
 def _load_m14_factpoints(profile_id: str) -> list[dict[str, Any]] | None:
-    """加载 M14 事实点抽取结果。
+    """加载 M1.6 跨轮事实点抽取结果。
 
     同时支持两种格式：
       1. 旧格式 JSONL：每行一个 JSON 对象，字段 ``fact_text``/``source_path``/``round_file``
          （同学版 extract_m14_factpoints 产物）
       2. 新格式 JSON：``{"factpoints": [...]}`` 字段 ``fact_point``/``round``/``topic``
-         （本仓库 prepare_m14 产物）
+         （本仓库 prepare_m14 产物，输出 ``m1_factpoints_*.json``）
     """
     eval_dir = _EVAL_DIR
-    # 新格式（.json）候选
+    # 新格式（.json）候选 — 优先 results/record，先新命名后旧命名
     new_candidates = [
-        eval_dir / "results" / "m14_factpoints" / f"m14_factpoints_{profile_id}.json",
-        eval_dir / "results" / "m14_factpoints" / f"m14_factpoints_multi-{profile_id}.json",
+        eval_dir / "results" / "record" / f"m1_factpoints_{profile_id}.json",
+        eval_dir / "results" / "record" / f"m1_factpoints_multi-{profile_id}.json",
+        eval_dir / "results" / "record" / f"m14_factpoints_{profile_id}.json",
+        eval_dir / "results" / "record" / f"m14_factpoints_multi-{profile_id}.json",
+        eval_dir / "results" / "reports" / "record" / f"m1_factpoints_{profile_id}.json",
+        eval_dir / "results" / "reports" / "record" / f"m1_factpoints_multi-{profile_id}.json",
+        eval_dir / "results" / "reports" / "record" / f"m14_factpoints_{profile_id}.json",
+        eval_dir / "results" / "reports" / "record" / f"m14_factpoints_multi-{profile_id}.json",
     ]
-    # 旧格式（.jsonl）候选
+    # 旧格式（.jsonl）候选 — 兼容旧路径，逐步废弃
     jsonl_candidates = [
+        eval_dir / "results" / "record" / f"m1_factpoints_{profile_id}.jsonl",
+        eval_dir / "results" / "record" / f"m1_factpoints_multi-{profile_id}.jsonl",
+        eval_dir / "results" / "record" / f"m14_factpoints_{profile_id}.jsonl",
+        eval_dir / "results" / "record" / f"m14_factpoints_multi-{profile_id}.jsonl",
+        eval_dir / "results" / "reports" / "record" / f"m1_factpoints_{profile_id}.jsonl",
+        eval_dir / "results" / "reports" / "record" / f"m1_factpoints_multi-{profile_id}.jsonl",
+        eval_dir / "results" / "reports" / "record" / f"m14_factpoints_{profile_id}.jsonl",
+        eval_dir / "results" / "reports" / "record" / f"m14_factpoints_multi-{profile_id}.jsonl",
+        eval_dir / "results" / "m14_factpoints" / f"m14_factpoints_{profile_id}.json",
+        eval_dir / "results" / "m14_factpoints" / f"m14_factpoints_{profile_id}.jsonl",
         eval_dir / "results" / "raw" / f"m14_factpoints_{profile_id}.jsonl",
-        eval_dir / "results" / "raw" / f"m14_factpoints_multi-{profile_id}.jsonl",
         eval_dir / f"m14_factpoints_{profile_id}.jsonl",
     ]
 
@@ -1752,7 +1808,7 @@ def _load_m14_factpoints(profile_id: str) -> list[dict[str, Any]] | None:
         if path.exists():
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
-                raw = data.get("factpoints", []) if isinstance(data, dict) else []
+                raw = (data.get("factpoints") or []) if isinstance(data, dict) else []
                 if not raw:
                     return None
                 # 转换为 evaluator 统一字段
@@ -1792,16 +1848,16 @@ def evaluate_m14(
     config: dict[str, Any],
     force: bool = False,
 ) -> dict[str, Any] | None:
-    """执行 M14 跨轮自洽率评估。
+    """执行 M1.6 跨轮自洽率评估。
 
-    输入：prepare_m14.py 生成的 m14_factpoints_{profile}.json
-    输出：m14_cross_round_{model}_{profile}.json
+    输入：prepare_m14.py 生成的 m1_factpoints_{profile}.json
+    输出：m1_cross_round_{model}_{profile}.json
     """
     llm_config = config.get("llm", {})
     output_config = config.get("output", {})
     model_name = llm_config.get("model", "unknown")
-    output_name = f"m14_cross_round_{model_name}_{profile_id}.json"
-    output_dir = _PROJECT_ROOT / output_config.get("dir", "backend/tests/evaluation/LLM/results")
+    output_name = f"m1_cross_round_{model_name}_{profile_id}.json"
+    output_dir = _PROJECT_ROOT / output_config.get("dir", "backend/tests/evaluation/results/record")
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / output_name
 
@@ -1811,7 +1867,7 @@ def evaluate_m14(
 
     factpoints = _load_m14_factpoints(profile_id)
     if not factpoints:
-        print(f"  ⚠️  未找到 m14_factpoints_{profile_id}.json，请先运行 prepare_m14.py")
+        print(f"  ⚠️  未找到 m1_factpoints_{profile_id}.json，请先运行 prepare_m14.py")
         return None
 
     prompt_path = _THIS_DIR / "prompts" / "m1_cross_round_consistency.md"
@@ -1845,7 +1901,7 @@ def evaluate_m14(
     result = {
         "metadata": {
             "profile_id": profile_id,
-            "eval_type": "m14_cross_round",
+            "eval_type": "m1_cross_round",
             "model": model_name,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         },
@@ -1864,9 +1920,14 @@ def evaluate_m14(
 
 def _load_system_qa_answers(name: str) -> list[dict[str, Any]] | None:
     """加载 prepare_probe.py 生成的系统回答文件。"""
+    eval_dir = _EVAL_DIR
+    # 优先 results/record，兼容旧路径
     candidates = [
-        _EVAL_DIR / "results" / "raw" / name,
-        _EVAL_DIR / name,
+        eval_dir / "results" / "record" / name,
+        eval_dir / "results" / "reports" / "record" / name,
+        eval_dir / "results" / "raw" / name,
+        eval_dir / "LLM" / "results" / name,
+        eval_dir / name,
     ]
     for path in candidates:
         if path.exists():
@@ -1889,7 +1950,7 @@ def _evaluate_system_qa(
     model_name: str,
 ) -> dict[str, Any] | None:
     """通用：对系统回答逐条调用 LLM 进行判定并汇总。"""
-    output_dir = _PROJECT_ROOT / output_config.get("dir", "backend/tests/evaluation/LLM/results")
+    output_dir = _PROJECT_ROOT / output_config.get("dir", "backend/tests/evaluation/results/record")
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / output_name
 
@@ -1900,13 +1961,13 @@ def _evaluate_system_qa(
     client = LLMClient(llm_config)
 
     evals: list[dict[str, Any]] = []
-    key_bool = "passed" if mode_label == "m15" else "appropriate"
+    key_bool = "passed" if mode_label == "m6_adversarial" else "appropriate"
     for ans in answers:
         user_prompt = f"""请评估以下系统回答：
 
 题目：{ans.get('question', '')}
 系统回答：{ans.get('answer', '')}
-{'陷阱类型' if mode_label == 'm15' else '期望反应'}：{ans.get('trap_type') or ans.get('expected', '')}
+{'陷阱类型' if mode_label == "m6_adversarial" else '期望反应'}：{ans.get('trap_type') or ans.get('expected', '')}
 
 请严格按照系统提示中的 JSON 格式输出。"""
         try:
@@ -1929,8 +1990,8 @@ def _evaluate_system_qa(
         },
         "methodology": "material_proxy",
         "total_questions": total,
-        "passed" if mode_label == "m15" else "appropriate": passed,
-        "pass_rate" if mode_label == "m15" else "appropriate_rate": rate,
+        "passed" if mode_label == "m6_adversarial" else "appropriate": passed,
+        "pass_rate" if mode_label == "m6_adversarial" else "appropriate_rate": rate,
         "evaluations": evals,
     }
     with open(output_path, "w", encoding="utf-8") as f:
@@ -1940,21 +2001,21 @@ def _evaluate_system_qa(
 
 
 def evaluate_m15(config: dict[str, Any], force: bool = False) -> dict[str, Any] | None:
-    """M15 对抗稳健率（系统级）。"""
+    """M6.1 对抗稳健率（系统级）。"""
     llm_config = config.get("llm", {})
     output_config = config.get("output", {})
     model_name = llm_config.get("model", "unknown")
-    output_name = f"m15_adversarial_{model_name}_system.json"
-    if (force is False and (_PROJECT_ROOT / output_config.get("dir", "backend/tests/evaluation/LLM/results") / output_name).exists()):
+    output_name = f"m6_adversarial_{model_name}_system.json"
+    if (force is False and (_PROJECT_ROOT / output_config.get("dir", "backend/tests/evaluation/results/record") / output_name).exists()):
         print(f"  ⏭️  跳过：{output_name} 已存在")
         return None
-    answers = _load_system_qa_answers("adversarial_answers_system.json")
+    answers = _load_system_qa_answers("m6_adversarial_answers_system.json")
     if not answers:
-        print("  ⚠️  未找到 adversarial_answers_system.json，请先运行 prepare_probe.py")
+        print("  ⚠️  未找到 m6_adversarial_answers_system.json，请先运行 prepare_probe.py")
         return None
     prompt_path = _THIS_DIR / "prompts" / "m6_adversarial_robustness.md"
     return _evaluate_system_qa(
-        mode_label="m15",
+        mode_label="m6_adversarial",
         system_prompt_path=prompt_path,
         answers=answers,
         output_name=output_name,
@@ -1965,21 +2026,21 @@ def evaluate_m15(config: dict[str, Any], force: bool = False) -> dict[str, Any] 
 
 
 def evaluate_m16(config: dict[str, Any], force: bool = False) -> dict[str, Any] | None:
-    """M16 边界拒答恰当率（系统级）。"""
+    """M6.2 边界拒答恰当率（系统级）。"""
     llm_config = config.get("llm", {})
     output_config = config.get("output", {})
     model_name = llm_config.get("model", "unknown")
-    output_name = f"m16_boundary_{model_name}_system.json"
-    if (force is False and (_PROJECT_ROOT / output_config.get("dir", "backend/tests/evaluation/LLM/results") / output_name).exists()):
+    output_name = f"m6_boundary_{model_name}_system.json"
+    if (force is False and (_PROJECT_ROOT / output_config.get("dir", "backend/tests/evaluation/results/record") / output_name).exists()):
         print(f"  ⏭️  跳过：{output_name} 已存在")
         return None
-    answers = _load_system_qa_answers("boundary_answers_system.json")
+    answers = _load_system_qa_answers("m6_boundary_answers_system.json")
     if not answers:
-        print("  ⚠️  未找到 boundary_answers_system.json，请先运行 prepare_probe.py")
+        print("  ⚠️  未找到 m6_boundary_answers_system.json，请先运行 prepare_probe.py")
         return None
     prompt_path = _THIS_DIR / "prompts" / "m6_boundary_refusal.md"
     return _evaluate_system_qa(
-        mode_label="m16",
+        mode_label="m6_boundary",
         system_prompt_path=prompt_path,
         answers=answers,
         output_name=output_name,
@@ -1997,16 +2058,16 @@ def evaluate_m17(
     config: dict[str, Any],
     force: bool = False,
 ) -> dict[str, Any] | None:
-    """M17 检索正确性评估（逐 chunk 判定 accurate/complete）。
+    """M2.5 检索正确性评估（逐 chunk 判定 accurate/complete）。
 
     输入：course_package.md 中的检索相关片段；可扩展 retrieval_context 日志。
-    输出：m17_retrieval_{model}_{profile}_{round:02d}.json
+    输出：m2_retrieval_{model}_{profile}_{round:02d}.json
     """
     llm_config = config.get("llm", {})
     output_config = config.get("output", {})
     model_name = llm_config.get("model", "unknown")
-    output_name = f"m17_retrieval_{model_name}_{profile_id}_{round_num:02d}.json"
-    output_dir = _PROJECT_ROOT / output_config.get("dir", "backend/tests/evaluation/LLM/results")
+    output_name = f"m2_retrieval_{model_name}_{profile_id}_{round_num:02d}.json"
+    output_dir = _PROJECT_ROOT / output_config.get("dir", "backend/tests/evaluation/results/record")
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / output_name
     if output_path.exists() and not force:
@@ -2056,7 +2117,7 @@ def evaluate_m17(
         "metadata": {
             "profile_id": profile_id,
             "round": round_num,
-            "eval_type": "m17_retrieval",
+            "eval_type": "m2_retrieval",
             "model": model_name,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         },
@@ -2091,9 +2152,9 @@ def main() -> None:
     eval_parser.add_argument("--round", type=int, help="指定轮次（如 1）")
     eval_parser.add_argument("--all-rounds", action="store_true", help="评估所有轮次")
     eval_parser.add_argument("--force", action="store_true", help="强制重跑（覆盖已有结果）")
-    eval_parser.add_argument("--mode", choices=["overall", "statement", "m7", "m8", "m14", "m15", "m16", "m17"], default="overall", 
-                           help="评估模式：overall/m7/m8/M17为每轮次评估；m14为每画像跨轮；m15/m16为系统级单次")
-    eval_parser.add_argument("--system-only", action="store_true", help="仅运行系统级评估（m15/m16）")
+    eval_parser.add_argument("--mode", choices=["overall", "statement", "m1", "m1_cross_round", "m2_retrieval", "m4", "m6_adversarial", "m6_boundary"], default="overall", 
+                           help="评估模式：overall/statement为通用评估；m1为异议闭环率；m1_cross_round为跨轮自洽率；m2_retrieval为检索正确性；m4为资源形态；m6_adversarial/m6_boundary为系统级单次")
+    eval_parser.add_argument("--system-only", action="store_true", help="仅运行系统级评估（m6_adversarial/m6_boundary）")
 
     args = parser.parse_args()
 

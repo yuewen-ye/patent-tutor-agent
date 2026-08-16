@@ -99,7 +99,7 @@ def load_profile(profile_id: str, *, learner_prefix: str = "multi") -> LoadedPro
         profile_id=profile_id,
         learner_id=f"{learner_prefix}-{letter}",
         learning_goal=str(data.get("learning_goal", "")),
-        responses=[dict(r) for r in data.get("responses", [])],
+        responses=[dict(r) for r in (data.get("responses") or [])],
         education_background=data.get("education_background"),
         raw=data,
     )

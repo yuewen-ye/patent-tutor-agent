@@ -368,12 +368,12 @@ def _do_llm_evaluate(profile_ids: list[str], *, force: bool = False) -> None:
     mode_label_map = {
         "1": ("overall", "整体评估（M1 三维度 + M2 有用性/相关性 + 9 通用维度）"),
         "2": ("statement", "M1/M9/M9-b/M1.1~M1.3 陈述级评估"),
-        "3": ("m7", "M7 资源形态评估"),
-        "4": ("m8", "M8 异议闭环率评估"),
-        "5": ("m14", "M14 跨轮自洽率（前置 prepare_m14 自动执行）"),
-        "6": ("m15", "M15 对抗稳健率（系统级，前置 prepare_probe 自动执行）"),
-        "7": ("m16", "M16 边界拒答恰当率（系统级，前置 prepare_probe 自动执行）"),
-        "8": ("m17", "M17 检索正确性"),
+        "3": ("m4", "M4.2 资源形态评估"),
+        "4": ("m1", "M1.1 异议闭环率评估"),
+        "5": ("m1_cross_round", "M1.6 跨轮自洽率（前置 prepare_m14 自动执行）"),
+        "6": ("m6_adversarial", "M6.1 对抗稳健率（系统级，前置 prepare_probe 自动执行）"),
+        "7": ("m6_boundary", "M6.2 边界拒答恰当率（系统级，前置 prepare_probe 自动执行）"),
+        "8": ("m2_retrieval", "M2.5 检索正确性"),
     }
     print(f"\n  评估模式:")
     for k, (_, desc) in mode_label_map.items():
@@ -472,10 +472,10 @@ def _do_llm_evaluate(profile_ids: list[str], *, force: bool = False) -> None:
         mode, mode_desc = mode_label_map[mode_key]
         print(f"\n── 模式 {mode_key}: {mode_desc} ──")
 
-        # 系统级单次评估（m15/m16）：忽略画像/轮次
-        if mode in ("m15", "m16"):
+        # 系统级单次评估（m6_adversarial/m6_boundary）：忽略画像/轮次
+        if mode in ("m6_adversarial", "m6_boundary"):
             try:
-                if mode == "m15":
+                if mode == "m6_adversarial":
                     result = llm_evaluator.evaluate_m15(config, force=force)
                 else:
                     result = llm_evaluator.evaluate_m16(config, force=force)
@@ -497,8 +497,8 @@ def _do_llm_evaluate(profile_ids: list[str], *, force: bool = False) -> None:
                 skip_count += 1
                 continue
 
-            # M14 跨轮自洽：每画像仅运行一次（跨轮聚合）
-            if mode == "m14":
+            # M1.6 跨轮自洽：每画像仅运行一次（跨轮聚合）
+            if mode == "m1_cross_round":
                 print(f"\n📋 {pid} (跨轮聚合)...")
                 try:
                     result = llm_evaluator.evaluate_m14(letter, config, force=force)
@@ -523,11 +523,11 @@ def _do_llm_evaluate(profile_ids: list[str], *, force: bool = False) -> None:
                 try:
                     if mode == "statement":
                         result = llm_evaluator.evaluate_m1_m9(letter, r, config, force=force)
-                    elif mode == "m7":
+                    elif mode == "m4":
                         result = llm_evaluator.evaluate_m7_resource_morphology(letter, r, config, force=force)
-                    elif mode == "m8":
+                    elif mode == "m1":
                         result = llm_evaluator.evaluate_m8_objection_loop(letter, r, config, force=force)
-                    elif mode == "m17":
+                    elif mode == "m2_retrieval":
                         result = llm_evaluator.evaluate_m17(letter, r, config, force=force)
                     else:
                         result = llm_evaluator.evaluate_profile_round(letter, r, config, force=force)
@@ -545,7 +545,7 @@ def _do_llm_evaluate(profile_ids: list[str], *, force: bool = False) -> None:
     print(f"  ✅ 成功: {success_count}")
     print(f"  ⏭️  跳过: {skip_count}")
     print(f"  ❌ 失败: {fail_count}")
-    print(f"  📁 结果目录: backend/tests/evaluation/LLM/results/")
+    print(f"  📁 结果目录: backend/tests/evaluation/results/record/")
     print(f"{'='*60}")
 
 

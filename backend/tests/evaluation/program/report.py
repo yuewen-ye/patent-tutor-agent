@@ -43,7 +43,20 @@ for _p in (_THIS_DIR, _EVAL_DIR, _PROJECT_ROOT):
 import _common as common  # noqa: E402
 import calculate  # noqa: E402
 
-REPORTS_DIR = _EVAL_DIR / "results" / "reports"
+REPORTS_DIR = _EVAL_DIR / "results"
+
+def _resolve_llm_results_dir() -> Path:
+    """解析外部 LLM 结果目录：优先 results/record，回退 results/reports/record 和 LLM/results。"""
+    new_dir = _EVAL_DIR / "results" / "record"
+    if new_dir.exists():
+        return new_dir
+    alt_dir = _EVAL_DIR / "results" / "reports" / "record"
+    if alt_dir.exists():
+        return alt_dir
+    old_dir = _EVAL_DIR / "LLM" / "results"
+    if old_dir.exists():
+        return old_dir
+    return new_dir
 
 # ── LLM 维度映射（标签 → 内部 key） ────────────────────────────────────────
 
@@ -73,7 +86,6 @@ _M2_LLM_DIMS: list[str] = [
 # 表1: 脚本计算指标（无需LLM，确定性计算）
 _SCRIPT_METRICS: list[tuple[str, list[str]]] = [
     ("M1 幻觉率", [
-        "1.1 异议率",
         "1.1 闭环率",
         "1.2 裁判Agent准确性评分",
     ]),
@@ -88,9 +100,12 @@ _SCRIPT_METRICS: list[tuple[str, list[str]]] = [
     ]),
     ("M4 执行完整性", [
         "4.1 产物完整率",
+        "4.2.1 资源大类数",
+        "4.2.2 资源小类数",
     ]),
     ("M5 其它指标", [
         "5.3 PII合规检测",
+        "5.4 异议率",
     ]),
 ]
 
@@ -112,9 +127,6 @@ _LLM_METRICS: list[tuple[str, list[str]]] = [
         "2.3 相关性",
         "2.5 检索准确率",
         "2.5 检索完整率",
-    ]),
-    ("M4 执行完整性", [
-        "4.2 资源形态",
     ]),
 ]
 
@@ -147,17 +159,19 @@ SYSTEM_LEVEL_METRICS: list[str] = [
     "6.2 边界拒答恰当率",
 ]
 
+# 独立于画像的系统级指标（展示时需独立处理）
+INDEPENDENT_SYSTEM_METRICS: list[str] = [
+    "6.1 对抗稳健率",
+    "6.2 边界拒答恰当率",
+]
+
 # ── 指标说明：name → (计算公式, 数据来源) ──────────────────────────────────
 
 METRIC_META: dict[str, tuple[str, str]] = {
     # M1 幻觉率
-    "1.1 异议率": (
-        "(🔴+🟡) / 总批注数 × 100%",
-        "expert_a_cross_review.md + expert_b_cross_review.md",
-    ),
     "1.1 闭环率": (
         "闭环条数 / 总🔴条数 × 100%（外部LLM判定）",
-        "objection_loop_*.json（外部LLM评估结果）",
+        "m1_objection_loop_*.json（外部LLM评估结果）",
     ),
     "1.2 裁判Agent准确性评分": (
         "直接取 X/5",
@@ -197,7 +211,7 @@ METRIC_META: dict[str, tuple[str, str]] = {
     ),
     "1.6 跨轮自洽率": (
         "1 - 矛盾事实点数 / 总事实点数 × 100%",
-        "m14_cross_round_*.json（外部LLM评估结果）",
+        "m1_cross_round_*.json（外部LLM评估结果）",
     ),
     # M2 匹配度
     "2.1 难度符合度": (
@@ -213,16 +227,16 @@ METRIC_META: dict[str, tuple[str, str]] = {
         "judge_*.json（外部LLM评估 scores.relevance）",
     ),
     "2.4 动态迭代触发率": (
-        "pl从弱升至已掌握的节点数 / 总节点数 × 100%（pl < 0.30 阈值）",
-        "learner_profile_update.md（跨轮比对）",
+        "每轮：是否触发动态迭代（|Δpl| ≥ 0.05 的节点变化），画像级：触发轮次数 / 有效轮次数 × 100%",
+        "learner_profile_update.md（跨轮比对，分母 n-1）",
     ),
     "2.5 检索准确率": (
         "准确检索chunk数 / 总检索chunk数 × 100%",
-        "m17_retrieval_*.json（外部LLM评估结果）",
+        "m2_retrieval_*.json（外部LLM评估结果）",
     ),
     "2.5 检索完整率": (
         "完整检索chunk数 / 总检索chunk数 × 100%",
-        "m17_retrieval_*.json（外部LLM评估结果）",
+        "m2_retrieval_*.json（外部LLM评估结果）",
     ),
     # M3 覆盖率
     "3.1 本节知识点覆盖率": (
@@ -242,58 +256,101 @@ METRIC_META: dict[str, tuple[str, str]] = {
         "存在文件数 / 应有文件数 × 100%",
         "round-*/ 目录下的产物文件",
     ),
-    "4.2 资源形态": (
-        "外部LLM判定：资源形态覆盖率（13类）",
-        "resource_morphology_*.json（外部LLM评估）",
+    "4.2.1 资源大类数": (
+        "统计课程中覆盖的资源大类总数",
+        "course_package.md（脚本解析）",
+    ),
+    "4.2.2 资源小类数": (
+        "统计课程中实际使用的资源小类总数",
+        "course_package.md（脚本解析）",
     ),
     # M5 其它指标
     "5.3 PII合规检测": (
         "正则白名单扫描 learner_profile_update.md / session_snapshot.json",
         "learner_profile_update.md + session_snapshot.json",
     ),
+    "5.4 异议率": (
+        "(🔴+🟡) / 总批注数 × 100%",
+        "expert_a_cross_review.md + expert_b_cross_review.md",
+    ),
     # M6 问答质量测试
     "6.1 对抗稳健率": (
-        "通过对抗探针题数 / 总对抗探针题数 × 100%（系统级单次）",
-        "m15_adversarial_*_system.json（系统级外部LLM评估）",
+        "通过对抗探针题数 / 总对抗探针题数 × 100%（系统级独立评估）",
+        "m6_adversarial_*_system.json（系统级外部LLM评估）",
     ),
     "6.2 边界拒答恰当率": (
-        "恰当拒答题数 / 总边界探针题数 × 100%（系统级单次）",
-        "m16_boundary_*_system.json（系统级外部LLM评估）",
+        "恰当拒答题数 / 总边界探针题数 × 100%（系统级独立评估）",
+        "m6_boundary_*_system.json（系统级外部LLM评估）",
     ),
 }
 
 # 旧指标名 → 新展示名映射（用于从 calculate.MetricResult 到报告展示）
 _RENAME_MAP: dict[str, str] = {
-    "专家互评异议率": "1.1 异议率",
-    "异议闭环率": "1.1 闭环率",
-    "裁判准确性评分": "1.2 裁判Agent准确性评分",
+    "1.1 闭环率": "1.1 闭环率",
+    "1.2 裁判Agent准确性评分": "1.2 裁判Agent准确性评分",
+    "5.4 异议率": "5.4 异议率",
     "上下文正确性(Context Correctness)": "1.3.1 上下文正确性",
     "答案正确性(Correctness)": "1.3.2 答案正确性",
     "幻觉评估(Hallucination)": "1.3.3 幻觉评估",
+    # 新名自引用（calculate.py 直接使用新名）
+    "1.4.1 事实性谬误率": "1.4.1 事实性谬误率",
+    "1.4.2 逻辑性谬误率": "1.4.2 逻辑性谬误率",
+    "1.4.3 指令性谬误率": "1.4.3 指令性谬误率",
+    "1.5.1 知识溯源可验证率": "1.5.1 知识溯源可验证率",
+    "1.5.2 溯源内容支撑率": "1.5.2 溯源内容支撑率",
+    "1.6 跨轮自洽率": "1.6 跨轮自洽率",
+    "2.1 难度符合度": "2.1 难度符合度",
+    "有用性(Helpfulness)": "2.2 有用性",
+    "相关性(Relevance)": "2.3 相关性",
+    "2.4 动态迭代触发率": "2.4 动态迭代触发率",
+    "2.5 检索准确率": "2.5 检索准确率",
+    "2.5 检索完整率": "2.5 检索完整率",
+    "3.1 本节知识点覆盖率": "3.1 本节知识点覆盖率",
+    "3.2 薄弱点命中率": "3.2 薄弱点命中率",
+    "3.3 混淆对覆盖率": "3.3 混淆对覆盖率",
+    "4.1 产物完整率": "4.1 产物完整率",
+    "4.2.1 资源大类数": "4.2.1 资源大类数",
+    "4.2.2 资源小类数": "4.2.2 资源小类数",
+    "5.3 PII合规检测": "5.3 PII合规检测",
+    "6.1 对抗稳健率": "6.1 对抗稳健率",
+    "6.2 边界拒答恰当率": "6.2 边界拒答恰当率",
+    # 旧名 → 新名（兼容 calculate.py 旧名输出）
     "M1.1 事实性谬误率": "1.4.1 事实性谬误率",
     "M1.2 逻辑性谬误率": "1.4.2 逻辑性谬误率",
     "M1.3 指令性谬误率": "1.4.3 指令性谬误率",
     "知识溯源可验证率": "1.5.1 知识溯源可验证率",
     "M9-b 溯源内容支撑率": "1.5.2 溯源内容支撑率",
     "M14 跨轮自洽率": "1.6 跨轮自洽率",
-    "难度符合度": "2.1 难度符合度",
-    "有用性(Helpfulness)": "2.2 有用性",
-    "相关性(Relevance)": "2.3 相关性",
-    "动态迭代触发率": "2.4 动态迭代触发率",
     "M17-a 检索准确率": "2.5 检索准确率",
     "M17-b 检索完整率": "2.5 检索完整率",
+    # 兼容旧名
+    "专家互评异议率": "5.4 异议率",
+    "异议闭环率": "1.1 闭环率",
+    "裁判准确性评分": "1.2 裁判Agent准确性评分",
+    "难度符合度": "2.1 难度符合度",
+    "动态迭代触发率": "2.4 动态迭代触发率",
     "本节知识点覆盖率": "3.1 本节知识点覆盖率",
     "薄弱点命中率": "3.2 薄弱点命中率",
     "混淆对覆盖率": "3.3 混淆对覆盖率",
     "产物完整率": "4.1 产物完整率",
-    "资源形态评估": "4.2 资源形态",
     "PII泄露条数": "5.3 PII合规检测",
     "M15 对抗稳健率": "6.1 对抗稳健率",
     "M16 边界拒答恰当率": "6.2 边界拒答恰当率",
+    "裁判Agent准确性评分": "1.2 裁判Agent准确性评分",
+    "专业知识谬误率": "1.4.1 事实性谬误率",
 }
 
 # 反向映射：新展示名 → 旧名（用于在 calculate.py 返回的列表中查找）
 _DISPLAY_TO_OLD: dict[str, str] = {v: k for k, v in _RENAME_MAP.items()}
+
+# 直接映射：展示名 → LLM 维度 key（用于把 1.3.1 等展示名翻译回 LLM 维度）
+_DISPLAY_TO_LLM_DIM: dict[str, str] = {
+    "1.3.1 上下文正确性": "上下文正确性(Context Correctness)",
+    "1.3.2 答案正确性": "答案正确性(Correctness)",
+    "1.3.3 幻觉评估": "幻觉评估(Hallucination)",
+    "2.2 有用性": "有用性(Helpfulness)",
+    "2.3 相关性": "相关性(Relevance)",
+}
 
 # ── 证据表 ──────────────────────────────────────────────────────────────────
 
@@ -357,46 +414,100 @@ class FullReportContext:
 
 # ── 外部 LLM 评估结果读取 ─────────────────────────────────────────────────────
 
-LLM_EVAL_RESULTS_DIR = _EVAL_DIR / "LLM" / "results"
-
 
 def _load_llm_eval_results() -> dict[str, Any]:
     results: dict[str, Any] = {}
-    if not LLM_EVAL_RESULTS_DIR.exists():
+    llm_dir = _resolve_llm_results_dir()
+    if not llm_dir.exists():
         return results
-    for json_file in sorted(LLM_EVAL_RESULTS_DIR.glob("judge_*.json")):
+
+    def _store(profile_id: str, round_num: int, key: str, data: Any) -> None:
+        if profile_id not in results:
+            results[profile_id] = {}
+        if round_num not in results[profile_id]:
+            results[profile_id][round_num] = {}
+        results[profile_id][round_num][key] = data
+
+    for json_file in sorted(llm_dir.glob("judge_*.json")):
         try:
             data = json.loads(json_file.read_text(encoding="utf-8"))
             metadata = data.get("metadata", {})
             profile_id = metadata.get("profile_id", "")
             round_num = metadata.get("round", 0)
             if profile_id and round_num:
-                if profile_id not in results:
-                    results[profile_id] = {}
-                if round_num not in results[profile_id]:
-                    results[profile_id][round_num] = {}
-                results[profile_id][round_num]["judge_eval"] = data
+                _store(profile_id, round_num, "judge_eval", data)
         except (json.JSONDecodeError, KeyError):
             continue
-    for json_file in sorted(LLM_EVAL_RESULTS_DIR.glob("resource_morphology_*.json")):
+
+    for json_file in sorted(llm_dir.glob("statement_judge_*.json")):
         try:
             data = json.loads(json_file.read_text(encoding="utf-8"))
             metadata = data.get("metadata", {})
             profile_id = metadata.get("profile_id", "")
             round_num = metadata.get("round", 0)
             if profile_id and round_num:
-                if profile_id not in results:
-                    results[profile_id] = {}
-                if round_num not in results[profile_id]:
-                    results[profile_id][round_num] = {}
-                results[profile_id][round_num]["m7_resource"] = data
+                _store(profile_id, round_num, "statement_eval", data)
         except (json.JSONDecodeError, KeyError):
             continue
+
+    for json_file in sorted(llm_dir.glob("m4_resource_morphology_*.json")):
+        try:
+            data = json.loads(json_file.read_text(encoding="utf-8"))
+            metadata = data.get("metadata", {})
+            profile_id = metadata.get("profile_id", "")
+            round_num = metadata.get("round", 0)
+            if profile_id and round_num:
+                _store(profile_id, round_num, "m7_resource", data)
+        except (json.JSONDecodeError, KeyError):
+            continue
+
+    for json_file in sorted(llm_dir.glob("m2_retrieval_*.json")):
+        try:
+            data = json.loads(json_file.read_text(encoding="utf-8"))
+            metadata = data.get("metadata", {})
+            profile_id = metadata.get("profile_id", "")
+            round_num = metadata.get("round", 0)
+            if profile_id and round_num:
+                _store(profile_id, round_num, "m2_retrieval", data)
+        except (json.JSONDecodeError, KeyError):
+            continue
+
+    for json_file in sorted(llm_dir.glob("m1_cross_round_*.json")):
+        try:
+            data = json.loads(json_file.read_text(encoding="utf-8"))
+            metadata = data.get("metadata", {})
+            profile_id = metadata.get("profile_id", "")
+            if profile_id:
+                if profile_id not in results:
+                    results[profile_id] = {}
+                results[profile_id]["_m14"] = data
+        except (json.JSONDecodeError, KeyError):
+            continue
+
+    for json_file in sorted(llm_dir.glob("m6_adversarial_*_system.json")):
+        try:
+            data = json.loads(json_file.read_text(encoding="utf-8"))
+            if "system" not in results:
+                results["system"] = {}
+            results["system"]["_m15"] = data
+        except (json.JSONDecodeError, KeyError):
+            continue
+
+    for json_file in sorted(llm_dir.glob("m6_boundary_*_system.json")):
+        try:
+            data = json.loads(json_file.read_text(encoding="utf-8"))
+            if "system" not in results:
+                results["system"] = {}
+            results["system"]["_m16"] = data
+        except (json.JSONDecodeError, KeyError):
+            continue
+
     return results
 
 
-def _load_profile_level_metrics(profile_letter: str) -> list[calculate.MetricResult]:
-    return calculate.calculate_profile_level_metrics(profile_letter)
+def _load_profile_level_metrics(profile_letter: str | None = None) -> list[calculate.MetricResult]:
+    """加载系统级指标（M6 问答质量测试），独立于画像。"""
+    return calculate.calculate_system_level_metrics()
 
 
 def _has_llm_eval_for(profile_letter: str, round_num: int,
@@ -518,9 +629,10 @@ def _get_metric_value_for_round(
     """获取特定画像特定轮次的指标值（支持新旧名称映射）。"""
     old_name = _display_to_old_name(display_name)
 
-    # LLM 评估器维度
-    if old_name in _LLM_DIM_KEY_MAP:
-        dim_key = _LLM_DIM_KEY_MAP[old_name]
+    # LLM 评估器维度（展示名 → LLM 维度 key）
+    llm_dim_key = _DISPLAY_TO_LLM_DIM.get(display_name) or _DISPLAY_TO_LLM_DIM.get(old_name)
+    if llm_dim_key and llm_dim_key in _LLM_DIM_KEY_MAP:
+        dim_key = _LLM_DIM_KEY_MAP[llm_dim_key]
         overall = _get_llm_overall_scores(profile_letter, round_num, llm_results)
         if overall:
             dim_data = overall.get(dim_key, {})
@@ -532,7 +644,7 @@ def _get_metric_value_for_round(
 
     # 查找规则计算指标
     for m in round_metrics:
-        if m.name == old_name:
+        if m.name == old_name or m.name == display_name or _RENAME_MAP.get(m.name, m.name) == display_name:
             return m.value, m.unit
 
     # 查找外部 LLM 指标 (M7 资源形态)
@@ -540,6 +652,21 @@ def _get_metric_value_for_round(
         m7_scores = _get_m7_resource_scores(profile_letter, round_num, llm_results)
         if m7_scores:
             return m7_scores.get("value", 0), m7_scores.get("unit", "分")
+
+    # M14 跨轮自洽率（每画像一次，跨轮共享）
+    if display_name == "1.6 跨轮自洽率":
+        m14_data = llm_results.get(profile_letter, {}).get("_m14")
+        if m14_data:
+            return m14_data.get("self_consistency_rate", 0.0), "%"
+
+    # M17 检索准确率/完整率（每画像每轮）
+    if display_name in ("2.5 检索准确率", "2.5 检索完整率"):
+        m17_data = llm_results.get(profile_letter, {}).get(round_num, {}).get("m2_retrieval")
+        if m17_data:
+            if display_name == "2.5 检索准确率":
+                return m17_data.get("accurate_rate", 0.0), "%"
+            elif display_name == "2.5 检索完整率":
+                return m17_data.get("complete_rate", 0.0), "%"
 
     # 系统级指标（问答质量测试表）
     if profile_level_metrics:
@@ -1068,7 +1195,7 @@ def generate_report(
         return None
 
     llm_results = _load_llm_eval_results()
-    profile_level_metrics = _load_profile_level_metrics(profile_letter)
+    profile_level_metrics = _load_profile_level_metrics()
 
     ctx = ReportContext(
         profile_letter=profile_letter,
@@ -1136,7 +1263,7 @@ def generate_full_report(
         return None
 
     llm_eval_results = _load_llm_eval_results()
-    profile_level_metrics = _load_profile_level_metrics(profiles[0].profile_letter) if profiles else []
+    profile_level_metrics = _load_profile_level_metrics()
 
     ctx = FullReportContext(
         profiles=profiles,

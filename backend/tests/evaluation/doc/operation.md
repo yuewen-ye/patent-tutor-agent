@@ -205,21 +205,21 @@ backend/tests/evaluation/artifacts/
 |--------|------|------|
 | `judge_{model}_{profile}_{round:02d}.json` | 外部 LLM 评估结果 | M1 幻觉率、M9 知识溯源可验证率的原始数据 |
 | `statement_judge_{model}_{profile}_{round:02d}.json` | 外部 LLM 评估结果 | M1.1~M1.3 三类谬误、M9-b 溯源内容支撑率的原始数据 |
-| `resource_morphology_{profile}_{round:02d}.json` | 外部 LLM 评估结果 | M7 资源形态评估的原始数据 |
-| `objection_loop_{profile}_{round:02d}.json` | 外部 LLM 评估结果 | M8 异议闭环率的原始数据 |
-| `m14_self_consistency_{profile}.json` | 外部 LLM 评估结果 | M14 跨轮自洽率的原始数据（跨轮聚合） |
-| `m15_adversarial_{model}_system.json` | 外部 LLM 评估结果 | M15 对抗稳健率的原始数据（系统级单次） |
-| `m16_boundary_{model}_system.json` | 外部 LLM 评估结果 | M16 边界拒答恰当率的原始数据（系统级单次） |
-| `m17_retrieval_{model}_{profile}_{round:02d}.json` | 外部 LLM 评估结果 | M17 检索正确性的原始数据 |
+| `m4_resource_morphology_{profile}_{round:02d}.json` | 外部 LLM 评估结果 | M4.2 资源形态评估的原始数据 |
+| `m1_objection_loop_{profile}_{round:02d}.json` | 外部 LLM 评估结果 | M1.1 异议闭环率的原始数据 |
+| `m1_cross_round_{profile}.json` | 外部 LLM 评估结果 | M1.6 跨轮自洽率的原始数据（跨轮聚合） |
+| `m6_adversarial_{model}_system.json` | 外部 LLM 评估结果 | M6.1 对抗稳健率的原始数据（系统级单次） |
+| `m6_boundary_{model}_system.json` | 外部 LLM 评估结果 | M6.2 边界拒答恰当率的原始数据（系统级单次） |
+| `m2_retrieval_{model}_{profile}_{round:02d}.json` | 外部 LLM 评估结果 | M2.5 检索正确性的原始数据 |
 
-### 4.5 系统级探针产物（M15/M16 前置）
+### 4.5 系统级探针产物（M6.1/M6.2 前置）
 
-运行系统级探针（选项 9）后，会在 `backend/tests/evaluation/results/raw/` 下生成：
+运行系统级探针（选项 9）后，会在 `backend/tests/evaluation/results/record/` 下生成：
 
 | 文件名 | 来源 | 用途 |
 |--------|------|------|
-| `adversarial_answers_system.json` | `prepare_probe.py` 生成 | 包含 22 道对抗题的系统回答，供 M15 评估使用 |
-| `boundary_answers_system.json` | `prepare_probe.py` 生成 | 包含 18 道边界题的系统回答，供 M16 评估使用 |
+| `m6_adversarial_answers_system.json` | `prepare_probe.py` 生成 | 包含 22 道对抗题的系统回答，供 M6.1 评估使用 |
+| `m6_boundary_answers_system.json` | `prepare_probe.py` 生成 | 包含 18 道边界题的系统回答，供 M6.2 评估使用 |
 
 ---
 
@@ -265,17 +265,17 @@ backend/tests/evaluation/artifacts/
 | M1 幻觉率 | 1.3.1 上下文正确性 / 1.3.2 答案正确性 / 1.3.3 幻觉评估 | `judge_*.json` |
 | M1 幻觉率 | 1.4.1 事实性谬误率 / 1.4.2 逻辑性谬误率 / 1.4.3 指令性谬误率 | `statement_judge_*.json` |
 | M1 幻觉率 | 1.5.1 知识溯源可验证率 / 1.5.2 溯源内容支撑率 | `statement_judge_*.json` |
-| M1 幻觉率 | 1.6 跨轮自洽率 | `m14_self_consistency_*.json` |
+| M1 幻觉率 | 1.6 跨轮自洽率 | `m1_cross_round_*.json` |
 | M2 匹配度 | 2.2 有用性 / 2.3 相关性 | `judge_*.json` |
-| M2 匹配度 | 2.5 检索准确率 / 2.5 检索完整率 | `m17_retrieval_*.json` |
-| M4 执行完整性 | 4.2 资源形态 | `resource_morphology_*.json` |
+| M2 匹配度 | 2.5 检索准确率 / 2.5 检索完整率 | `m2_retrieval_*.json` |
+| M4 执行完整性 | 4.2 资源形态 | `m4_resource_morphology_*.json` |
 
 ### 6.3 表3：问答质量测试指标（系统级）
 
 | M1~M6 分类 | 指标 | 依赖的 LLM 评估文件 |
 |------|------|-------------------|
-| M6 问答质量测试 | 6.1 对抗稳健率 | `m15_adversarial_*_system.json` |
-| M6 问答质量测试 | 6.2 边界拒答恰当率 | `m16_boundary_*_system.json` |
+| M6 问答质量测试 | 6.1 对抗稳健率 | `m6_adversarial_*_system.json` |
+| M6 问答质量测试 | 6.2 边界拒答恰当率 | `m6_boundary_*_system.json` |
 
 > **注意**：如果相关的外部 LLM 评估结果不存在，对应的指标项会标记为"未评估"或使用 0 值占位，并提示先运行对应的 LLM 评估模式。
 
@@ -309,8 +309,8 @@ backend/tests/evaluation/artifacts/
 
 ### 7.2 报告输出
 
-- 完整报告：`results/reports/report_full.md`
-- 单画像报告：`results/reports/report_{letter}.md`
+- 完整报告：`results/report_full.md`
+- 单画像报告：`results/report_{letter}.md`
 
 ### 7.3 指标行列矩阵
 
@@ -336,9 +336,9 @@ uv run python backend/tests/evaluation/program/prepare_m14.py --profile B
 uv run python backend/tests/evaluation/program/prepare_m14.py
 ```
 
-该脚本遍历所有轮次结果，抽取与"权利要求新颖性"相关的事实点，输出到 `results/m14_factpoints/` 目录。
+该脚本遍历所有轮次结果，抽取与"权利要求新颖性"相关的事实点，输出到 `results/record/` 目录（文件名 `m1_factpoints_*.json`）。
 
-#### (b) M15/M16 系统级探针：真实问答
+#### (b) M6.1/M6.2 系统级探针：真实问答
 
 ```powershell
 # 使用默认题库（22 道对抗题 + 18 道边界题）
@@ -376,13 +376,13 @@ uv run python backend/tests/evaluation/program/prepare_probe.py --base-url http:
 |------|---------|---------|---------|
 | `1` (overall) | 全面评估（14 个维度） | `judge_{model}_{profile}_{round:02d}.json` | 画像 × 轮次 |
 | `2` (statement) | M1/M9/M9-b/M1.1~M1.3 | `statement_judge_{model}_{profile}_{round:02d}.json` | 画像 × 轮次 |
-| `3` (m7) | M7 资源形态 | `resource_morphology_{profile}_{round:02d}.json` | 画像 × 轮次 |
-| `4` (m8) | M8 异议闭环率 | `objection_loop_{profile}_{round:02d}.json` | 画像 × 轮次 |
-| `5` (m14) | M14 跨轮自洽率 | `m14_self_consistency_{profile}.json` | **每画像仅一次**（跨轮聚合） |
-| `6` (m15) | M15 对抗稳健率 | `m15_adversarial_{model}_system.json` | **系统级仅一次** |
-| `7` (m16) | M16 边界拒答恰当率 | `m16_boundary_{model}_system.json` | **系统级仅一次** |
-| `8` (m17) | M17 检索正确性 | `m17_retrieval_{model}_{profile}_{round:02d}.json` | 画像 × 轮次 |
-| `9` (probe) | 仅执行前置数据准备 | `adversarial_answers_system.json` / `boundary_answers_system.json` / `m14_factpoints_*.json` | 单次调用 `prepare_m14.py` + `prepare_probe.py` |
+| `3` (m7) | M4.2 资源形态 | `m4_resource_morphology_{profile}_{round:02d}.json` | 画像 × 轮次 |
+| `4` (m8) | M1.1 异议闭环率 | `m1_objection_loop_{profile}_{round:02d}.json` | 画像 × 轮次 |
+| `5` (m14) | M1.6 跨轮自洽率 | `m1_cross_round_{profile}.json` | **每画像仅一次**（跨轮聚合） |
+| `6` (m15) | M6.1 对抗稳健率 | `m6_adversarial_{model}_system.json` | **系统级仅一次** |
+| `7` (m16) | M6.2 边界拒答恰当率 | `m6_boundary_{model}_system.json` | **系统级仅一次** |
+| `8` (m17) | M2.5 检索正确性 | `m2_retrieval_{model}_{profile}_{round:02d}.json` | 画像 × 轮次 |
+| `9` (probe) | 仅执行前置数据准备 | `m6_adversarial_answers_system.json` / `m6_boundary_answers_system.json` / `m1_factpoints_*.json` | 单次调用 `prepare_m14.py` + `prepare_probe.py` |
 | `all` | 全部 1~8 顺序执行 | 上述所有文件 | 按上述规则 |
 
 ### 8.4 独立运行方式
@@ -396,24 +396,24 @@ uv run python backend/tests/evaluation/LLM/evaluator_LLM.py evaluate --mode over
 # 2. 陈述级评估
 uv run python backend/tests/evaluation/LLM/evaluator_LLM.py evaluate --mode statement --all-profiles --all-rounds
 
-# 5. M14 跨轮自洽率
-uv run python backend/tests/evaluation/LLM/evaluator_LLM.py evaluate --mode m14 --all-profiles
+# 5. M1.6 跨轮自洽率
+uv run python backend/tests/evaluation/LLM/evaluator_LLM.py evaluate --mode m1_cross_round --all-profiles
 
-# 6. M15 对抗稳健率
-uv run python backend/tests/evaluation/LLM/evaluator_LLM.py evaluate --mode m15
+# 6. M6.1 对抗稳健率
+uv run python backend/tests/evaluation/LLM/evaluator_LLM.py evaluate --mode m6_adversarial
 
-# 7. M16 边界拒答恰当率
-uv run python backend/tests/evaluation/LLM/evaluator_LLM.py evaluate --mode m16
+# 7. M6.2 边界拒答恰当率
+uv run python backend/tests/evaluation/LLM/evaluator_LLM.py evaluate --mode m6_boundary
 
-# 8. M17 检索正确性
-uv run python backend/tests/evaluation/LLM/evaluator_LLM.py evaluate --mode m17 --all-profiles --all-rounds
+# 8. M2.5 检索正确性
+uv run python backend/tests/evaluation/LLM/evaluator_LLM.py evaluate --mode m2_retrieval --all-profiles --all-rounds
 ```
 
 ### 8.5 注意事项
 
 -   外部 LLM 评估会消耗额外的 API 资源和时间。
 -   评估结果会缓存，重复运行默认会跳过已存在的结果，除非使用 `--force` 标志。
--   M15/M16 为系统级指标，所有画像共享同一评估结果。
+-   M6.1/M6.2 为系统级指标，所有画像共享同一评估结果。
 -   详细评估逻辑参见 `backend/tests/evaluation/LLM/evaluator_LLM.py`。
 
 ---
@@ -461,7 +461,7 @@ uv run python backend/tests/evaluation/LLM/evaluator_LLM.py evaluate --mode m17 
    └─ 主菜单 2 → 选画像 → all → 查看逐轮结果 + 多轮平均值
 
 （13）生成完整报告
-   └─ 主菜单 3 → 打开 results/reports/evaluation_report_*.md
+   └─ 主菜单 3 → 打开 results/report_full.md
 ```
 
 ---

@@ -1,12 +1,12 @@
-"""M14 跨轮事实点抽取脚本。
+"""M1.6 跨轮事实点抽取脚本。
 
 功能：
     1. 遍历 ``artifacts/multi-{letter}/round-*/`` 下的课程包和画像更新文件
     2. 从 course_package.md（知识点、法条、案例、问题）和
        learner_profile_update.md（BKT 掌握度更新）中
        提取与专利法核心主题相关的事实点
-    3. 按 topic 聚合跨轮事实点，输出 ``m14_factpoints_{profile_id}.json``
-       供 evaluator_LLM.py --mode m14 评估使用
+    3. 按 topic 聚合跨轮事实点，输出 ``m1_factpoints_{profile_id}.json``
+       供 evaluator_LLM.py --mode m1_cross_round 评估使用
 
 用法：
     # 对所有画像抽取
@@ -256,7 +256,7 @@ def _extract_profile(
             })
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    out_path = output_dir / f"m14_factpoints_{profile_letter}.json"
+    out_path = output_dir / f"m1_factpoints_{profile_letter}.json"
     payload = {
         "profile_id": profile_letter,
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -277,7 +277,7 @@ def run_extract(
     learner_prefix: str = "multi",
 ) -> list[Path]:
     artifacts_dir = artifacts_dir or common.EVAL_ARTIFACTS_DIR
-    output_dir = output_dir or (_EVAL_DIR / "results" / "m14_factpoints")
+    output_dir = output_dir or (_EVAL_DIR / "results" / "record")
 
     profiles: list[str]
     if profile:
@@ -307,7 +307,7 @@ def run_extract(
 
     print(f"\n✅ 抽取完成，共 {len(outputs)} 个输出文件")
     print(f"\n下一步：")
-    print(f"  uv run python {_EVAL_DIR / 'LLM' / 'evaluator_LLM.py'} --mode m14")
+    print(f"  uv run python {_EVAL_DIR / 'LLM' / 'evaluator_LLM.py'} --mode m1_cross_round")
     return outputs
 
 

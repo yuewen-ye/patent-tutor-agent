@@ -5,8 +5,8 @@
     2. 启动 FastAPI 后端、调用 ``POST /sessions`` + ``chat`` 路径或直接调用
        workflow ``arun_workflow(workflow_mode="chat")``，获取系统回答
     3. 分别将回答保存为：
-         - ``adversarial_answers_system.json``  （供 evaluator_LLM.py --mode m15 使用）
-         - ``boundary_answers_system.json``     （供 evaluator_LLM.py --mode m16 使用）
+         - ``m6_adversarial_answers_system.json``  （供 evaluator_LLM.py --mode m6_adversarial 使用）
+         - ``m6_boundary_answers_system.json``     （供 evaluator_LLM.py --mode m6_boundary 使用）
 
 用法：
     # 使用默认题库 + 本地 FastAPI
@@ -114,20 +114,34 @@ def _call_via_workflow(
     失败时返回占位错误文本，不抛出异常。
     """
     try:
+        common.ensure_dotenv()
+        import os as _os
+        for _key in ("RAG_EMBEDDING_MODEL_PATH", "RAG_RERANKER_MODEL_PATH"):
+            _val = _os.getenv(_key, "").strip()
+            if _val and not _os.path.isabs(_val):
+                _os.environ[_key] = str(_PROJECT_ROOT / _val)
         sys.path.insert(0, str(_PROJECT_ROOT / "backend"))
         from app.graph.workflow import build_workflow  # type: ignore
         from app.schemas.state import StateDict  # type: ignore
 
+        import uuid
+        session_id = str(uuid.uuid4())[:8]
         wf = build_workflow()
         initial: StateDict = {
+            "session_id": session_id,
             "user_input": question,
             "learner_id": learner_id,
             "workflow_mode": "chat",
+            "events": [],
+            "artifacts": [],
+            "teach_phase": "debate",
         }
         if target_node:
             initial["target_node_id"] = target_node
-        result = wf.invoke(initial)
-        # chat 模式结果字段
+        result = wf.invoke(
+            initial,
+            {"configurable": {"thread_id": session_id}},
+        )
         answer = (
             result.get("chat_answer")
             or result.get("final_answer")
@@ -147,19 +161,41 @@ def _call_via_http(
     base_url: str,
     learner_id: str,
 ) -> str:
-    """通过 HTTP 调用 chat 端点。"""
+    """通过 HTTP 调用 chat 端点（POST /sessions + 轮询）。"""
     try:
+        import time
         import httpx
+
         payload = {
-            "learner_id": learner_id,
             "user_input": question,
-            "workflow_mode": "chat",
+            "learner_id": learner_id,
+            "mode": "chat",
         }
-        resp = httpx.post(f"{base_url}/sessions/chat", json=payload, timeout=60.0)
+        resp = httpx.post(f"{base_url}/sessions", json=payload, timeout=30.0)
         if resp.status_code != 200:
-            return f"[http_error] status={resp.status_code} body={resp.text[:200]}"
-        data = resp.json()
-        return str(data.get("answer") or data.get("chat_answer") or data)
+            return f"[http_error] create status={resp.status_code} body={resp.text[:200]}"
+        session_id = resp.json()["session_id"]
+
+        deadline = time.time() + 90
+        while time.time() < deadline:
+            r = httpx.get(f"{base_url}/sessions/{session_id}", timeout=30.0)
+            if r.status_code == 200:
+                body = r.json()
+                status = body.get("status", "")
+                if status in ("completed", "failed", "canceled"):
+                    state = body.get("state", {})
+                    answer = (
+                        state.get("chat_answer")
+                        or state.get("final_answer")
+                        or state.get("answer")
+                        or body.get("error")
+                        or ""
+                    )
+                    if isinstance(answer, dict):
+                        answer = json.dumps(answer, ensure_ascii=False)
+                    return str(answer)[:4000]
+            time.sleep(2)
+        return f"[http_error] timeout waiting for session {session_id}"
     except Exception as e:  # noqa: BLE001
         return f"[http_error] {type(e).__name__}: {e}"
 
@@ -179,7 +215,7 @@ def run_probe(
     返回两个输出文件路径。
     """
     learner_id = f"multi-{profile_letter}"
-    out_dir = output_dir or (_EVAL_DIR / "results" / "raw")
+    out_dir = output_dir or (_EVAL_DIR / "results" / "record")
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # 优先加载 JSON 题库，如果不存在则回退到内置列表
@@ -210,28 +246,28 @@ def run_probe(
     adv_answers: list[dict[str, Any]] = []
     for i, item in enumerate(adv_bank, 1):
         q = item["question"]
-        print(f"[M15 {i}/{len(adv_bank)}] {q[:50]}...")
+        print(f"[M6.adv {i}/{len(adv_bank)}] {q[:50]}...")
         ans = call_fn(q)
         adv_answers.append({
             "question": q,
-            "trap_type": item.get("trap_type", ""),
-            "expected": item.get("expected", ""),
+            "trap_type": item.get("trap_type") or item.get("trap", ""),
+            "expected": item.get("expected") or item.get("pass") or item.get("trap", ""),
             "answer": ans,
         })
 
     bnd_answers: list[dict[str, Any]] = []
     for i, item in enumerate(bnd_bank, 1):
         q = item["question"]
-        print(f"[M16 {i}/{len(bnd_bank)}] {q[:50]}...")
+        print(f"[M6.bnd {i}/{len(bnd_bank)}] {q[:50]}...")
         ans = call_fn(q)
         bnd_answers.append({
             "question": q,
-            "expected": item.get("expected", ""),
+            "expected": item.get("expected") or item.get("boundary") or item.get("pass", ""),
             "answer": ans,
         })
 
-    adv_path = out_dir / "adversarial_answers_system.json"
-    bnd_path = out_dir / "boundary_answers_system.json"
+    adv_path = out_dir / "m6_adversarial_answers_system.json"
+    bnd_path = out_dir / "m6_boundary_answers_system.json"
     _save_answers(adv_path, adv_answers, kind="adversarial")
     _save_answers(bnd_path, bnd_answers, kind="boundary")
 
@@ -239,8 +275,8 @@ def run_probe(
     print(f"  M15 对抗题回答: {adv_path}")
     print(f"  M16 边界题回答: {bnd_path}")
     print(f"\n下一步：")
-    print(f"  uv run python {_EVAL_DIR / 'LLM' / 'evaluator_LLM.py'} evaluate --mode m15")
-    print(f"  uv run python {_EVAL_DIR / 'LLM' / 'evaluator_LLM.py'} evaluate --mode m16")
+    print(f"  uv run python {_EVAL_DIR / 'LLM' / 'evaluator_LLM.py'} evaluate --mode m6_adversarial")
+    print(f"  uv run python {_EVAL_DIR / 'LLM' / 'evaluator_LLM.py'} evaluate --mode m6_boundary")
     return adv_path, bnd_path
 
 

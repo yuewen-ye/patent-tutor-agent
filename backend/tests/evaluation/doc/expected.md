@@ -368,7 +368,7 @@ profiles/expected_{letter}_{round:02d}.json
 
 1. 扫描所有已运行的 `multi-{letter}/round-*`
 2. 汇总所有轮次的指标计算结果
-3. 输出跨画像跨轮次的完整报告：`results/reports/evaluation_report_*.md`
+3. 输出跨画像跨轮次的完整报告：`results/report_full.md`
 
 ---
 

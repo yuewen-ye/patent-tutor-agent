@@ -33,7 +33,7 @@
 
 字段来源：
 - 🔴 和 🟡 — `expert_a_cross_review.md` 和 `expert_b_cross_review.md` 的 `类别` 列标记符号
-- 闭环判定 — 外部 LLM 评估（`objection_loop_*.json`）
+- 闭环判定 — 外部 LLM 评估（`m1_objection_loop_*.json`）
 
 **子维度 ②：裁判准确性评分**
 
@@ -254,7 +254,7 @@ PII泄露条数 = 正则白名单扫描 learner_profile_update.md / session_snap
 ```
 
 字段来源：
-- 外部 LLM：`resource_morphology_*.json`
+- 外部 LLM：`m4_resource_morphology_*.json`
 - 回退脚本：统计 `course_package.md` 中出现的 13 种资源形态类型
 - 三类核心形态（必覆盖）：
   - 讲义类：`knowledge_synthesis` / `verbal_explanation` / `global_framework` / `summary_card` / `mnemonic`
@@ -304,11 +304,11 @@ uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py
    # M1陈述级评估（专业知识谬误率 + 知识溯源可验证率）
    uv run python backend/tests/evaluation/LLM/evaluator_LLM.py --mode statement
 
-   # M7资源形态评估
-   uv run python backend/tests/evaluation/LLM/evaluator_LLM.py --mode m7
+   # M4.2资源形态评估
+   uv run python backend/tests/evaluation/LLM/evaluator_LLM.py --mode m4
 
-   # M1异议闭环率评估
-   uv run python backend/tests/evaluation/LLM/evaluator_LLM.py --mode m8
+   # M1.1异议闭环率评估
+   uv run python backend/tests/evaluation/LLM/evaluator_LLM.py --mode m1
    ```
 
 2. **指标计算**：
