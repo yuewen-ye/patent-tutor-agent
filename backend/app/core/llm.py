@@ -66,7 +66,7 @@ DEFAULT_CONFIG: dict[LLMProvider, dict[str, str]] = {
         "api_key_env": "GPT_API_KEY",
         "model_env": "GPT_MODEL",
         "base_url_env": "GPT_BASE_URL",
-        "model": "gpt-5.6-luna",
+        "model": "gpt-4o",
         "base_url": "https://endpoint.greatrouter.com",
     },
     "luna": {
