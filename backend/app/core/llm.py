@@ -52,7 +52,7 @@ DEFAULT_CONFIG: dict[LLMProvider, dict[str, str]] = {
         "api_key_env": "QWEN_API_KEY",
         "model_env": "QWEN_MODEL",
         "base_url_env": "QWEN_BASE_URL",
-        "model": "qwen3.7-plus",
+        "model": "Qwen3.7-Plus",
         "base_url": "https://endpoint.greatrouter.com",
     },
     "glm": {
@@ -66,7 +66,7 @@ DEFAULT_CONFIG: dict[LLMProvider, dict[str, str]] = {
         "api_key_env": "GPT_API_KEY",
         "model_env": "GPT_MODEL",
         "base_url_env": "GPT_BASE_URL",
-        "model": "gpt-5.5",
+        "model": "gpt-5.6-luna",
         "base_url": "https://endpoint.greatrouter.com",
     },
     "luna": {
