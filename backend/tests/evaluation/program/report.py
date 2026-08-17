@@ -43,7 +43,7 @@ for _p in (_THIS_DIR, _EVAL_DIR, _PROJECT_ROOT):
 import _common as common  # noqa: E402
 import calculate  # noqa: E402
 
-REPORTS_DIR = _EVAL_DIR / "results"
+REPORTS_DIR = _EVAL_DIR / "results" / "reports"
 
 def _resolve_llm_results_dir() -> Path:
     """解析外部 LLM 结果目录：优先 results/record，回退 results/reports/record 和 LLM/results。"""

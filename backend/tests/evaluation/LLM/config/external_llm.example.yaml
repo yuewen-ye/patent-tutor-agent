@@ -29,7 +29,7 @@ inputs:
 
 # 输出配置
 output:
-  dir: "backend/tests/evaluation/results/reports/record"
+  dir: "backend/tests/evaluation/results/record"
   naming: "judge_{model}_{profile}_{round:02d}.json"
   overwrite: false  # 不覆盖已有结果（支持重跑失败的）
 
