@@ -84,10 +84,10 @@ def _prompt_main_menu() -> str:
     print("\n" + "=" * 60)
     print("请选择操作模式：")
     print("  0 — 退出")
-    print("  1 — 计算指标")
+    print("  1 — 计算指标（跳过已有结果）")
     print("  2 — 生成报告")
     print("  3 — 运行系统")
-    print("  4 — 外部LLM评估")
+    print("  4 — 外部LLM评估（跳过已有结果）")
     while True:
         raw = input("→ 选择: ").strip()
         if raw in {"0", "1", "2", "3", "4"}:
@@ -847,6 +847,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--base-url", default=common.DEFAULT_BASE_URL)
     p.add_argument("--artifact-dir", type=Path, default=common.EVAL_ARTIFACTS_DIR)
     p.add_argument("--learner-prefix", default="multi")
+    p.add_argument("--force", action="store_true", help="强制重跑（覆盖已有结果）")
     return p
 
 
@@ -895,7 +896,13 @@ def main(argv: list[str] | None = None) -> int:
             )
         elif choice == "4":
             print(f"\n将进行外部 LLM 评估：{', '.join(selected)}")
-            _do_llm_evaluate(selected)
+            force = args.force
+            if not force:
+                force_input = input("  强制重跑？(y/N): ").strip().lower()
+                force = force_input == "y"
+            if force:
+                print("  ⚠️  强制重跑模式：已有结果将被覆盖")
+            _do_llm_evaluate(selected, force=force)
             print("\n外部 LLM 评估完成，返回主菜单。")
 
 

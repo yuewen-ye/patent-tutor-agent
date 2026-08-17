@@ -779,6 +779,104 @@ def _render_comparison_table(
     return lines
 
 
+# ── Markdown 渲染：系统级指标表（两列格式） ────────────────────────────────────
+
+def _render_system_level_table(
+    table_metric_groups: list[tuple[str, list[str]]],
+    profile_level_metrics: list[calculate.MetricResult],
+) -> list[str]:
+    """渲染系统级指标表：两列格式（指标 + 数值）。
+
+    系统级指标（M6）独立于画像，所有画像共享同一数值。
+    """
+    lines: list[str] = []
+
+    # 表头
+    lines.append("| 指标 | **数值** |")
+    lines.append("|---|---|")
+
+    # 数据行（按分组组织）
+    for group_name, metrics in table_metric_groups:
+        group_header = f"| **{group_name}** | |"
+        lines.append(group_header)
+        for name in metrics:
+            # 从 profile_level_metrics 中查找值
+            value = "-"
+            for m in profile_level_metrics:
+                mapped = _RENAME_MAP.get(m.name, m.name)
+                if mapped == name or m.name == name:
+                    value = _format_value(m.value, m.unit)
+                    break
+            row = f"| `{name}` | {value} |"
+            lines.append(row)
+
+    return lines
+
+
+# ── Markdown 渲染：M6 详细说明模块 ────────────────────────────────────────────
+
+def _render_m6_detail_section(
+    profile_level_metrics: list[calculate.MetricResult],
+) -> list[str]:
+    """渲染 M6 问答质量测试的详细说明模块。"""
+    lines: list[str] = []
+
+    lines.append("### 4.5 M6 问答质量测试详情")
+    lines.append("")
+    lines.append("M6 问答质量测试为**系统级独立评估**，所有画像共享同一结果。")
+    lines.append("")
+
+    # M6.1 对抗稳健率
+    adv_metric = None
+    bnd_metric = None
+    for m in profile_level_metrics:
+        mapped = _RENAME_MAP.get(m.name, m.name)
+        if mapped == "6.1 对抗稳健率":
+            adv_metric = m
+        elif mapped == "6.2 边界拒答恰当率":
+            bnd_metric = m
+
+    if adv_metric:
+        lines.append("#### 6.1 对抗稳健率")
+        lines.append("")
+        lines.append(f"- **数值**: {_format_value(adv_metric.value, adv_metric.unit)}")
+        lines.append(f"- **计算公式**: 通过对抗探针题数 / 总对抗探针题数 × 100%")
+        lines.append(f"- **数据来源**: `m6_adversarial_*_system.json`（系统级外部LLM评估）")
+        if adv_metric.detail:
+            detail = adv_metric.detail
+            if isinstance(detail, dict):
+                total = detail.get("问题数", 0)
+                passed = detail.get("通过数", 0)
+                lines.append(f"- **统计**: 共 {total} 题，通过 {passed} 题")
+        lines.append("")
+        lines.append("**说明**: 本指标衡量系统在面对对抗性/陷阱性问题时的稳健程度。")
+        lines.append("系统应能识别并正确处理这些精心设计的诱导性问题，而非被误导给出错误答案。")
+        lines.append("")
+
+    if bnd_metric:
+        lines.append("#### 6.2 边界拒答恰当率")
+        lines.append("")
+        lines.append(f"- **数值**: {_format_value(bnd_metric.value, bnd_metric.unit)}")
+        lines.append(f"- **计算公式**: 恰当拒答题数 / 总边界探针题数 × 100%")
+        lines.append(f"- **数据来源**: `m6_boundary_*_system.json`（系统级外部LLM评估）")
+        if bnd_metric.detail:
+            detail = bnd_metric.detail
+            if isinstance(detail, dict):
+                total = detail.get("问题数", 0)
+                appropriate = detail.get("恰当数", 0)
+                lines.append(f"- **统计**: 共 {total} 题，恰当拒答 {appropriate} 题")
+        lines.append("")
+        lines.append("**说明**: 本指标衡量系统在面对超出能力范围或边界问题时，能否恰当拒答而非编造信息。")
+        lines.append("恰当拒答包括：坦诚告知用户该问题超出范围、引导用户查阅官方渠道、或提供有限但准确的信息。")
+        lines.append("")
+
+    if not adv_metric and not bnd_metric:
+        lines.append("_（M6 指标数据未就绪，请先运行系统级探针和外部LLM评估）_")
+        lines.append("")
+
+    return lines
+
+
 # ── Markdown 渲染：画像单表（轮次对比） ──────────────────────────────────────
 
 def _render_profile_round_table(
@@ -874,11 +972,17 @@ def _render_markdown_single(ctx: ReportContext) -> str:
     for table_name, table_groups in THREE_TABLES:
         lines.append(f"### {table_name}")
         lines.append("")
-        lines.extend(_render_profile_round_table(
-            table_groups,
-            ProfileReport(profile_letter, ctx.session_dir, rounds),
-            llm_results, profile_level_metrics,
-        ))
+        if table_name == "问答质量测试指标":
+            # 系统级指标使用两列格式
+            lines.extend(_render_system_level_table(
+                table_groups, profile_level_metrics,
+            ))
+        else:
+            lines.extend(_render_profile_round_table(
+                table_groups,
+                ProfileReport(profile_letter, ctx.session_dir, rounds),
+                llm_results, profile_level_metrics,
+            ))
         lines.append("")
 
     # 四、五段式详情
@@ -935,6 +1039,10 @@ def _render_markdown_single(ctx: ReportContext) -> str:
         lines.extend(_render_round_detail_section(
             profile_letter, rm, llm_results, profile_level_metrics,
         ))
+
+    # 4.5 M6 问答质量测试详情（系统级独立展示）
+    lines.append("")
+    lines.extend(_render_m6_detail_section(profile_level_metrics))
 
     # 五、证据表
     _append_evidence_tables(lines)
@@ -1074,9 +1182,15 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
     for table_name, table_groups in THREE_TABLES:
         lines.append(f"### {table_name}")
         lines.append("")
-        lines.extend(_render_comparison_table(
-            table_groups, profiles, llm_results, profile_level_metrics,
-        ))
+        if table_name == "问答质量测试指标":
+            # 系统级指标使用两列格式
+            lines.extend(_render_system_level_table(
+                table_groups, profile_level_metrics,
+            ))
+        else:
+            lines.extend(_render_comparison_table(
+                table_groups, profiles, llm_results, profile_level_metrics,
+            ))
         lines.append("")
 
     lines.append("---")
@@ -1093,8 +1207,10 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
         lines.append(f"- 轮次数：{len(p.rounds)}")
         lines.append("")
 
-        # 三张表
+        # 三张表（M6 问答质量测试为系统级指标，不在画像详情中重复渲染）
         for table_name, table_groups in THREE_TABLES:
+            if table_name == "问答质量测试指标":
+                continue
             lines.append(f"#### {table_name}")
             lines.append("")
             lines.extend(_render_profile_round_table(
@@ -1126,7 +1242,12 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
         lines.append("---")
         lines.append("")
 
-    # 五、证据表
+    # 五、M6 问答质量测试详情（系统级独立展示）
+    lines.append("## 五、M6 问答质量测试详情")
+    lines.append("")
+    lines.extend(_render_m6_detail_section(profile_level_metrics))
+
+    # 六、证据表
     _append_evidence_tables(lines)
 
     lines.append("---")
