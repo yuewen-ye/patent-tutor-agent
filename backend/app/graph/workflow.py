@@ -3,25 +3,31 @@
 from __future__ import annotations
 
 import inspect
+import os
 import sys
 import time
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable, Literal, assert_never, cast
+from typing import Any, Literal, assert_never, cast
 
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.runtime import Runtime
 from langgraph.store.memory import InMemoryStore
 
-from backend.app.core.agent_runtime_config import agent_top_k
 from backend.app.agents import Node, build_agent_nodes
-from backend.app.runtime_outputs.artifacts import attach_markdown_artifact, write_field_artifact, write_manifest
+from backend.app.core.agent_runtime_config import agent_top_k
 from backend.app.core.llm import AgentLLMRouter, DefaultLLMClient, LLMClient, set_llm_log_context
 from backend.app.retrieval.selector import retrieve_context
+from backend.app.runtime_outputs.artifacts import (
+    attach_markdown_artifact,
+    write_field_artifact,
+    write_manifest,
+)
+from backend.app.runtime_outputs.workflow_logging import write_workflow_log
 from backend.app.schemas.context import WorkflowContext
 from backend.app.schemas.state import JudgeReport, StateDict, completed_event
-from backend.app.runtime_outputs.workflow_logging import write_workflow_log
 
 WorkflowUpdateSink = Callable[[dict[str, Any]], None]
 WorkflowEventSink = Callable[[list[dict[str, Any]]], None]
@@ -242,6 +248,12 @@ def _with_runtime_side_effects(
             )
             if artifact_root is not None:
                 write_manifest(artifact_root=artifact_root, state=dict(state), status="failed")
+            # 把失败节点名挂到异常上，供 session_service 写进 state（last_failed_node），
+            # 否则崩溃点只能靠 workflow.log.jsonl 反推。
+            try:
+                exc.add_note(f"patent_tutor_failed_node={label}")
+            except AttributeError:  # 极老的解释器没有 add_note，忽略即可
+                pass
             set_llm_log_context(session_id=None, log_root=None)
             raise
 
@@ -340,22 +352,49 @@ def _route_after_experts_barrier(
             assert_never(unreachable)
 
 
-def _route_after_judge(
-    state: StateDict,
-) -> Literal["expert_a_integration", "slide_deck", "__end__"]:
-    report = JudgeReport.model_validate(state.get("judge_report", {}))
-    needs_revision = report.decision == "revise" or bool(report.revision_requests)
-    if not needs_revision:
-        print("▸ [路由] judge 通过 → slide_deck 生成结构化课件", file=sys.stderr)
-        return "slide_deck"
-    current_round = state.get("revision_round", 0) or 0
-    if current_round >= 3:
-        # 修订达上限：course_package 已由 expert_a integration 生成，仍生成配套课件，
-        # 避免"有课程内容却无 slides"（workflow_status 仍为 completed）。
-        print("▸ [路由] judge 修订已达上限 3 次 → 仍生成结构化课件", file=sys.stderr)
-        return "slide_deck"
-    print("▸ [路由] judge 未通过 → expert_a_integration 重新整合", file=sys.stderr)
-    return "expert_a_integration"
+def _is_slide_deck_enabled() -> bool:
+    """读取环境变量控制是否启用 slide_deck 节点；默认为开启。"""
+    raw = (
+        os.environ.get("PATENT_TUTOR_SLIDE_DECK_ENABLED")
+        or os.environ.get("SLIDE_DECK_ENABLED", "")
+    ).strip()
+    if not raw:
+        return True
+    return raw.lower() not in {"false", "0", "off", "no"}
+
+
+def _complete_node(state: StateDict) -> dict[str, Any]:
+    """slide_deck 关闭时的流程收尾节点：把 workflow_status 置为 completed。"""
+    return {"workflow_status": "completed"}
+
+
+def _make_route_after_judge(
+    slide_deck_enabled: bool,
+) -> Callable[[StateDict], Literal["expert_a_integration", "slide_deck", "_complete"]]:
+    def _route_after_judge(
+        state: StateDict,
+    ) -> Literal["expert_a_integration", "slide_deck", "_complete"]:
+        report = JudgeReport.model_validate(state.get("judge_report", {}))
+        needs_revision = report.decision == "revise" or bool(report.revision_requests)
+        if not needs_revision:
+            if slide_deck_enabled:
+                print("▸ [路由] judge 通过 → slide_deck 生成结构化课件", file=sys.stderr)
+                return "slide_deck"
+            print("▸ [路由] judge 通过 → slide_deck 已关闭，直接完成", file=sys.stderr)
+            return "_complete"
+        current_round = state.get("revision_round", 0) or 0
+        if current_round >= 3:
+            # 修订达上限：course_package 已由 expert_a integration 生成。
+            # 若 slide_deck 开启则生成配套课件，否则直接收尾。
+            if slide_deck_enabled:
+                print("▸ [路由] judge 修订已达上限 3 次 → 仍生成结构化课件", file=sys.stderr)
+                return "slide_deck"
+            print("▸ [路由] judge 修订已达上限 3 次 → slide_deck 已关闭，直接完成", file=sys.stderr)
+            return "_complete"
+        print("▸ [路由] judge 未通过 → expert_a_integration 重新整合", file=sys.stderr)
+        return "expert_a_integration"
+
+    return _route_after_judge
 
 
 def build_workflow(
@@ -367,11 +406,15 @@ def build_workflow(
     event_sink: WorkflowEventSink | None = None,
     use_default_checkpointing: bool = True,
     workflow_log_root: str | Path | None = None,
+    slide_deck_enabled: bool | None = None,
 ) -> Any:
     builder = StateGraph(StateDict, context_schema=WorkflowContext)
     nodes: dict[str, Node] = build_agent_nodes(llm_client or AgentLLMRouter.from_env())
     root_path = Path(artifact_root) if artifact_root is not None else None
     log_root_path = Path(workflow_log_root) if workflow_log_root is not None else root_path
+    slide_deck_enabled = (
+        _is_slide_deck_enabled() if slide_deck_enabled is None else slide_deck_enabled
+    )
 
     def _ensure_session_id(state: StateDict) -> dict[str, Any]:
         """Auto-generate session_id if not provided (e.g. from LangGraph Studio)."""
@@ -409,7 +452,23 @@ def build_workflow(
     builder.add_node("_experts_barrier", _advance_expert_phase)
     builder.add_node("expert_a_integration", _wrap("expert_a", node_label="expert_a"))
     builder.add_node("judge", _wrap("judge"))
-    builder.add_node("slide_deck", _wrap("slide_deck"))
+    if slide_deck_enabled:
+        builder.add_node("slide_deck", _wrap("slide_deck"))
+    else:
+        builder.add_node(
+            "_complete",
+            cast(
+                Any,
+                _with_runtime_side_effects(
+                    _complete_node,
+                    root_path,
+                    log_root_path,
+                    update_sink,
+                    event_sink,
+                    node_label="_complete",
+                ),
+            ),
+        )
 
     # ── Edges ──
 
@@ -456,16 +515,26 @@ def build_workflow(
         },
     )
     builder.add_edge("expert_a_integration", "judge")
-    builder.add_conditional_edges(
-        "judge",
-        _route_after_judge,
-        {
-            "expert_a_integration": "expert_a_integration",
-            "slide_deck": "slide_deck",
-            "__end__": END,
-        },
-    )
-    builder.add_edge("slide_deck", END)
+    if slide_deck_enabled:
+        builder.add_conditional_edges(
+            "judge",
+            _make_route_after_judge(True),
+            {
+                "expert_a_integration": "expert_a_integration",
+                "slide_deck": "slide_deck",
+            },
+        )
+        builder.add_edge("slide_deck", END)
+    else:
+        builder.add_conditional_edges(
+            "judge",
+            _make_route_after_judge(False),
+            {
+                "expert_a_integration": "expert_a_integration",
+                "_complete": "_complete",
+            },
+        )
+        builder.add_edge("_complete", END)
 
     builder.add_edge("chat_answer", END)
 
@@ -490,6 +559,7 @@ def run_workflow(
     workflow_mode: Literal["auto", "teach", "chat", "diagnose", "feedback"] = "auto",
     input_payload: dict[str, Any] | None = None,
     parent_session_id: str | None = None,
+    slide_deck_enabled: bool | None = None,
 ) -> StateDict:
     print(f"\n{'='*60}", file=sys.stderr)
     print(f"工作流启动  session={session_id}  learner={learner_id or 'N/A'}", file=sys.stderr)
@@ -501,6 +571,7 @@ def run_workflow(
         artifact_root=artifact_root,
         checkpointer=checkpointer,
         store=store,
+        slide_deck_enabled=slide_deck_enabled,
     )
     result = workflow.invoke(
         {
@@ -537,6 +608,7 @@ async def arun_workflow(
     workflow_mode: Literal["auto", "teach", "chat", "diagnose", "feedback"] = "auto",
     input_payload: dict[str, Any] | None = None,
     parent_session_id: str | None = None,
+    slide_deck_enabled: bool | None = None,
 ) -> StateDict:
     workflow = build_workflow(
         llm_client=llm_client,
@@ -545,6 +617,7 @@ async def arun_workflow(
         store=store,
         update_sink=update_sink,
         event_sink=event_sink,
+        slide_deck_enabled=slide_deck_enabled,
     )
     result = await workflow.ainvoke(
         {

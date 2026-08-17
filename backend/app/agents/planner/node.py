@@ -12,15 +12,15 @@ from langgraph.runtime import Runtime
 from backend.app.agents.common import Node, generate_validated_json, load_prompt
 from backend.app.core.agent_runtime_config import agent_temperature
 from backend.app.core.llm import LLMClient, LLMMessage
-from backend.app.curriculum.learning_plan import (
-    learning_goal_hash,
-    reusable_active_plan,
-)
 from backend.app.curriculum.learning_path import (
     build_dual_axis_snapshot,
     compute_learning_path,
     load_confusion_pairs,
     load_knowledge_dag,
+)
+from backend.app.curriculum.learning_plan import (
+    learning_goal_hash,
+    reusable_active_plan,
 )
 from backend.app.curriculum.learning_progress import (
     build_teaching_context,
@@ -274,6 +274,7 @@ def _parse_planner_plan(
     raw: object,
     *,
     known_node_ids: set[str],
+    canonical_names: dict[str, str],
 ) -> dict[str, Any]:
     """Parse and deterministically guard the schema-valid Planner proposal."""
 
@@ -287,6 +288,10 @@ def _parse_planner_plan(
     for node in nodes:
         if not isinstance(node, dict):
             raise ValueError("Planner path contains a non-object node")
+        # 用领域知识图的权威 node_name 覆盖 LLM 可能改写/漂移的名称，保证名称与 KC 一致
+        node_id = str(node.get("node_id") or "")
+        if node_id in canonical_names:
+            node = {**node, "node_name": canonical_names[node_id]}
         item = LearningPathItem.model_validate(
             {k: v for k, v in node.items() if k in LearningPathItem.model_fields}
         )
@@ -414,11 +419,17 @@ def build_planner_node(llm_client: LLMClient) -> Node:
                 for node in knowledge.get("nodes", [])
                 if isinstance(node, dict) and node.get("node_id")
             }
+            canonical_names = {
+                str(node["node_id"]): str(node.get("node_name") or node["node_id"])
+                for node in knowledge.get("nodes", [])
+                if isinstance(node, dict) and node.get("node_id")
+            }
             plan = _parse_planner_plan(
                 proposal.model_dump(),
                 known_node_ids=known_node_ids,
+                canonical_names=canonical_names,
             )
-        except Exception as exc:  # noqa: BLE001 - LLM failure → deterministic fallback
+        except Exception as exc:
             fallback_reason = _planner_fallback_reason(exc)
             _LOGGER.warning(
                 "Planner Agent proposal failed; using deterministic A* fallback: %s",

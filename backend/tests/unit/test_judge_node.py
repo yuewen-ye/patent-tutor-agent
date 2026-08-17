@@ -23,7 +23,8 @@ class JudgeLLMClient:
         temperature: float,
         agent: str | None = None,
     ) -> LLMResponseWithTools:
-        raise AssertionError("judge node must not call tools")
+        # judge 节点在裁决前会调用 RAG 探针；单测中返回空检索，避免污染裁决结果
+        return LLMResponseWithTools(content="", tool_calls=[])
 
 
 def test_judge_normalizes_major_revision_decision_to_revise() -> None:
@@ -127,10 +128,12 @@ def test_judge_adds_fallback_revision_request_when_revise_has_no_requests() -> N
 
     assert result["judge_report"]["revision_requests"] == [
         {
+            "request_id": result["judge_report"]["revision_requests"][0]["request_id"],
             "target": "both",
             "issue": "抵触申请主体表述错误",
             "required_change": "必须修正法律概念后再输出。",
             "basis": None,
+            "status": "new",
         }
     ]
 
@@ -161,3 +164,162 @@ def test_judge_recomputes_adaptation_rate_from_score() -> None:
     result = node(state)
 
     assert result["judge_report"]["adaptation_rate"] == 0.8
+
+
+def test_judge_assigns_request_id_and_status_to_revision_requests() -> None:
+    """Judge 为每条 revision_request 生成 request_id 与 status。"""
+    node = build_judge_node(
+        JudgeLLMClient(
+            {
+                "decision": "revise",
+                "accuracy_score": 2,
+                "adaptation_score": 3,
+                "disputes": ["测评缺失"],
+                "rationale": "需补测评。",
+                "revision_requests": [
+                    {
+                        "target": "expert_a",
+                        "issue": "interactive_questions 不足",
+                        "required_change": "补充 4 选项客观题",
+                        "basis": None,
+                    }
+                ],
+            }
+        )
+    )
+    state: StateDict = {
+        "session_id": "debug",
+        "user_input": "学习新颖性",
+        "events": [],
+        "expert_a_draft": {},
+        "expert_b_draft": {},
+    }
+
+    result = node(state)
+    req = result["judge_report"]["revision_requests"][0]
+
+    assert isinstance(req["request_id"], str) and len(req["request_id"]) == 12
+    assert req["status"] == "open"
+
+
+def test_judge_reuses_request_id_for_similar_historical_request() -> None:
+    """后续轮 judge 若改写措辞但语义相同，应复用历史 request_id。"""
+    historical_request_id = "abc123"
+    node = build_judge_node(
+        JudgeLLMClient(
+            {
+                "decision": "revise",
+                "accuracy_score": 3,
+                "adaptation_score": 3,
+                "disputes": [],
+                "rationale": "仍有问题。",
+                "revision_requests": [
+                    {
+                        "target": "expert_a",
+                        "issue": "interactive_questions 仍然不足",
+                        "required_change": "继续补充 4 选项客观题",
+                        "basis": None,
+                    }
+                ],
+            }
+        )
+    )
+    state: StateDict = {
+        "session_id": "debug",
+        "user_input": "学习新颖性",
+        "events": [],
+        "expert_a_draft": {},
+        "expert_b_draft": {},
+        "judge_report_history": [
+            {
+                "decision": "revise",
+                "accuracy_score": 2,
+                "adaptation_score": 3,
+                "disputes": ["测评缺失"],
+                "rationale": "需补测评。",
+                "revision_requests": [
+                    {
+                        "request_id": historical_request_id,
+                        "target": "expert_a",
+                        "issue": "interactive_questions 不足",
+                        "required_change": "补充 4 选项客观题",
+                        "status": "open",
+                    }
+                ],
+            }
+        ],
+        "revision_round": 1,
+    }
+
+    result = node(state)
+    req = result["judge_report"]["revision_requests"][0]
+
+    assert req["request_id"] == historical_request_id
+    assert req["status"] == "open"
+
+
+def test_judge_marks_missing_historical_request_as_fixed() -> None:
+    """后续轮未再出现的旧请求应在 history 中被标记为 fixed，且不出现在当前 revision_requests。"""
+    fixed_request_id = "fixed123"
+    node = build_judge_node(
+        JudgeLLMClient(
+            {
+                "decision": "revise",
+                "accuracy_score": 3,
+                "adaptation_score": 4,
+                "disputes": [],
+                "rationale": "只剩一个老问题。",
+                "revision_requests": [
+                    {
+                        "request_id": fixed_request_id,
+                        "target": "expert_a",
+                        "issue": "A26.4 要件拆解",
+                        "required_change": "以清单形式列出必要技术特征",
+                        "status": "open",
+                    }
+                ],
+            }
+        )
+    )
+    state: StateDict = {
+        "session_id": "debug",
+        "user_input": "学习新颖性",
+        "events": [],
+        "expert_a_draft": {},
+        "expert_b_draft": {},
+        "judge_report_history": [
+            {
+                "decision": "revise",
+                "accuracy_score": 2,
+                "adaptation_score": 3,
+                "disputes": ["多处缺失"],
+                "rationale": "需补内容。",
+                "revision_requests": [
+                    {
+                        "request_id": fixed_request_id,
+                        "target": "expert_a",
+                        "issue": "A26.4 要件拆解",
+                        "required_change": "以清单形式列出必要技术特征",
+                        "status": "open",
+                    },
+                    {
+                        "request_id": "other123",
+                        "target": "expert_a",
+                        "issue": "申请文件要求",
+                        "required_change": "补充说明书、权利要求书、摘要的具体要求",
+                        "status": "open",
+                    },
+                ],
+            }
+        ],
+        "revision_round": 1,
+    }
+
+    result = node(state)
+    current_ids = {r["request_id"] for r in result["judge_report"]["revision_requests"]}
+    history_snapshot = result["judge_report_history"][-1]
+    history_by_id = {r["request_id"]: r for r in history_snapshot["revision_requests"]}
+
+    assert "other123" not in current_ids
+    assert history_by_id["other123"]["status"] == "fixed"
+    assert history_by_id[fixed_request_id]["status"] == "open"

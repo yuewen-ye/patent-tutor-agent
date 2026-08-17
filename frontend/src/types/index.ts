@@ -53,6 +53,7 @@ export interface LearningPathItem {
   duration_min: number;
   strategy: string;
   prerequisites: string[];
+  difficulty_cap?: string;
   target_ability?: string;
   assessment?: string;
   markdown_artifact?: MarkdownArtifact;
@@ -215,6 +216,8 @@ export interface WorkflowState {
   expert_b_revision?: ExpertDraft;
   course_package?: Record<string, unknown>;
   judge_report?: JudgeReport;
+  judge_report_history?: JudgeReport[];
+  revision_round?: number;
   feedback_result?: FeedbackResult;
   grading_report?: Array<Record<string, unknown>>;
   chat_answer?: ChatAnswer;

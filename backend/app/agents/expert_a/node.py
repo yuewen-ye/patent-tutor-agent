@@ -127,20 +127,32 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
             _judge_decision = (judge_report_state.get("decision") or "").strip().lower()
             _rev_round = state.get("revision_round", 0) or 0
             # 跨轮累积：汇总 judge_report_history 中所有历史必须修改项 + 当前轮，
-            # 按 (target, issue, required_change) 去重，避免跨轮打地鼠 / 微改项不落地。
+            # 优先按 request_id 去重，缺失 request_id 时回退到 (target, issue, required_change)。
+            # 只保留 status 为 open / new / regressed 的项；fixed 项不再要求修改。
             _history = state.get("judge_report_history") or []
             _accumulated: list[dict[str, Any]] = []
-            _seen: set[tuple[object, object, object]] = set()
+            _seen_ids: set[str] = set()
+            _seen_keys: set[tuple[object, object, object]] = set()
             for _rep in (*_history, judge_report_state):
                 if not isinstance(_rep, dict):
                     continue
                 for _r in (_rep.get("revision_requests") or []):
                     if not isinstance(_r, dict):
                         continue
-                    _key = (_r.get("target"), _r.get("issue"), _r.get("required_change"))
-                    if _key in _seen:
+                    _status = _r.get("status")
+                    if _status == "fixed":
                         continue
-                    _seen.add(_key)
+                    _rid = _r.get("request_id")
+                    if isinstance(_rid, str) and _rid:
+                        if _rid in _seen_ids:
+                            continue
+                        _seen_ids.add(_rid)
+                        _accumulated.append(_r)
+                        continue
+                    _key = (_r.get("target"), _r.get("issue"), _r.get("required_change"))
+                    if _key in _seen_keys:
+                        continue
+                    _seen_keys.add(_key)
                     _accumulated.append(_r)
             revision_requests = _accumulated
             _revision_directive = ""

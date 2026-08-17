@@ -104,12 +104,18 @@ export function CourseResourceTabs({ sessionId, coursePackage, artifacts }: Cour
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-      <TabsList className="grid w-full grid-cols-2 bg-slate-900">
-        <TabsTrigger value="lecture" className="gap-2">
+      <TabsList className="grid w-full grid-cols-2 bg-slate-100 text-slate-600 border border-slate-200 p-1 rounded-lg">
+        <TabsTrigger
+          value="lecture"
+          className="gap-2 data-[state=active]:bg-[#D9773E] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md"
+        >
           <BookOpen className="h-4 w-4" />
           定制化讲义
         </TabsTrigger>
-        <TabsTrigger value="exercises" className="gap-2">
+        <TabsTrigger
+          value="exercises"
+          className="gap-2 data-[state=active]:bg-[#D9773E] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md"
+        >
           <ListChecks className="h-4 w-4" />
           分级习题
         </TabsTrigger>
@@ -134,11 +140,11 @@ export function CourseResourceTabs({ sessionId, coursePackage, artifacts }: Cour
                       onClick={() => setActiveTab("guide")}
                     >
                       <Wrench className="h-3.5 w-3.5 mr-1.5" />
-                      实务操作指南
+                      课程产出结构
                       <ArrowRight className="h-3 w-3 ml-1" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>跳转至实务操作指南（IRAC 框架、法条依据）</TooltipContent>
+                  <TooltipContent>跳转至课程产出结构（IRAC 框架、法条依据）</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </CardHeader>
@@ -159,7 +165,7 @@ export function CourseResourceTabs({ sessionId, coursePackage, artifacts }: Cour
         )}
       </TabsContent>
 
-      {/* ── 实务操作指南 ── */}
+      {/* ── 课程产出结构 ── */}
       <TabsContent value="guide" className="mt-4">
         <div className="space-y-4 max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
         {/* IRAC 法律分析框架 */}
@@ -313,7 +319,7 @@ export function CourseResourceTabs({ sessionId, coursePackage, artifacts }: Cour
 // ── 分级习题交互面板 ──
 
 const SUBJECTIVE_QID = "lecture_feedback_subjective";
-const SUBJECTIVE_QUESTION = "你对本讲义有什么建议？";
+const SUBJECTIVE_QUESTION = "对此课程相关知识掌握是否有具体困难？";
 
 function normalizeLetterAnswer(answer: string | undefined | null): string {
   if (!answer) return "";
@@ -449,6 +455,10 @@ function ExercisePanel({
 
   const handleGotoNewSession = async () => {
     if (!learnerId) return;
+    if (reteachSessionId) {
+      navigate(`/session/${reteachSessionId}`);
+      return;
+    }
     const data = await queryClient.fetchQuery<SessionsListResponse>({
       queryKey: ["sessions", learnerId],
       queryFn: () => sessionsApi.list({ learner_id: learnerId, limit: 50 }),
@@ -458,7 +468,7 @@ function ExercisePanel({
     const latest = [...sessions].sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     )[0];
-    if (latest) navigate(`/course/${latest.session_id}`);
+    if (latest) navigate(`/session/${latest.session_id}`);
   };
 
   const answeredCount = questions.filter((q) => answers[q.qid]?.trim()).length;
@@ -561,7 +571,7 @@ function ExercisePanel({
           <Textarea
             value={feedback}
             onChange={(e) => !isSubmitted && setFeedback(e.target.value)}
-            placeholder="请输入你对本讲义的建议（选填，提交后将反馈给下一轮 Agent 用于课程优化）..."
+            placeholder="请输入你对本讲义的建议（选填，提交后将反馈给下一轮 Agent 用于课程优化，用于推动对知识掌握度的认知）..."
             disabled={isSubmitted}
             className="min-h-[100px] resize-y text-sm"
           />

@@ -8,8 +8,8 @@ from backend.app.agents.planner.node import (
     build_planner_node,
 )
 from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinition
-from backend.app.curriculum.learning_plan import learning_goal_hash
 from backend.app.curriculum.learning_path import load_knowledge_dag
+from backend.app.curriculum.learning_plan import learning_goal_hash
 from backend.app.schemas.context import WorkflowContext
 from backend.app.schemas.state import PlannerAgentResult, StateDict
 
@@ -173,12 +173,20 @@ def test_planner_semantic_guard_rejects_unknown_or_topologically_invalid_nodes()
         },
     }
 
-    parsed = _parse_planner_plan(base, known_node_ids={"novelty", "patentability"})
+    canonical_names = {"novelty": "新颖性", "patentability": "授权条件"}
+    parsed = _parse_planner_plan(
+        base,
+        known_node_ids={"novelty", "patentability"},
+        canonical_names=canonical_names,
+    )
     assert parsed["learning_path"][0].node_id == "novelty"
+    assert parsed["learning_path"][0].node_name == "新颖性"
 
     unknown = {**base, "nodes": [{**base["nodes"][0], "node_id": "invented-node"}]}
     with pytest.raises(ValueError, match="unknown node_id"):
-        _parse_planner_plan(unknown, known_node_ids={"novelty"})
+        _parse_planner_plan(
+            unknown, known_node_ids={"novelty"}, canonical_names=canonical_names
+        )
 
     invalid_topology = {
         **base,
@@ -188,6 +196,7 @@ def test_planner_semantic_guard_rejects_unknown_or_topologically_invalid_nodes()
         _parse_planner_plan(
             invalid_topology,
             known_node_ids={"novelty", "patentability"},
+            canonical_names=canonical_names,
         )
 
 

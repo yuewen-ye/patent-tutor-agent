@@ -195,7 +195,7 @@ def test_graph_registers_diagnosis_feedback_agent_name() -> None:
 
 
 def test_graph_parallelizes_experts_and_branches_after_judge() -> None:
-    workflow = build_workflow(llm_client=PhaseLLMClient())
+    workflow = build_workflow(llm_client=PhaseLLMClient(), slide_deck_enabled=True)
     mermaid = export_workflow_mermaid(workflow)
     edges = {(edge.source, edge.target) for edge in workflow.get_graph().edges}
 
@@ -206,9 +206,22 @@ def test_graph_parallelizes_experts_and_branches_after_judge() -> None:
     assert ("judge", "expert_a_integration") in edges
     assert ("judge", "slide_deck") in edges
     assert ("slide_deck", "__end__") in edges
+    assert "_complete" not in {edge.target for edge in workflow.get_graph().edges}
     assert "publish_final_learning" not in mermaid
     assert "quality_gate_failed" not in mermaid
     assert "revise_integration" not in mermaid
+
+
+def test_graph_skips_slide_deck_when_disabled() -> None:
+    workflow = build_workflow(llm_client=PhaseLLMClient(), slide_deck_enabled=False)
+    mermaid = export_workflow_mermaid(workflow)
+    edges = {(edge.source, edge.target) for edge in workflow.get_graph().edges}
+
+    assert ("judge", "expert_a_integration") in edges
+    assert ("judge", "_complete") in edges
+    assert ("_complete", "__end__") in edges
+    assert ("judge", "slide_deck") not in edges
+    assert "slide_deck" not in mermaid
 
 
 def test_diagnosis_receives_questionnaire_responses() -> None:
@@ -430,6 +443,35 @@ def test_accepted_teach_flow_waits_for_learner_answers_and_keeps_process_markdow
     ]
     assert len(profile_artifacts) == 1
     assert profile_artifacts[0]["created_by"] == "diagnosis_feedback"
+
+
+def test_accepted_teach_flow_skips_slide_deck_when_disabled(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
+    artifact_root = tmp_path / "artifacts"
+    llm = WorkflowLLMClient()
+
+    state = run_workflow(
+        session_id="no-slide-deck",
+        user_input="掌握专利新颖性",
+        llm_client=llm,
+        artifact_root=artifact_root,
+        learner_id="learner-1",
+        slide_deck_enabled=False,
+    )
+
+    session_root = artifact_root / "sessions" / "no-slide-deck"
+    assert state["workflow_status"] == "completed"
+    assert "judge_report" in state
+    assert state["judge_report"]["decision"] == "accept"
+    assert "course_slides" not in state
+    assert "slide_deck" not in llm.agents
+    assert llm.agents[-1] == "judge"
+    assert (session_root / "round-01/course_package.md").is_file()
+    assert not (session_root / "round-01/course_slides.md").exists()
+    manifest = json.loads((session_root / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["status"] == "completed"
 
 
 def test_feedback_mode_reuses_diagnosis_feedback_and_skips_course_agents(
