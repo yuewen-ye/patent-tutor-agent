@@ -14,29 +14,29 @@ function getRiskStyle(risk: number) {
   const pct = risk * 100;
   if (pct <= 25) {
     return {
-      badge: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-      card: "border-emerald-500/20 bg-emerald-500/5",
-      bar: "bg-emerald-500",
+      badge: "bg-emerald-600 text-white border-emerald-700",
+      card: "border-border/40 bg-amber-50/40",
+      bar: "bg-[#D9773E]",
     };
   }
   if (pct <= 50) {
     return {
-      badge: "bg-lime-500/15 text-lime-400 border-lime-500/30",
-      card: "border-lime-500/20 bg-lime-500/5",
-      bar: "bg-lime-500",
+      badge: "bg-lime-600 text-white border-lime-700",
+      card: "border-border/40 bg-amber-50/40",
+      bar: "bg-[#D9773E]",
     };
   }
   if (pct <= 75) {
     return {
-      badge: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-      card: "border-amber-500/20 bg-amber-500/5",
-      bar: "bg-amber-500",
+      badge: "bg-amber-600 text-white border-amber-700",
+      card: "border-border/40 bg-amber-50/40",
+      bar: "bg-[#D9773E]",
     };
   }
   return {
-    badge: "bg-rose-500/15 text-rose-400 border-rose-500/30",
-    card: "border-rose-500/20 bg-rose-500/5",
-    bar: "bg-rose-500",
+    badge: "bg-rose-600 text-white border-rose-700",
+    card: "border-border/40 bg-amber-50/40",
+    bar: "bg-[#D9773E]",
   };
 }
 
@@ -114,7 +114,7 @@ export function ConfusionRiskPanel({ items }: ConfusionRiskPanelProps) {
                   风险 {pct}%
                 </span>
               </div>
-              <div className="h-1.5 w-full rounded-full bg-white/5 mb-2 overflow-hidden">
+              <div className="h-1.5 w-full rounded-full bg-orange-100 mb-2 overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all ${style.bar}`}
                   style={{ width: `${pct}%` }}

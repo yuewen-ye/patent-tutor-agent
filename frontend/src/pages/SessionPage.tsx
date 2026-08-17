@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-import { Loader2, RefreshCw, BookOpen, MessageSquare, AlertCircle, Activity, ArrowRight, Workflow, Maximize2 } from "lucide-react";
+import { Loader2, BookOpen, MessageSquare, AlertCircle, Activity, ArrowRight, Workflow, Maximize2 } from "lucide-react";
 import { PixelMascot } from "@/components/auth/PixelMascot";
 import {
   Dialog,
@@ -53,7 +53,7 @@ export function SessionPage() {
   const state = session?.state;
   const status = liveStatus || session?.status;
   const currentNode = events.length > 0 ? events[events.length - 1].node : undefined;
-  const [graphDialogOpen, setGraphDialogOpen] = useState(false);
+  const [eventDialogOpen, setEventDialogOpen] = useState(false);
 
   const isFinished = status && ["completed", "failed", "canceled"].includes(status);
 
@@ -86,10 +86,6 @@ export function SessionPage() {
                 <MetaCard label="Learner ID" value={session?.learner_id || "—"} />
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
-                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => refetch()}>
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                  刷新
-                </Button>
                 {status === "completed" && state?.workflow_mode === "teach" && (
                   <Button size="sm" className="h-7 text-xs bg-gradient-to-r from-[#D9773E] to-[#C15B27] hover:from-[#C15B27] hover:to-[#A64A1F] text-white shadow-md" asChild>
                     <Link to={`/course/${sessionId}`}>
@@ -133,17 +129,25 @@ export function SessionPage() {
 
       {session && !isLoading && !error && (
         <div className="flex-1 flex flex-col lg:flex-row gap-2 overflow-hidden min-h-0">
-          <aside className="lg:w-56 flex-shrink-0 min-h-0">
+          <aside className="lg:w-80 flex-shrink-0 min-h-0">
             <div className="h-full py-2 px-2 lg:px-0 lg:pl-4 flex flex-col gap-2">
               <Card className="border-white/70 bg-white/90 shadow-soft hover:shadow-elevated transition-all duration-200 overflow-hidden flex-1 flex flex-col min-h-0">
                 <CardHeader className="py-2 px-3 pb-1 flex-shrink-0">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Activity className="h-3.5 w-3.5 text-[#D9773E]" />
-                    Agent 事件流
+                    <Workflow className="h-3.5 w-3.5 text-[#D9773E]" />
+                    agent协同调度图
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="overflow-y-auto flex-1 px-3 pb-2">
-                  <AgentEventLog events={events} />
+                <CardContent className="flex-1 min-h-0 p-2">
+                  <div className="h-full w-full rounded-lg border border-white/5 bg-slate-950/50 overflow-hidden">
+                    <WorkflowGraph
+                      intent={state?.intent}
+                      workflowMode={state?.workflow_mode}
+                      currentNode={currentNode}
+                      expertPhase={state?.expert_phase}
+                      status={status}
+                    />
+                  </div>
                 </CardContent>
               </Card>
 
@@ -153,10 +157,10 @@ export function SessionPage() {
                     variant="outline"
                     size="sm"
                     className="w-full border-[#D9773E]/30 text-[#C15B27] hover:bg-[#FFE8D0]/60 hover:text-[#9A4A1C]"
-                    onClick={() => setGraphDialogOpen(true)}
+                    onClick={() => setEventDialogOpen(true)}
                   >
-                    <Workflow className="h-4 w-4 mr-2" />
-                    查看协同调度图
+                    <Activity className="h-4 w-4 mr-2" />
+                    查看 Agent 事件流
                     <Maximize2 className="h-3.5 w-3.5 ml-2" />
                   </Button>
                 </CardContent>
@@ -190,6 +194,7 @@ export function SessionPage() {
               {state?.learning_path && (
                 <LearningPathSection
                   path={state.learning_path}
+                  pathDecision={state.path_decision as Record<string, unknown> | undefined}
                   dualAxisSnapshot={state.dual_axis_snapshot}
                   mastery={undefined}
                 />
@@ -207,13 +212,17 @@ export function SessionPage() {
                   expertBCrossReview={state.expert_b_cross_review}
                   expertARevision={state.expert_a_revision}
                   expertBRevision={state.expert_b_revision}
+                  coursePackage={state.course_package}
+                  revisionRound={state.revision_round}
                   expertPhase={state?.expert_phase}
                   sessionId={sessionId}
                   artifacts={state.artifacts}
                 />
               )}
 
-              {state?.judge_report && <JudgePanel report={state.judge_report} />}
+              {(state?.judge_report || state?.judge_report_history) && (
+                <JudgePanel report={state.judge_report} history={state.judge_report_history} />
+              )}
 
               {!isFinished && (
                 <div className="flex items-center justify-center py-10">
@@ -224,24 +233,16 @@ export function SessionPage() {
             </div>
           </main>
 
-          <Dialog open={graphDialogOpen} onOpenChange={setGraphDialogOpen}>
-            <DialogContent className="max-w-5xl w-[90vw] h-[80vh] p-0 flex flex-col">
+          <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
+            <DialogContent className="max-w-2xl w-[90vw] h-[70vh] p-0 flex flex-col">
               <DialogHeader className="px-6 pt-6 pb-2">
                 <DialogTitle className="text-lg font-semibold flex items-center gap-2 text-[#5C3A26]">
-                  <Workflow className="h-5 w-5 text-[#D9773E]" />
-                  多 Agent 协同调度图
+                  <Activity className="h-5 w-5 text-[#D9773E]" />
+                  Agent 事件流
                 </DialogTitle>
               </DialogHeader>
-              <div className="flex-1 px-6 pb-6 min-h-0">
-                <div className="h-full w-full rounded-xl border border-white/5 bg-slate-950/50 overflow-hidden">
-                  <WorkflowGraph
-                    intent={state?.intent}
-                    workflowMode={state?.workflow_mode}
-                    currentNode={currentNode}
-                    expertPhase={state?.expert_phase}
-                    status={status}
-                  />
-                </div>
+              <div className="flex-1 px-6 pb-6 min-h-0 overflow-y-auto">
+                <AgentEventLog events={events} />
               </div>
             </DialogContent>
           </Dialog>

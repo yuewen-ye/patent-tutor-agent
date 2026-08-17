@@ -43,10 +43,10 @@ function CustomTooltip({
       </div>
 
       <div className="space-y-1.5 text-xs">
-        {difficulty !== undefined && (
+        {difficulty !== undefined && difficulty > 0 && (
           <div className="flex items-center justify-between gap-3">
             <span className="text-muted-foreground">难度</span>
-            <span className="font-medium text-foreground">{difficulty} 级</span>
+            <span className="font-medium text-foreground">L{difficulty}</span>
           </div>
         )}
         {duration !== undefined && (
@@ -78,9 +78,21 @@ function CustomTooltip({
   );
 }
 
+const DIFFICULTY_MAP: Record<string, number> = { L1: 1, L2: 2, L3: 3 };
+
+function resolveDifficulty(item: LearningPathItem): number {
+  if (item.difficulty_cap) {
+    const level = item.difficulty_cap.toUpperCase();
+    if (level in DIFFICULTY_MAP) return DIFFICULTY_MAP[level];
+    const match = level.match(/L(\d)/);
+    if (match) return Number(match[1]);
+  }
+  return 0;
+}
+
 export function DifficultyCurve({ path }: DifficultyCurveProps) {
   const data = path.map((item, index) => {
-    const difficulty = Math.round((item.node_id.length % 10) * 10 + 20);
+    const difficulty = resolveDifficulty(item);
     return {
       step: index + 1,
       node_id: item.node_id,
@@ -120,7 +132,9 @@ export function DifficultyCurve({ path }: DifficultyCurveProps) {
             yAxisId="left"
             stroke="hsl(var(--muted-foreground))"
             tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-            domain={[0, 100]}
+            domain={[0, 4]}
+            ticks={[0, 1, 2, 3]}
+            tickFormatter={(v: number) => (v === 0 ? "—" : `L${v}`)}
             label={{
               value: "难度等级",
               angle: -90,
