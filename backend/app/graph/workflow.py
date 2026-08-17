@@ -242,6 +242,12 @@ def _with_runtime_side_effects(
             )
             if artifact_root is not None:
                 write_manifest(artifact_root=artifact_root, state=dict(state), status="failed")
+            # 把失败节点名挂到异常上，供 session_service 写进 state（last_failed_node），
+            # 否则崩溃点只能靠 workflow.log.jsonl 反推。
+            try:
+                exc.add_note(f"patent_tutor_failed_node={label}")
+            except AttributeError:  # 极老的解释器没有 add_note，忽略即可
+                pass
             set_llm_log_context(session_id=None, log_root=None)
             raise
 

@@ -625,6 +625,10 @@ class StateDict(TypedDict):
     course_package: NotRequired[dict[str, Any]]
     course_slides: NotRequired[dict[str, Any]]
     workflow_status: NotRequired[Literal["running", "completed", "failed", "canceled"]]
+    # 失败可追溯字段：崩溃时由 session_service 写入，供 GET /sessions/{id} 直接排查
+    last_failed_node: NotRequired[str]
+    error: NotRequired[str]
+    error_traceback: NotRequired[str]
 
 
 def agent_output_json_schemas() -> dict[str, dict[str, Any]]:
