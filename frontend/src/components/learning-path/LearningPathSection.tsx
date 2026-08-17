@@ -9,11 +9,12 @@ import { Route, TrendingUp, AlertTriangle } from "lucide-react";
 
 interface LearningPathSectionProps {
   path?: LearningPathItem[];
+  pathDecision?: Record<string, unknown>;
   dualAxisSnapshot?: DualAxisSnapshot;
   mastery?: Record<string, number>;
 }
 
-export function LearningPathSection({ path, dualAxisSnapshot, mastery }: LearningPathSectionProps) {
+export function LearningPathSection({ path, pathDecision, dualAxisSnapshot, mastery }: LearningPathSectionProps) {
   if (!path || path.length === 0) {
     return (
       <Card className="border-border/40 bg-card shadow-soft">
@@ -47,7 +48,7 @@ export function LearningPathSection({ path, dualAxisSnapshot, mastery }: Learnin
           <TabsList className="grid w-full grid-cols-3 bg-secondary/50 p-1 rounded-lg">
             <TabsTrigger value="graph" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-soft rounded-md">
               <Route className="h-4 w-4" />
-              交互路线图
+              学习路线图
             </TabsTrigger>
             <TabsTrigger value="curve" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-soft rounded-md">
               <TrendingUp className="h-4 w-4" />
@@ -60,7 +61,7 @@ export function LearningPathSection({ path, dualAxisSnapshot, mastery }: Learnin
           </TabsList>
 
           <TabsContent value="graph" className="mt-4">
-            <LearningPathGraph path={path} mastery={mastery} />
+            <LearningPathGraph path={path} pathDecision={pathDecision} mastery={mastery} />
           </TabsContent>
 
           <TabsContent value="curve" className="mt-4">

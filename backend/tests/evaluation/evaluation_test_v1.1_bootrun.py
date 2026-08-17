@@ -3,18 +3,17 @@
 Single interactive entry point:
 
   ① 主菜单（循环直到 0-退出）：
-       0-退出 / 1-删除数据 / 2-计算指标 / 3-生成报告 / 4-运行系统 / 5-外部LLM评估
-  ② 依据选择列出可操作的画像（删除只列有运行数据的，运行/指标/报告列全部）
-  ③ 选择画像（删除可多选，其余只能单选）
+       0-退出 / 1-计算指标 / 2-生成报告 / 3-运行系统 / 4-外部LLM评估
+  ② 依据选择列出可操作的画像（指标/报告只列有运行数据的，运行列全部）
+  ③ 选择画像（指标/LLM评估可多选，运行单选）
   ④ 执行：
-       1 删除 → 报告成功/失败 → 返回主菜单
-       2 计算指标 → 选择轮次 → 调用 calculate.calculate_round → 返回主菜单
-       3 生成报告 → 调用 report.generate_report 汇总所有轮次 → 返回主菜单
-       4 运行系统 → 提示启动 FastAPI → 进入子循环：
+       1 计算指标 → 选择轮次 → 调用 calculate.calculate_round → 返回主菜单
+       2 生成报告 → 调用 report.generate_report 汇总所有轮次 → 返回主菜单
+       3 运行系统 → 提示启动 FastAPI → 进入子循环：
                     1-运行初始化画像（运行第0轮，即首轮课程生成）
                     2-运行系统（输入运行到第n轮，自动循环：灌输全对答案+新一轮课程生成）
                     0-返回上层
-       5 外部LLM评估 → 使用独立LLM对产物进行评价 → 返回主菜单
+       4 外部LLM评估 → 使用独立LLM对产物进行评价 → 返回主菜单
 """
 
 from __future__ import annotations
@@ -26,13 +25,14 @@ from pathlib import Path
 _EVAL_DIR = Path(__file__).resolve().parent
 _PROGRAM_DIR = _EVAL_DIR / "program"
 _LLM_DIR = _EVAL_DIR / "LLM"
+_PROJECT_ROOT = _EVAL_DIR.parents[3]  # backend/tests/evaluation -> backend/tests -> backend -> project root
 for _p in (_EVAL_DIR, _PROGRAM_DIR, _LLM_DIR):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
-import program.eval_common as common  # noqa: E402
-import program.eval_course_gen as course_gen  # noqa: E402
-import program.eval_learn_sim as learn_sim  # noqa: E402
+import program._common as common  # noqa: E402
+import program.run_course_gen as course_gen  # noqa: E402
+import program.run_learning_sim as learn_sim  # noqa: E402
 import program.calculate as calculate  # noqa: E402
 import program.report as report  # noqa: E402
 
@@ -80,22 +80,21 @@ def _next_round_idx(letter: str, *, learner_prefix: str = "multi") -> int:
 # ── prompts ─────────────────────────────────────────────────────────────────
 
 def _prompt_main_menu() -> str:
-    """① 主菜单：0-退出 / 1-删除 / 2-计算指标 / 3-生成报告 / 4-运行 / 5-外部LLM评估。"""
+    """① 主菜单：0-退出 / 1-计算指标 / 2-生成报告 / 3-运行 / 4-外部LLM评估。"""
     print("\n" + "=" * 60)
     print("请选择操作模式：")
     print("  0 — 退出")
-    print("  1 — 删除数据")
-    print("  2 — 计算指标")
-    print("  3 — 生成报告")
-    print("  4 — 运行系统")
-    print("  5 — 外部LLM评估")
+    print("  1 — 计算指标")
+    print("  2 — 生成报告")
+    print("  3 — 运行系统")
+    print("  4 — 外部LLM评估")
     while True:
         raw = input("→ 选择: ").strip()
-        if raw in {"0", "1", "2", "3", "4", "5"}:
+        if raw in {"0", "1", "2", "3", "4"}:
             return raw
         if raw.lower() in {"exit", "quit", "q"}:
             return "0"
-        print("  请输入 0、1、2、3、4 或 5")
+        print("  请输入 0、1、2、3 或 4")
 
 
 def _prompt_profile_selection(profiles: list[str], *, multi: bool) -> list[str]:
@@ -132,19 +131,6 @@ def _prompt_profile_selection(profiles: list[str], *, multi: bool) -> list[str]:
             selected.append(profiles[idx - 1])
         if valid and selected:
             return selected
-
-
-# ── delete ──────────────────────────────────────────────────────────────────
-
-def _do_delete(profile_ids: list[str]) -> None:
-    """④-1 删除选中画像的全部运行数据。"""
-    for pid in profile_ids:
-        print(f"\n[{pid}] 正在删除运行数据...")
-        try:
-            common.delete_run_results(pid, wipe_mysql=True)
-            print(f"[{pid}] ✅ 删除成功")
-        except Exception as exc:  # noqa: BLE001
-            print(f"[{pid}] ❌ 删除失败: {type(exc).__name__}: {exc}")
 
 
 # ── metrics / report placeholders ───────────────────────────────────────────
@@ -377,11 +363,104 @@ def _do_llm_evaluate(profile_ids: list[str], *, force: bool = False) -> None:
         return
 
     model = config.get("llm", {}).get("model", "unknown")
+
+    # ── 评估模式选择 ─────────────────────────────────────────────────
+    mode_label_map = {
+        "1": ("overall", "整体评估（M1 三维度 + M2 有用性/相关性 + 9 通用维度）"),
+        "2": ("statement", "M1/M9/M9-b/M1.1~M1.3 陈述级评估"),
+        "3": ("m4", "M4.2 资源形态评估"),
+        "4": ("m1", "M1.1 异议闭环率评估"),
+        "5": ("m1_cross_round", "M1.6 跨轮自洽率（前置 prepare_m14 自动执行）"),
+        "6": ("m6_adversarial", "M6.1 对抗稳健率（系统级，前置 prepare_probe 自动执行）"),
+        "7": ("m6_boundary", "M6.2 边界拒答恰当率（系统级，前置 prepare_probe 自动执行）"),
+        "8": ("m2_retrieval", "M2.5 检索正确性"),
+    }
+    print(f"\n  评估模式:")
+    for k, (_, desc) in mode_label_map.items():
+        print(f"    {k}. {desc}")
+    print(f"    9. 仅执行前置数据准备（prepare_m14 + prepare_probe，不做 LLM 评估）")
+    print(f"    all. 全部执行（按顺序 1→8，前置准备自动触发）")
+    raw_mode = input(f"  → 选择模式编号（默认 1）: ").strip().lower() or "1"
+
+    # 先算出 selected_mode_keys，供后续前置准备与主循环共用
+    mode_labels = list(mode_label_map.keys())
+    if raw_mode == "all":
+        selected_mode_keys = mode_labels
+    elif raw_mode in mode_label_map:
+        selected_mode_keys = [raw_mode]
+    elif raw_mode == "9":
+        selected_mode_keys = []
+    else:
+        print(f"  ⚠️ 无效选择，回退到整体评估")
+        selected_mode_keys = ["1"]
+
+    # ── 一键只跑前置准备（模式 9）─────────────────────────────────
+    if raw_mode == "9":
+        print("\n" + "=" * 60)
+        print("📦 仅执行前置数据准备（不进入 LLM 评估）")
+        print("=" * 60)
+        try:
+            import subprocess
+
+            # 1. M14 事实点抽取
+            print("\n▶ prepare_m14.py（M14 事实点抽取）...")
+            cmd_m14 = [sys.executable, str(_PROGRAM_DIR / "prepare_m14.py")]
+            print(f"   命令: {' '.join(cmd_m14)}")
+            r = subprocess.run(cmd_m14, cwd=str(_PROJECT_ROOT))
+            print("   ✅ 完成" if r.returncode == 0 else f"   ⚠️  返回码 {r.returncode}")
+
+            # 2. M15/M16 系统级探针
+            print("\n▶ prepare_probe.py（M15/M16 系统级探针 --direct）...")
+            cmd_probe = [sys.executable, str(_PROGRAM_DIR / "prepare_probe.py"), "--direct"]
+            print(f"   命令: {' '.join(cmd_probe)}")
+            r = subprocess.run(cmd_probe, cwd=str(_PROJECT_ROOT))
+            print("   ✅ 完成" if r.returncode == 0 else f"   ⚠️  返回码 {r.returncode}")
+        except Exception as exc:  # noqa: BLE001
+            print(f"  ❌ 执行异常: {exc}")
+        print("\n前置准备完成。如需 LLM 评估，请再选 5/6/7/all（将自动跳过已完成的前置）。")
+        return
+
+    # ── 自动前置：根据选中模式触发 prepare_m14 / prepare_probe ───
+    needs_prepare_m14 = "5" in selected_mode_keys or raw_mode == "all"
+    needs_prepare_probe = any(k in selected_mode_keys for k in ("6", "7")) or raw_mode == "all"
+
+    if needs_prepare_m14 or needs_prepare_probe:
+        print("\n" + "=" * 60)
+        print("📦 执行 LLM 评估前置数据准备（自动）")
+        print("=" * 60)
+        try:
+            import subprocess
+
+            if needs_prepare_m14:
+                print("\n▶ 步骤 1: 运行 prepare_m14.py（M14 事实点抽取）...")
+                cmd_m14 = [sys.executable, str(_PROGRAM_DIR / "prepare_m14.py")]
+                print(f"   命令: {' '.join(cmd_m14)}")
+                result_m14 = subprocess.run(cmd_m14, cwd=str(_PROJECT_ROOT))
+                if result_m14.returncode == 0:
+                    print("   ✅ prepare_m14.py 执行成功")
+                else:
+                    print(f"   ⚠️  prepare_m14.py 返回非 0 退出码 ({result_m14.returncode})，继续后续步骤")
+
+            if needs_prepare_probe:
+                print("\n▶ 步骤 2: 运行 prepare_probe.py（M15/M16 系统级探针 --direct）...")
+                cmd_probe = [sys.executable, str(_PROGRAM_DIR / "prepare_probe.py"), "--direct"]
+                print(f"   命令: {' '.join(cmd_probe)}")
+                result_probe = subprocess.run(cmd_probe, cwd=str(_PROJECT_ROOT))
+                if result_probe.returncode == 0:
+                    print("   ✅ prepare_probe.py 执行成功")
+                else:
+                    print(f"   ⚠️  prepare_probe.py 返回非 0 退出码 ({result_probe.returncode})，继续后续步骤")
+        except Exception as exc:  # noqa: BLE001
+            print(f"  ⚠️  前置准备异常（不影响后续 LLM 评估）: {exc}")
+
+    # ── 进入正式 LLM 评估 ─────────────────────────────────────────
+
     print(f"\n{'='*60}")
     print(f"外部 LLM 评估")
     print(f"{'='*60}")
     print(f"  模型: {model}")
     print(f"  画像: {len(profile_ids)} 个")
+    print(f"  模式: {', '.join(mode_label_map[k][1].split('（')[0] for k in selected_mode_keys)}")
     print(f"  强制重跑: {force}")
     print(f"{'='*60}")
 
@@ -389,49 +468,17 @@ def _do_llm_evaluate(profile_ids: list[str], *, force: bool = False) -> None:
     skip_count = 0
     fail_count = 0
 
-    for pid in profile_ids:
-        letter = common.profile_letter_from_id(pid)
-        rounds = _list_available_rounds(common.EVAL_ARTIFACTS_DIR / f"multi-{letter}")
+    for mode_key in selected_mode_keys:
+        mode, mode_desc = mode_label_map[mode_key]
+        print(f"\n── 模式 {mode_key}: {mode_desc} ──")
 
-        if not rounds:
-            print(f"\n📋 {pid}: 无可用轮次，跳过")
-            skip_count += 1
-            continue
-
-        print(f"\n📋 {pid} ({len(rounds)} 个轮次):")
-        for r in rounds:
-            print(f"  R{r:02d}", end="")
-
-        # 选择轮次
-        print(f"\n  可选: all（全部）或 1 到 {max(rounds)}")
-        while True:
-            raw = input(f"  → 选择轮次（all 或数字，exit 跳过）: ").strip().lower()
-            if raw in {"exit", "quit", "q"}:
-                break
-            if raw == "all":
-                eval_rounds = rounds
-                break
+        # 系统级单次评估（m6_adversarial/m6_boundary）：忽略画像/轮次
+        if mode in ("m6_adversarial", "m6_boundary"):
             try:
-                r = int(raw)
-            except ValueError:
-                print("  请输入 all 或数字")
-                continue
-            if r not in rounds:
-                print(f"  轮次 R{r:02d} 不存在")
-                continue
-            eval_rounds = [r]
-            break
-
-        if raw in {"exit", "quit", "q"}:
-            skip_count += len(rounds)
-            continue
-
-        for r in eval_rounds:
-            print(f"\n  评估 R{r:02d}...")
-            try:
-                result = llm_evaluator.evaluate_profile_round(
-                    letter, r, config, force=force
-                )
+                if mode == "m6_adversarial":
+                    result = llm_evaluator.evaluate_m15(config, force=force)
+                else:
+                    result = llm_evaluator.evaluate_m16(config, force=force)
                 if result is None:
                     skip_count += 1
                 else:
@@ -439,6 +486,58 @@ def _do_llm_evaluate(profile_ids: list[str], *, force: bool = False) -> None:
             except Exception as exc:  # noqa: BLE001
                 print(f"  ❌ 异常: {type(exc).__name__}: {exc}")
                 fail_count += 1
+            continue
+
+        for pid in profile_ids:
+            letter = common.profile_letter_from_id(pid)
+            rounds = _list_available_rounds(common.EVAL_ARTIFACTS_DIR / f"multi-{letter}")
+
+            if not rounds:
+                print(f"\n📋 {pid}: 无可用轮次，跳过")
+                skip_count += 1
+                continue
+
+            # M1.6 跨轮自洽：每画像仅运行一次（跨轮聚合）
+            if mode == "m1_cross_round":
+                print(f"\n📋 {pid} (跨轮聚合)...")
+                try:
+                    result = llm_evaluator.evaluate_m14(letter, config, force=force)
+                    if result is None:
+                        skip_count += 1
+                    else:
+                        success_count += 1
+                except Exception as exc:  # noqa: BLE001
+                    print(f"  ❌ 异常: {type(exc).__name__}: {exc}")
+                    fail_count += 1
+                continue
+
+            # 其他按画像 × 轮次评估
+            print(f"\n📋 {pid} ({len(rounds)} 个轮次):")
+            for r in rounds:
+                print(f"  R{r:02d}", end="")
+            print()
+
+            eval_rounds = rounds  # 默认评估所有轮次
+            for r in eval_rounds:
+                print(f"\n  评估 R{r:02d}...")
+                try:
+                    if mode == "statement":
+                        result = llm_evaluator.evaluate_m1_m9(letter, r, config, force=force)
+                    elif mode == "m4":
+                        result = llm_evaluator.evaluate_m7_resource_morphology(letter, r, config, force=force)
+                    elif mode == "m1":
+                        result = llm_evaluator.evaluate_m8_objection_loop(letter, r, config, force=force)
+                    elif mode == "m2_retrieval":
+                        result = llm_evaluator.evaluate_m17(letter, r, config, force=force)
+                    else:
+                        result = llm_evaluator.evaluate_profile_round(letter, r, config, force=force)
+                    if result is None:
+                        skip_count += 1
+                    else:
+                        success_count += 1
+                except Exception as exc:  # noqa: BLE001
+                    print(f"  ❌ 异常: {type(exc).__name__}: {exc}")
+                    fail_count += 1
 
     print(f"\n{'='*60}")
     print(f"外部 LLM 评估完成")
@@ -446,7 +545,7 @@ def _do_llm_evaluate(profile_ids: list[str], *, force: bool = False) -> None:
     print(f"  ✅ 成功: {success_count}")
     print(f"  ⏭️  跳过: {skip_count}")
     print(f"  ❌ 失败: {fail_count}")
-    print(f"  📁 结果目录: backend/tests/evaluation/LLM/results/")
+    print(f"  📁 结果目录: backend/tests/evaluation/results/record/")
     print(f"{'='*60}")
 
 
@@ -467,7 +566,16 @@ def _run_course_gen(
     plan = common.inspect_plan(mem)
 
     if not plan.has_active_plan:
+        # 首轮生成前清理该 learner 的跨 run 残留（MySQL skill_mastery / 历史会话 /
+        # 文件痕迹），避免上次运行的虚高掌握度或残留计划被本次评测读回。
+        # 只在首轮清理——后续轮依赖已持久化的计划与游标，不能清。
         print(f"[course_gen/{letter}] 首轮课程生成（问卷提交）...")
+        try:
+            common.delete_run_results(
+                profile_letter=letter, learner_prefix=learner_prefix, wipe_mysql=True
+            )
+        except Exception as exc:  # noqa: BLE001 — 清理失败不应阻断评测
+            print(f"  ⚠️ 清理 {letter} 残留失败（继续）: {exc}")
         try:
             result = course_gen.run_first_round(
                 profile_letter=letter,
@@ -746,22 +854,22 @@ def main(argv: list[str] | None = None) -> int:
     common.ensure_dotenv()
     args = _build_parser().parse_args(argv)
 
-    # 主菜单循环：0 才退出；1/2/3/4/5 执行完都回到主菜单
+    # 主菜单循环：0 才退出；1/2/3/4 执行完都回到主菜单
     while True:
         choice = _prompt_main_menu()
         if choice == "0":
             return 0
 
-        # 3=生成报告 → 直接生成所有画像的完整报告，不需要选画像
-        if choice == "3":
+        # 2=生成报告 → 直接生成所有画像的完整报告，不需要选画像
+        if choice == "2":
             _do_report(learner_prefix=args.learner_prefix)
             print("\n报告生成完成，返回主菜单。")
             continue
 
-        # 1=删除数据 / 2=计算指标 / 5=外部LLM评估 → 只列有运行数据的，可多选
-        # 4=运行系统 → 列全部画像，单选
-        multi_select = choice in {"1", "2", "5"}
-        if choice in {"1", "2", "5"}:
+        # 1=计算指标 / 4=外部LLM评估 → 只列有运行数据的，可多选
+        # 3=运行系统 → 列全部画像，单选
+        multi_select = choice in {"1", "4"}
+        if choice in {"1", "4"}:
             profiles = _profiles_with_run_data()
             print(f"\n有运行数据的画像（{len(profiles)} 个）：")
         else:
@@ -775,21 +883,17 @@ def main(argv: list[str] | None = None) -> int:
 
         # 执行选中项
         if choice == "1":
-            print(f"\n将删除 {len(selected)} 个画像的运行数据：{', '.join(selected)}")
-            _do_delete(selected)
-            print("\n删除完成，返回主菜单。")
-        elif choice == "2":
             print(f"\n将计算 {len(selected)} 个画像的指标：{', '.join(selected)}")
             _do_metrics(selected, learner_prefix=args.learner_prefix)
             print("\n指标计算完成，返回主菜单。")
-        elif choice == "4":
+        elif choice == "3":
             _do_run(
                 selected[0],
                 base_url=args.base_url,
                 artifact_dir=args.artifact_dir,
                 learner_prefix=args.learner_prefix,
             )
-        elif choice == "5":
+        elif choice == "4":
             print(f"\n将进行外部 LLM 评估：{', '.join(selected)}")
             _do_llm_evaluate(selected)
             print("\n外部 LLM 评估完成，返回主菜单。")

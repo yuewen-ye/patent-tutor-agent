@@ -26,6 +26,7 @@ ArtifactKind = Literal[
     "cross_review",
     "expert_revision",
     "course_package",
+    "course_slides",
     "dual_axis_snapshot",
     "questionnaire",
     "questionnaire_submission",
@@ -49,6 +50,7 @@ _CREATED_BY = {
     "expert_b_revision": "expert_b",
     "learner_profile_update": "diagnosis_feedback",
     "course_package": "expert_a",
+    "course_slides": "slide_deck",
     "grading_report": "diagnosis_feedback",
 }
 _KIND_BY_FIELD: dict[str, ArtifactKind] = {
@@ -68,6 +70,7 @@ _KIND_BY_FIELD: dict[str, ArtifactKind] = {
     "expert_b_revision": "expert_revision",
     "learner_profile_update": "feedback_report",
     "course_package": "course_package",
+    "course_slides": "course_slides",
     "grading_report": "feedback_report",
 }
 _TITLE_BY_FIELD = {
@@ -87,6 +90,7 @@ _TITLE_BY_FIELD = {
     "expert_b_revision": "专家 B 修订稿",
     "learner_profile_update": "学情画像更新",
     "course_package": "整合后的课程完整内容与习题",
+    "course_slides": "结构化课件（PPT 分页 + 讲稿）",
     "grading_report": "练习评分报告",
 }
 _FILE_BY_FIELD = {
@@ -106,6 +110,7 @@ _FILE_BY_FIELD = {
     "expert_b_revision": "expert_b_revision.md",
     "learner_profile_update": "learner_profile_update.md",
     "course_package": "course_package.md",
+    "course_slides": "course_slides.md",
     "grading_report": "grading_report.md",
 }
 _ROUND_FIELDS = {
@@ -190,6 +195,8 @@ def _markdown_for(field: str, value: object) -> str:
         return _grading_markdown(title, value)
     if field == "course_package" and isinstance(value, dict):
         return _course_package_markdown(title, value)
+    if field == "course_slides" and isinstance(value, dict):
+        return _course_slides_markdown(title, value)
     if field in {"expert_a_draft", "expert_b_draft"} and isinstance(value, dict):
         return _expert_draft_markdown(title, value)
     if isinstance(value, dict):
@@ -843,6 +850,64 @@ def _course_package_markdown(title: str, value: dict[str, Any]) -> str:
     if rest:
         lines.extend(["## 结构化数据", "", _dict_markdown(rest)])
 
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def course_teaching_content_full(value: dict[str, Any]) -> str:
+    """返回「教学正文」完整版：teaching_content（叙事引言）+ 各 block payload 详细内容，
+    按 block_plan 顺序穿插（测评置末）。与 ``_course_package_markdown`` 内「教学正文」段一致，
+    供前端讲义 tab 渲染完整课程（而非只有 teaching_content 字段的引言部分）。
+
+    - 无可用 block payload 时退回 teaching_content 本身，避免重复内容。
+    - 不修改入参 ``value``。
+    """
+    if not isinstance(value, dict):
+        return ""
+    teaching = value.get("teaching_content")
+    block_plan = value.get("block_plan")
+    blocks = block_plan.get("blocks") if isinstance(block_plan, dict) else None
+    detail = ""
+    if isinstance(blocks, list) and blocks:
+        order_index = {str(b.get("block_id")): i for i, b in enumerate(blocks)}
+        ordered = sorted(blocks, key=lambda b: order_index.get(str(b.get("block_id")), 999))
+        non_ass = [b for b in ordered if str(b.get("block_type")) != "assessment"]
+        ass = [b for b in ordered if str(b.get("block_type")) == "assessment"]
+        detail = _render_block_details(non_ass + ass)
+    parts: list[str] = []
+    if teaching:
+        parts.append(str(teaching))
+    if detail:
+        parts.append(detail)
+    return "\n\n".join(parts).strip()
+
+
+def _course_slides_markdown(title: str, value: dict[str, Any]) -> str:
+    """Render the structured course deck (slides + narration) as a readable Markdown artifact."""
+    slides = value.get("slides") if isinstance(value, dict) else None
+    lines: list[str] = [f"# {title}"]
+    if not isinstance(slides, list):
+        lines.append("\n（无课件分页数据）")
+        return "\n".join(lines) + "\n"
+    for slide in slides:
+        if not isinstance(slide, dict):
+            continue
+        order = slide.get("order", "?")
+        stype = slide.get("type", "")
+        stitle = slide.get("title", "")
+        lines.append(f"\n## Slide {order} · {stype} · {stitle}")
+        content = slide.get("content") or {}
+        if isinstance(content, dict) and content:
+            lines.append("\n**页面内容**")
+            lines.append("```json")
+            lines.append(json.dumps(content, ensure_ascii=False, indent=2))
+            lines.append("```")
+        narration = slide.get("narration") or {}
+        if isinstance(narration, dict) and narration.get("text"):
+            lines.append("\n**讲稿**")
+            lines.append(str(narration["text"]))
+            audio_url = narration.get("audio_url")
+            if audio_url:
+                lines.append(f"\n> 音频：{audio_url}（{narration.get('duration_sec', '?')}s）")
     return "\n".join(lines).rstrip() + "\n"
 
 

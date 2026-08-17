@@ -76,11 +76,21 @@ class SessionRecord:
 
 
 def record_to_response(record: SessionRecord) -> dict[str, Any]:
+    state = compact_state(record.state)
+    # 为前端讲义 tab 补全「教学正文完整版」（teaching_content + 各 block payload 详细内容），
+    # 与 course_package.md 的「教学正文」段一致。只在返回副本上追加，绝不改动存储中的 state。
+    course_pkg = state.get("course_package")
+    if isinstance(course_pkg, dict) and course_pkg.get("block_plan"):
+        from ..runtime_outputs.artifacts import course_teaching_content_full
+
+        enriched = dict(course_pkg)
+        enriched["teaching_content_full"] = course_teaching_content_full(course_pkg)
+        state = {**state, "course_package": enriched}
     return {
         "session_id": record.session_id,
         "status": record.status,
         "learner_id": record.learner_id,
-        "state": compact_state(record.state),
+        "state": state,
         "error": record.error,
         "created_at": record.created_at,
         "updated_at": record.updated_at,

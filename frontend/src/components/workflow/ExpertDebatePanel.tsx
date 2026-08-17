@@ -22,6 +22,8 @@ interface ExpertDebatePanelProps {
   expertBCrossReview?: CrossReview;
   expertARevision?: ExpertDraft;
   expertBRevision?: ExpertDraft;
+  coursePackage?: Record<string, unknown>;
+  revisionRound?: number;
   expertPhase?: string;
   sessionId?: string;
   artifacts?: MarkdownArtifact[];
@@ -39,6 +41,8 @@ export function ExpertDebatePanel({
   expertBCrossReview,
   expertARevision,
   expertBRevision,
+  coursePackage,
+  revisionRound,
   expertPhase,
   sessionId,
   artifacts,
@@ -51,7 +55,7 @@ export function ExpertDebatePanel({
     return `round-01/${stem}.md`;
   };
   const hasAny =
-    expertADraft || expertBDraft || expertACrossReview || expertBCrossReview || expertARevision || expertBRevision;
+    expertADraft || expertBDraft || expertACrossReview || expertBCrossReview || expertARevision || expertBRevision || coursePackage;
 
   if (!hasAny) {
     return (
@@ -163,12 +167,14 @@ export function ExpertDebatePanel({
                 draft={expertADraft}
                 color="cyan"
                 sessionId={sessionId}
+                artifactPath={resolvePath("expert_a_draft", expertADraft?.markdown_artifact)}
               />
               <DraftCard
                 title="专家 B 草稿"
                 draft={expertBDraft}
                 color="amber"
                 sessionId={sessionId}
+                artifactPath={resolvePath("expert_b_draft", expertBDraft?.markdown_artifact)}
               />
             </div>
           </TabsContent>
@@ -208,14 +214,26 @@ export function ExpertDebatePanel({
           </TabsContent>
 
           <TabsContent value="integration" className="space-y-4">
-            <Card className="border-border/40 bg-card shadow-soft">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-medium">课程整合</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                专家 A 将根据互评和修订结果，整合双方内容生成最终课程包。
-              </CardContent>
-            </Card>
+            {coursePackage ? (
+              <div className="grid md:grid-cols-2 gap-4">
+                <DraftCard
+                  title={`专家 A 整合稿${revisionRound ? `（第 ${revisionRound + 1} 轮）` : ""}`}
+                  draft={coursePackage as unknown as ExpertDraft}
+                  color="cyan"
+                  sessionId={sessionId}
+                  artifactPath={resolvePath("course_package", (coursePackage as { markdown_artifact?: MarkdownArtifact }).markdown_artifact)}
+                />
+              </div>
+            ) : (
+              <Card className="border-border/40 bg-card shadow-soft">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-medium">课程整合</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm text-muted-foreground">
+                  专家 A 将根据互评和修订结果，整合双方内容生成最终课程包。
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </CardContent>
@@ -344,10 +362,10 @@ function ReviewCard({
         <CardTitle className="text-base font-medium">{title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
-        <p className="text-muted-foreground leading-relaxed">{review.overall_assessment}</p>
+        <p className="text-foreground/80 leading-relaxed">{review.overall_assessment}</p>
         {review.positive_confirmation && (
-          <p className="text-primary/80 text-xs flex items-center gap-1.5">
-            <CheckCircle2 className="h-3 w-3" />
+          <p className="text-foreground/70 text-xs flex items-center gap-1.5">
+            <CheckCircle2 className="h-3 w-3 text-emerald-600/70" />
             {review.positive_confirmation}
           </p>
         )}
@@ -360,8 +378,8 @@ function ReviewCard({
                 </Badge>
                 <span className="text-xs text-muted-foreground">{op.location}</span>
               </div>
-              <p className="text-xs text-destructive/80 mb-1.5">问题：{op.problem}</p>
-              <p className="text-xs text-primary/80">建议：{op.suggestion}</p>
+              <p className="text-xs text-foreground/60 mb-1.5">问题：{op.problem}</p>
+              <p className="text-xs text-foreground/75">建议：{op.suggestion}</p>
             </div>
           ))}
         </div>

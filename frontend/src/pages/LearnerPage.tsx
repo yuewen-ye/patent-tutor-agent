@@ -12,12 +12,10 @@ import { ProfileTimeline } from "@/components/profile/ProfileTimeline";
 import { AchievementBadges } from "@/components/profile/AchievementBadges";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Loader2,
-  ArrowRight,
   User,
   Mail,
   Save,
@@ -42,17 +40,6 @@ import {
 import { PixelMascot } from "@/components/auth/PixelMascot";
 import type { LearnerProfile, StudentInfo } from "@/types";
 import { formatDate } from "@/lib/utils";
-
-function labelMode(mode: string): string {
-  const map: Record<string, string> = {
-    teach: "教学",
-    chat: "问答",
-    diagnose: "诊断",
-    feedback: "反馈",
-    auto: "自动",
-  };
-  return map[mode] || mode;
-}
 
 const REASON_MESSAGES: Record<string, string> = {
   learner_not_found: "学员不存在",
@@ -199,21 +186,21 @@ export function LearnerPage() {
         {info && learner && (
           <>
             {/* ── 顶部英雄区：抓眼球 + 核心数据 ── */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#C15B27] via-[#D9773E] to-[#E8995A] text-white shadow-elevated">
-              <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-white/10 blur-3xl" />
-              <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full bg-white/10 blur-2xl" />
+            <div className="relative overflow-hidden rounded-3xl bg-[#FFF7ED] border border-[#FFE8D0] text-[#5C3A26] shadow-elevated">
+              <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-[#FFE8D0]/40 blur-3xl" />
+              <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full bg-[#FFE8D0]/30 blur-2xl" />
               <div className="relative p-6 md:p-8">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30 shadow-inner">
-                      <User className="h-8 w-8 md:h-10 md:w-10 text-white" />
+                    <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-white/80 border border-[#FFE8D0] shadow-inner flex items-center justify-center">
+                      <User className="h-8 w-8 md:h-10 md:w-10 text-[#D9773E]" />
                     </div>
                     <div>
-                      <p className="text-white/80 text-sm font-medium">欢迎回来</p>
-                      <h1 className="text-2xl md:text-4xl font-bold tracking-tight">
+                      <p className="text-[#9A4A1C]/80 text-sm font-medium">欢迎回来</p>
+                      <h1 className="text-2xl md:text-4xl font-bold tracking-tight text-[#5C3A26]">
                         {info.display_name || info.login_id || "学员"}
                       </h1>
-                      <p className="text-white/70 text-xs mt-1.5 flex items-center gap-1.5">
+                      <p className="text-[#9A4A1C]/70 text-xs mt-1.5 flex items-center gap-1.5">
                         <ShieldCheck className="h-3 w-3" />
                         账号状态正常 · 学员 ID: {info.learner_id}
                       </p>
@@ -224,7 +211,7 @@ export function LearnerPage() {
                       variant="outline"
                       size="sm"
                       onClick={startEdit}
-                      className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                      className="border-[#D9773E]/30 bg-white text-[#5C3A26] hover:bg-[#FFE8D0]/30 hover:text-[#3E2817]"
                     >
                       <Pencil className="h-3.5 w-3.5 mr-1.5" />
                       编辑资料
@@ -232,7 +219,7 @@ export function LearnerPage() {
                     <Button
                       asChild
                       size="sm"
-                      className="bg-white text-[#C15B27] hover:bg-white/90 shadow-md"
+                      className="bg-[#D9773E] text-white hover:bg-[#C15B27] shadow-md"
                     >
                       <Link to="/">
                         <Home className="h-3.5 w-3.5 mr-1.5" />
@@ -248,13 +235,13 @@ export function LearnerPage() {
                     return (
                       <div
                         key={stat.label}
-                        className="rounded-2xl bg-white/15 backdrop-blur-sm border border-white/20 p-4 text-center hover:bg-white/20 transition-colors"
+                        className="rounded-2xl bg-white border border-[#FFE8D0] p-4 text-center hover:bg-[#FFE8D0]/30 transition-colors"
                       >
-                        <Icon className="h-5 w-5 mx-auto mb-2 text-white/90" />
-                        <p className="text-xs text-white/80 mb-1">{stat.label}</p>
-                        <p className="text-2xl md:text-3xl font-bold text-white">
+                        <Icon className="h-5 w-5 mx-auto mb-2 text-[#D9773E]" />
+                        <p className="text-xs text-[#9A4A1C]/70 mb-1">{stat.label}</p>
+                        <p className="text-2xl md:text-3xl font-bold text-[#5C3A26]">
                           {stat.value}
-                          <span className="text-sm font-normal text-white/70 ml-0.5">{stat.unit}</span>
+                          <span className="text-sm font-normal text-[#9A4A1C]/70 ml-0.5">{stat.unit}</span>
                         </p>
                       </div>
                     );
@@ -449,60 +436,10 @@ export function LearnerPage() {
                 </div>
                 <div>
                   <h2 className="text-lg md:text-xl font-bold text-[#5C3A26]">学习历程</h2>
-                  <p className="text-xs text-muted-foreground">画像演进与最近会话记录</p>
+                  <p className="text-xs text-muted-foreground">画像演进与学习轨迹</p>
                 </div>
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                <div className="lg:col-span-2">
-                  <ProfileTimeline profiles={learner.profiles} mastery={learner.mastery} />
-                </div>
-                <Card className="rounded-2xl border border-white/70 bg-white/90 shadow-soft overflow-hidden">
-                  <div className="h-1.5 w-full bg-gradient-to-r from-[#D9773E] via-[#F59E0B] to-[#C15B27]" />
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-medium flex items-center gap-2 text-[#5C3A26]">
-                      <span className="inline-flex items-center justify-center rounded-lg bg-[#D9773E]/10 p-1.5 text-[#D9773E]">
-                        <MessageSquare className="h-4 w-4" />
-                      </span>
-                      最近会话
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {(sessionsData?.sessions || []).length === 0 && (
-                      <div className="text-center py-4">
-                        <p className="text-sm text-[#9A6A4A]">还没有学习会话</p>
-                        <p className="text-xs text-[#D9773E] mt-1 font-medium">去完成一次自评诊断，开启你的学习路径</p>
-                      </div>
-                    )}
-                    {(sessionsData?.sessions || []).slice(0, 5).map((s) => {
-                      const modeLabel = s.workflow_mode ? labelMode(String(s.workflow_mode)) : null;
-                      const displayTitle = s.course?.title || `会话 ${s.session_id.slice(0, 8)}`;
-                      const createdAt = (s as { created_at?: string }).created_at || "";
-                      return (
-                        <div
-                          key={s.session_id}
-                          className="flex items-center justify-between rounded-xl border border-[#FFE8D0]/70 bg-[#FFF7ED]/70 p-3.5 hover:bg-[#FFE8D0]/60 hover:border-[#FFE8D0] hover:-translate-y-0.5 transition-all cursor-pointer shadow-sm"
-                          onClick={() => (window.location.href = `/session/${s.session_id}`)}
-                        >
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{displayTitle}</p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {formatDate(createdAt)}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {modeLabel && (
-                              <Badge variant="secondary" className="text-[11px] px-1.5 py-0">
-                                {modeLabel}
-                              </Badge>
-                            )}
-                            <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </CardContent>
-                </Card>
-              </div>
+              <ProfileTimeline profiles={learner.profiles} mastery={learner.mastery} />
             </section>
           </>
         )}

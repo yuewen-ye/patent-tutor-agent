@@ -70,7 +70,8 @@ uv export --format requirements-txt --output-file requirements.txt
 │   ├── scripts/                 # workflow runner, graph export, memory migration
 │   ├── tests/                   # unit and real-provider integration tests
 │   └── main.py                  # FastAPI entry point
-├── config/agents.yaml           # provider, model, temperature and top_k settings
+├── frontend/                    # React 18 + TypeScript + Vite UI (pages, API client, components)
+├── config/agents.example.yaml   # provider/model/temperature template; copy to config/agents.yaml (ignored)
 ├── docs/                        # active contracts, guides, architecture and output examples
 ├── scripts/                     # Studio start/stop scripts
 ├── artifacts/                   # ignored runtime Markdown, manifests and logs
@@ -172,9 +173,15 @@ def build_<name>_node(llm_client: LLMClient) -> Node:
 - provider base URLs and default model names
 - per-Agent provider/model/temperature/tool temperature/top_k
 
-API keys and machine-local paths belong in `.env`. Supported providers are `deepseek`, `qwen`, and
-`glm`. `AgentLLMRouter` supports explicit `{AGENT}_PROVIDER` environment overrides for incident
-recovery. Planner uses the default provider unless a dedicated runtime setting is added.
+API keys and machine-local paths belong in `.env`. The `LLMProvider` literal supports `qwen`,
+`glm`, `gpt`, `luna`, `grok`, and `yangmao`; the recommended per-Agent mapping
+(route=qwen, chat_answer=qwen, diagnosis_feedback=qwen, planner=gpt, expert_b=luna,
+expert_a=grok, judge=gpt) is documented in `config/agents.example.yaml`. The five Krill providers
+share the same endpoint (`https://api-slb.krill-ai.net/codex/v1`) and a single key set through the
+five `*_API_KEY` variables in `.env`; `yangmao` is the retained DeepSeek Flash channel
+(`yangmao-main`, separate `YANGMAO_API_KEY`/base_url) for DeepSeek requests. `AgentLLMRouter`
+supports explicit `{AGENT}_PROVIDER` environment overrides for incident recovery. Planner uses the
+default provider unless a dedicated runtime setting is added.
 
 ## State And Contracts
 
@@ -226,9 +233,10 @@ the selected window and must not add nodes outside it. Do not let an LLM bypass 
 the static confusion definitions. Production code must not read `docs/`; runtime assets belong to the
 backend domain package that owns their schema and behavior.
 
-`learning_paths` is a session-level audit snapshot. `learner_learning_plans` and
-`learner_learning_plan_nodes` are the cross-session source of truth for the full route and cursor;
-`session_directives` stores the per-session derived question/activity window.
+The full route and cursor live in `learner_learning_plans` and `learner_learning_plan_nodes`
+(cross-session source of truth). Per-session snapshots (path, activity window, `path_decision`)
+persist inside the session state JSON (`session_states`); the old `learning_paths` and
+`session_directives` tables were removed.
 
 ## Module Placement
 
@@ -261,8 +269,8 @@ artifacts/sessions/{session_id}/
   workflow.log.jsonl
   onboarding/{questionnaire,submission}.md
   profile/learner_profile.md
-  path/{dual_axis_snapshot,learning_path}.md
-  round-01/{expert drafts,cross reviews,revisions,course_package,judge_report}.md
+  path/{dual_axis_snapshot,learning_path,path_decision}.md
+  round-01/{retrieval_context,expert drafts,cross reviews,revisions,course_package,judge_report}.md
   feedback/{feedback_report,learner_profile_update,grading_report}.md
 ```
 
@@ -274,6 +282,7 @@ no final Markdown file; `course_package.md` is the integrated course process art
 
 `backend/main.py` serves:
 
+- auth: `POST /auth/register`, `POST /auth/login`
 - health: `GET /health`, `GET /health/ready`
 - onboarding: `GET /questionnaires/onboarding`
 - learner flow: questionnaire submission and exercise submission endpoints
@@ -324,10 +333,12 @@ requires them or the user asks for a complete integration run.
 
 ## Graphify
 
-The repository knowledge graph lives in `graphify-out/`.
+The repository knowledge graph is generated locally by
+[graphify](https://github.com/yuewen-ye/graphify) into `graphify-out/`. That directory is
+Git-ignored, so it is absent from a fresh checkout until `graphify update .` builds it.
 
-- Always read `graphify-out/GRAPH_REPORT.md` before source exploration or codebase answers.
-- If `graphify-out/wiki/index.md` exists, navigate it before raw files.
+- If `graphify-out/GRAPH_REPORT.md` exists, read it before source exploration or codebase answers;
+  if `graphify-out/wiki/index.md` exists, navigate it before raw files.
 - Prefer `graphify query/path/explain` for cross-module relationship questions.
 - Run `graphify update .` after source or active documentation changes.
 

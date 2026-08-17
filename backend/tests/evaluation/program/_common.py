@@ -13,7 +13,7 @@ evaluation entry points:
 * ``progress.inspect_plan``        – read current_node / completed_nodes / plan_nodes
 * ``progress.advance_bkt``         – register N correct observations on a node
 
-All runnable scripts (``eval_course_gen.py``, ``eval_learn_sim.py`` and
+All runnable scripts (``run_course_gen.py``, ``run_learning_sim.py`` and
 ``evaluation_test_v1.1_bootrun.py``) import from this single common module so
 the core logic is defined once and only the CLI orchestration differs.
 """
@@ -40,7 +40,7 @@ from dotenv import load_dotenv
 # NOTE: This module now lives under evaluation/program/.  EVAL_DIR is still
 # the evaluation/ root (one level up) because that's where run_control.md,
 # profiles/, results/, etc. live.  We also insert evaluation/ into sys.path
-# so the in-tree "import eval_common as common" pattern keeps working.
+# so the in-tree "import _common as common" pattern keeps working.
 
 _THIS_DIR = Path(__file__).resolve().parent
 EVAL_DIR = _THIS_DIR.parent  # backend/tests/evaluation/
@@ -99,7 +99,7 @@ def load_profile(profile_id: str, *, learner_prefix: str = "multi") -> LoadedPro
         profile_id=profile_id,
         learner_id=f"{learner_prefix}-{letter}",
         learning_goal=str(data.get("learning_goal", "")),
-        responses=[dict(r) for r in data.get("responses", [])],
+        responses=[dict(r) for r in (data.get("responses") or [])],
         education_background=data.get("education_background"),
         raw=data,
     )
@@ -184,7 +184,7 @@ def check_test_environment(
         items.append(("backend /health/ready", f"UNREACHABLE: {exc}  → start with: uv run python backend/main.py"))
 
     # 5. LLM provider env (non-fatal, informative only)
-    providers = [p for p in ("DEEPSEEK_API_KEY", "QWEN_API_KEY", "GLM_API_KEY") if os.environ.get(p)]
+    providers = [p for p in ("QWEN_API_KEY", "GLM_API_KEY", "GPT_API_KEY", "LUNA_API_KEY", "GROK_API_KEY") if os.environ.get(p)]
     items.append(("LLM API keys set", ", ".join(providers) if providers else "NONE — teach sessions will likely fail"))
 
     return EnvReport(ok, items)
@@ -498,7 +498,7 @@ def generate_control_md(preserve_previous: bool = True) -> None:
         "",
         "## 使用说明",
         "",
-        "这个控制文件是 **eval_course_gen、eval_learn_sim、evaluation_test_v1.1_bootrun.py** 共用的。",
+        "这个控制文件是 **run_course_gen、run_learning_sim、evaluation_test_v1.1_bootrun.py** 共用的。",
         "无论单独运行哪一个流程，都是读取/修改这一个文件。",
         "",
         "使用方式：",
@@ -646,7 +646,7 @@ def wipe_learner_mysql(learner_id: str) -> int:
     Safe no-op if ``PATENT_TUTOR_MYSQL_URL`` is not configured.
     Returns a count of deleted rows (informational only, not a contract).
     """
-    import mysql.connector  # type: ignore[import-untyped]
+    import pymysql  # type: ignore[import-untyped]
 
     ensure_dotenv()
     url = os.environ.get("PATENT_TUTOR_MYSQL_URL")
@@ -656,15 +656,16 @@ def wipe_learner_mysql(learner_id: str) -> int:
 
     # mysql://user:password@host:port/database
     m = re.match(
-        r"mysql(?:\+mysqlconnector)?://(?P<u>[^:]+):(?P<p>[^@]+)@(?P<h>[^:]+):(?P<port>\d+)/(?P<db>[^/?]+)",
+        r"mysql(?:\+\w+)?://(?P<u>[^:]+):(?P<p>[^@]+)@(?P<h>[^:]+):(?P<port>\d+)/(?P<db>[^/?]+)",
         url,
     )
     if not m:
         raise ValueError(f"无法解析 PATENT_TUTOR_MYSQL_URL: {url!r}")
 
-    conn = mysql.connector.connect(
+    conn = pymysql.connect(
         user=unquote(m.group("u")), password=unquote(m.group("p")),
         host=m.group("h"), port=int(m.group("port")), database=m.group("db"),
+        charset="utf8mb4",
     )
     try:
         cur = conn.cursor()
@@ -677,7 +678,7 @@ def wipe_learner_mysql(learner_id: str) -> int:
         try:
             cur.execute("DELETE FROM session_directives WHERE student_id=%s", (learner_id,))
             total += max(cur.rowcount, 0)
-        except mysql.connector.Error:
+        except pymysql.MySQLError:
             pass  # older schema without session_directives — ignore
         # 3. Tables reachable only through plan_id
         cur.execute(
@@ -702,12 +703,12 @@ def wipe_learner_mysql(learner_id: str) -> int:
             try:
                 cur.execute(f"DELETE FROM {table} WHERE student_id=%s", (learner_id,))
                 total += max(cur.rowcount, 0)
-            except mysql.connector.Error:
+            except pymysql.MySQLError:
                 pass
         try:
             cur.execute("DELETE FROM students WHERE student_id=%s", (learner_id,))
             total += max(cur.rowcount, 0)
-        except mysql.connector.Error:
+        except pymysql.MySQLError:
             pass
         conn.commit()
         cur.close()

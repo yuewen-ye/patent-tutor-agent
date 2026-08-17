@@ -14,8 +14,8 @@
 
 两种调用方式：
     A. 函数调用：infuse_learning_results(profile_letter="B", correct_counts=[3])
-    B. CLI 独立运行：uv run python eval_learn_sim.py --profile B --correct 3
-    C. CLI 交互模式：uv run python eval_learn_sim.py --profile B（提示输入）
+    B. CLI 独立运行：uv run python run_learning_sim.py --profile B --correct 3
+    C. CLI 交互模式：uv run python run_learning_sim.py --profile B（提示输入）
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ for _p in (_THIS_DIR, _EVAL_DIR):
     if _ps not in sys.path:
         sys.path.insert(0, _ps)
 
-import eval_common as common  # noqa: E402
+import _common as common  # noqa: E402
 
 DEFAULT_SEPARATOR = "-"
 
@@ -114,7 +114,7 @@ class InfusionResult:
 def _parse_mysql_url(url: str) -> dict[str, Any]:
     """解析 mysql://user:password@host:port/database，支持 URL 编码的凭据。"""
     m = re.match(
-        r"mysql(?:\+mysqlconnector)?://(?P<u>[^:]+):(?P<p>[^@]+)@(?P<h>[^:]+):(?P<port>\d+)/(?P<db>[^/?]+)",
+        r"mysql(?:\+\w+)?://(?P<u>[^:]+):(?P<p>[^@]+)@(?P<h>[^:]+):(?P<port>\d+)/(?P<db>[^/?]+)",
         url,
     )
     if not m:
@@ -133,7 +133,7 @@ def _find_latest_teach_session_id(learner_id: str) -> str | None:
 
     后端 sessions 表有 workflow_mode 和 status 字段，直接 SQL 过滤。
     """
-    import mysql.connector  # type: ignore[import-untyped]
+    import pymysql  # type: ignore[import-untyped]
 
     common.ensure_dotenv()
     url = os.environ.get("PATENT_TUTOR_MYSQL_URL")
@@ -141,9 +141,11 @@ def _find_latest_teach_session_id(learner_id: str) -> str | None:
         raise RuntimeError("PATENT_TUTOR_MYSQL_URL 未配置")
 
     cfg = _parse_mysql_url(url)
-    conn = mysql.connector.connect(**cfg)
+    cfg["charset"] = "utf8mb4"
+    cfg["cursorclass"] = pymysql.cursors.DictCursor
+    conn = pymysql.connect(**cfg)
     try:
-        cur = conn.cursor(dictionary=True)
+        cur = conn.cursor()
         cur.execute(
             "SELECT session_id FROM sessions "
             "WHERE student_id=%s AND workflow_mode='teach' AND status='completed' "

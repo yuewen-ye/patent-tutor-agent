@@ -92,8 +92,9 @@
 - `interactive_questions[].category` 使用布鲁姆英文层级
 - `interactive_questions[].difficulty` 使用 `L1 / L2 / L3`
 - `interactive_questions[].source_tag` 使用 `backward_review / forward_probe / weakness_probe`
-- `interactive_questions[].options` 必须包含 4 个选择题选项（A/B/C/D），`interactive_questions[].answer` 为正确选项字母（如 "A"、"B"、"C"、"D"）
+- `interactive_questions[].options` 必须包含 4 个选择题选项（A/B/C/D），`interactive_questions[].answer` 为正确选项字母（如 "A"、"B"、"C"、"D"）；**所有题目必须为客观选择题，禁止无选项、开放作答或自由论述类题目**（如"如何评估XX风险""请简述XX"类问法必须改写成有确定选项的选择题，不得保留为开放式）
 - `block_plan` 必须遵循编排层注入的模块、顺序和预算
+- **语言（硬性）**：`teaching_content` 全部正文、`block_plan` 各 block `payload` 的讲解文本、`knowledge_points` / `legal_basis` / `risks` / `knowledge_synthesis` 的说明文字、`interactive_questions` 的题干与选项文本、`assessment.items` 的题干与解析等所有自然语言文字字段**必须用中文撰写**，不得用英文作答。保留 `I/R/A/C` 等结构标记，以及 schema 定义的枚举与标识符字段（如 `expert`、`style`、`category` 布鲁姆层级、`difficulty` 的 `L1/L2/L3`、`source_tag`、`block_type` / `block_id`、选项字母 `A/B/C/D`、`node_id` 等知识图标识符）原样，不得翻译或改写。
 - 字段名、枚举和嵌套结构严格遵守调用方提供的 JSON Schema，不得增加合同外字段
 
 ## 注意事项（铁律）

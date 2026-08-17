@@ -16,6 +16,7 @@ AgentNode = Literal[
     "route",
     "retrieve_context",
     "chat_answer",
+    "slide_deck",
 ]
 ErrorPattern = Literal[
     "unknown",
@@ -54,6 +55,7 @@ class MarkdownArtifact(ContractModel):
         "cross_review",
         "expert_revision",
         "course_package",
+        "course_slides",
         "dual_axis_snapshot",
         "questionnaire",
         "questionnaire_submission",
@@ -70,6 +72,7 @@ class MarkdownArtifact(ContractModel):
         "judge",
         "route",
         "chat_answer",
+        "slide_deck",
         "learner",
     ]
     title: str
@@ -333,6 +336,47 @@ class Assessment(ContractModel):
     items: list[AssessmentItem] = Field(default_factory=list)
 
 
+# ── PPT + 语音讲解（结构化课件）契约 ──────────────────────────────────────
+# 由 SlideDeckBuilder 节点从 course_package 生成；每页含展示数据 content 与
+# 讲稿 narration（页面文字 ≠ 老师说的话）。TTS 合成后回填 audio_url/duration_sec。
+SlideType = Literal[
+    "title",
+    "concept",
+    "bullet",
+    "comparison",
+    "process",
+    "example",
+    "summary",
+]
+
+
+class SlideNarration(ContractModel):
+    """单页讲稿：页面文字与口播内容分离。"""
+
+    text: str
+    audio_url: str | None = None
+    duration_sec: float | None = Field(default=None, ge=0)
+
+
+class Slide(ContractModel):
+    id: str
+    order: int = Field(ge=1)
+    type: SlideType
+    title: str
+    content: dict[str, Any] = Field(default_factory=dict)
+    narration: SlideNarration
+
+
+class SlideDeck(ContractModel):
+    """结构化课件：slides[] 即可支撑"翻页 + 逐页音频"播放。"""
+
+    slides: list[Slide] = Field(min_length=1)
+    slide_to_block_id: dict[str, str] = Field(
+        default_factory=dict,
+        description="slide.id -> course_package.block_plan.block_id 追溯映射（可选）",
+    )
+
+
 class LegalBasisItem(ContractModel):
     """法条溯源条目（spec v3：article + source 双字段，供幻觉率审计）。"""
 
@@ -560,6 +604,7 @@ class StateDict(TypedDict):
     expert_a_draft: NotRequired[dict[str, Any]]
     expert_b_draft: NotRequired[dict[str, Any]]
     judge_report: NotRequired[dict[str, Any]]
+    judge_report_history: NotRequired[list[dict[str, Any]]]
     revision_round: NotRequired[int]
     feedback_result: NotRequired[dict[str, Any]]
     intent: NotRequired[str]  # "teach" | "chat" | "diagnose"
@@ -578,7 +623,12 @@ class StateDict(TypedDict):
     expert_a_revision: NotRequired[dict[str, Any]]
     expert_b_revision: NotRequired[dict[str, Any]]
     course_package: NotRequired[dict[str, Any]]
+    course_slides: NotRequired[dict[str, Any]]
     workflow_status: NotRequired[Literal["running", "completed", "failed", "canceled"]]
+    # 失败可追溯字段：崩溃时由 session_service 写入，供 GET /sessions/{id} 直接排查
+    last_failed_node: NotRequired[str]
+    error: NotRequired[str]
+    error_traceback: NotRequired[str]
 
 
 def agent_output_json_schemas() -> dict[str, dict[str, Any]]:

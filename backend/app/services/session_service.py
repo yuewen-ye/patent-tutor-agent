@@ -939,6 +939,35 @@ class SessionService:
             raise FileNotFoundError(artifact_path)
         return candidate.read_text(encoding="utf-8")
 
+    def read_artifact_bytes(self, session_id: str, artifact_path: str) -> bytes:
+        """Read a session artifact as raw bytes (e.g. audio files).
+
+        Path validation mirrors ``read_artifact``; no text decoding is applied.
+        """
+        safe_session_id = normalize_artifact_path(
+            artifact_path=session_id,
+            artifact_root_name=self.artifact_root.name or "artifacts",
+            session_id=session_id,
+        )
+        if safe_session_id != Path(session_id):
+            raise InvalidArtifactPathError("Invalid session artifact directory.")
+        root = (self.artifact_root / "sessions" / safe_session_id).resolve()
+        relative_path = normalize_artifact_path(
+            artifact_path=artifact_path,
+            artifact_root_name=self.artifact_root.name or "artifacts",
+            session_id=session_id,
+        )
+        candidate = (root / relative_path).resolve()
+        try:
+            candidate.relative_to(root)
+        except ValueError as exc:
+            raise InvalidArtifactPathError(
+                "Artifact path escapes the session artifact directory."
+            ) from exc
+        if not candidate.is_file():
+            raise FileNotFoundError(artifact_path)
+        return candidate.read_bytes()
+
     def learner_memory(self, learner_id: str, *, limit: int = 10) -> dict[str, Any]:
         snapshot = learner_memory_snapshot(self._store, learner_id=learner_id, limit=limit)
         all_sessions = self.list_sessions()
@@ -1150,6 +1179,25 @@ class SessionService:
                 record.error = str(exc)
                 record.updated_at = utc_now()
                 record.state["workflow_status"] = "failed"
+                # 失败可追溯：从异常 notes 提取崩溃节点，连同错误信息写进 state，
+                # 这样 GET /sessions/{id} 的 state 里能直接看到"挂在哪个节点、什么错"，
+                # 无需反推 workflow.log.jsonl。节点信息由 graph 层 _with_runtime_side_effects
+                # 通过 exc.add_note(f"patent_tutor_failed_node={node}") 附加。
+                failed_node: str | None = None
+                notes = getattr(exc, "__notes__", None) or []
+                for note in notes:
+                    if str(note).startswith("patent_tutor_failed_node="):
+                        failed_node = str(note).split("=", 1)[1]
+                        break
+                if failed_node:
+                    record.state["last_failed_node"] = failed_node
+                record.state["error"] = str(exc)
+                # 完整 Traceback 写入 state：GET /sessions/{id} 直接可见崩溃栈
+                import traceback as _traceback
+
+                record.state["error_traceback"] = "".join(
+                    _traceback.format_exception(type(exc), exc, exc.__traceback__)
+                )
                 write_manifest(
                     artifact_root=self.artifact_root,
                     state=record.state,

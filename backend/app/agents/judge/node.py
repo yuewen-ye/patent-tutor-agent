@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any, assert_never
 
 from langchain_core.prompts import ChatPromptTemplate
 
-from backend.app.core.agent_runtime_config import agent_temperature
+from backend.app.core.agent_runtime_config import agent_temperature, agent_top_k
 from backend.app.agents.common import (
     Node,
     generate_validated_json,
@@ -14,7 +15,8 @@ from backend.app.agents.common import (
     messages_from_prompt,
     schema_note,
 )
-from backend.app.core.llm import LLMClient
+from backend.app.core.llm import LLMClient, LLMMessage
+from backend.app.agents.rag_tools import collect_judge_retrieval_context
 from backend.app.schemas.state import JudgeReport, StateDict, completed_event
 
 _DECISION_NORMALIZATION = {
@@ -119,7 +121,7 @@ def build_judge_node(llm_client: LLMClient) -> Node:
                 "system",
                 schema_note(
                     "JudgeReport",
-                    '{"decision":"accept_with_minor_revision","accuracy_score":5,'
+                    '{"decision":"accept","accuracy_score":5,'
                     '"adaptation_score":4,"completeness_score":4,"adaptation_rate":0.8,"disputes":[],"rationale":"理由"}',
                 )
                 + _EXTRA_TEXT,
@@ -132,6 +134,7 @@ def build_judge_node(llm_client: LLMClient) -> Node:
                 "检索上下文：{retrieval_context}\n"
                 "学习者画像：{learner_profile}\n"
                 "学习路径：{learning_path}\n"
+                "历史裁判记录（多轮修订时必读，用于闭环：标 fixed/open/regressed，只补新增项）：{prior_judge_reviews}\n"
                 "请只审核专家 A 的整合教学稿。通过后它就是 teach 路由的最终教学内容。"
                 "judge 只判断是否通过并说明理由，不生成教学正文，不承担整合过程输出。",
             ),
@@ -139,6 +142,27 @@ def build_judge_node(llm_client: LLMClient) -> Node:
     )
 
     def judge_node(state: StateDict) -> dict[str, Any]:
+        # —— RAG 预检：裁决前基于检索意图补一次检索，并入检索上下文 ——
+        judge_probe_messages = [
+            LLMMessage(role="system", content=_EXTRA_TEXT),
+            LLMMessage(
+                role="user",
+                content=(
+                    f"用户问题：{state['user_input']}\n"
+                    f"专家 A 整合稿：{json.dumps(state.get('expert_a_draft', {}), ensure_ascii=False)}\n"
+                    "请判断审核前是否需要补充检索以核实法条、案例或关键数据；"
+                    "如需，请调用 rag_retrieve 给出检索词。"
+                ),
+            ),
+        ]
+        judge_retrieved = collect_judge_retrieval_context(
+            llm_client,
+            messages=judge_probe_messages,
+            temperature=agent_temperature("judge", 0.2, "tool_temperature"),
+            agent="judge",
+        )
+        retrieval_context = list(state.get("retrieval_context", [])) + judge_retrieved
+
         report = generate_validated_json(
             llm_client,
             messages=messages_from_prompt(
@@ -146,9 +170,12 @@ def build_judge_node(llm_client: LLMClient) -> Node:
                 expert_a_draft=state.get("expert_a_draft", {}),
                 teach_phase=state.get("teach_phase", "debate"),
                 user_input=state["user_input"],
-                retrieval_context=state.get("retrieval_context", []),
+                retrieval_context=retrieval_context,
                 learner_profile=state.get("learner_profile", {}),
                 learning_path=state.get("learning_path", []),
+                prior_judge_reviews=json.dumps(
+                    state.get("judge_report_history") or [], ensure_ascii=False
+                ),
             ),
             temperature=agent_temperature("judge", 0.0),
             agent="judge",
@@ -163,6 +190,10 @@ def build_judge_node(llm_client: LLMClient) -> Node:
             "judge_report": report_dict,
             "events": [completed_event("judge", "reviewed expert A integration draft with LLM")],
         }
+        # —— 历史闭环：把本轮报告 append 进 judge_report_history，供后续轮次与 expert_a 累积读取 ——
+        prior_history = list(state.get("judge_report_history") or [])
+        prior_history.append(report_dict)
+        updates["judge_report_history"] = prior_history
         match report_dict["decision"]:
             case "accept" | "accept_with_minor_revision":
                 updates["workflow_status"] = "completed"

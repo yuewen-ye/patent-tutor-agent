@@ -70,3 +70,21 @@ def collect_expert_retrieval_context(
             )
         )
     return chunks
+
+
+def collect_judge_retrieval_context(
+    llm_client: LLMClient,
+    *,
+    messages: list[LLMMessage],
+    temperature: float,
+    agent: AgentName = "judge",
+) -> list[dict[str, object]]:
+    """judge 裁决前的 RAG 预检：复用与专家同构的探针方式，补一次检索。
+
+    让 judge 在裁决前基于自身检索意图补充法条/案例/数据上下文，降低检索覆盖
+    不全导致的误判。实际检索动作由节点侧发起，judge 主裁决仍走 schema 强约束的
+    ``generate_validated_json``。
+    """
+    return collect_expert_retrieval_context(
+        llm_client, messages=messages, temperature=temperature, agent=agent
+    )

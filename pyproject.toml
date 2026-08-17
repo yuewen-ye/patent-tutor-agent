@@ -27,6 +27,7 @@ dependencies = [
     "scipy>=1.14.0",
     "flagembedding>=1.4.0",
     "modelscope>=1.39.0",
+    "edge-tts>=6.1.0",
 ]
 
 [dependency-groups]
@@ -41,6 +42,17 @@ dev = [
 
 [tool.uv]
 package = false
+
+# torch 固定从 PyTorch 官方 CPU wheel 源安装：CPU 版 wheel 不依赖 nvidia-*
+# CUDA 运行库（约 3~4GB），镜像更小、构建更快、也不会因慢网下载 CUDA 包超时。
+# 部署/推理均为 CPU 场景，不需要 GPU 版。
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
 
 [tool.ruff]
 line-length = 100

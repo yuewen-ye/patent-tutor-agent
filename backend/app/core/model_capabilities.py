@@ -4,7 +4,8 @@ from typing import Literal
 
 LLMRequestParameter = Literal["temperature"]
 
-_PROVIDERS_WITHOUT_TEMPERATURE = frozenset({"luna", "terra"})
+# luna 恢复为 gpt-5.6-luna；gpt-5.6 系列的温度禁用仍由模型前缀覆盖。
+_PROVIDERS_WITHOUT_TEMPERATURE: frozenset[str] = frozenset()
 _MODEL_PREFIXES_WITHOUT_TEMPERATURE = ("gpt-5.6",)
 
 

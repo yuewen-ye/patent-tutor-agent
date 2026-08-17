@@ -3,11 +3,14 @@
 用于在不同环境之间同步学习者数据（学习者画像、会话、BKT mastery 等）。
 
 用法：
-  # 导出指定学习者的数据（默认输出到 backend/tests/evaluation/）
+  # 导出 multi- 开头的学习者数据（默认输出到 backend/tests/evaluation/）
+  uv run python backend/tests/evaluation/mysql_export_import.py export --all
+
+  # 导出指定学习者的数据
   uv run python backend/tests/evaluation/mysql_export_import.py export --learner-ids multi-B multi-C
 
-  # 导出所有学习者的数据
-  uv run python backend/tests/evaluation/mysql_export_import.py export --all
+  # 导出所有学习者的数据（不过滤前缀）
+  uv run python backend/tests/evaluation/mysql_export_import.py export --all --no-filter
 
   # 导入数据
   uv run python backend/tests/evaluation/mysql_export_import.py import --input backend/tests/evaluation/export_data.sql
@@ -28,6 +31,9 @@ from urllib.parse import unquote
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]  # backend/tests/evaluation/ -> project root
 EVAL_DIR = Path(__file__).resolve().parent  # backend/tests/evaluation/
+
+# 默认过滤前缀：只导出以 multi- 开头的学习者数据
+DEFAULT_FILTER_PREFIX = "multi-"
 
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
@@ -58,7 +64,7 @@ def get_mysql_url() -> str:
 
 
 def parse_mysql_url(url: str) -> dict[str, str]:
-    """解析 MySQL URL，支持 mysql://、mysql+pymysql://、mysql+mysqlconnector:// 格式，支持 URL 编码的凭据。"""
+    """解析 MySQL URL，支持 mysql://、mysql+pymysql:// 格式，支持 URL 编码的凭据。"""
     m = re.match(
         r"mysql(?:\+\w+)?://(?P<u>[^:]+):(?P<p>[^@]+)@(?P<h>[^:]+):(?P<port>\d+)/(?P<db>[^/?]+)",
         url,
@@ -94,10 +100,14 @@ def connect_mysql(url: str):
     return conn
 
 
-def list_learners(conn) -> list[str]:
-    """列出数据库中所有学习者 ID。"""
+def list_learners(conn, prefix_filter: str | None = None) -> list[str]:
+    """列出数据库中所有学习者 ID，可按前缀过滤。"""
     cursor = conn.cursor()
-    cursor.execute("SELECT DISTINCT student_id FROM students")
+    if prefix_filter:
+        cursor.execute("SELECT DISTINCT student_id FROM students WHERE student_id LIKE %s", 
+                      (f"{prefix_filter}%",))
+    else:
+        cursor.execute("SELECT DISTINCT student_id FROM students")
     learners = [row["student_id"] for row in cursor.fetchall()]
     cursor.close()
     return sorted(learners)
@@ -359,7 +369,10 @@ def main() -> None:
     export_parser = subparsers.add_parser("export", help="导出数据")
     export_group = export_parser.add_mutually_exclusive_group(required=True)
     export_group.add_argument("--learner-ids", nargs="+", help="要导出的学习者 ID 列表")
-    export_group.add_argument("--all", action="store_true", help="导出所有学习者")
+    export_group.add_argument("--all", action="store_true", help=f"导出所有学习者（默认只导出 {DEFAULT_FILTER_PREFIX} 开头的）")
+    export_parser.add_argument("--no-filter", action="store_true", help="禁用前缀过滤，导出所有学习者")
+    export_parser.add_argument("--filter-prefix", default=DEFAULT_FILTER_PREFIX, 
+                               help=f"学习者 ID 前缀过滤（默认: {DEFAULT_FILTER_PREFIX}）")
     export_parser.add_argument("--output", default="export_data.sql", help="输出文件路径（默认保存到 backend/tests/evaluation/）")
     export_parser.add_argument("--dry-run", action="store_true", help="预览模式，不实际导出")
     
@@ -385,8 +398,13 @@ def main() -> None:
     try:
         if args.command == "export":
             if args.all:
-                learner_ids = list_learners(conn)
-                print(f"发现 {len(learner_ids)} 个学习者: {', '.join(learner_ids)}")
+                # 默认使用前缀过滤，除非指定 --no-filter
+                filter_prefix = None if args.no_filter else args.filter_prefix
+                learner_ids = list_learners(conn, prefix_filter=filter_prefix)
+                if filter_prefix:
+                    print(f"发现 {len(learner_ids)} 个 {filter_prefix} 开头的学习者: {', '.join(learner_ids)}")
+                else:
+                    print(f"发现 {len(learner_ids)} 个学习者（无过滤）: {', '.join(learner_ids)}")
             else:
                 learner_ids = args.learner_ids
             

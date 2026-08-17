@@ -10,6 +10,55 @@ from typing import Any
 _ASSET_ROOT = Path(__file__).resolve().parent / "data"
 _WEIGHTS = {"低": 0.35, "中": 0.6, "高": 0.8, "极高": 1.0}
 
+# 判定"已掌握"所需的最小真实观测数（与 learning_progress._is_mastered 对齐）。
+# 自陈问卷播种只写 inferred 弱先验、不累加 observations，因此不会通过此闸门。
+_MIN_MASTERY_OBSERVATIONS = 2
+_MASTERY_THRESHOLD = 0.8
+
+
+def _mastery_with_evidence(
+    *,
+    node_id: str,
+    bkt_knowledge: object,
+    legacy_mastery: object,
+) -> tuple[float | None, int]:
+    """Return (pl, observations) for a node, preferring the BKT snapshot.
+
+    Only genuine observations (from graded exercise/diagnostic answers) count
+    as evidence; inferred questionnaire priors keep observations=0 and thus
+    never satisfy the "mastered" gate.
+    """
+    if isinstance(bkt_knowledge, dict):
+        state = bkt_knowledge.get(node_id)
+        if isinstance(state, dict):
+            raw_pl = state.get("pl", state.get("probability"))
+            try:
+                pl = float(raw_pl) if raw_pl is not None else None
+            except (TypeError, ValueError):
+                pl = None
+            try:
+                obs = int(state.get("observations", 0))
+            except (TypeError, ValueError):
+                obs = 0
+            return pl, max(0, obs)
+    if isinstance(legacy_mastery, dict):
+        raw_pl = legacy_mastery.get(node_id)
+        try:
+            pl = float(raw_pl) if raw_pl is not None else None
+        except (TypeError, ValueError):
+            pl = None
+        return pl, 0
+    return None, 0
+
+
+def _is_mastered_with_evidence(pl: float | None, observations: int) -> bool:
+    """True only when BOTH probability and genuine observation count qualify."""
+    return (
+        pl is not None
+        and pl >= _MASTERY_THRESHOLD
+        and observations >= _MIN_MASTERY_OBSERVATIONS
+    )
+
 
 @lru_cache(maxsize=1)
 def _raw_knowledge_dag() -> dict[str, Any]:
@@ -136,17 +185,21 @@ def build_dual_axis_snapshot(
     # ── 掌握度：优先 BKT 真实状态，回退旧 mastery 字段 ──
     fd = profile.get("five_dimensions") or {}
     bkt_knowledge = fd.get("knowledge", {}) or {}
+    legacy_mastery = profile.get("mastery", {}) if isinstance(profile.get("mastery"), dict) else {}
     mastery: dict[str, float] = {}
     if isinstance(bkt_knowledge, dict):
-        for _nid, _st in bkt_knowledge.items():
-            if isinstance(_st, dict) and _st.get("pl") is not None:
-                mastery[str(_nid)] = float(_st["pl"])
-    if not mastery:
-        _legacy = profile.get("mastery", {})
-        if isinstance(_legacy, dict):
-            mastery = {
-                str(_k): float(_v) for _k, _v in _legacy.items() if _v is not None
-            }
+        for _nid in bkt_knowledge:
+            _pl, _obs = _mastery_with_evidence(
+                node_id=str(_nid),
+                bkt_knowledge=bkt_knowledge,
+                legacy_mastery={},
+            )
+            if _pl is not None:
+                mastery[str(_nid)] = float(_pl)
+    if not mastery and isinstance(legacy_mastery, dict):
+        mastery = {
+            str(_k): float(_v) for _k, _v in legacy_mastery.items() if _v is not None
+        }
 
     # ── 薄弱点 → 节点 id 集合（用共享索引，支持中文名 / 英文 id / 名字子串）──
     name_to_id, id_to_name = _build_node_name_index(knowledge)
@@ -198,7 +251,11 @@ def build_dual_axis_snapshot(
 
 
 def compute_learning_path(
-    *, profile: dict[str, Any], learning_goal: str, max_nodes: int = 8
+    *,
+    profile: dict[str, Any],
+    learning_goal: str,
+    max_nodes: int = 8,
+    mastery_snapshot: object | None = None,
 ) -> list[dict[str, Any]]:
     graph = load_knowledge_dag()
     nodes = {str(node["node_id"]): node for node in graph["nodes"]}
@@ -207,7 +264,12 @@ def compute_learning_path(
     name_to_id, id_to_name = _build_node_name_index(graph)
     weak_node_ids = _resolve_weak_nodes(weak_points, name_to_id, id_to_name)
     search_text = f"{learning_goal} {weak_text}"
-    mastery = profile.get("mastery", {}) if isinstance(profile.get("mastery"), dict) else {}
+    legacy_mastery = profile.get("mastery", {}) if isinstance(profile.get("mastery"), dict) else {}
+    bkt_knowledge = (
+        mastery_snapshot
+        if mastery_snapshot is not None
+        else (profile.get("five_dimensions") or {}).get("knowledge", {})
+    )
 
     # 混淆对补全：薄弱点命中某混淆对任一端时，把该对整体（两端 + 相关节点）强制纳入
     # 路径，确保「辨析模块」两端齐备、common_pitfall 块能真正触发。
@@ -240,7 +302,12 @@ def compute_learning_path(
         heapq.heappush(frontier, (_node_cost(nodes[target], weak_text), target))
     while frontier and len(required) < max_nodes:
         _, node_id = heapq.heappop(frontier)
-        if node_id in required or float(mastery.get(node_id, 0.0)) >= 0.8:
+        _pl, _obs = _mastery_with_evidence(
+            node_id=node_id,
+            bkt_knowledge=bkt_knowledge,
+            legacy_mastery=legacy_mastery,
+        )
+        if node_id in required or _is_mastered_with_evidence(_pl, _obs):
             continue
         required.add(node_id)
         for predecessor in nodes[node_id].get("predecessors", []):

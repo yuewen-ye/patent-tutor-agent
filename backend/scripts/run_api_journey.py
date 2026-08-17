@@ -364,6 +364,32 @@ class ApiJourney:
                 cat_knowledge_snapshot=cat_knowledge_snapshot,
             )
 
+        # 校验结构化课件（course_slides）：PPT 分页 + 逐页讲稿（音频可选）
+        course_slides = course_state.get("course_slides")
+        if not isinstance(course_slides, dict):
+            raise JourneyError("课程会话缺少结构化 state.course_slides。")
+        slides = course_slides.get("slides")
+        if not isinstance(slides, list) or not slides:
+            raise JourneyError("state.course_slides.slides 为空，未生成课件分页。")
+        for slide in slides:
+            if not isinstance(slide, dict):
+                raise JourneyError("state.course_slides.slides 包含非对象项。")
+            narration = slide.get("narration")
+            if not isinstance(narration, dict) or not narration.get("text"):
+                raise JourneyError(
+                    f"slide {slide.get('id') or slide.get('order')} 缺少讲稿 narration.text。"
+                )
+        audio_count = sum(
+            1
+            for slide in slides
+            if isinstance(slide, dict)
+            and isinstance(slide.get("narration"), dict)
+            and slide["narration"].get("audio_url")
+        )
+        print(
+            f"    结构化课件：{len(slides)} 页，其中 {audio_count} 页已合成音频。"
+        )
+
         self._step("6", "查询会话列表，确认课程会话可被持久化查询")
         query = urlencode(
             {
@@ -451,6 +477,10 @@ class ApiJourney:
             ],
             "course_artifact": course_artifact_path,
             "feedback_artifact": feedback_artifact_path,
+            "course_slides": {
+                "slide_count": len(slides),
+                "audio_count": audio_count,
+            },
             "mastery": learner.get("mastery", {}),
             "active_learning_plan": learner.get("active_learning_plan"),
             "profile_count": len(profiles.get("profiles", [])),

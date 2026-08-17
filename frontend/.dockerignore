@@ -1,0 +1,6 @@
+# Patent Tutor 前端镜像构建排除项（build context 为 ./frontend）
+node_modules
+dist
+.vite
+*.log
+.DS_Store

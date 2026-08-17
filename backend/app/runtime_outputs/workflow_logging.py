@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import traceback
 from threading import Lock
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
@@ -48,6 +49,7 @@ class WorkflowLogRecord:
     error_status_code: int | None = None
     error_provider: str | None = None
     error_retryable: bool | None = None
+    error_traceback: str | None = None
 
     def to_json_line(self) -> str:
         return json.dumps(asdict(self), ensure_ascii=False, separators=(",", ":")) + "\n"
@@ -98,6 +100,12 @@ def write_workflow_log(
         error_status_code=getattr(error, "status_code", None) if error is not None else None,
         error_provider=getattr(error, "provider", None) if error is not None else None,
         error_retryable=getattr(error, "retryable", None) if error is not None else None,
+        # 完整调用栈：便于事后直接定位崩溃点（不截断，日志是诊断主依据）
+        error_traceback=(
+            "".join(traceback.format_exception(type(error), error, error.__traceback__))
+            if error is not None
+            else None
+        ),
     )
     path = workflow_log_path(log_root, session_id)
     path.parent.mkdir(parents=True, exist_ok=True)

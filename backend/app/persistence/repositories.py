@@ -1473,14 +1473,14 @@ class MySQLLearnerStore:
         responses: list[dict[str, Any]],
         education_background: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Seed initial KC mastery from onboarding knowledge questions Q1-Q21.
+        """Seed an initial **weak prior** from onboarding questionnaire answers.
 
-        Runs in a single transaction: each mapped, answered question is graded
-        against the questionnaire standard answer, registered as a question and
-        attempt row (per-session idempotency), then applied through the same
-        ``_update_mastery_connection`` writer used by exercises. Finally the
-        deterministic DAG inference pass propagates parent states exactly like
-        the CAT engine. Failures roll back the whole batch; the service layer
+        Questionnaire answers are self-reported, not graded diagnostic
+        evidence. They only set an ``inferred`` prior (pl = p_init,
+        observations unchanged) for mapped KCs — they never write real BKT
+        observations. Only genuine exercise/diagnostic answers may advance
+        ``observations`` (see ``_update_mastery_connection``). Runs in a single
+        transaction; failures roll back the whole batch and the service layer
         degrades to "no seeding" without blocking course creation.
         """
 
@@ -1496,7 +1496,6 @@ class MySQLLearnerStore:
         seeded_skills: list[str] = []
         with self.database.transaction() as connection:
             self._ensure_student(connection, learner_id, now)
-            answered_questions = self._answered_question_count(connection, learner_id)
             cursor = connection.cursor()
             for question_id, meta in mapping.items():
                 if question_id not in answers:
@@ -1504,77 +1503,40 @@ class MySQLLearnerStore:
                 kc_ids = [str(kc) for kc in meta["kc_ids"]]
                 if not kc_ids:
                     continue
-                question_key = f"qseed:{session_id}:{question_id}"
-                question_id_db = f"qseed:{session_id}:{question_id}"[:128]
-                cursor.execute(
-                    "INSERT IGNORE INTO questions(question_id, session_id, origin, qid, kind, "
-                    "category, kc_node_id, skills_json, question_text, answer_json, "
-                    "question_version, status, created_at) "
-                    "VALUES (%s,%s,'diagnostic_catalog',%s,'diagnostic',%s,%s,%s,%s,%s,"
-                    "'catalog-v1','published',%s)",
-                    (
-                        question_id_db,
-                        session_id,
-                        question_id,
-                        meta["area"],
-                        kc_ids[0],
-                        _json_dump(kc_ids),
-                        meta.get("question_text") or question_id,
-                        _json_dump(meta["standard"]),
-                        now,
-                    ),
-                )
-                cursor.execute(
-                    "SELECT attempt_id FROM attempts "
-                    "WHERE student_id=%s AND idempotency_key=%s",
-                    (learner_id, question_key),
-                )
-                if cursor.fetchone():
-                    continue
-                raw_answer = answers[question_id]
-                is_correct = _answer_matches(meta["standard"], raw_answer)
-                attempt_id = uuid.uuid4().hex
-                cursor.execute(
-                    "INSERT INTO attempts(attempt_id, student_id, question_id, session_id, "
-                    "raw_answer_json, selected_option, is_correct, grading_status, "
-                    "grading_source, idempotency_key, created_at, graded_at) "
-                    "VALUES (%s,%s,%s,%s,%s,%s,%s,'graded',"
-                    "'questionnaire_answer_key',%s,%s,%s)",
-                    (
-                        attempt_id,
-                        learner_id,
-                        question_id_db,
-                        session_id,
-                        _json_dump(raw_answer),
-                        raw_answer if isinstance(raw_answer, str) else None,
-                        int(is_correct),
-                        question_key,
-                        now,
-                        now,
-                    ),
-                )
-                answered_questions += 1
-                effective_transit = (
-                    min(1.0, parameters.p_transit * 1.5)
-                    if answered_questions <= 10
-                    else parameters.p_transit
-                )
+                # 问卷是自陈先验：不写真实观测，只把命中 KC 置为 inferred 弱先验（pl=p_init）
                 for kc in kc_ids:
-                    update = self._update_mastery_connection(
+                    cursor.execute(
+                        "SELECT pl FROM student_node_mastery "
+                        "WHERE student_id=%s AND node_id=%s",
+                        (learner_id, kc),
+                    )
+                    row = cursor.fetchone()
+                    prior_pl = float(row["pl"]) if row else parameters.p_init
+                    _upsert_mastery_progress(
                         connection,
                         learner_id,
                         kc,
-                        is_correct,
-                        attempt_id=attempt_id,
+                        pl=parameters.p_init,
+                        inferred=True,
                         now=now,
-                        p_init=parameters.p_init,
-                        p_transit=effective_transit,
-                        p_guess=parameters.p_guess,
-                        p_slip=parameters.p_slip,
+                    )
+                    _write_inferred_event(
+                        connection,
+                        learner_id,
+                        kc,
+                        prior_pl=prior_pl,
+                        posterior_pl=parameters.p_init,
+                        now=now,
                         source=_SOURCE_QUESTIONNAIRE,
                     )
-                    update["question_id"] = question_id
-                    results.append(update)
+                    results.append(
+                        {
+                            "skill_id": kc,
+                            "question_id": question_id,
+                            "posterior_pl": parameters.p_init,
+                            "observed_correct": None,
+                        }
+                    )
                     seeded_skills.append(kc)
             if seeded_skills:
                 _propagate_dag_inference(
@@ -1586,16 +1548,6 @@ class MySQLLearnerStore:
                     source=_SOURCE_QUESTIONNAIRE,
                 )
         return results
-
-    def _answered_question_count(self, connection: Any, learner_id: str) -> int:
-        cursor = connection.cursor()
-        cursor.execute(
-            "SELECT COUNT(*) AS answer_count FROM attempts "
-            "WHERE student_id=%s AND is_correct IS NOT NULL",
-            (learner_id,),
-        )
-        row = cursor.fetchone()
-        return int(row["answer_count"]) if row else 0
 
     def _put_memory(
         self,

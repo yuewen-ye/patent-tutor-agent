@@ -23,7 +23,10 @@ from backend.app.core.agent_runtime_config import (
 )
 from backend.app.core.model_capabilities import model_supports_request_parameter
 
-LLMProvider = Literal["deepseek", "qwen", "glm", "gpt", "luna", "terra", "grok", "yangmao"]
+# 准确映射：provider 名 = 真实厂商/模型，不再用壳名套壳复用。
+# qwen / glm / gpt / luna / grok 经 Krill 单端点 + 单 key（nb_ 开头，
+# 5 个 *_API_KEY 已统一为该值）；yangmao 为原 DeepSeek Flash 通道（保留）。
+LLMProvider = Literal["qwen", "glm", "gpt", "luna", "grok", "yangmao", "mistral", "minimax", "deepseek"]
 LLMRole = Literal["system", "user", "assistant", "tool"]
 AgentName = Literal[
     "diagnosis_feedback",
@@ -33,58 +36,52 @@ AgentName = Literal[
     "route",
     "chat_answer",
     "planner",
+    "slide_deck",
 ]
 
-DEFAULT_PROVIDER: LLMProvider = "deepseek"
+DEFAULT_PROVIDER: LLMProvider = "qwen"
+# 节点 → 真实模型：
+#   qwen    → qwen3.7-plus    (route / chat_answer / diagnosis，通用；Krill)
+#   glm     → GLM-5.2         (可用，默认未分配给节点；Krill)
+#   gpt     → gpt-5.5         (planner / judge；Krill)
+#   luna    → gpt-5.6-luna    (expert_b 强推理；Krill)
+#   grok    → grok-4.5        (expert_a 内容生成；Krill)
+#   yangmao → yangmao-main    (DeepSeek Flash，原独立通道，默认未分配给节点)
 DEFAULT_CONFIG: dict[LLMProvider, dict[str, str]] = {
-    "deepseek": {
-        "api_key_env": "DEEPSEEK_API_KEY",
-        "model_env": "DEEPSEEK_MODEL",
-        "base_url_env": "DEEPSEEK_BASE_URL",
-        "model": "deepseek-v4-flash",
-        "base_url": "https://api.deepseek.com",
-    },
     "qwen": {
         "api_key_env": "QWEN_API_KEY",
         "model_env": "QWEN_MODEL",
         "base_url_env": "QWEN_BASE_URL",
-        "model": "qwen3.7-max-2026-05-17",
-        "base_url": "https://api-slb.krill-ai.net/codex/v1",
+        "model": "Qwen3.7-Plus",
+        "base_url": "https://endpoint.greatrouter.com",
     },
     "glm": {
         "api_key_env": "GLM_API_KEY",
         "model_env": "GLM_MODEL",
         "base_url_env": "GLM_BASE_URL",
-        "model": "glm-5.2",
-        "base_url": "https://api-slb.krill-ai.net/codex/v1",
+        "model": "GLM-5.2",
+        "base_url": "https://endpoint.greatrouter.com",
     },
     "gpt": {
         "api_key_env": "GPT_API_KEY",
         "model_env": "GPT_MODEL",
         "base_url_env": "GPT_BASE_URL",
-        "model": "gpt-5.5",
-        "base_url": "https://api-slb.krill-ai.net/codex/v1",
+        "model": "gpt-4o",
+        "base_url": "https://endpoint.greatrouter.com",
     },
     "luna": {
         "api_key_env": "LUNA_API_KEY",
         "model_env": "LUNA_MODEL",
         "base_url_env": "LUNA_BASE_URL",
         "model": "gpt-5.6-luna",
-        "base_url": "https://api-slb.krill-ai.net/codex/v1",
-    },
-    "terra": {
-        "api_key_env": "TERRA_API_KEY",
-        "model_env": "TERRA_MODEL",
-        "base_url_env": "TERRA_BASE_URL",
-        "model": "gpt-5.6-terra",
-        "base_url": "https://api-slb.krill-ai.net/codex/v1",
+        "base_url": "https://endpoint.greatrouter.com",
     },
     "grok": {
         "api_key_env": "GROK_API_KEY",
         "model_env": "GROK_MODEL",
         "base_url_env": "GROK_BASE_URL",
-        "model": "grok-4.5",
-        "base_url": "https://api-slb.krill-ai.net/codex/v1",
+        "model": "grok-4.3",
+        "base_url": "https://endpoint.greatrouter.com",
     },
     "yangmao": {
         "api_key_env": "YANGMAO_API_KEY",
@@ -92,7 +89,28 @@ DEFAULT_CONFIG: dict[LLMProvider, dict[str, str]] = {
         "base_url_env": "YANGMAO_BASE_URL",
         "model": "yangmao-main",
         "base_url": "https://ai.gz404.com:54002/v1",
-    }
+    },
+    "mistral": {
+        "api_key_env": "MISTRAL_API_KEY",
+        "model_env": "MISTRAL_MODEL",
+        "base_url_env": "MISTRAL_BASE_URL",
+        "model": "mistral-small-2503",
+        "base_url": "https://endpoint.greatrouter.com",
+    },
+    "minimax": {
+        "api_key_env": "MINIMAX_API_KEY",
+        "model_env": "MINIMAX_MODEL",
+        "base_url_env": "MINIMAX_BASE_URL",
+        "model": "MiniMax-M2.5",
+        "base_url": "https://endpoint.greatrouter.com",
+    },
+    "deepseek": {
+        "api_key_env": "DEEPSEEK_API_KEY",
+        "model_env": "DEEPSEEK_MODEL",
+        "base_url_env": "DEEPSEEK_BASE_URL",
+        "model": "DeepSeek-V4-Flash",
+        "base_url": "https://endpoint.greatrouter.com",
+    },
 }
 AGENT_PROVIDER_ENV: dict[AgentName, str] = {
     "diagnosis_feedback": "DIAGNOSIS_FEEDBACK_PROVIDER",
@@ -101,11 +119,13 @@ AGENT_PROVIDER_ENV: dict[AgentName, str] = {
     "judge": "JUDGE_PROVIDER",
     "route": "ROUTE_PROVIDER",
     "chat_answer": "CHAT_ANSWER_PROVIDER",
+    "planner": "PLANNER_PROVIDER",
+    "slide_deck": "SLIDE_DECK_PROVIDER",
 }
 
 # ── Per-provider 并发信号量 ──────────────────────────────────────────────
 # 限制同一 provider 同时“在飞”的 HTTP 请求数，避免并发节点（如 expert_a /
-# expert_b 同时打同一个 deepseek key）被上游服务端排队/限流而长时间挂起
+# expert_b 同时打同一个 Krill key）被上游服务端排队/限流而长时间挂起
 # → ReadTimeout。默认 2；若仍偶发超时可设为 1（彻底串行化该 provider）。
 _PROVIDER_SEMAPHORES: dict[str, threading.Semaphore] = {}
 _PROVIDER_SEMAPHORES_LOCK = threading.Lock()

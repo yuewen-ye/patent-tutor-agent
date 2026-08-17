@@ -124,6 +124,29 @@ class WorkflowLLMClient:
                     "rationale": "通过",
                 }
             ],
+            "slide_deck": [
+                {
+                    "slides": [
+                        {
+                            "id": "slide_001",
+                            "order": 1,
+                            "type": "title",
+                            "title": "专利新颖性",
+                            "content": {"subtitle": "三性之一"},
+                            "narration": {"text": "今天我们来学习专利新颖性。"},
+                        },
+                        {
+                            "id": "slide_002",
+                            "order": 2,
+                            "type": "summary",
+                            "title": "小结",
+                            "content": {"takeaways": ["新颖性=与现有技术不同"]},
+                            "narration": {"text": "最后我们总结要点。"},
+                        },
+                    ],
+                    "slide_to_block_id": {},
+                },
+            ],
         }
 
     def generate_json(
@@ -181,7 +204,8 @@ def test_graph_parallelizes_experts_and_branches_after_judge() -> None:
     assert ("expert_a", "_experts_barrier") in edges
     assert ("expert_b", "_experts_barrier") in edges
     assert ("judge", "expert_a_integration") in edges
-    assert ("judge", "__end__") in edges
+    assert ("judge", "slide_deck") in edges
+    assert ("slide_deck", "__end__") in edges
     assert "publish_final_learning" not in mermaid
     assert "quality_gate_failed" not in mermaid
     assert "revise_integration" not in mermaid
@@ -394,7 +418,7 @@ def test_accepted_teach_flow_waits_for_learner_answers_and_keeps_process_markdow
     assert not (session_root / "feedback/feedback_report.md").exists()
     assert "feedback_result" not in state
     assert llm.agents.count("diagnosis_feedback") == 1
-    assert llm.agents[-1] == "judge"
+    assert llm.agents[-1] == "slide_deck"
     assert not (session_root / "final_learning.md").exists()
     assert not (session_root / "internal/exercise_answer_key.md").exists()
     manifest = json.loads((session_root / "manifest.json").read_text(encoding="utf-8"))
