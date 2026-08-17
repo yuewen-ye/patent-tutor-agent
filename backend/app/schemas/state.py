@@ -409,10 +409,12 @@ class ExpertDraft(ContractModel):
 
 
 class RevisionRequest(ContractModel):
+    request_id: str | None = None
     target: Literal["expert_a", "expert_b", "both"]
     issue: str
     required_change: str
     basis: str | None = None
+    status: Literal["open", "fixed", "regressed", "new"] | None = None
 
 
 class ToulminCheck(ContractModel):
