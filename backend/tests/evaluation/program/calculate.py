@@ -52,7 +52,7 @@ from typing import Any
 
 _THIS_DIR = Path(__file__).resolve().parent
 _EVAL_DIR = _THIS_DIR.parent
-_PROJECT_ROOT = _EVAL_DIR.parents[3]
+_PROJECT_ROOT = _EVAL_DIR.parents[2]
 for _p in (_THIS_DIR, _EVAL_DIR, _PROJECT_ROOT):
     _ps = str(_p)
     if _ps not in sys.path:
@@ -900,12 +900,24 @@ def _load_external_json(prefix: str, profile_letter: str, round_num: int | None 
         pattern = f"{prefix}_*_{profile_letter}.json"
     else:
         pattern = f"{prefix}_*_{profile_letter}_{round_num:02d}.json"
-    matching = sorted(llm_results_dir.glob(pattern))
+    all_matching = list(llm_results_dir.glob(pattern))
+    # 排除中间产物（answers），优先选择 LLM 评估结果
+    eval_results = [f for f in all_matching if "answers" not in f.name]
+    matching = sorted(eval_results if eval_results else all_matching)
     if not matching:
+        print(f"  [DEBUG] _load_external_json: 未找到匹配文件")
+        print(f"    llm_results_dir: {llm_results_dir}")
+        print(f"    llm_results_dir exists: {llm_results_dir.exists()}")
+        print(f"    pattern: {pattern}")
+        print(f"    _EVAL_DIR: {_EVAL_DIR}")
+        print(f"    _PROJECT_ROOT: {_PROJECT_ROOT}")
         return None
     try:
-        return json.loads(matching[0].read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
+        result = json.loads(matching[0].read_text(encoding="utf-8"))
+        print(f"  [DEBUG] _load_external_json: 成功加载 {matching[0].name}")
+        return result
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"  [DEBUG] _load_external_json: 解析失败 {e}")
         return None
 
 def load_m14_external_result(profile_letter: str) -> dict[str, Any] | None:

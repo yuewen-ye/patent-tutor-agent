@@ -44,7 +44,7 @@ from dotenv import load_dotenv
 
 _THIS_DIR = Path(__file__).resolve().parent
 EVAL_DIR = _THIS_DIR.parent  # backend/tests/evaluation/
-PROJECT_ROOT = EVAL_DIR.parents[3]
+PROJECT_ROOT = EVAL_DIR.parents[2]
 PROFILES_DIR = EVAL_DIR / "profiles"
 CONTROL_MD = EVAL_DIR / "run_control.md"
 EVAL_ARTIFACTS_DIR = EVAL_DIR / "artifacts"

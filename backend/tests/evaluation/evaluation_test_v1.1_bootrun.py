@@ -25,7 +25,7 @@ from pathlib import Path
 _EVAL_DIR = Path(__file__).resolve().parent
 _PROGRAM_DIR = _EVAL_DIR / "program"
 _LLM_DIR = _EVAL_DIR / "LLM"
-_PROJECT_ROOT = _EVAL_DIR.parents[3]  # backend/tests/evaluation -> backend/tests -> backend -> project root
+_PROJECT_ROOT = _EVAL_DIR.parents[2]  # backend/tests/evaluation -> backend/tests -> backend -> project root
 for _p in (_EVAL_DIR, _PROGRAM_DIR, _LLM_DIR):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
@@ -349,7 +349,11 @@ def _do_report(learner_prefix: str = "multi") -> None:
 def _do_llm_evaluate(profile_ids: list[str], *, force: bool = False) -> None:
     """⑤ 外部 LLM 评估：使用独立 LLM 对产物进行评价。"""
     try:
-        import evaluator_LLM as llm_evaluator  # noqa: WPS433
+        import sys
+        llm_dir = _EVAL_DIR / "LLM"
+        if str(llm_dir) not in sys.path:
+            sys.path.insert(0, str(llm_dir))
+        import evaluator_LLM as llm_evaluator  # noqa: WPS433, type: ignore[import-not-found]
     except ImportError as exc:
         print(f"  ❌ 导入 evaluator_LLM 失败: {exc}")
         print("  请确保已安装依赖: uv add pyyaml requests")
@@ -572,7 +576,7 @@ def _run_course_gen(
         print(f"[course_gen/{letter}] 首轮课程生成（问卷提交）...")
         try:
             common.delete_run_results(
-                profile_letter=letter, learner_prefix=learner_prefix, wipe_mysql=True
+                profile_id=f"{learner_prefix}-{letter}", wipe_mysql=True
             )
         except Exception as exc:  # noqa: BLE001 — 清理失败不应阻断评测
             print(f"  ⚠️ 清理 {letter} 残留失败（继续）: {exc}")

@@ -35,7 +35,7 @@ from typing import Any
 
 _THIS_DIR = Path(__file__).resolve().parent
 _EVAL_DIR = _THIS_DIR.parent  # backend/tests/evaluation
-_PROJECT_ROOT = _EVAL_DIR.parents[3]  # 项目根目录
+_PROJECT_ROOT = _EVAL_DIR.parents[2]  # 项目根目录
 
 for _p in (_THIS_DIR, _EVAL_DIR, _PROJECT_ROOT):
     _ps = str(_p)
