@@ -319,13 +319,13 @@ def _log_llm_call(**kwargs: object) -> None:
 
 
 def _llm_payload_log_enabled() -> bool:
-    return os.getenv("LLM_LOG_PAYLOAD", "").strip().lower() in {"1", "true", "yes", "on"}
+    return os.getenv("LLM_LOG_PAYLOAD", "true").strip().lower() not in {"0", "false", "no", "off"}
 
 
 def _log_llm_payload(call_id: str, direction: str, **kwargs: object) -> None:
     """Write a full request/response record paired by ``call_id``.
 
-    Enabled by the ``LLM_LOG_PAYLOAD`` env var; records land in
+    Enabled by default; set ``LLM_LOG_PAYLOAD=false`` to disable. Records land in
     ``llm_payloads.log.jsonl`` next to ``llm_calls.log.jsonl``. Request records
     carry the exact JSON ``body`` sent to the provider (messages, response_format
     schema, tools); response records carry the raw provider payload or the full

@@ -323,7 +323,7 @@ def test_call_llm_skips_payload_log_when_disabled(monkeypatch, tmp_path) -> None
     )
     monkeypatch.setenv("GPT_API_KEY", "gpt-key")
     monkeypatch.setenv("GPT_BASE_URL", "https://gateway.example/v1")
-    monkeypatch.delenv("LLM_LOG_PAYLOAD", raising=False)
+    monkeypatch.setenv("LLM_LOG_PAYLOAD", "false")
     set_llm_log_context(session_id="sess-no-payload", log_root=tmp_path)
     try:
         call_llm(
