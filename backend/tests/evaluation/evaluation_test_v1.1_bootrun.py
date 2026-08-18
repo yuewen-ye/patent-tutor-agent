@@ -25,7 +25,7 @@ from pathlib import Path
 _EVAL_DIR = Path(__file__).resolve().parent
 _PROGRAM_DIR = _EVAL_DIR / "program"
 _LLM_DIR = _EVAL_DIR / "LLM"
-_PROJECT_ROOT = _EVAL_DIR.parents[3]  # backend/tests/evaluation -> backend/tests -> backend -> project root
+_PROJECT_ROOT = _EVAL_DIR.parents[2]  # backend/tests/evaluation -> backend/tests -> backend -> project root
 for _p in (_EVAL_DIR, _PROGRAM_DIR, _LLM_DIR):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
@@ -84,10 +84,10 @@ def _prompt_main_menu() -> str:
     print("\n" + "=" * 60)
     print("请选择操作模式：")
     print("  0 — 退出")
-    print("  1 — 计算指标")
+    print("  1 — 计算指标（跳过已有结果）")
     print("  2 — 生成报告")
     print("  3 — 运行系统")
-    print("  4 — 外部LLM评估")
+    print("  4 — 外部LLM评估（跳过已有结果）")
     while True:
         raw = input("→ 选择: ").strip()
         if raw in {"0", "1", "2", "3", "4"}:
@@ -349,7 +349,11 @@ def _do_report(learner_prefix: str = "multi") -> None:
 def _do_llm_evaluate(profile_ids: list[str], *, force: bool = False) -> None:
     """⑤ 外部 LLM 评估：使用独立 LLM 对产物进行评价。"""
     try:
-        import evaluator_LLM as llm_evaluator  # noqa: WPS433
+        import sys
+        llm_dir = _EVAL_DIR / "LLM"
+        if str(llm_dir) not in sys.path:
+            sys.path.insert(0, str(llm_dir))
+        import evaluator_LLM as llm_evaluator  # noqa: WPS433, type: ignore[import-not-found]
     except ImportError as exc:
         print(f"  ❌ 导入 evaluator_LLM 失败: {exc}")
         print("  请确保已安装依赖: uv add pyyaml requests")
@@ -572,7 +576,7 @@ def _run_course_gen(
         print(f"[course_gen/{letter}] 首轮课程生成（问卷提交）...")
         try:
             common.delete_run_results(
-                profile_letter=letter, learner_prefix=learner_prefix, wipe_mysql=True
+                profile_id=f"{learner_prefix}-{letter}", wipe_mysql=True
             )
         except Exception as exc:  # noqa: BLE001 — 清理失败不应阻断评测
             print(f"  ⚠️ 清理 {letter} 残留失败（继续）: {exc}")
@@ -847,6 +851,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--base-url", default=common.DEFAULT_BASE_URL)
     p.add_argument("--artifact-dir", type=Path, default=common.EVAL_ARTIFACTS_DIR)
     p.add_argument("--learner-prefix", default="multi")
+    p.add_argument("--force", action="store_true", help="强制重跑（覆盖已有结果）")
     return p
 
 
@@ -895,7 +900,13 @@ def main(argv: list[str] | None = None) -> int:
             )
         elif choice == "4":
             print(f"\n将进行外部 LLM 评估：{', '.join(selected)}")
-            _do_llm_evaluate(selected)
+            force = args.force
+            if not force:
+                force_input = input("  强制重跑？(y/N): ").strip().lower()
+                force = force_input == "y"
+            if force:
+                print("  ⚠️  强制重跑模式：已有结果将被覆盖")
+            _do_llm_evaluate(selected, force=force)
             print("\n外部 LLM 评估完成，返回主菜单。")
 
 

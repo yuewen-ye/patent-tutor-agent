@@ -398,7 +398,7 @@ def save_round_artifacts(
             encoding="utf-8",
         )
 
-    # 2. 从系统产物目录复制完整的 round 文件 + 该轮的 path 产物
+    # 2. 从系统产物目录复制完整的 round 文件 + 该轮的 path 产物 + feedback 产物
     if session_result is not None and round_idx > 0:
         sys_session_dir = SYS_ARTIFACTS_DIR / session_result.session_id
         sys_round_dir = sys_session_dir / f"round-{round_idx:02d}"
@@ -413,6 +413,13 @@ def save_round_artifacts(
         if sys_path_dir_src.is_dir():
             for f in sys_path_dir_src.glob("*.md"):
                 shutil.copy2(f, round_dir / f.name)
+        # 把 feedback/ 产物（learner_profile_update.md, feedback_report.md, grading_report.md）复制到 round/feedback/
+        sys_feedback_src = sys_session_dir / "feedback"
+        if sys_feedback_src.is_dir():
+            round_feedback_dir = round_dir / "feedback"
+            round_feedback_dir.mkdir(parents=True, exist_ok=True)
+            for f in sys_feedback_src.glob("*.md"):
+                shutil.copy2(f, round_feedback_dir / f.name)
 
     # 3. 保存 learner memory
     if memory is not None:

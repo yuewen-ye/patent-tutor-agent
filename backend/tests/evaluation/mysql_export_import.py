@@ -29,7 +29,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]  # backend/tests/evaluation/ -> project root
+PROJECT_ROOT = Path(__file__).resolve().parents[2]  # backend/tests/evaluation/ -> project root
 EVAL_DIR = Path(__file__).resolve().parent  # backend/tests/evaluation/
 
 # 默认过滤前缀：只导出以 multi- 开头的学习者数据

@@ -40,7 +40,6 @@ backend/tests/evaluation/artifacts/*
 backend/tests/evaluation/doc/reference/*
 backend/tests/evaluation/LLM/config/external_llm.yaml
 backend/tests/evaluation/results/*
-backend/tests/evaluation/LLM/results/*
 backend/tests/evaluation/export_data.sql
 backend/tests/evaluation/results/reports/*
 backend/tests/evaluation/clean_export_sql.py

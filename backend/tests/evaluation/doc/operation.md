@@ -309,8 +309,8 @@ backend/tests/evaluation/artifacts/
 
 ### 7.2 报告输出
 
-- 完整报告：`results/report_full.md`
-- 单画像报告：`results/report_{letter}.md`
+- 完整报告：`results/reports/report_full.md`
+- 单画像报告：`results/reports/report_{letter}.md`
 
 ### 7.3 指标行列矩阵
 
@@ -461,7 +461,7 @@ uv run python backend/tests/evaluation/LLM/evaluator_LLM.py evaluate --mode m2_r
    └─ 主菜单 2 → 选画像 → all → 查看逐轮结果 + 多轮平均值
 
 （13）生成完整报告
-   └─ 主菜单 3 → 打开 results/report_full.md
+   └─ 主菜单 3 → 打开 results/reports/report_full.md
 ```
 
 ---

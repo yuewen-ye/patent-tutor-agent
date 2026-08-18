@@ -1953,13 +1953,15 @@ def _evaluate_system_qa(
     output_config: dict[str, Any],
     llm_config: dict[str, Any],
     model_name: str,
+    force: bool = False,
 ) -> dict[str, Any] | None:
     """通用：对系统回答逐条调用 LLM 进行判定并汇总。"""
     output_dir = _PROJECT_ROOT / output_config.get("dir", "backend/tests/evaluation/results/record")
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / output_name
 
-    if output_path.exists():
+    if output_path.exists() and not force:
+        print(f"  ⏭️  跳过：{output_name} 已存在")
         return None
 
     system_prompt = system_prompt_path.read_text(encoding="utf-8") if system_prompt_path.exists() else "提示词文件缺失"
@@ -2027,6 +2029,7 @@ def evaluate_m15(config: dict[str, Any], force: bool = False) -> dict[str, Any] 
         output_config=output_config,
         llm_config=llm_config,
         model_name=model_name,
+        force=force,
     )
 
 
@@ -2052,6 +2055,7 @@ def evaluate_m16(config: dict[str, Any], force: bool = False) -> dict[str, Any] 
         output_config=output_config,
         llm_config=llm_config,
         model_name=model_name,
+        force=force,
     )
 
 

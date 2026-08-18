@@ -231,7 +231,7 @@ def _parse_learning_path_nodes(path_text: str) -> set[str]:
 def _expand_with_ancestors(nodes: set[str], dag: dict[str, Any]) -> set[str]:
     """扩展节点集：基于 knowledge-dag.json 的 predecessors 关系。"""
     expanded = set(nodes)
-    nodes_data = dag.get("nodes", [])
+    nodes_data = dag.get("dag", {}).get("nodes", [])
     predecessors_map: dict[str, list[str]] = {}
     for node in nodes_data:
         node_id = node.get("node_id", "")
@@ -260,7 +260,7 @@ def _load_node_name_map() -> dict[str, str]:
         return {}
     try:
         data = json.loads(_KNOWLEDGE_DAG.read_text(encoding="utf-8"))
-        return {n["node_id"]: n.get("node_name", n["node_id"]) for n in data.get("nodes", [])}
+        return {n["node_id"]: n.get("node_name", n["node_id"]) for n in data.get("dag", {}).get("nodes", [])}
     except (json.JSONDecodeError, OSError, KeyError):
         return {}
 
@@ -271,7 +271,7 @@ def _load_node_id_by_name() -> dict[str, str]:
     try:
         data = json.loads(_KNOWLEDGE_DAG.read_text(encoding="utf-8"))
         result: dict[str, str] = {}
-        for n in data.get("nodes", []):
+        for n in data.get("dag", {}).get("nodes", []):
             nid = n.get("node_id", "")
             name = n.get("node_name", "")
             if nid and name:
@@ -298,11 +298,11 @@ def _resolve_to_node_id(raw: str, name_to_id: dict[str, str]) -> str:
 
 def _load_knowledge_dag() -> dict[str, Any]:
     if not _KNOWLEDGE_DAG.exists():
-        return {"nodes": []}
+        return {"dag": {"nodes": []}}
     try:
         return json.loads(_KNOWLEDGE_DAG.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
-        return {"nodes": []}
+        return {"dag": {"nodes": []}}
 
 # ── 幻觉率相关计算 ──────────────────────────────────────────────────────────
 
@@ -312,13 +312,14 @@ def calc_objection_loop(judge_text: str, review_a_text: str, review_b_text: str)
     闭环率 = 闭环条数 / 总🔴条数 × 100%。
     实际值由外部 LLM 评估（m1_objection_loop_*.json）通过 `load_m8_external_result` 加载。
     此处仅用于在外部LLM结果缺失时保留占位，并透出 🔴 计数供参考。
+    无🔴异议时返回 100%（无需闭环即为满分）。
     """
     counts_a = _parse_cross_review(review_a_text)
     counts_b = _parse_cross_review(review_b_text)
     total_critical = counts_a.get("🔴", 0) + counts_b.get("🔴", 0)
 
     return MetricResult(
-        name="1.1 闭环率", value=0.0, unit="%",
+        name="1.1 闭环率", value=100.0 if total_critical == 0 else 0.0, unit="%",
         detail={
             "总🔴条数": total_critical,
             "闭环条数": None,
@@ -598,6 +599,16 @@ def calc_coverage_confusable(course_text: str, expected_content: dict[str, Any],
 
 # ── 其它指标计算 ──────────────────────────────────────────────────────────
 
+def _file_exists_in_round(round_dir: Path, filename: str) -> bool:
+    """检查产物文件是否存在（支持 feedback/ 子目录回退）。"""
+    if (round_dir / filename).exists():
+        return True
+    feedback_dir = round_dir / "feedback"
+    if feedback_dir.is_dir() and (feedback_dir / filename).exists():
+        return True
+    return False
+
+
 def check_artifact_completeness(round_dir: Path, round_num: int, is_final_round: bool = False) -> MetricResult:
     """M6 产物完整率。"""
     required_files = ["course_package.md", "judge_report.md", "expert_a_cross_review.md", "expert_b_cross_review.md"]
@@ -606,7 +617,7 @@ def check_artifact_completeness(round_dir: Path, round_num: int, is_final_round:
     if is_final_round:
         required_files.extend(["expert_a_revision.md", "expert_b_revision.md"])
 
-    present = sum(1 for f in required_files if (round_dir / f).exists())
+    present = sum(1 for f in required_files if _file_exists_in_round(round_dir, f))
     total = len(required_files)
     rate = round(present / total * 100, 2) if total else 0.0
     return MetricResult(
@@ -776,7 +787,7 @@ def load_m8_external_result(profile_letter: str, round_num: int) -> MetricResult
     raw = data.get("raw_llm_response", {})
     total = raw.get("total_objections", 0)
     closed = raw.get("closed_loop_count", 0)
-    rate = round(closed / total * 100, 2) if total > 0 else 0.0
+    rate = round(closed / total * 100, 2) if total > 0 else 100.0
     return MetricResult(
         name="1.1 闭环率", value=rate, unit="%",
         detail={"评估方式": "外部 LLM", "原始文件": matching[0].name,
@@ -889,12 +900,24 @@ def _load_external_json(prefix: str, profile_letter: str, round_num: int | None 
         pattern = f"{prefix}_*_{profile_letter}.json"
     else:
         pattern = f"{prefix}_*_{profile_letter}_{round_num:02d}.json"
-    matching = sorted(llm_results_dir.glob(pattern))
+    all_matching = list(llm_results_dir.glob(pattern))
+    # 排除中间产物（answers），优先选择 LLM 评估结果
+    eval_results = [f for f in all_matching if "answers" not in f.name]
+    matching = sorted(eval_results if eval_results else all_matching)
     if not matching:
+        print(f"  [DEBUG] _load_external_json: 未找到匹配文件")
+        print(f"    llm_results_dir: {llm_results_dir}")
+        print(f"    llm_results_dir exists: {llm_results_dir.exists()}")
+        print(f"    pattern: {pattern}")
+        print(f"    _EVAL_DIR: {_EVAL_DIR}")
+        print(f"    _PROJECT_ROOT: {_PROJECT_ROOT}")
         return None
     try:
-        return json.loads(matching[0].read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
+        result = json.loads(matching[0].read_text(encoding="utf-8"))
+        print(f"  [DEBUG] _load_external_json: 成功加载 {matching[0].name}")
+        return result
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"  [DEBUG] _load_external_json: 解析失败 {e}")
         return None
 
 def load_m14_external_result(profile_letter: str) -> dict[str, Any] | None:
@@ -1133,7 +1156,7 @@ def calculate_round(
         rm.metrics.append(calc_bkt_advancement(prev_profile_update, profile_update_text, course_text))
     else:
         rm.metrics.append(MetricResult(
-            name="2.4 动态迭代触发率", value=0.0, unit="%",
+            name="2.4 动态迭代触发率", value=0.0, unit="/",
             detail={"触发": False, "note": "首轮：缺少前一轮 profile_update，无法比较"}
         ))
 
