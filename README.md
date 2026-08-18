@@ -429,13 +429,14 @@ agents.<agent>.model_name
 日常建议把模型名写在 `providers` 里，`agents` 里只写差异项；只有某个 Agent 要换特殊模型时才在
 该 Agent 下写 `model_name`。
 
-### fallback（模型侧故障转移）
+### fallback（故障转移）
 
-主模型遇到**模型侧错误**（429/5xx/524、连接中断、空响应/坏 JSON）时，自动切到
-`fallback_model_name` 试一次；fallback 也失败则回到主模型进入下一轮，交替直到
-`llm.retry_times` 轮耗尽。**我方问题不触发**：400（schema 被拒）、401/403（key 无效）直接报错。
+主模型请求失败时（无论是模型侧的 429/5xx/524、连接中断、空响应/坏 JSON，还是我方的
+400 schema 被拒、401/403 key 问题），都会自动切到 `fallback_model_name` 试一次；
+fallback 也失败则回到主模型进入下一轮，交替直到 `llm.retry_times` 轮耗尽。
 fallback 请求保留原调用的全部参数（prompt、schema、temperature），是否发严格 schema 由 fallback
-通道自己的 `supports_strict_schema` 决定。
+通道自己的 `supports_strict_schema` 决定。注意：400 这类确定性错误在 fallback 也失败后会继续
+循环，只是把报错推迟了 `retry_times` 轮——配置错误最终仍会原样抛出。
 
 ### 添加一个新 provider 的步骤
 

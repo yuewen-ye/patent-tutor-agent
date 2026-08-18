@@ -183,10 +183,11 @@ Other keys:
 - `llm.default_provider` (must reference a defined channel), timeout and retries
 - per-Agent provider/model/temperature/tool temperature/top_k
 - optional per-Agent model failover: `agents.<agent>.fallback_model_name` (plus optional
-  `fallback_provider`/`fallback_base_url`, may cross channels). Model-side failures
-  (429/5xx/524, transport errors, empty or unparsable content) fail over to the fallback
-  model for one attempt, then the next round starts from the primary model again, bounded
-  by `retry_times`. Our-side errors (400/401/403) never trigger failover. When
+  `fallback_provider`/`fallback_base_url`, may cross channels). Any primary-model
+  failure — model-side (429/5xx/524, transport errors, empty or unparsable content)
+  or our-side (400 schema rejection, 401/403 auth) — fails over to the fallback model
+  for one attempt, then the next round starts from the primary model again, bounded
+  by `retry_times`. When
   `{AGENT}_PROVIDER` env override is set, the yaml `model_name`/`fallback_*` for that Agent
   are ignored.
 

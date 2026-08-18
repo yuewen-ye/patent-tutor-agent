@@ -48,10 +48,10 @@ providers:
 
 # 推荐 Agent → 通道映射示例：
 #
-# 可选 fallback（模型侧故障转移）：agents.<agent> 下加 fallback_model_name 即启用。
-# 主模型遇到模型侧错误（429/5xx/524、传输错误、空/坏响应）时，自动切到 fallback
-# 模型试一次；fallback 也失败则回到主模型进入下一轮，轮数由 llm.retry_times 控制。
-# 400（schema 被拒）/401/403（key 问题）属于我方问题，不触发 fallback。
+# 可选 fallback（故障转移）：agents.<agent> 下加 fallback_model_name 即启用。
+# 主模型任何请求失败（模型侧的 429/5xx/524、传输错误、空/坏响应，以及我方的
+# 400 schema 被拒、401/403 key 问题）都会自动切到 fallback 模型试一次；
+# fallback 也失败则回到主模型进入下一轮，轮数由 llm.retry_times 控制。
 #   fallback_provider: jiji-gpt       # 可选，可跨通道；缺省 = 该 Agent 的主通道
 #   fallback_model_name: gpt-5.4-mini # 必填（不配则不启用 fallback）
 #   fallback_base_url: https://...    # 可选，覆盖 fallback 通道解析出的 base_url

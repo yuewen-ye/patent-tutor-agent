@@ -695,22 +695,25 @@ def test_fallback_exhausts_rounds_then_raises(monkeypatch) -> None:
     assert len(calls) == 4  # 2 rounds x (primary + fallback)
 
 
-def test_our_side_error_never_triggers_fallback(monkeypatch) -> None:
+def test_our_side_error_also_triggers_fallback(monkeypatch) -> None:
     _patch_retry_times(monkeypatch, 3)
     calls = _patch_call_llm_json(
         monkeypatch,
         {
             ("deepseek", "deepseek-v4-pro"): [LLMProviderError("bad schema", status_code=400)],
-            ("gpt", "gpt-5.6-terra"): [{"answer": "should-not-be-used"}],
+            ("gpt", "gpt-5.6-terra"): [{"answer": "from-fallback"}],
         },
     )
 
-    with pytest.raises(LLMProviderError, match="bad schema"):
-        _fallback_router().generate_json(
-            [LLMMessage(role="user", content="hi")], 0.5, agent="expert_b"
-        )
+    result = _fallback_router().generate_json(
+        [LLMMessage(role="user", content="hi")], 0.5, agent="expert_b"
+    )
 
-    assert len(calls) == 1
+    assert result == {"answer": "from-fallback"}
+    assert [(c["provider"], c["model_name"]) for c in calls] == [
+        ("deepseek", "deepseek-v4-pro"),
+        ("gpt", "gpt-5.6-terra"),
+    ]
 
 
 def test_agent_without_fallback_keeps_default_retry_path(monkeypatch) -> None:

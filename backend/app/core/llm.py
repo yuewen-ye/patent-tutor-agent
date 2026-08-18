@@ -1062,7 +1062,7 @@ class DefaultLLMClient:
 
 @dataclass(frozen=True)
 class FallbackTarget:
-    """Per-agent fallback model used when the primary model fails model-side."""
+    """Per-agent fallback model used when the primary model fails for any reason."""
 
     provider: str
     model_name: str
@@ -1073,11 +1073,11 @@ class AgentLLMRouter:
     """Routes each Agent node to its configured provider, falling back to the default provider.
 
     When an agent configures ``fallback_model_name`` (``agents.<agent>.fallback_*`` in
-    agents.yaml), model-side failures (retryable statuses such as 524, transport errors,
-    empty/unparsable content) fail over to the fallback model for one attempt; if the
-    fallback also fails model-side, the next round starts from the primary model again.
-    Rounds are bounded by ``retry_times``. Non-model-side errors (400 schema rejection,
-    401/403 auth) never trigger the fallback.
+    agents.yaml), any failure of the primary model — model-side errors (retryable
+    statuses such as 524, transport errors, empty/unparsable content) or our-side
+    errors (400 schema rejection, 401/403 auth) — fails over to the fallback model for
+    one attempt; if the fallback also fails, the next round starts from the primary
+    model again. Rounds are bounded by ``retry_times``.
     """
 
     default_provider: str | None
@@ -1152,8 +1152,9 @@ class AgentLLMRouter:
         """Run ``invoke(provider, model_name, base_url, max_attempts)`` with failover.
 
         No fallback configured -> single passthrough with default retry behavior.
-        Configured -> each round tries primary once, then the fallback once, then
-        sleeps and returns to the primary; rounds are bounded by retry_times.
+        Configured -> any LLMProviderError (model-side or our-side) fails over to the
+        fallback model; if the fallback also fails, the next round starts from the
+        primary again. Rounds are bounded by retry_times.
         """
         primary = self.provider_for(agent)
         primary_model = self.model_for(agent)
@@ -1166,8 +1167,6 @@ class AgentLLMRouter:
             try:
                 return invoke(primary, primary_model, None, 1)
             except LLMProviderError as exc:
-                if not _is_retryable_error(exc):
-                    raise
                 last_exc = exc
                 _log_llm_call(
                     provider=primary,
@@ -1181,8 +1180,6 @@ class AgentLLMRouter:
             try:
                 return invoke(fallback.provider, fallback.model_name, fallback.base_url, 1)
             except LLMProviderError as exc:
-                if not _is_retryable_error(exc):
-                    raise
                 last_exc = exc
                 if round_no < rounds:
                     time.sleep(min(0.5 * 2 ** (round_no - 1), 4.0))
