@@ -71,7 +71,7 @@ uv export --format requirements-txt --output-file requirements.txt
 │   ├── tests/                   # unit and real-provider integration tests
 │   └── main.py                  # FastAPI entry point
 ├── frontend/                    # React 18 + TypeScript + Vite UI (pages, API client, components)
-├── config/agents.example.yaml   # provider/model/temperature template; copy to config/agents.yaml (ignored)
+├── config/agents.example.yaml   # channel/model/temperature template; copy to config/agents.yaml (ignored)
 ├── docs/                        # active contracts, guides, architecture and output examples
 ├── scripts/                     # Studio start/stop scripts
 ├── artifacts/                   # ignored runtime Markdown, manifests and logs
@@ -282,6 +282,9 @@ Runtime files live under:
 artifacts/sessions/{session_id}/
   manifest.json
   workflow.log.jsonl
+  llm_calls.log.jsonl      # per-call LLM telemetry (tokens, status, duration)
+  llm_payloads.log.jsonl   # per-call request bodies (incl. response_format schema) and raw
+                           # responses; enabled by default, LLM_LOG_PAYLOAD=false disables
   onboarding/{questionnaire,submission}.md
   profile/learner_profile.md
   path/{dual_axis_snapshot,learning_path,path_decision}.md
