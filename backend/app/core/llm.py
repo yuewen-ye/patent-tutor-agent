@@ -39,7 +39,7 @@ AgentName = Literal[
     "slide_deck",
 ]
 
-DEFAULT_PROVIDER: LLMProvider = "qwen"
+DEFAULT_PROVIDER: LLMProvider = "deepseek"
 # 节点 → 真实模型：
 #   qwen    → qwen3.7-plus    (route / chat_answer / diagnosis，通用；Krill)
 #   glm     → GLM-5.2         (可用，默认未分配给节点；Krill)

@@ -34,7 +34,7 @@ from typing import Any
 
 _THIS_DIR = Path(__file__).resolve().parent
 _EVAL_DIR = _THIS_DIR.parent
-_PROJECT_ROOT = _EVAL_DIR.parents[2]
+_PROJECT_ROOT = _EVAL_DIR.parents[3]
 for _p in (_THIS_DIR, _EVAL_DIR, _PROJECT_ROOT):
     _ps = str(_p)
     if _ps not in sys.path:
@@ -603,6 +603,8 @@ def _list_profiles_with_data(learner_prefix: str = "multi") -> list[str]:
 # ── 格式化 ───────────────────────────────────────────────────────────────────
 
 def _format_value(value: float, unit: str) -> str:
+    if unit == "/":
+        return "/"
     if unit == "/5":
         return f"{value:.1f}/5"
     return f"{value:.1f}{unit}"
@@ -684,7 +686,7 @@ def _metric_avg_for_profile(
     llm_results: dict[str, Any] | None = None,
     profile_level_metrics: list[calculate.MetricResult] | None = None,
 ) -> tuple[float, str] | None:
-    """计算单个画像某指标的跨轮平均值。"""
+    """计算单个画像某指标的跨轮平均值（跳过 unit='/' 的轮次）。"""
     values_with_unit: list[tuple[float, str]] = []
 
     for rm in profile.rounds:
@@ -692,7 +694,7 @@ def _metric_avg_for_profile(
             profile.profile_letter, rm.round_num, display_name,
             llm_results or {}, rm.metrics, profile_level_metrics,
         )
-        if result is not None:
+        if result is not None and result[1] != "/":
             values_with_unit.append(result)
 
     if not values_with_unit:
@@ -817,6 +819,7 @@ def _render_system_level_table(
 
 def _render_m6_detail_section(
     profile_level_metrics: list[calculate.MetricResult],
+    llm_results: dict[str, Any] | None = None,
 ) -> list[str]:
     """渲染 M6 问答质量测试的详细说明模块。"""
     lines: list[str] = []
@@ -836,6 +839,11 @@ def _render_m6_detail_section(
         elif mapped == "6.2 边界拒答恰当率":
             bnd_metric = m
 
+    # 获取 M6 原始评估数据
+    sys_data = (llm_results or {}).get("system", {})
+    adv_raw = sys_data.get("_m15", {})
+    bnd_raw = sys_data.get("_m16", {})
+
     if adv_metric:
         lines.append("#### 6.1 对抗稳健率")
         lines.append("")
@@ -853,6 +861,22 @@ def _render_m6_detail_section(
         lines.append("系统应能识别并正确处理这些精心设计的诱导性问题，而非被误导给出错误答案。")
         lines.append("")
 
+        # 展示未通过的题目
+        adv_evals = adv_raw.get("evaluations", []) if isinstance(adv_raw, dict) else []
+        failed = [e for e in adv_evals if not e.get("passed", False)]
+        if failed:
+            lines.append(f"**未通过题目详情**（共 {len(failed)} 题）:")
+            lines.append("")
+            for i, ev in enumerate(failed, 1):
+                question = ev.get("question", "")
+                answer = ev.get("answer", "")
+                reason = ev.get("reason", "")
+                lines.append(f"**{i}. {question}**")
+                lines.append(f"- 系统回答: {answer[:200]}{'...' if len(answer) > 200 else ''}")
+                if reason:
+                    lines.append(f"- 未通过原因: {reason}")
+                lines.append("")
+
     if bnd_metric:
         lines.append("#### 6.2 边界拒答恰当率")
         lines.append("")
@@ -869,6 +893,22 @@ def _render_m6_detail_section(
         lines.append("**说明**: 本指标衡量系统在面对超出能力范围或边界问题时，能否恰当拒答而非编造信息。")
         lines.append("恰当拒答包括：坦诚告知用户该问题超出范围、引导用户查阅官方渠道、或提供有限但准确的信息。")
         lines.append("")
+
+        # 展示未通过的题目
+        bnd_evals = bnd_raw.get("evaluations", []) if isinstance(bnd_raw, dict) else []
+        failed = [e for e in bnd_evals if not e.get("appropriate", False)]
+        if failed:
+            lines.append(f"**未通过题目详情**（共 {len(failed)} 题）:")
+            lines.append("")
+            for i, ev in enumerate(failed, 1):
+                question = ev.get("question", "")
+                answer = ev.get("answer", "")
+                reason = ev.get("reason", "")
+                lines.append(f"**{i}. {question}**")
+                lines.append(f"- 系统回答: {answer[:200]}{'...' if len(answer) > 200 else ''}")
+                if reason:
+                    lines.append(f"- 未通过原因: {reason}")
+                lines.append("")
 
     if not adv_metric and not bnd_metric:
         lines.append("_（M6 指标数据未就绪，请先运行系统级探针和外部LLM评估）_")
@@ -902,6 +942,7 @@ def _render_profile_round_table(
         for name in metrics:
             row = [f"`{name}`"]
             values: list[float] = []
+            skip_rounds: list[int] = []
             unit = ""
             for rm in rounds:
                 result = _get_metric_value_for_round(
@@ -913,8 +954,11 @@ def _render_profile_round_table(
                 else:
                     val, u = result
                     row.append(_format_value(val, u))
-                    values.append(val)
-                    unit = u
+                    if u == "/":
+                        skip_rounds.append(rm.round_num)
+                    else:
+                        values.append(val)
+                        unit = u
             if values:
                 avg = sum(values) / len(values)
                 row.append(_format_value(avg, unit))
@@ -926,7 +970,8 @@ def _render_profile_round_table(
                 if sys_result is not None:
                     val, u = sys_result
                     for i in range(len(rounds)):
-                        row[i + 1] = _format_value(val, u)
+                        if rounds[i].round_num not in skip_rounds:
+                            row[i + 1] = _format_value(val, u)
                     row.append(_format_value(val, u))
                 else:
                     row.append("-")
@@ -1042,7 +1087,7 @@ def _render_markdown_single(ctx: ReportContext) -> str:
 
     # 4.5 M6 问答质量测试详情（系统级独立展示）
     lines.append("")
-    lines.extend(_render_m6_detail_section(profile_level_metrics))
+    lines.extend(_render_m6_detail_section(profile_level_metrics, llm_results))
 
     # 五、证据表
     _append_evidence_tables(lines)
@@ -1245,7 +1290,7 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
     # 五、M6 问答质量测试详情（系统级独立展示）
     lines.append("## 五、M6 问答质量测试详情")
     lines.append("")
-    lines.extend(_render_m6_detail_section(profile_level_metrics))
+    lines.extend(_render_m6_detail_section(profile_level_metrics, llm_results))
 
     # 六、证据表
     _append_evidence_tables(lines)
