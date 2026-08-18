@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart } from "lucide-react";
 import { SUNBURST_TREE, type SunburstTreeNode } from "./sunburst-tree";
+import { buildChapterGroups, computeMasteryStats } from "@/lib/knowledge-map";
 
 interface MasterySunburstProps {
   mastery?: Record<string, number>;
@@ -179,12 +180,13 @@ export function MasterySunburst({ mastery }: MasterySunburstProps) {
       angle += span;
     });
 
-    const values = Object.values(plMap).filter(
-      (v) => typeof v === "number" && !Number.isNaN(v)
+    // 与 BlindSpotGraph 共用同一统计口径，保证中心"综合掌握度"与盲区定位图的"平均掌握度"数值一致。
+    const stats = computeMasteryStats(
+      buildChapterGroups(SUNBURST_TREE),
+      plMap as unknown as Record<string, unknown>,
     );
-    const avg = values.length > 0 ? values.reduce((s, v) => s + v, 0) / values.length : 0;
 
-    return { segments: segs, maxDepth: depth, overallAvg: avg };
+    return { segments: segs, maxDepth: depth, overallAvg: stats.avgMastery };
   }, [plMap]);
 
   const ringOf = (depth: number): [number, number] => {
