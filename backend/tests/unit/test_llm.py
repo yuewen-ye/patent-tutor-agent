@@ -154,6 +154,43 @@ def test_call_llm_json_adds_json_mode_and_parses_response(monkeypatch) -> None:
     assert cast(dict[str, Any], captured["body"])["response_format"] == {"type": "json_object"}
 
 
+def test_call_llm_json_salvages_duplicated_json_payload(monkeypatch) -> None:
+    monkeypatch.setenv("QWEN_API_KEY", "qwen-key")
+    monkeypatch.setenv("QWEN_MODEL", "qwen3.7-plus")
+    monkeypatch.setenv("QWEN_BASE_URL", "https://api-slb.krill-ai.net/codex/v1")
+
+    duplicated = '{"a": 1, "b": [2]}{"a": 1, "b": [2]}'
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return _json_response(duplicated)
+
+    result = call_llm_json(
+        provider="qwen",
+        messages=[LLMMessage(role="system", content="只输出 json")],
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    assert result == {"a": 1, "b": [2]}
+
+
+def test_call_llm_json_salvage_failure_keeps_retryable_error(monkeypatch) -> None:
+    monkeypatch.setenv("QWEN_API_KEY", "qwen-key")
+    monkeypatch.setenv("QWEN_MODEL", "qwen3.7-plus")
+    monkeypatch.setenv("QWEN_BASE_URL", "https://api-slb.krill-ai.net/codex/v1")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return _json_response('{"a": 1, broken')
+
+    with pytest.raises(LLMProviderError) as excinfo:
+        call_llm_json(
+            provider="qwen",
+            messages=[LLMMessage(role="system", content="只输出 json")],
+            http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+        )
+
+    assert excinfo.value.retryable
+
+
 def test_call_llm_uses_explicit_model_name_override(monkeypatch) -> None:
     monkeypatch.setenv("QWEN_API_KEY", "qwen-key")
     captured: dict[str, object] = {}

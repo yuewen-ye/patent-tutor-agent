@@ -727,6 +727,22 @@ def call_llm(
     )
 
 
+def _salvage_first_json_value(text: str) -> tuple[bool, object]:
+    """Tolerant parse: decode the first complete JSON value and drop trailing junk.
+
+    Compatible endpoints occasionally emit a duplicated payload (``{...}{...}``)
+    or trailing prose even in JSON mode. Only reached after ``json.loads`` has
+    failed, so any trailing content here is genuinely unusable. Returns
+    ``(True, value)`` when a complete leading value decodes, ``(False, None)``
+    otherwise (caller keeps the normal parse_error path).
+    """
+    try:
+        value, _end = json.JSONDecoder().raw_decode(text.lstrip())
+    except json.JSONDecodeError:
+        return False, None
+    return True, value
+
+
 def _strip_json_fence(content: str) -> str:
     text = content.strip()
     if text.startswith("```json"):
@@ -796,6 +812,15 @@ def call_llm_json(
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError as exc:
+        salvaged, value = _salvage_first_json_value(cleaned)
+        if salvaged:
+            _log_llm_call(
+                provider=provider,
+                status="parse_salvaged",
+                content_preview=content[:300],
+                error_message=str(exc)[:300],
+            )
+            return value
         _log_llm_call(
             provider=provider,
             status="parse_error",
