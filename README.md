@@ -374,61 +374,84 @@ bash scripts/langgraph-stop.sh 8124
 
 复制 `.env.example` 为 `.env`，填入真实 key。**不要提交 `.env` 或任何密钥。**
 
-`.env` 只放密钥和本机路径；模型、provider、temperature、top_k 等非密钥参数放在 `config/agents.yaml`。provider 是 yaml `providers:` 段自定义的通道名；key 按通道的 `api_key_env` 或约定 `{通道名大写}_API_KEY` 从 `.env` 读取。
+`.env` 只放密钥和本机路径；模型、provider、temperature、top_k 等非密钥参数放在 `config/agents.yaml`。
 
-```env
-GPT_API_KEY=sk-replace-me
-DEEPSEEK_API_KEY=sk-replace-me
-GROK_API_KEY=sk-replace-me
-AGENT_CONFIG_PATH=config/agents.yaml
-```
+### 概念：provider 是"通道"，不是厂商
+
+项目里所有模型都经 OpenAI 兼容的中转站访问，因此 **provider 是你在 yaml 里自定义的通道名**
+（一个中转站端点 + 一把 key 的组合），叫什么都可以（建议字母数字加连字符，**大小写敏感**）。
+同一个通道下可以挂多个模型——中转站支持多少就能用多少。
+
+### providers 段：定义通道
 
 ```yaml
-llm:
-  default_provider: jiji-deepseek
-  timeout_seconds: 90
-  retry_times: 3
-
 providers:
-  jiji-deepseek:
-    base_url: https://api.jiji.cc/v1
-    api_key_env: DEEPSEEK_API_KEY
-    model_name: deepseek-v4-flash
-  jiji-gpt:
-    base_url: https://api.jiji.cc/v1
-    api_key_env: GPT_API_KEY
-    model_name: gpt-5.4-mini
-  jiji-grok:
-    base_url: https://api.jiji.cc/v1
-    api_key_env: GROK_API_KEY
-    model_name: grok-4.5
-
-agents:
-  judge:
-    provider: jiji-gpt
-    temperature: 0.0
-  expert_a:
-    provider: jiji-grok
-    temperature: 0.4
-    tool_temperature: 0.2
-    integration_temperature: 0.3
-    top_k: 5
-  expert_b:
-    provider: jiji-gpt
-    model_name: gpt-5.6-terra  # 可选：只在单个 agent 需要不同模型时覆盖
-    temperature: 0.7
+  jiji-deepseek:                        # 通道名，自定义
+    base_url: https://api.jiji.cc/v1    # 必填
+    api_key_env: DEEPSEEK_API_KEY       # 可选：从 .env 的哪个变量读 key
+    # api_key: sk-...                   # 可选：直接写 key（与 api_key_env 二选一，优先级更高）
+    model_name: deepseek-v4-flash       # 可选：通道默认模型（节点没配 model_name 时用）
+    supports_strict_schema: true        # 可选：是否发严格 JSON Schema；不配则运行时自动探测
+    models:                             # 可选：该通道可用模型清单
+      - deepseek-v4-flash
+      - deepseek-v4-pro
 ```
 
-可用 Agent 参数：`provider`、`model_name`、`temperature`、`tool_temperature`、`integration_temperature`、`top_k`。其中 `model_name` 的优先级是：
+key 的解析优先级：`api_key`（yaml 直写）→ `api_key_env` 指定的 .env 变量 → 约定变量名
+`{通道名大写、非字母数字转 _}_API_KEY`（如通道 `jiji-deepseek` → `JIJI_DEEPSEEK_API_KEY`）。
+三者都没有则在启动/调用时报错。
+
+`models` 清单是**可选的拼写保护**：配了它，节点引用的模型名必须在清单内（typo 在启动时直接
+报错）；不配则放行任意模型名——中转站上线了新型号可以零改动直接用。
+
+### agents 段：节点引用通道
+
+```yaml
+agents:
+  expert_b:
+    provider: jiji-deepseek            # 必填：引用 providers 里已定义的通道
+    model_name: deepseek-v4-pro        # 可选：覆盖通道默认模型
+    temperature: 0.7
+    fallback_provider: jiji-gpt        # 可选：模型侧故障时切换的备用通道（可跨通道）
+    fallback_model_name: gpt-5.6-terra # 配了它才启用 fallback
+```
+
+可用字段：`provider`、`model_name`、`temperature`、`tool_temperature`、`integration_temperature`、
+`top_k`、`fallback_provider`、`fallback_model_name`、`fallback_base_url`。
+
+`model_name` 的优先级：
 
 ```text
 agents.<agent>.model_name
 > providers.<provider>.model_name
 ```
 
-因此日常配置建议把模型名写在 `providers` 里，`agents` 里只写 `provider`、温度、`top_k` 等差异项；只有某个 Agent 要换成特殊模型时，才在该 Agent 下写 `model_name`。`DEFAULT_LLM_PROVIDER` 与 `{AGENT}_PROVIDER` 环境变量仍可用（事故恢复），但取值必须指向 yaml 里已定义的通道；设置 `{AGENT}_PROVIDER` 后该 Agent 的 yaml `model_name`/`fallback_*` 被忽略。
+日常建议把模型名写在 `providers` 里，`agents` 里只写差异项；只有某个 Agent 要换特殊模型时才在
+该 Agent 下写 `model_name`。
 
-当前只有这些 YAML 字段会被运行时代码读取。Prompt、系统消息、辩论轮数、RAG 模式、日志目录、learner memory 路径仍分别由 prompt 文件、CLI/API 参数或 `.env` 控制。
+### fallback（模型侧故障转移）
+
+主模型遇到**模型侧错误**（429/5xx/524、连接中断、空响应/坏 JSON）时，自动切到
+`fallback_model_name` 试一次；fallback 也失败则回到主模型进入下一轮，交替直到
+`llm.retry_times` 轮耗尽。**我方问题不触发**：400（schema 被拒）、401/403（key 无效）直接报错。
+fallback 请求保留原调用的全部参数（prompt、schema、temperature），是否发严格 schema 由 fallback
+通道自己的 `supports_strict_schema` 决定。
+
+### 添加一个新 provider 的步骤
+
+1. `config/agents.yaml` 的 `providers:` 下加一段（起个名字、填 `base_url`）；
+2. 配 key：`.env` 里加 `{通道名大写}_API_KEY=sk-...`（或在 yaml 里 `api_key_env` 指向已有的
+   .env 变量 / `api_key` 直写）；
+3. 节点里引用：`agents.<agent>.provider: 新通道名`；
+4. 加载即校验：引用了不存在的通道、或模型名不在 `models` 清单里，启动时就会报错并列出可用项。
+
+### 环境变量覆盖（事故恢复）
+
+`DEFAULT_LLM_PROVIDER` 与 `{AGENT}_PROVIDER` 环境变量仍可用，但取值必须指向 yaml 里已定义的通道；
+设置 `{AGENT}_PROVIDER` 后该 Agent 的 yaml `model_name`/`fallback_*` 被忽略（防止模型与通道错配）。
+
+当前只有这些 YAML 字段会被运行时代码读取。Prompt、系统消息、RAG 模式、日志目录、
+learner memory 路径仍分别由 prompt 文件、CLI/API 参数或 `.env` 控制。
 
 ### 验证 YAML 配置是否生效
 
