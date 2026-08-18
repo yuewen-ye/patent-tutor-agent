@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 import os
 import struct
+import tempfile
 import uuid
 import wave
 from dataclasses import dataclass
@@ -104,7 +105,12 @@ class EdgeTTSService:
         _LOGGER.info("edge-tts synthesizing %s (%d chars)", storage_key, len(text))
         import asyncio
 
-        asyncio.run(communicate.save(str(local_path)))
+        try:
+            asyncio.run(communicate.save(str(local_path)))
+        except Exception:
+            # Do not leave a partial/empty scratch file behind on failure.
+            local_path.unlink(missing_ok=True)
+            raise
         duration = _estimated_duration(text)
         return AudioAsset(
             storage_key=storage_key,
@@ -118,7 +124,11 @@ class EdgeTTSService:
 def _local_audio_path(storage_key: str) -> Path:
     # The node stage owns the real course dir; TTS only returns storage_key + local
     # scratch path. The caller moves the file into artifacts and rewrites audio_url.
-    scratch = Path(os.environ.get("TTS_SCRATCH_DIR", "")) if os.environ.get("TTS_SCRATCH_DIR") else Path.cwd()
+    # Default scratch lives under the system temp dir, never the process cwd
+    # (running from the repo root must not litter it with audio files).
+    scratch_env = os.environ.get("TTS_SCRATCH_DIR", "")
+    scratch = Path(scratch_env) if scratch_env else Path(tempfile.gettempdir()) / "patent-tutor-tts"
+    scratch.mkdir(parents=True, exist_ok=True)
     return scratch / storage_key
 
 
