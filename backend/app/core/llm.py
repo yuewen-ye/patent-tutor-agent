@@ -387,11 +387,16 @@ def load_provider_config(provider: LLMProvider, model_name: str | None = None) -
     )
 
 
+# Transient upstream/gateway failures worth an automatic retry. 524 is
+# Cloudflare's origin timeout (gateway cut a slow generation), same class as 502/504.
+_RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504, 524}
+
+
 def _is_retryable_error(exc: BaseException) -> bool:
     if isinstance(exc, httpx.TransportError):
         return True
     if isinstance(exc, LLMProviderError):
-        return exc.status_code in {429, 500, 502, 503, 504} or exc.retryable
+        return exc.status_code in _RETRYABLE_STATUS_CODES or exc.retryable
     return False
 
 
@@ -591,7 +596,7 @@ def _post_chat_completion(
                 error_type="HTTPStatusError",
                 error_message=f"{response.status_code} {response.text[:300]}",
                 status_code=response.status_code,
-                retryable=response.status_code in {429, 500, 502, 503, 504},
+                retryable=response.status_code in _RETRYABLE_STATUS_CODES,
                 duration_ms=round((time.monotonic() - _call_start) * 1000),
             )
             _log_llm_payload(
@@ -894,7 +899,7 @@ def _post_chat_completion_with_tools(
                 error_type="HTTPStatusError",
                 error_message=f"{response.status_code} {response.text[:300]}",
                 status_code=response.status_code,
-                retryable=response.status_code in {429, 500, 502, 503, 504},
+                retryable=response.status_code in _RETRYABLE_STATUS_CODES,
                 tool_call=True,
                 duration_ms=round((time.monotonic() - _call_start) * 1000),
             )

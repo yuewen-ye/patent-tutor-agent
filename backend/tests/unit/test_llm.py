@@ -227,6 +227,14 @@ def test_call_llm_wraps_provider_error_body(monkeypatch) -> None:
         )
 
 
+def test_524_gateway_timeout_is_retryable() -> None:
+    from backend.app.core.llm import _is_retryable_error
+
+    assert _is_retryable_error(LLMProviderError("cf timeout", status_code=524))
+    assert _is_retryable_error(LLMProviderError("bad gateway", status_code=502))
+    assert not _is_retryable_error(LLMProviderError("bad request", status_code=400))
+
+
 def test_call_llm_normalizes_socks_proxy(monkeypatch) -> None:
     monkeypatch.setenv("QWEN_API_KEY", "qwen-key")
     monkeypatch.setenv("HTTP_PROXY", "socks://127.0.0.1:64193/")
