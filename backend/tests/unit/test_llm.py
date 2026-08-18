@@ -267,3 +267,74 @@ def test_load_provider_config_falls_back_to_yaml_when_env_unset(monkeypatch) -> 
 
     assert cfg.timeout_seconds == 90.0
     assert cfg.retry_times == 5
+
+
+def test_call_llm_logs_full_payload_pair_when_enabled(monkeypatch, tmp_path) -> None:
+    from backend.app.core.llm import set_llm_log_context
+
+    monkeypatch.setattr(
+        "backend.app.core.llm.provider_runtime_config",
+        lambda _provider: ProviderRuntimeConfig(),
+    )
+    monkeypatch.setenv("GPT_API_KEY", "gpt-key")
+    monkeypatch.setenv("GPT_BASE_URL", "https://gateway.example/v1")
+    monkeypatch.setenv("LLM_LOG_PAYLOAD", "true")
+    set_llm_log_context(session_id="sess-payload", log_root=tmp_path)
+    try:
+        result = call_llm(
+            provider="gpt",
+            model_name="gpt-5.5",
+            messages=[LLMMessage(role="user", content="你好")],
+            temperature=0.2,
+            json_mode=True,
+            schema_name="IntentResult",
+            json_schema={"type": "object", "properties": {"intent": {"type": "string"}}},
+            http_client=httpx.Client(
+                transport=httpx.MockTransport(lambda request: _json_response('{"intent":"teach"}'))
+            ),
+        )
+    finally:
+        set_llm_log_context(session_id=None, log_root=None)
+
+    assert result == '{"intent":"teach"}'
+    log_file = tmp_path / "sessions" / "sess-payload" / "llm_payloads.log.jsonl"
+    records = [
+        json.loads(line)
+        for line in log_file.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert [record["direction"] for record in records] == ["request", "response"]
+    assert records[0]["call_id"] == records[1]["call_id"]
+    request_body = records[0]["body"]
+    assert request_body["messages"] == [{"role": "user", "content": "你好"}]
+    assert request_body["response_format"]["json_schema"]["schema"]["properties"]["intent"] == {
+        "type": "string"
+    }
+    assert records[1]["status"] == "success"
+    assert records[1]["payload"]["choices"][0]["message"]["content"] == '{"intent":"teach"}'
+
+
+def test_call_llm_skips_payload_log_when_disabled(monkeypatch, tmp_path) -> None:
+    from backend.app.core.llm import set_llm_log_context
+
+    monkeypatch.setattr(
+        "backend.app.core.llm.provider_runtime_config",
+        lambda _provider: ProviderRuntimeConfig(),
+    )
+    monkeypatch.setenv("GPT_API_KEY", "gpt-key")
+    monkeypatch.setenv("GPT_BASE_URL", "https://gateway.example/v1")
+    monkeypatch.delenv("LLM_LOG_PAYLOAD", raising=False)
+    set_llm_log_context(session_id="sess-no-payload", log_root=tmp_path)
+    try:
+        call_llm(
+            provider="gpt",
+            model_name="gpt-5.5",
+            messages=[LLMMessage(role="user", content="你好")],
+            http_client=httpx.Client(
+                transport=httpx.MockTransport(lambda request: _json_response("ok"))
+            ),
+        )
+    finally:
+        set_llm_log_context(session_id=None, log_root=None)
+
+    assert not (tmp_path / "sessions" / "sess-no-payload" / "llm_payloads.log.jsonl").exists()

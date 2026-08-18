@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal, Protocol, Self, cast
+from uuid import uuid4
 
 import httpx
 from dotenv import load_dotenv
@@ -317,6 +318,38 @@ def _log_llm_call(**kwargs: object) -> None:
         f.write(line)
 
 
+def _llm_payload_log_enabled() -> bool:
+    return os.getenv("LLM_LOG_PAYLOAD", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _log_llm_payload(call_id: str, direction: str, **kwargs: object) -> None:
+    """Write a full request/response record paired by ``call_id``.
+
+    Enabled by the ``LLM_LOG_PAYLOAD`` env var; records land in
+    ``llm_payloads.log.jsonl`` next to ``llm_calls.log.jsonl``. Request records
+    carry the exact JSON ``body`` sent to the provider (messages, response_format
+    schema, tools); response records carry the raw provider payload or the full
+    error body. ``Authorization`` headers are never logged.
+    """
+    if not _llm_payload_log_enabled():
+        return
+    log_path = getattr(_llm_log_ctx, "log_path", None)
+    if log_path is None:
+        return
+    payload_path = log_path.with_name("llm_payloads.log.jsonl")
+    record: dict[str, object] = {
+        "timestamp": datetime.now(UTC).isoformat(),
+        "session_id": getattr(_llm_log_ctx, "session_id", ""),
+        "type": "llm_payload",
+        "call_id": call_id,
+        "direction": direction,
+    }
+    record.update(kwargs)
+    line = json.dumps(record, ensure_ascii=False, default=str, separators=(",", ":")) + chr(10)
+    with _LLM_LOG_LOCK, payload_path.open("a", encoding="utf-8") as f:
+        f.write(line)
+
+
 def _validate_provider(value: str, source: str) -> LLMProvider:
     provider = value.lower()
     if provider not in DEFAULT_CONFIG:
@@ -517,6 +550,7 @@ def _post_chat_completion(
     )
 
     _call_start = time.monotonic()
+    call_id = uuid4().hex
     _log_llm_call(
         provider=config.provider,
         model=config.model,
@@ -526,6 +560,14 @@ def _post_chat_completion(
         message_count=len(truncated_messages),
         estimated_input_tokens=sum(_estimate_tokens(m.content) for m in truncated_messages),
         status="attempting",
+    )
+    _log_llm_payload(
+        call_id,
+        "request",
+        provider=config.provider,
+        model=config.model,
+        base_url=config.base_url,
+        body=body,
     )
 
     try:
@@ -551,6 +593,13 @@ def _post_chat_completion(
                 status_code=response.status_code,
                 retryable=response.status_code in {429, 500, 502, 503, 504},
                 duration_ms=round((time.monotonic() - _call_start) * 1000),
+            )
+            _log_llm_payload(
+                call_id,
+                "response",
+                status="error",
+                status_code=response.status_code,
+                error_body=response.text,
             )
             raise LLMProviderError(
                 f"{config.provider} API request failed: {response.status_code} {response.text}",
@@ -591,6 +640,7 @@ def _post_chat_completion(
             content_length=len(content),
             duration_ms=round((time.monotonic() - _call_start) * 1000),
         )
+        _log_llm_payload(call_id, "response", status="success", payload=payload)
         return content
     except (KeyError, IndexError, json.JSONDecodeError) as exc:
         _log_llm_call(
@@ -605,6 +655,13 @@ def _post_chat_completion(
             body_preview=response.text[:300],
             retryable=True,
             duration_ms=round((time.monotonic() - _call_start) * 1000),
+        )
+        _log_llm_payload(
+            call_id,
+            "response",
+            status="error",
+            status_code=response.status_code,
+            error_body=response.text,
         )
         raise LLMProviderError(
             f"{config.provider} returned an invalid chat response "
@@ -623,6 +680,13 @@ def _post_chat_completion(
             error_message=str(exc)[:300],
             retryable=True,
             duration_ms=round((time.monotonic() - _call_start) * 1000),
+        )
+        _log_llm_payload(
+            call_id,
+            "response",
+            status="error",
+            error_type=type(exc).__name__,
+            error_message=str(exc),
         )
         raise LLMProviderError(
             f"{config.provider} transport error: {exc}",
@@ -764,6 +828,7 @@ def _post_chat_completion_with_tools(
     )
 
     _call_start = time.monotonic()
+    call_id = uuid4().hex
     _log_llm_call(
         provider=config.provider,
         model=config.model,
@@ -773,6 +838,15 @@ def _post_chat_completion_with_tools(
         estimated_input_tokens=sum(_estimate_tokens(m.content) for m in messages),
         status="attempting",
         tool_call=True,
+    )
+    _log_llm_payload(
+        call_id,
+        "request",
+        provider=config.provider,
+        model=config.model,
+        base_url=config.base_url,
+        tool_call=True,
+        body=body,
     )
 
     try:
@@ -798,6 +872,14 @@ def _post_chat_completion_with_tools(
                 retryable=response.status_code in {429, 500, 502, 503, 504},
                 tool_call=True,
                 duration_ms=round((time.monotonic() - _call_start) * 1000),
+            )
+            _log_llm_payload(
+                call_id,
+                "response",
+                status="error",
+                status_code=response.status_code,
+                tool_call=True,
+                error_body=response.text,
             )
             raise LLMProviderError(
                 f"{config.provider} tools API request failed: {response.status_code} {response.text}",
@@ -831,6 +913,7 @@ def _post_chat_completion_with_tools(
             tool_call=True,
             duration_ms=round((time.monotonic() - _call_start) * 1000),
         )
+        _log_llm_payload(call_id, "response", status="success", tool_call=True, payload=payload)
         return LLMResponseWithTools(
             content=content if isinstance(content, str) and content.strip() else None,
             tool_calls=tool_calls,
@@ -845,6 +928,14 @@ def _post_chat_completion_with_tools(
             retryable=True,
             tool_call=True,
             duration_ms=round((time.monotonic() - _call_start) * 1000),
+        )
+        _log_llm_payload(
+            call_id,
+            "response",
+            status="error",
+            status_code=response.status_code,
+            tool_call=True,
+            error_body=response.text,
         )
         raise LLMProviderError(
                 f"{config.provider} returned an invalid tools chat response.",
@@ -861,6 +952,14 @@ def _post_chat_completion_with_tools(
             retryable=True,
             tool_call=True,
             duration_ms=round((time.monotonic() - _call_start) * 1000),
+        )
+        _log_llm_payload(
+            call_id,
+            "response",
+            status="error",
+            error_type=type(exc).__name__,
+            tool_call=True,
+            error_message=str(exc),
         )
         raise LLMProviderError(
             f"{config.provider} transport error: {exc}",
