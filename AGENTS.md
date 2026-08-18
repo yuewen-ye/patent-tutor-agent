@@ -172,6 +172,12 @@ def build_<name>_node(llm_client: LLMClient) -> Node:
 - `llm.default_provider`, timeout and retries
 - provider base URLs and default model names
 - per-Agent provider/model/temperature/tool temperature/top_k
+- optional per-Agent model failover: `agents.<agent>.fallback_model_name` (plus optional
+  `fallback_provider`/`fallback_base_url`). Model-side failures (429/5xx/524, transport errors,
+  empty or unparsable content) fail over to the fallback model for one attempt, then the next
+  round starts from the primary model again, bounded by `retry_times`. Our-side errors
+  (400/401/403) never trigger failover. When `{AGENT}_PROVIDER` env override is set, the yaml
+  `model_name`/`fallback_*` for that Agent are ignored.
 
 API keys and machine-local paths belong in `.env`. The `LLMProvider` literal supports `qwen`,
 `glm`, `gpt`, `luna`, `grok`, and `yangmao`; the recommended per-Agent mapping

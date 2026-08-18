@@ -383,3 +383,215 @@ def test_call_llm_skips_payload_log_when_disabled(monkeypatch, tmp_path) -> None
         set_llm_log_context(session_id=None, log_root=None)
 
     assert not (tmp_path / "sessions" / "sess-no-payload" / "llm_payloads.log.jsonl").exists()
+
+
+# ---------------------------------------------------------------------------
+# AgentLLMRouter fallback_model 机制
+# ---------------------------------------------------------------------------
+
+
+def _fallback_router() -> AgentLLMRouter:
+    from backend.app.core.llm import FallbackTarget
+
+    return AgentLLMRouter(
+        default_provider="gpt",
+        agent_providers={"expert_b": "deepseek"},
+        agent_model_names={"expert_b": "deepseek-v4-pro"},
+        agent_fallbacks={
+            "expert_b": FallbackTarget(
+                provider="gpt", model_name="gpt-5.6-terra", base_url="https://fb.example/v1"
+            )
+        },
+    )
+
+
+def _patch_call_llm_json(monkeypatch, script: dict[tuple[str, str | None], list[object]]):
+    """Patch call_llm_json with per-(provider, model) scripted results; returns call log."""
+    calls: list[dict[str, object]] = []
+
+    def fake_call_llm_json(
+        *,
+        provider,
+        messages,
+        temperature,
+        http_client=None,
+        model_name=None,
+        schema_name=None,
+        json_schema=None,
+        base_url_override=None,
+        max_attempts=None,
+    ):
+        calls.append(
+            {
+                "provider": provider,
+                "model_name": model_name,
+                "base_url_override": base_url_override,
+                "max_attempts": max_attempts,
+            }
+        )
+        queue = script[(provider, model_name)]
+        outcome = queue.pop(0)
+        if isinstance(outcome, Exception):
+            raise outcome
+        return outcome
+
+    monkeypatch.setattr("backend.app.core.llm.call_llm_json", fake_call_llm_json)
+    return calls
+
+
+def _patch_retry_times(monkeypatch, retry_times: int) -> None:
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(
+        "backend.app.core.llm.load_provider_config",
+        lambda *a, **k: SimpleNamespace(retry_times=retry_times),
+    )
+    monkeypatch.setattr("backend.app.core.llm.time.sleep", lambda _s: None)
+
+
+def test_fallback_model_used_on_model_side_failure(monkeypatch) -> None:
+    _patch_retry_times(monkeypatch, 3)
+    calls = _patch_call_llm_json(
+        monkeypatch,
+        {
+            ("deepseek", "deepseek-v4-pro"): [LLMProviderError("cf timeout", status_code=524)],
+            ("gpt", "gpt-5.6-terra"): [{"answer": "from-fallback"}],
+        },
+    )
+
+    result = _fallback_router().generate_json(
+        [LLMMessage(role="user", content="hi")], 0.5, agent="expert_b"
+    )
+
+    assert result == {"answer": "from-fallback"}
+    assert [(c["provider"], c["model_name"]) for c in calls] == [
+        ("deepseek", "deepseek-v4-pro"),
+        ("gpt", "gpt-5.6-terra"),
+    ]
+    assert calls[0]["max_attempts"] == 1 and calls[0]["base_url_override"] is None
+    assert calls[1]["max_attempts"] == 1
+    assert calls[1]["base_url_override"] == "https://fb.example/v1"
+
+
+def test_fallback_failure_returns_to_primary_next_round(monkeypatch) -> None:
+    _patch_retry_times(monkeypatch, 3)
+    calls = _patch_call_llm_json(
+        monkeypatch,
+        {
+            ("deepseek", "deepseek-v4-pro"): [
+                LLMProviderError("cf timeout", status_code=524),
+                {"answer": "primary-round-2"},
+            ],
+            ("gpt", "gpt-5.6-terra"): [LLMProviderError("bad gateway", status_code=502)],
+        },
+    )
+
+    result = _fallback_router().generate_json(
+        [LLMMessage(role="user", content="hi")], 0.5, agent="expert_b"
+    )
+
+    assert result == {"answer": "primary-round-2"}
+    assert [(c["provider"], c["model_name"]) for c in calls] == [
+        ("deepseek", "deepseek-v4-pro"),
+        ("gpt", "gpt-5.6-terra"),
+        ("deepseek", "deepseek-v4-pro"),
+    ]
+
+
+def test_fallback_exhausts_rounds_then_raises(monkeypatch) -> None:
+    _patch_retry_times(monkeypatch, 2)
+    calls = _patch_call_llm_json(
+        monkeypatch,
+        {
+            ("deepseek", "deepseek-v4-pro"): [
+                LLMProviderError("cf timeout", status_code=524),
+                LLMProviderError("cf timeout again", status_code=524),
+            ],
+            ("gpt", "gpt-5.6-terra"): [
+                LLMProviderError("bad gateway", status_code=502),
+                LLMProviderError("bad gateway again", status_code=502),
+            ],
+        },
+    )
+
+    with pytest.raises(LLMProviderError, match="bad gateway again"):
+        _fallback_router().generate_json(
+            [LLMMessage(role="user", content="hi")], 0.5, agent="expert_b"
+        )
+
+    assert len(calls) == 4  # 2 rounds x (primary + fallback)
+
+
+def test_our_side_error_never_triggers_fallback(monkeypatch) -> None:
+    _patch_retry_times(monkeypatch, 3)
+    calls = _patch_call_llm_json(
+        monkeypatch,
+        {
+            ("deepseek", "deepseek-v4-pro"): [LLMProviderError("bad schema", status_code=400)],
+            ("gpt", "gpt-5.6-terra"): [{"answer": "should-not-be-used"}],
+        },
+    )
+
+    with pytest.raises(LLMProviderError, match="bad schema"):
+        _fallback_router().generate_json(
+            [LLMMessage(role="user", content="hi")], 0.5, agent="expert_b"
+        )
+
+    assert len(calls) == 1
+
+
+def test_agent_without_fallback_keeps_default_retry_path(monkeypatch) -> None:
+    calls = _patch_call_llm_json(
+        monkeypatch, {("gpt", None): [{"answer": "plain"}]}
+    )
+    router = AgentLLMRouter(default_provider="gpt")
+
+    result = router.generate_json([LLMMessage(role="user", content="hi")], 0.5, agent="judge")
+
+    assert result == {"answer": "plain"}
+    assert len(calls) == 1
+    assert calls[0]["max_attempts"] is None  # 内部 tenacity 重试行为不变
+
+
+def test_from_env_reads_fallback_config(monkeypatch, tmp_path) -> None:
+    yaml_path = tmp_path / "agents.yaml"
+    yaml_path.write_text(
+        "agents:\n"
+        "  expert_b:\n"
+        "    provider: deepseek\n"
+        "    model_name: deepseek-v4-pro\n"
+        "    fallback_provider: gpt\n"
+        "    fallback_model_name: gpt-5.6-terra\n"
+        "    fallback_base_url: https://fb.example/v1\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("AGENT_CONFIG_PATH", str(yaml_path))
+    for env_name in AGENT_PROVIDER_ENV.values():
+        monkeypatch.setenv(env_name, "")
+
+    router = AgentLLMRouter.from_env()
+
+    target = router.agent_fallbacks["expert_b"]
+    assert target.provider == "gpt"
+    assert target.model_name == "gpt-5.6-terra"
+    assert target.base_url == "https://fb.example/v1"
+
+
+def test_env_provider_override_ignores_yaml_fallback(monkeypatch, tmp_path) -> None:
+    yaml_path = tmp_path / "agents.yaml"
+    yaml_path.write_text(
+        "agents:\n"
+        "  expert_b:\n"
+        "    provider: deepseek\n"
+        "    fallback_model_name: deepseek-v4-flash\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("AGENT_CONFIG_PATH", str(yaml_path))
+    for env_name in AGENT_PROVIDER_ENV.values():
+        monkeypatch.setenv(env_name, "")
+    monkeypatch.setenv("EXPERT_B_PROVIDER", "gpt")
+
+    router = AgentLLMRouter.from_env()
+
+    assert router.provider_for("expert_b") == "gpt"
+    assert "expert_b" not in router.agent_fallbacks

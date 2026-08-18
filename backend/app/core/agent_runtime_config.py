@@ -42,6 +42,9 @@ class AgentRuntimeSettings(BaseModel):
     tool_temperature: float | None = Field(default=None, ge=0, le=2)
     integration_temperature: float | None = Field(default=None, ge=0, le=2)
     top_k: int | None = Field(default=None, ge=1, le=10)
+    fallback_provider: str | None = None
+    fallback_model_name: str | None = None
+    fallback_base_url: str | None = None
 
 
 class AgentRuntimeConfig(BaseModel):

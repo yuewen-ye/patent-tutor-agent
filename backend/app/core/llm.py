@@ -6,11 +6,11 @@ import json
 import os
 import threading
 import time
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Literal, Protocol, Self, cast
+from typing import Literal, Protocol, Self, TypeVar, cast
 from uuid import uuid4
 
 import httpx
@@ -41,6 +41,7 @@ AgentName = Literal[
 ]
 
 DEFAULT_PROVIDER: LLMProvider = "deepseek"
+_T = TypeVar("_T")
 # 节点 → 真实模型：
 #   qwen    → qwen3.7-plus    (route / chat_answer / diagnosis，通用；Krill)
 #   glm     → GLM-5.2         (可用，默认未分配给节点；Krill)
@@ -357,7 +358,11 @@ def _validate_provider(value: str, source: str) -> LLMProvider:
     return cast(LLMProvider, provider)
 
 
-def load_provider_config(provider: LLMProvider, model_name: str | None = None) -> LLMProviderConfig:
+def load_provider_config(
+    provider: LLMProvider,
+    model_name: str | None = None,
+    base_url_override: str | None = None,
+) -> LLMProviderConfig:
     load_dotenv(encoding="utf-8")
     normalize_socks_proxy_env()
     defaults = DEFAULT_CONFIG[provider]
@@ -373,7 +378,10 @@ def load_provider_config(provider: LLMProvider, model_name: str | None = None) -
         or defaults["model"]
     )
     configured_base_url = (
-        provider_config.base_url or os.getenv(defaults["base_url_env"]) or defaults["base_url"]
+        base_url_override
+        or provider_config.base_url
+        or os.getenv(defaults["base_url_env"])
+        or defaults["base_url"]
     )
     return LLMProviderConfig(
         provider=provider,
@@ -713,10 +721,12 @@ def call_llm(
     model_name: str | None = None,
     schema_name: str | None = None,
     json_schema: dict[str, object] | None = None,
+    base_url_override: str | None = None,
+    max_attempts: int | None = None,
 ) -> str:
-    config = load_provider_config(provider, model_name=model_name)
+    config = load_provider_config(provider, model_name=model_name, base_url_override=base_url_override)
     retrying = retry(
-        stop=stop_after_attempt(config.retry_times),
+        stop=stop_after_attempt(max_attempts or config.retry_times),
         wait=wait_exponential(multiplier=0.5, min=0.5, max=4),
         retry=retry_if_exception(_is_retryable_error),
         reraise=True,
@@ -777,6 +787,8 @@ def call_llm_json(
     model_name: str | None = None,
     schema_name: str | None = None,
     json_schema: dict[str, object] | None = None,
+    base_url_override: str | None = None,
+    max_attempts: int | None = None,
 ) -> object:
     # Drop json_schema if provider is known to not support strict schema
     if json_schema is not None and not provider_supports_strict_schema(provider):
@@ -792,6 +804,8 @@ def call_llm_json(
             model_name=model_name,
             schema_name=schema_name,
             json_schema=json_schema,
+            base_url_override=base_url_override,
+            max_attempts=max_attempts,
         )
     except LLMProviderError as exc:
         if exc.status_code in {401, 403}:
@@ -812,6 +826,8 @@ def call_llm_json(
             model_name=model_name,
             schema_name=None,
             json_schema=None,
+            base_url_override=base_url_override,
+            max_attempts=max_attempts,
         )
     cleaned = _strip_json_fence(content)
     try:
@@ -1009,10 +1025,12 @@ def call_llm_tools(
     temperature: float = 0.5,
     http_client: httpx.Client | None = None,
     model_name: str | None = None,
+    base_url_override: str | None = None,
+    max_attempts: int | None = None,
 ) -> LLMResponseWithTools:
-    config = load_provider_config(provider, model_name=model_name)
+    config = load_provider_config(provider, model_name=model_name, base_url_override=base_url_override)
     retrying = retry(
-        stop=stop_after_attempt(config.retry_times),
+        stop=stop_after_attempt(max_attempts or config.retry_times),
         wait=wait_exponential(multiplier=0.5, min=0.5, max=4),
         retry=retry_if_exception(_is_retryable_error),
         reraise=True,
@@ -1089,22 +1107,42 @@ class DefaultLLMClient:
         )
 
 
+@dataclass(frozen=True)
+class FallbackTarget:
+    """Per-agent fallback model used when the primary model fails model-side."""
+
+    provider: LLMProvider
+    model_name: str
+    base_url: str | None = None
+
+
 class AgentLLMRouter:
-    """Routes each Agent node to its configured provider, falling back to the default provider."""
+    """Routes each Agent node to its configured provider, falling back to the default provider.
+
+    When an agent configures ``fallback_model_name`` (``agents.<agent>.fallback_*`` in
+    agents.yaml), model-side failures (retryable statuses such as 524, transport errors,
+    empty/unparsable content) fail over to the fallback model for one attempt; if the
+    fallback also fails model-side, the next round starts from the primary model again.
+    Rounds are bounded by ``retry_times``. Non-model-side errors (400 schema rejection,
+    401/403 auth) never trigger the fallback.
+    """
 
     default_provider: LLMProvider
     agent_providers: dict[AgentName, LLMProvider]
     agent_model_names: dict[AgentName, str]
+    agent_fallbacks: dict[AgentName, FallbackTarget]
 
     def __init__(
         self,
         default_provider: LLMProvider = DEFAULT_PROVIDER,
         agent_providers: Mapping[AgentName, LLMProvider] | None = None,
         agent_model_names: Mapping[AgentName, str] | None = None,
+        agent_fallbacks: Mapping[AgentName, FallbackTarget] | None = None,
     ) -> None:
         self.default_provider = default_provider
         self.agent_providers = dict(agent_providers or {})
         self.agent_model_names = dict(agent_model_names or {})
+        self.agent_fallbacks = dict(agent_fallbacks or {})
 
     @classmethod
     def from_env(cls) -> Self:
@@ -1119,18 +1157,35 @@ class AgentLLMRouter:
         )
         agent_providers: dict[AgentName, LLMProvider] = {}
         agent_model_names: dict[AgentName, str] = {}
+        agent_fallbacks: dict[AgentName, FallbackTarget] = {}
         for agent, env_name in AGENT_PROVIDER_ENV.items():
             settings = agent_runtime_settings(agent)
             environment_provider = os.getenv(env_name)
             value = environment_provider or settings.provider
             if value:
                 agent_providers[agent] = _validate_provider(value, env_name)
-            if settings.model_name and not environment_provider:
+            if environment_provider:
+                # env override is an incident-recovery switch; ignore yaml model/fallback
+                # to avoid model/provider mismatch.
+                continue
+            if settings.model_name:
                 agent_model_names[agent] = settings.model_name
+            if settings.fallback_model_name:
+                fallback_provider = (
+                    _validate_provider(settings.fallback_provider, f"{agent}.fallback_provider")
+                    if settings.fallback_provider
+                    else agent_providers.get(agent, default_provider)
+                )
+                agent_fallbacks[agent] = FallbackTarget(
+                    provider=fallback_provider,
+                    model_name=settings.fallback_model_name,
+                    base_url=settings.fallback_base_url,
+                )
         return cls(
             default_provider=default_provider,
             agent_providers=agent_providers,
             agent_model_names=agent_model_names,
+            agent_fallbacks=agent_fallbacks,
         )
 
     def provider_for(self, agent: AgentName | None) -> LLMProvider:
@@ -1143,15 +1198,67 @@ class AgentLLMRouter:
             return None
         return self.agent_model_names.get(agent)
 
+    def _with_fallback(
+        self,
+        agent: AgentName | None,
+        invoke: Callable[[LLMProvider, str | None, str | None, int | None], _T],
+    ) -> _T:
+        """Run ``invoke(provider, model_name, base_url, max_attempts)`` with failover.
+
+        No fallback configured -> single passthrough with default retry behavior.
+        Configured -> each round tries primary once, then the fallback once, then
+        sleeps and returns to the primary; rounds are bounded by retry_times.
+        """
+        primary = self.provider_for(agent)
+        primary_model = self.model_for(agent)
+        fallback = self.agent_fallbacks.get(agent) if agent is not None else None
+        if fallback is None:
+            return invoke(primary, primary_model, None, None)
+        rounds = load_provider_config(primary, model_name=primary_model).retry_times
+        last_exc: LLMProviderError | None = None
+        for round_no in range(1, rounds + 1):
+            try:
+                return invoke(primary, primary_model, None, 1)
+            except LLMProviderError as exc:
+                if not _is_retryable_error(exc):
+                    raise
+                last_exc = exc
+                _log_llm_call(
+                    provider=primary,
+                    status="model_fallback",
+                    from_model=primary_model,
+                    to_provider=fallback.provider,
+                    to_model=fallback.model_name,
+                    reason=str(exc)[:300],
+                    round=round_no,
+                )
+            try:
+                return invoke(fallback.provider, fallback.model_name, fallback.base_url, 1)
+            except LLMProviderError as exc:
+                if not _is_retryable_error(exc):
+                    raise
+                last_exc = exc
+                if round_no < rounds:
+                    time.sleep(min(0.5 * 2 ** (round_no - 1), 4.0))
+        assert last_exc is not None
+        raise last_exc
+
     def generate_json(
         self, messages: list[LLMMessage], temperature: float, agent: AgentName | None = None
     ) -> object:
-        return call_llm_json(
-            provider=self.provider_for(agent),
-            messages=messages,
-            temperature=temperature,
-            model_name=self.model_for(agent),
-        )
+        def invoke(
+            provider: LLMProvider, model_name: str | None, base_url: str | None, attempts: int | None
+        ) -> object:
+            return call_llm_json(
+                provider=provider,
+                messages=messages,
+                temperature=temperature,
+                model_name=model_name,
+                base_url_override=base_url,
+                max_attempts=attempts,
+            )
+
+        return self._with_fallback(agent, invoke)
 
     def generate_structured_json(
         self,
@@ -1162,14 +1269,21 @@ class AgentLLMRouter:
         json_schema: dict[str, object],
         agent: AgentName | None = None,
     ) -> object:
-        return call_llm_json(
-            provider=self.provider_for(agent),
-            messages=messages,
-            temperature=temperature,
-            model_name=self.model_for(agent),
-            schema_name=schema_name,
-            json_schema=json_schema,
-        )
+        def invoke(
+            provider: LLMProvider, model_name: str | None, base_url: str | None, attempts: int | None
+        ) -> object:
+            return call_llm_json(
+                provider=provider,
+                messages=messages,
+                temperature=temperature,
+                model_name=model_name,
+                schema_name=schema_name,
+                json_schema=json_schema,
+                base_url_override=base_url,
+                max_attempts=attempts,
+            )
+
+        return self._with_fallback(agent, invoke)
 
     def generate_with_tools(
         self,
@@ -1178,10 +1292,17 @@ class AgentLLMRouter:
         temperature: float,
         agent: AgentName | None = None,
     ) -> LLMResponseWithTools:
-        return call_llm_tools(
-            provider=self.provider_for(agent),
-            messages=messages,
-            tools=tools,
-            temperature=temperature,
-            model_name=self.model_for(agent),
-        )
+        def invoke(
+            provider: LLMProvider, model_name: str | None, base_url: str | None, attempts: int | None
+        ) -> LLMResponseWithTools:
+            return call_llm_tools(
+                provider=provider,
+                messages=messages,
+                tools=tools,
+                temperature=temperature,
+                model_name=model_name,
+                base_url_override=base_url,
+                max_attempts=attempts,
+            )
+
+        return self._with_fallback(agent, invoke)
