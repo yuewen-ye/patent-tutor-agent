@@ -50,6 +50,7 @@ class AgentRuntimeSettings(BaseModel):
     fallback_provider: str | None = None
     fallback_model_name: str | None = None
     fallback_base_url: str | None = None
+    max_revisions: int | None = Field(default=None, ge=0)
 
 
 class AgentRuntimeConfig(BaseModel):

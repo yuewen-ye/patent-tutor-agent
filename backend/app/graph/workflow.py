@@ -17,7 +17,7 @@ from langgraph.runtime import Runtime
 from langgraph.store.memory import InMemoryStore
 
 from backend.app.agents import Node, build_agent_nodes
-from backend.app.core.agent_runtime_config import agent_top_k
+from backend.app.core.agent_runtime_config import agent_runtime_settings, agent_top_k
 from backend.app.core.llm import AgentLLMRouter, DefaultLLMClient, LLMClient, set_llm_log_context
 from backend.app.retrieval.selector import retrieve_context
 from backend.app.runtime_outputs.artifacts import (
@@ -383,13 +383,21 @@ def _make_route_after_judge(
             print("▸ [路由] judge 通过 → slide_deck 已关闭，直接完成", file=sys.stderr)
             return "_complete"
         current_round = state.get("revision_round", 0) or 0
-        if current_round >= 3:
+        configured_cap = agent_runtime_settings("judge").max_revisions
+        max_revisions = configured_cap if configured_cap is not None else 3
+        if current_round >= max_revisions:
             # 修订达上限：course_package 已由 expert_a integration 生成。
             # 若 slide_deck 开启则生成配套课件，否则直接收尾。
             if slide_deck_enabled:
-                print("▸ [路由] judge 修订已达上限 3 次 → 仍生成结构化课件", file=sys.stderr)
+                print(
+                    f"▸ [路由] judge 修订已达上限 {max_revisions} 次 → 仍生成结构化课件",
+                    file=sys.stderr,
+                )
                 return "slide_deck"
-            print("▸ [路由] judge 修订已达上限 3 次 → slide_deck 已关闭，直接完成", file=sys.stderr)
+            print(
+                f"▸ [路由] judge 修订已达上限 {max_revisions} 次 → slide_deck 已关闭，直接完成",
+                file=sys.stderr,
+            )
             return "_complete"
         print("▸ [路由] judge 未通过 → expert_a_integration 重新整合", file=sys.stderr)
         return "expert_a_integration"

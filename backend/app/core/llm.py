@@ -703,19 +703,28 @@ def call_llm(
 
 
 def _salvage_first_json_value(text: str) -> tuple[bool, object]:
-    """Tolerant parse: decode the first complete JSON value and drop trailing junk.
+    """Tolerant parse: decode the first complete JSON value and drop surrounding junk.
 
-    Compatible endpoints occasionally emit a duplicated payload (``{...}{...}``)
-    or trailing prose even in JSON mode. Only reached after ``json.loads`` has
-    failed, so any trailing content here is genuinely unusable. Returns
-    ``(True, value)`` when a complete leading value decodes, ``(False, None)``
-    otherwise (caller keeps the normal parse_error path).
+    Compatible endpoints occasionally emit a duplicated payload (``{...}{...}``),
+    trailing prose, or a garbage prefix before the real object (e.g. a stray
+    ``{"`` before ``{"slides": ...}``) even in JSON mode. Only reached after
+    ``json.loads`` has failed, so any extra content here is genuinely unusable.
+    Tries ``raw_decode`` at the start, then at each later ``{``/``[`` position,
+    and returns ``(True, value)`` for the first complete value that decodes;
+    ``(False, None)`` otherwise (caller keeps the normal parse_error path).
+    Downstream Pydantic validation remains the contract guard.
     """
-    try:
-        value, _end = json.JSONDecoder().raw_decode(text.lstrip())
-    except json.JSONDecodeError:
-        return False, None
-    return True, value
+    decoder = json.JSONDecoder()
+    stripped = text.lstrip()
+    candidates = [0] if stripped[:1] in "{[" else []
+    candidates.extend(i for i, ch in enumerate(stripped) if ch in "{[" and i > 0)
+    for start in candidates:
+        try:
+            value, _end = decoder.raw_decode(stripped[start:])
+        except json.JSONDecodeError:
+            continue
+        return True, value
+    return False, None
 
 
 def _strip_json_fence(content: str) -> str:

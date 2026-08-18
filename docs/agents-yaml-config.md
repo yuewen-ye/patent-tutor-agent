@@ -78,6 +78,7 @@ provider 不再是代码内置枚举，而是用户自由定义的**通道名**�
 | `fallback_provider` | fallback 通道，可跨通道；缺省 = 该节点的主通道 |
 | `fallback_model_name` | fallback 模型；**不配则不启用 fallback** |
 | `fallback_base_url` | 可选，覆盖 fallback 通道解析出的 `base_url` |
+| `max_revisions` | 仅 `judge` 使用：打回重新整合的最大次数，缺省 3；达到上限后带着当前 `course_package` 继续走 slide_deck/收尾，不再循环。配 0 表示不允许打回 |
 
 ### fallback（故障转移）语义
 

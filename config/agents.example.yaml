@@ -28,21 +28,18 @@ llm:
 
 providers:
   jiji-gpt:
-    base_url: https://api.jiji.cc/v1
-    api_key_env: GPT_API_KEY          # key 放 .env；也可改成 api_key: sk-...
+    base_url: https://api-slb.jiji.cc/v1
+    api_key_env: JIJI_GPT_API_KEY          # key 放 .env；也可改成 api_key: sk-...
     model_name: gpt-5.4-mini
     supports_strict_schema: true
-    models:                            # 可选：配了就校验节点引用的模型名
-      - gpt-5.4-mini
-      - gpt-5.6-terra
   jiji-deepseek:
-    base_url: https://api.jiji.cc/v1
-    api_key_env: DEEPSEEK_API_KEY
+    base_url: https://api-slb.jiji.cc/v1
+    api_key_env: JIJI_DEEPSEEK_API_KEY
     model_name: deepseek-v4-flash
     supports_strict_schema: false
   jiji-grok:
-    base_url: https://api.jiji.cc/v1
-    api_key_env: GROK_API_KEY
+    base_url: https://api-slb.jiji.cc/v1
+    api_key_env: JIJI_GROK_API_KEY
     model_name: grok-4.5
     supports_strict_schema: false
 
@@ -85,6 +82,7 @@ agents:
     provider: jiji-gpt
     model_name: gpt-5.6-terra
     temperature: 0.0
+    max_revisions: 3                     # judge 打回上限；达到后带着当前课程继续收尾
     fallback_provider: jiji-deepseek
     fallback_model_name: deepseek-v4-pro
   chat_answer:

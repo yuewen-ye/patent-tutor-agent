@@ -100,8 +100,10 @@ START -> _init -> route
                -> expert_a[revision] || expert_b[revision]
                -> _experts_barrier
                -> expert_a[integration] -> judge
-                    accept/minor -> END
-                    revise       -> expert_a[integration] -> judge（循环直到通过）
+                    accept/minor -> slide_deck（可用 PATENT_TUTOR_SLIDE_DECK_ENABLED 关闭）-> END
+                    revise       -> expert_a[integration] -> judge（循环，上限
+                                    agents.judge.max_revisions 次，缺省 3；达上限后带当前
+                                    course_package 继续收尾）
 
 POST /sessions/{course_session_id}/exercise-responses
   -> independent feedback session
@@ -113,7 +115,9 @@ experts finish the same phase. `expert_a_integration` is a graph alias that invo
 Expert A node in integration phase; it is not a sixth Agent.
 
 Judge approval ends the course-generation session. A `revise` decision returns to Expert A
-integration and repeats until Judge accepts the course. The learner studies and submits exercises
+integration and repeats until Judge accepts the course or the revision count reaches
+`agents.judge.max_revisions` (default 3); at the cap the workflow keeps the current
+`course_package` and finishes instead of looping forever. The learner studies and submits exercises
 later, which creates a separate feedback session. The graph has no interrupt-based long wait.
 
 ## Node Responsibilities

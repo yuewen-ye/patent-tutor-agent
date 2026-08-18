@@ -150,6 +150,24 @@ def test_call_llm_json_salvages_duplicated_json_payload(monkeypatch) -> None:
     assert result == {"a": 1, "b": [2]}
 
 
+def test_call_llm_json_salvages_leading_garbage_prefix(monkeypatch) -> None:
+    stub_llm_providers(monkeypatch, {"qwen": make_provider_config()})
+
+    # deepseek json_object 偶发在真正的 JSON 对象前多输出一个 '{"'
+    garbage_prefixed = '{"{"slides": [{"id": "slide_001"}]}'
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return _json_response(garbage_prefixed)
+
+    result = call_llm_json(
+        provider="qwen",
+        messages=[LLMMessage(role="system", content="只输出 json")],
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    assert result == {"slides": [{"id": "slide_001"}]}
+
+
 def test_call_llm_json_salvage_failure_keeps_retryable_error(monkeypatch) -> None:
     stub_llm_providers(monkeypatch, {"qwen": make_provider_config()})
 
