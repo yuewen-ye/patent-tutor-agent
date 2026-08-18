@@ -266,6 +266,165 @@ class KnowledgePoint(ContractModel):
     kc_name: str
 
 
+# ── 教学模块 payload 封闭契约 ────────────────────────────────────────────
+# 与 curriculum/block_content_spec.py 的 BLOCK_CONTENT_SPEC 一一对应：
+# 每种 block_type 一个模型，spec 标记「非空 / ≥N / 三类齐全」的字段为 required，
+# 「可选 / 建议」的字段为 optional。封闭结构（extra="forbid"）使专家契约可以走
+# json_schema + strict 模式；原中文嵌套键由 normalize 层兼容归一化。
+
+
+class PayloadArticle(ContractModel):
+    """legal_anchor.articles 条目：条号 + 出处。"""
+
+    article: str
+    source: str | None = None
+
+
+class WorkedExampleStep(ContractModel):
+    """worked_example.steps 条目（原中文键 推理/小结）。"""
+
+    reasoning: str
+    summary: str
+
+
+class DecisionFlowStep(ContractModel):
+    """decision_flow.steps 条目（原中文键 条件/走向）。"""
+
+    condition: str
+    outcome: str
+
+
+class PayloadTerm(ContractModel):
+    """术语/映射条目（原中文键 术语/人话，或 mnemonic.mapping 的动态键值对）。"""
+
+    term: str
+    explanation: str
+
+
+class PayloadCard(ContractModel):
+    """summary_card.cards 条目（原中文键 概念/一句话）。"""
+
+    concept: str
+    one_liner: str
+
+
+class AssessmentCoverage(ContractModel):
+    """assessment.coverage：三类出题覆盖标记（spec 要求三类齐全）。"""
+
+    backward_review: bool
+    forward_probe: bool
+    weakness_probe: bool
+
+
+class AssessmentItemRef(ContractModel):
+    """assessment.items 条目：题目引用 + 一句话主题摘要。"""
+
+    qid: str
+    summary: str
+
+
+class LegalAnchorPayload(ContractModel):
+    articles: list[PayloadArticle] = Field(min_length=1)
+    plain_summary: list[str] = Field(min_length=1)
+    why_it_matters: str
+
+
+class KnowledgeSynthesisPayload(ContractModel):
+    framework: list[str] = Field(min_length=1)
+    must_know: list[str] = Field(min_length=1)
+    key_relations: list[str] | None = None
+
+
+class AssessmentPayload(ContractModel):
+    coverage: AssessmentCoverage
+    items: list[AssessmentItemRef] = Field(min_length=1)
+    body_guide: str
+
+
+class AnchorScenarioPayload(ContractModel):
+    scenario: str
+    why_anchor: str
+    think_prompt: str
+
+
+class GlobalFrameworkPayload(ContractModel):
+    position: str
+    big_picture: str
+    prereq: list[str] | None = None
+    leads_to: list[str] | None = None
+
+
+class WorkedExamplePayload(ContractModel):
+    problem: str
+    applicable_rule: str
+    steps: list[WorkedExampleStep] = Field(min_length=1)
+    conclusion: str
+    takeaway: str
+
+
+class DecisionFlowPayload(ContractModel):
+    question: str
+    steps: list[DecisionFlowStep] = Field(min_length=1)
+    end_states: list[str] = Field(min_length=1)
+
+
+class VerbalExplanationPayload(ContractModel):
+    spoken: str
+    key_terms: list[PayloadTerm] = Field(min_length=1)
+    analogy: str | None = None
+
+
+class PredictActivatePayload(ContractModel):
+    prompt: str
+    activate: str
+    reveal_hint: str
+
+
+class ReflectPromptPayload(ContractModel):
+    question: str
+    what_to_notice: list[str] = Field(min_length=1)
+    connect: str
+
+
+class MnemonicPayload(ContractModel):
+    device: str
+    mapping: list[PayloadTerm] = Field(min_length=1)
+    when_recall: str
+
+
+class CommonPitfallPayload(ContractModel):
+    misconception: str
+    why_wrong: str
+    distinguisher: str
+    related_node: str
+
+
+class SummaryCardPayload(ContractModel):
+    cards: list[PayloadCard] = Field(min_length=1)
+    must_recite: list[str] = Field(min_length=1)
+    one_line: str
+
+
+# 13 种模块 payload 的并集。各模型 required 键互不相同（extra="forbid" 下
+# 至多一个模型能命中），Pydantic smart union 可稳定消歧；block_type 与
+# payload 模型的对应关系由 prompt 与 validate_block_payloads 软校验保证。
+BlockPayloadUnion = (
+    LegalAnchorPayload
+    | KnowledgeSynthesisPayload
+    | AssessmentPayload
+    | AnchorScenarioPayload
+    | GlobalFrameworkPayload
+    | WorkedExamplePayload
+    | DecisionFlowPayload
+    | VerbalExplanationPayload
+    | PredictActivatePayload
+    | ReflectPromptPayload
+    | MnemonicPayload
+    | CommonPitfallPayload
+    | SummaryCardPayload
+)
+
+
 class BlockPlan(ContractModel):
     block_id: str
     block_type: Literal[
@@ -284,13 +443,22 @@ class BlockPlan(ContractModel):
         "summary_card",
     ]
     title: str
-    payload: dict[str, Any] = Field(default_factory=dict)
+    payload: BlockPayloadUnion | None = None
     # 十个自适应模块均为共享模块，A/B 均可主张；chosen_by 仅记录融合后的实际归属，非预设默认归属
     chosen_by: Literal["[A]", "[B]", "[A+B融合]"] | None = None
     trigger: str | None = None
     rationale: str | None = None
     adapts_to: list[str] = Field(default_factory=list)
     source: str | None = None
+
+
+class BlockBudget(ContractModel):
+    """板块预算（learning_path 确定性产出，固定 4 键）。"""
+
+    adaptive_used: int | None = None
+    adaptive_max: int | None = None
+    total: int | None = None
+    total_max: int | None = None
 
 
 class BlockPlanPackage(ContractModel):
@@ -300,7 +468,7 @@ class BlockPlanPackage(ContractModel):
     learner_id: str | None = None
     blocks: list[BlockPlan] = Field(default_factory=list)
     order: list[str] = Field(default_factory=list)
-    budget: dict[str, Any] = Field(default_factory=dict)
+    budget: BlockBudget = Field(default_factory=BlockBudget)
     debate_resolved: bool = False
 
 
@@ -326,10 +494,22 @@ class AssessmentItem(ContractModel):
     evidence: str | None = None
 
 
+class CoverageItem(ContractModel):
+    """knowledge_synthesis.coverage 条目：覆盖到的知识节点。"""
+
+    node_id: str | None = None
+
+
+class ConfusablePair(ContractModel):
+    """knowledge_synthesis.confusable_pairs 条目：易混淆点对描述。"""
+
+    pair: str | None = None
+
+
 class KnowledgeSynthesis(ContractModel):
     node: str | None = None
-    coverage: list[dict[str, Any]] = Field(default_factory=list)
-    confusable_pairs: list[dict[str, Any]] | None = None
+    coverage: list[CoverageItem] = Field(default_factory=list)
+    confusable_pairs: list[ConfusablePair] | None = None
 
 
 class Assessment(ContractModel):
@@ -391,6 +571,14 @@ class RiskItem(ContractModel):
     related_node_id: str | None = None
 
 
+class ExerciseItem(ContractModel):
+    """exercises 条目（宽松题目载体；正式测评以 interactive_questions/assessment 为准）。"""
+
+    question: str | None = None
+    answer: str | None = None
+    options: list[str] | None = None
+
+
 class ExpertDraft(ContractModel):
     expert: Literal["expert_a", "expert_b", "A+B融合"]
     style: Literal["conservative", "accessible", "fused"]
@@ -404,7 +592,7 @@ class ExpertDraft(ContractModel):
     block_plan: BlockPlanPackage | None = None
     knowledge_synthesis: KnowledgeSynthesis | None = None
     assessment: Assessment | None = None
-    exercises: list[dict[str, Any]] | None = None
+    exercises: list[ExerciseItem] | None = None
     markdown_artifact: MarkdownArtifact | None = None
 
 

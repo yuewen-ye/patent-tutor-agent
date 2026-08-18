@@ -148,7 +148,17 @@ Planner 必须：
 - Provider 返回结果仍须经过字段别名归一化与 Pydantic 二次校验；首次校验失败时，系统把具体
   校验错误回传模型并自动修复一次，第二次仍失败才终止节点。
 - `agent_output_json_schemas()` 导出全部实际结构化输出合同：诊断、反馈、Planner、专家 A/B
-  各阶段、Judge、Route、ChatAnswer。
+  各阶段、Judge、Route、ChatAnswer。全部合同均为封闭对象（无 `dict[str, Any]` 自由字典），
+  可直接以 `json_schema + strict` 发送。
+- `BlockPlan.payload` 为 13 种模块各自的封闭 payload 模型的并集（与
+  `curriculum/block_content_spec.py` 的 `BLOCK_CONTENT_SPEC` 一一对应；spec 标记
+  「非空/≥N/三类齐全」的字段为 required，「可选/建议」为 optional）。嵌套条目统一使用英文键：
+  `steps` 条目为 `{reasoning, summary}`（worked_example）或 `{condition, outcome}`
+  （decision_flow），`key_terms`/`mapping` 条目为 `{term, explanation}`，`cards` 条目为
+  `{concept, one_liner}`；normalize 层兼容真实 LLM 偶发的中文键（推理/小结/条件/走向/
+  术语/人话/概念/一句话）与 `mapping` 的动态键值对。`BlockPlanPackage.budget` 为封闭
+  `BlockBudget`（`adaptive_used/adaptive_max/total/total_max`）。`block_type` 与 payload
+  模型的对应关系由提示词与 `validate_block_payloads` 软校验保证，schema 层不做跨字段判别。
 - Planner 使用 `PlannerAgentResult` Schema；检索服务返回 `RetrievalChunk`。
 - Provider 字段别名必须先规范化再校验。
 - `FeedbackAgentResult.error_pattern` 只接受 `unknown`、`no_prior_knowledge`、

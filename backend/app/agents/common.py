@@ -403,6 +403,77 @@ def _norm_chosen_by(val: object) -> object:
     return None
 
 
+# ── BlockPlan payload 封闭契约的兼容归一化（防御真实 LLM 输出的中文/动态键） ──
+_PAYLOAD_ALLOWED_KEYS = {
+    "articles", "plain_summary", "why_it_matters",
+    "framework", "key_relations", "must_know",
+    "coverage", "items", "body_guide",
+    "scenario", "why_anchor", "think_prompt",
+    "position", "prereq", "leads_to", "big_picture",
+    "problem", "applicable_rule", "steps", "conclusion", "takeaway",
+    "question", "end_states",
+    "spoken", "key_terms", "analogy",
+    "prompt", "activate", "reveal_hint",
+    "what_to_notice", "connect",
+    "device", "mapping", "when_recall",
+    "misconception", "why_wrong", "distinguisher", "related_node",
+    "cards", "must_recite", "one_line",
+}
+_STEP_KEY_ALIASES = {"推理": "reasoning", "小结": "summary", "条件": "condition", "走向": "outcome"}
+_CARD_KEY_ALIASES = {"概念": "concept", "一句话": "one_liner"}
+
+
+def _normalize_step_item(item: object) -> object:
+    if not isinstance(item, dict):
+        return item
+    return {_STEP_KEY_ALIASES.get(str(k), str(k)): v for k, v in item.items()}
+
+
+def _normalize_term_item(item: object) -> object:
+    """术语/映射条目：兼容 {术语, 人话} 中文键与 {动态键: 动态值} 单键对。"""
+    if not isinstance(item, dict) or not item:
+        return item
+    if "term" in item or "explanation" in item:
+        return {"term": item.get("term"), "explanation": item.get("explanation")}
+    if "术语" in item or "人话" in item:
+        return {"term": item.get("术语"), "explanation": item.get("人话")}
+    key, value = next(iter(item.items()))
+    return {"term": str(key), "explanation": value}
+
+
+def _normalize_card_item(item: object) -> object:
+    if not isinstance(item, dict):
+        return item
+    return {_CARD_KEY_ALIASES.get(str(k), str(k)): v for k, v in item.items()}
+
+
+def _normalize_block_payload(payload: object) -> object:
+    """把 LLM 产出的 block payload 归一化到 BlockPayloadUnion 封闭键集合。
+
+    顶层丢弃 spec 之外的垃圾键；steps/key_terms/mapping/cards 的中文或动态
+    嵌套键映射为契约英文键。payload 非 dict（空心字符串等）原样返回，交给
+    Pydantic 校验与修复循环处理。
+    """
+    if not isinstance(payload, dict):
+        return payload
+    p = {k: v for k, v in payload.items() if k in _PAYLOAD_ALLOWED_KEYS}
+    if not p:
+        # 空/全垃圾键 payload 等价于缺失（骨架块由 reconcile 在校验后插入，
+        # 空心问题由 validate_block_payloads 软校验告警）
+        return None
+    if isinstance(p.get("steps"), list):
+        p["steps"] = [_normalize_step_item(s) for s in p["steps"]]
+    for key in ("key_terms", "mapping"):
+        value = p.get(key)
+        if isinstance(value, list):
+            p[key] = [_normalize_term_item(t) for t in value]
+        elif isinstance(value, dict):
+            p[key] = [_normalize_term_item(value)]
+    if isinstance(p.get("cards"), list):
+        p["cards"] = [_normalize_card_item(c) for c in p["cards"]]
+    return p
+
+
 def normalize_expert_draft_payload(raw: object) -> object:
     normalized = normalize_key_aliases(
         raw,
@@ -545,7 +616,10 @@ def normalize_expert_draft_payload(raw: object) -> object:
             ks["coverage"] = [{"node_id": cov}]
         elif isinstance(cov, list):
             ks["coverage"] = [
-                {"node_id": c} if isinstance(c, str) else c for c in cov
+                {"node_id": c} if isinstance(c, str)
+                else {"node_id": c.get("node_id")} if isinstance(c, dict)
+                else c
+                for c in cov
             ]
         cp = ks.get("confusable_pairs")
         if cp is None:
@@ -554,7 +628,10 @@ def normalize_expert_draft_payload(raw: object) -> object:
             ks["confusable_pairs"] = [{"pair": cp}]
         elif isinstance(cp, list):
             ks["confusable_pairs"] = [
-                {"pair": c} if isinstance(c, str) else c for c in cp
+                {"pair": c} if isinstance(c, str)
+                else {"pair": c.get("pair")} if isinstance(c, dict)
+                else c
+                for c in cp
             ]
         normalized["knowledge_synthesis"] = ks
     elif isinstance(ks, str):
@@ -624,14 +701,30 @@ def normalize_expert_draft_payload(raw: object) -> object:
                 _blk["block_type"] = _norm_block_type(_blk["block_type"])
             if _blk.get("chosen_by") is not None:
                 _blk["chosen_by"] = _norm_chosen_by(_blk["chosen_by"])
+            # payload：归一化到封闭契约键集合（中文/动态嵌套键 → 英文契约键）
+            if "payload" in _blk:
+                _blk["payload"] = _normalize_block_payload(_blk["payload"])
             cleaned_blocks.append(_blk)
         pkg["blocks"] = cleaned_blocks
+        # budget：只保留 BlockBudget 的 4 个合法键
+        budget = pkg.get("budget")
+        if isinstance(budget, dict):
+            pkg["budget"] = {
+                k: budget[k]
+                for k in ("adaptive_used", "adaptive_max", "total", "total_max")
+                if k in budget
+            }
     exercises = normalized.get("exercises")
     if isinstance(exercises, str):
         normalized["exercises"] = [{"question": exercises}]
     elif isinstance(exercises, list):
         normalized["exercises"] = [
-            {"question": item} if isinstance(item, str) else item for item in exercises
+            {"question": item} if isinstance(item, str)
+            else {
+                k: item[k] for k in ("question", "answer", "options") if k in item
+            } if isinstance(item, dict)
+            else item
+            for item in exercises
         ]
     return normalized
 

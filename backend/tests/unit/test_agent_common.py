@@ -2,14 +2,27 @@ import pytest
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel
 
-from backend.app.agents.common import generate_validated_json, messages_from_prompt
+from backend.app.agents.common import (
+    _normalize_schema_for_strict,
+    _schema_has_free_form_object,
+    generate_validated_json,
+    messages_from_prompt,
+    normalize_expert_draft_payload,
+)
 from backend.app.core.llm import (
     LLMMessage,
     LLMProviderError,
     LLMResponseWithTools,
     ToolDefinition,
 )
-from backend.app.schemas.state import IntentResult, JudgeReport
+from backend.app.schemas.state import (
+    ExpertDraft,
+    IntentResult,
+    JudgeReport,
+    MnemonicPayload,
+    SummaryCardPayload,
+    WorkedExamplePayload,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -314,3 +327,109 @@ def test_generate_validated_json_skips_strict_schema_for_free_form_objects() -> 
     assert result.payload == {"body": "自由内容"}
     assert client.structured_calls == 0
     assert client.json_calls == 1
+
+
+def _draft_with_blocks(blocks: list[dict[str, object]]) -> dict[str, object]:
+    return {
+        "expert": "A",
+        "style": "conservative",
+        "knowledge_points": [{"node_id": "novelty", "kc_name": "新颖性"}],
+        "legal_basis": ["《专利法》第二十二条"],
+        "teaching_content": "正文",
+        "block_plan": {"blocks": blocks},
+    }
+
+
+def test_expert_draft_payload_chinese_nested_keys_normalize_to_closed_contract() -> None:
+    raw = _draft_with_blocks(
+        [
+            {
+                "block_id": "b1",
+                "block_type": "worked_example",
+                "title": "宽限期例题",
+                "payload": {
+                    "problem": "展出是否破坏新颖性？",
+                    "applicable_rule": "《专利法》第二十四条",
+                    "steps": [{"推理": "展出日早于申请日", "小结": "落入宽限期"}],
+                    "conclusion": "不破坏",
+                    "takeaway": "先判范围再算日期",
+                    "垃圾键": "应被丢弃",
+                },
+            },
+            {
+                "block_id": "b2",
+                "block_type": "summary_card",
+                "title": "要点卡",
+                "payload": {
+                    "cards": [{"概念": "三性", "一句话": "新颖性/创造性/实用性"}],
+                    "must_recite": ["三性缺一不可"],
+                    "one_line": "先客体后三性",
+                },
+            },
+            {
+                "block_id": "b3",
+                "block_type": "mnemonic",
+                "title": "三性记忆表",
+                "payload": {
+                    "device": "新/创/实",
+                    "mapping": [{"新": "新颖性=未公开"}],
+                    "when_recall": "看到授权条件时",
+                },
+            },
+        ]
+    )
+
+    draft = ExpertDraft.model_validate(normalize_expert_draft_payload(raw))
+
+    assert draft.block_plan is not None
+    worked = draft.block_plan.blocks[0].payload
+    assert isinstance(worked, WorkedExamplePayload)
+    assert worked.steps[0].reasoning == "展出日早于申请日"
+    assert worked.steps[0].summary == "落入宽限期"
+    card = draft.block_plan.blocks[1].payload
+    assert isinstance(card, SummaryCardPayload)
+    assert card.cards[0].concept == "三性"
+    assert card.cards[0].one_liner == "新颖性/创造性/实用性"
+    mnemonic = draft.block_plan.blocks[2].payload
+    assert isinstance(mnemonic, MnemonicPayload)
+    assert mnemonic.mapping[0].term == "新"
+    assert mnemonic.mapping[0].explanation == "新颖性=未公开"
+
+
+def test_expert_draft_empty_or_garbage_payload_becomes_none() -> None:
+    raw = _draft_with_blocks(
+        [
+            {"block_id": "b1", "block_type": "verbal_explanation", "title": "讲解", "payload": {}},
+            {
+                "block_id": "b2",
+                "block_type": "verbal_explanation",
+                "title": "讲解2",
+                "payload": {"未知键": "x"},
+            },
+        ]
+    )
+
+    draft = ExpertDraft.model_validate(normalize_expert_draft_payload(raw))
+
+    assert draft.block_plan is not None
+    assert draft.block_plan.blocks[0].payload is None
+    assert draft.block_plan.blocks[1].payload is None
+
+
+def test_expert_draft_budget_is_closed_to_four_keys() -> None:
+    raw = _draft_with_blocks([])
+    raw["block_plan"] = {
+        "blocks": [],
+        "budget": {"adaptive_used": 2, "adaptive_max": 6, "total": 5, "total_max": 9, "垃圾": 1},
+    }
+
+    draft = ExpertDraft.model_validate(normalize_expert_draft_payload(raw))
+
+    assert draft.block_plan is not None
+    assert draft.block_plan.budget.adaptive_used == 2
+    assert draft.block_plan.budget.total_max == 9
+
+
+def test_expert_draft_schema_is_fully_closed_for_strict_mode() -> None:
+    schema = _normalize_schema_for_strict(ExpertDraft.model_json_schema(mode="validation"))
+    assert _schema_has_free_form_object(schema) is False

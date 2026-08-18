@@ -544,7 +544,7 @@ def _to_text(v: Any) -> str:
         return v
     if isinstance(v, dict):
         # 优先取常见文本键
-        for k in ("concept", "术语", "article", "summary", "desc", "description", "推理", "question"):
+        for k in ("concept", "term", "术语", "article", "summary", "one_liner", "desc", "description", "推理", "reasoning", "question"):
             if k in v and isinstance(v[k], str):
                 return v[k]
         # 否则取第一个字符串值
@@ -575,7 +575,7 @@ def _mermaid_decision_flow(payload: dict[str, Any]) -> str:
     for i, s in enumerate(steps):
         if isinstance(s, dict):
             cond = str(s.get("条件") or s.get("condition") or f"步骤{i + 1}")
-            goto = str(s.get("走向") or s.get("branch") or "")
+            goto = str(s.get("走向") or s.get("outcome") or s.get("branch") or "")
         else:
             cond = str(s)
             goto = ""
@@ -631,7 +631,7 @@ def _render_block_payload(block_type: str, p: dict[str, Any]) -> str:
             for i, s in enumerate(steps, 1):
                 if isinstance(s, dict):
                     r = s.get("推理") or s.get("reasoning") or ""
-                    c = s.get("小结") or s.get("conclusion") or ""
+                    c = s.get("小结") or s.get("summary") or s.get("conclusion") or ""
                     lines.append(f"{i}. {r} → *{c}*")
                 else:
                     lines.append(f"{i}. {s}")
@@ -702,7 +702,7 @@ def _render_block_payload(block_type: str, p: dict[str, Any]) -> str:
             parts.append("**要点卡**：")
             for c in cards:
                 if isinstance(c, dict):
-                    parts.append(f"- **{c.get('概念', c.get('concept', ''))}**：{c.get('一句话', c.get('summary', ''))}")
+                    parts.append(f"- **{c.get('概念', c.get('concept', ''))}**：{c.get('一句话', c.get('one_liner', c.get('summary', '')))}")
                 else:
                     parts.append(f"- {c}")
         if p.get("must_recite"):
