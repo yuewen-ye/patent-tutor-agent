@@ -133,6 +133,45 @@ def _slim_draft_for_review(draft: object) -> dict:
     return {k: v for k, v in draft.items() if k in _KEEP}
 
 
+def _normalize_schema_for_strict(schema: object) -> object:
+    """Rewrite a Pydantic JSON Schema for strict structured-output endpoints.
+
+    OpenAI-compatible strict endpoints reject any object whose ``required`` does not
+    list every key in ``properties`` (e.g. ``JudgeReport.debate.attack_relations``).
+    Pydantic keeps fields with defaults out of ``required``, so we recursively merge
+    all property names into ``required``; optional semantics remain expressible
+    through the ``anyOf [T, null]`` that ``| None`` fields already produce.
+    """
+    if isinstance(schema, dict):
+        normalized = {key: _normalize_schema_for_strict(value) for key, value in schema.items()}
+        properties = normalized.get("properties")
+        if isinstance(properties, dict):
+            normalized["required"] = list(properties.keys())
+            normalized.setdefault("additionalProperties", False)
+        return normalized
+    if isinstance(schema, list):
+        return [_normalize_schema_for_strict(item) for item in schema]
+    return schema
+
+
+def _schema_has_free_form_object(schema: object) -> bool:
+    """Detect free-form map fields (``dict[str, Any]``) that strict endpoints reject.
+
+    Strict structured-output endpoints require every object schema to declare
+    ``additionalProperties: false``. Free-form maps such as ``BlockPlan.payload``
+    (``dict[str, Any]``) are emitted by Pydantic as ``{"type": "object"}`` without
+    properties and fundamentally cannot satisfy that rule, so contracts containing
+    them must use JSON-object mode instead of wasting a rejected request.
+    """
+    if isinstance(schema, dict):
+        if schema.get("type") == "object" and "properties" not in schema:
+            return True
+        return any(_schema_has_free_form_object(value) for value in schema.values())
+    if isinstance(schema, list):
+        return any(_schema_has_free_form_object(item) for item in schema)
+    return False
+
+
 def generate_validated_json(
     llm_client: LLMClient,
     *,
@@ -152,8 +191,10 @@ def generate_validated_json(
     Every response that fails normalization/Pydantic validation receives one repair attempt
     containing the exact validation errors. Providers with strict JSON Schema support receive the
     schema through ``response_format``; compatible endpoints that reject that feature fall back to
-    JSON-object mode while keeping the same schema instruction and repair loop. Pydantic remains the
-    final trust boundary regardless of provider behavior.
+    JSON-object mode while keeping the same schema instruction and repair loop. Contracts with
+    free-form object fields (``dict[str, Any]``, e.g. ``BlockPlan.payload``) skip strict schema
+    upfront because strict endpoints cannot accept them. Pydantic remains the final trust boundary
+    regardless of provider behavior.
     """
 
     structured_generate = getattr(llm_client, "generate_structured_json", None)
@@ -163,8 +204,14 @@ def generate_validated_json(
     contract_name = schema_name or output_model.__name__
     json_schema = cast(
         dict[str, object],
-        output_model.model_json_schema(mode="validation"),
+        _normalize_schema_for_strict(output_model.model_json_schema(mode="validation")),
     )
+    if use_structured_output and _schema_has_free_form_object(json_schema):
+        _LOGGER.info(
+            "Contract %s contains free-form object fields; using JSON-object mode",
+            contract_name,
+        )
+        use_structured_output = False
     schema_instruction = LLMMessage(
         role="system",
         content=(

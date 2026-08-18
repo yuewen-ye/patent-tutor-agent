@@ -23,43 +23,43 @@ providers:
   qwen:
     model_name: Qwen3.7-Plus
     base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: false
+    supports_strict_schema: true
   glm:
     model_name: GLM-5.2
     base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: false
+    supports_strict_schema: true
   gpt:
     model_name: gpt-4o
     base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: false
+    supports_strict_schema: true
   luna:
     model_name: gpt-5.6-luna
     base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: false
+    supports_strict_schema: true
   grok:
     model_name: grok-4.3
     base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: false
+    supports_strict_schema: true
   terra:
     model_name: gpt-5.6-terra
     base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: false
+    supports_strict_schema: true
   yangmao:
     model_name: yangmao-main
     base_url: https://ai.gz404.com:54002/v1
-    supports_strict_schema: false
+    supports_strict_schema: true
   mistral:
     model_name: mistral-small-2503
     base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: false
+    supports_strict_schema: true
   minimax:
     model_name: MiniMax-M2.5
     base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: false
+    supports_strict_schema: true
   deepseek:
     model_name: DeepSeek-V4-Flash
     base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: false
+    supports_strict_schema: true
 
 # 推荐 Agent → provider 映射（按 GreatRouter 节点分配表）：
 agents:
