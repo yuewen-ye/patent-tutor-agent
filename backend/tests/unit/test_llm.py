@@ -7,19 +7,20 @@ import httpx
 import pytest
 
 from backend.app.core.agent_runtime_config import (
-    ProviderRuntimeConfig,
+    AgentRuntimeConfigError,
     clear_agent_runtime_config_cache,
 )
 from backend.app.core.llm import (
     AGENT_PROVIDER_ENV,
     AgentLLMRouter,
+    LLMConfigurationError,
     LLMMessage,
-    LLMProvider,
     LLMProviderError,
     call_llm,
     call_llm_json,
     load_provider_config,
 )
+from backend.tests.helpers import make_provider_config, stub_llm_providers
 
 pytestmark = pytest.mark.unit
 
@@ -36,12 +37,7 @@ def _json_response(content: str) -> httpx.Response:
 
 
 def test_call_llm_omits_temperature_for_gpt56_model(monkeypatch) -> None:
-    monkeypatch.setattr(
-        "backend.app.core.llm.provider_runtime_config",
-        lambda _provider: ProviderRuntimeConfig(),
-    )
-    monkeypatch.setenv("GPT_API_KEY", "gpt-key")
-    monkeypatch.setenv("GPT_BASE_URL", "https://gateway.example/v1")
+    stub_llm_providers(monkeypatch, {"gpt": make_provider_config(model_name="gpt-5.5")})
     captured: dict[str, object] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -63,12 +59,7 @@ def test_call_llm_omits_temperature_for_gpt56_model(monkeypatch) -> None:
 
 
 def test_gpt_provider_keeps_temperature_for_supported_model(monkeypatch) -> None:
-    monkeypatch.setattr(
-        "backend.app.core.llm.provider_runtime_config",
-        lambda _provider: ProviderRuntimeConfig(),
-    )
-    monkeypatch.setenv("GPT_API_KEY", "gpt-key")
-    monkeypatch.setenv("GPT_BASE_URL", "https://gateway.example/v1")
+    stub_llm_providers(monkeypatch, {"gpt": make_provider_config(model_name="gpt-5.5")})
     captured: dict[str, object] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -89,31 +80,21 @@ def test_gpt_provider_keeps_temperature_for_supported_model(monkeypatch) -> None
 
 
 @pytest.mark.parametrize(
-    ("provider", "key_name", "model_name", "base_url"),
+    ("provider", "model_name", "base_url"),
     [
-        ("qwen", "QWEN_API_KEY", "qwen3.7-plus", "https://api-slb.krill-ai.net/codex/v1"),
-        (
-            "glm",
-            "GLM_API_KEY",
-            "GLM-5.2",
-            "https://api-slb.krill-ai.net/codex/v1",
-        ),
-        ("gpt", "GPT_API_KEY", "gpt-5.5", "https://api-slb.krill-ai.net/codex/v1"),
+        ("chan-alpha", "model-a", "https://alpha.example/v1"),
+        ("chan-beta", "model-b", "https://beta.example/v1"),
+        ("chan-gamma", "model-c", "https://gamma.example/v1"),
     ],
 )
-def test_call_llm_supports_three_configured_providers(
-    monkeypatch, provider: LLMProvider, key_name: str, model_name: str, base_url: str
+def test_call_llm_supports_custom_channels(
+    monkeypatch, provider: str, model_name: str, base_url: str
 ) -> None:
-    # This test exercises the legacy environment-variable fallback.  YAML is
-    # intentionally higher priority, so isolate the test from the developer's
-    # local config/agents.yaml provider settings.
-    monkeypatch.setattr(
-        "backend.app.core.llm.provider_runtime_config",
-        lambda _provider: ProviderRuntimeConfig(),
+    # provider 名是完全自定义的通道名；base_url/model 全部来自 yaml（这里 stub）。
+    stub_llm_providers(
+        monkeypatch,
+        {provider: make_provider_config(model_name=model_name, base_url=base_url)},
     )
-    monkeypatch.setenv(key_name, "provider-key")
-    monkeypatch.setenv(f"{provider.upper()}_MODEL", model_name)
-    monkeypatch.setenv(f"{provider.upper()}_BASE_URL", base_url)
 
     seen: dict[str, object] = {}
 
@@ -135,9 +116,7 @@ def test_call_llm_supports_three_configured_providers(
 
 
 def test_call_llm_json_adds_json_mode_and_parses_response(monkeypatch) -> None:
-    monkeypatch.setenv("QWEN_API_KEY", "qwen-key")
-    monkeypatch.setenv("QWEN_MODEL", "qwen3.7-plus")
-    monkeypatch.setenv("QWEN_BASE_URL", "https://api-slb.krill-ai.net/codex/v1")
+    stub_llm_providers(monkeypatch, {"qwen": make_provider_config(model_name="qwen3.7-plus")})
     captured: dict[str, object] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -155,9 +134,7 @@ def test_call_llm_json_adds_json_mode_and_parses_response(monkeypatch) -> None:
 
 
 def test_call_llm_json_salvages_duplicated_json_payload(monkeypatch) -> None:
-    monkeypatch.setenv("QWEN_API_KEY", "qwen-key")
-    monkeypatch.setenv("QWEN_MODEL", "qwen3.7-plus")
-    monkeypatch.setenv("QWEN_BASE_URL", "https://api-slb.krill-ai.net/codex/v1")
+    stub_llm_providers(monkeypatch, {"qwen": make_provider_config()})
 
     duplicated = '{"a": 1, "b": [2]}{"a": 1, "b": [2]}'
 
@@ -174,9 +151,7 @@ def test_call_llm_json_salvages_duplicated_json_payload(monkeypatch) -> None:
 
 
 def test_call_llm_json_salvage_failure_keeps_retryable_error(monkeypatch) -> None:
-    monkeypatch.setenv("QWEN_API_KEY", "qwen-key")
-    monkeypatch.setenv("QWEN_MODEL", "qwen3.7-plus")
-    monkeypatch.setenv("QWEN_BASE_URL", "https://api-slb.krill-ai.net/codex/v1")
+    stub_llm_providers(monkeypatch, {"qwen": make_provider_config()})
 
     def handler(request: httpx.Request) -> httpx.Response:
         return _json_response('{"a": 1, broken')
@@ -192,7 +167,7 @@ def test_call_llm_json_salvage_failure_keeps_retryable_error(monkeypatch) -> Non
 
 
 def test_call_llm_uses_explicit_model_name_override(monkeypatch) -> None:
-    monkeypatch.setenv("QWEN_API_KEY", "qwen-key")
+    stub_llm_providers(monkeypatch, {"qwen": make_provider_config()})
     captured: dict[str, object] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -211,10 +186,7 @@ def test_call_llm_uses_explicit_model_name_override(monkeypatch) -> None:
 
 
 def test_call_llm_wraps_provider_error_body(monkeypatch) -> None:
-    monkeypatch.setenv("QWEN_API_KEY", "qwen-key")
-    monkeypatch.setenv("QWEN_MODEL", "qwen3.7-plus")
-    monkeypatch.setenv("QWEN_BASE_URL", "https://api-slb.krill-ai.net/codex/v1")
-
+    stub_llm_providers(monkeypatch, {"qwen": make_provider_config()})
     client = httpx.Client(
         transport=httpx.MockTransport(
             lambda request: httpx.Response(400, json={"error": {"message": "bad request detail"}})
@@ -236,7 +208,7 @@ def test_524_gateway_timeout_is_retryable() -> None:
 
 
 def test_call_llm_normalizes_socks_proxy(monkeypatch) -> None:
-    monkeypatch.setenv("QWEN_API_KEY", "qwen-key")
+    stub_llm_providers(monkeypatch, {"qwen": make_provider_config()})
     monkeypatch.setenv("HTTP_PROXY", "socks://127.0.0.1:64193/")
     monkeypatch.setenv("HTTPS_PROXY", "socks://127.0.0.1:64193/")
 
@@ -253,7 +225,18 @@ def test_call_llm_normalizes_socks_proxy(monkeypatch) -> None:
 
 
 def test_agent_llm_router_reads_agent_specific_provider_config(monkeypatch, tmp_path) -> None:
-    monkeypatch.setenv("AGENT_CONFIG_PATH", str(tmp_path / "missing-agents.yaml"))
+    yaml_path = tmp_path / "agents.yaml"
+    yaml_path.write_text(
+        "llm:\n"
+        "  default_provider: qwen\n"
+        "providers:\n"
+        "  qwen:\n"
+        "    base_url: https://gw.example/v1\n"
+        "  glm:\n"
+        "    base_url: https://gw.example/v1\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("AGENT_CONFIG_PATH", str(yaml_path))
     for env_name in AGENT_PROVIDER_ENV.values():
         monkeypatch.setenv(env_name, "")
     monkeypatch.setenv("DEFAULT_LLM_PROVIDER", "qwen")
@@ -274,14 +257,11 @@ def test_load_provider_config_env_timeout_overrides_yaml(monkeypatch) -> None:
         timeout_seconds = 90.0
         retry_times = 5
 
-    class _ProvCfg:
-        model_name = "qwen3.7-plus"
-        base_url = None
-
+    stub_llm_providers(
+        monkeypatch, {"qwen": make_provider_config(model_name="qwen3.7-plus")}
+    )
     monkeypatch.setattr("backend.app.core.llm.load_dotenv", lambda *a, **k: None)
     monkeypatch.setattr("backend.app.core.llm.llm_runtime_config", lambda: _LlmCfg())
-    monkeypatch.setattr("backend.app.core.llm.provider_runtime_config", lambda p: _ProvCfg())
-    monkeypatch.setenv("QWEN_API_KEY", "test-key")
     monkeypatch.setenv("LLM_TIMEOUT_SECONDS", "600")
     monkeypatch.setenv("LLM_RETRY_TIMES", "7")
 
@@ -297,14 +277,11 @@ def test_load_provider_config_falls_back_to_yaml_when_env_unset(monkeypatch) -> 
         timeout_seconds = 90.0
         retry_times = 5
 
-    class _ProvCfg:
-        model_name = "qwen3.7-plus"
-        base_url = None
-
+    stub_llm_providers(
+        monkeypatch, {"qwen": make_provider_config(model_name="qwen3.7-plus")}
+    )
     monkeypatch.setattr("backend.app.core.llm.load_dotenv", lambda *a, **k: None)
     monkeypatch.setattr("backend.app.core.llm.llm_runtime_config", lambda: _LlmCfg())
-    monkeypatch.setattr("backend.app.core.llm.provider_runtime_config", lambda p: _ProvCfg())
-    monkeypatch.setenv("QWEN_API_KEY", "test-key")
     monkeypatch.delenv("LLM_TIMEOUT_SECONDS", raising=False)
     monkeypatch.delenv("LLM_RETRY_TIMES", raising=False)
 
@@ -317,12 +294,7 @@ def test_load_provider_config_falls_back_to_yaml_when_env_unset(monkeypatch) -> 
 def test_call_llm_logs_full_payload_pair_when_enabled(monkeypatch, tmp_path) -> None:
     from backend.app.core.llm import set_llm_log_context
 
-    monkeypatch.setattr(
-        "backend.app.core.llm.provider_runtime_config",
-        lambda _provider: ProviderRuntimeConfig(),
-    )
-    monkeypatch.setenv("GPT_API_KEY", "gpt-key")
-    monkeypatch.setenv("GPT_BASE_URL", "https://gateway.example/v1")
+    stub_llm_providers(monkeypatch, {"gpt": make_provider_config(model_name="gpt-5.5")})
     monkeypatch.setenv("LLM_LOG_PAYLOAD", "true")
     set_llm_log_context(session_id="sess-payload", log_root=tmp_path)
     try:
@@ -362,12 +334,7 @@ def test_call_llm_logs_full_payload_pair_when_enabled(monkeypatch, tmp_path) -> 
 def test_call_llm_skips_payload_log_when_disabled(monkeypatch, tmp_path) -> None:
     from backend.app.core.llm import set_llm_log_context
 
-    monkeypatch.setattr(
-        "backend.app.core.llm.provider_runtime_config",
-        lambda _provider: ProviderRuntimeConfig(),
-    )
-    monkeypatch.setenv("GPT_API_KEY", "gpt-key")
-    monkeypatch.setenv("GPT_BASE_URL", "https://gateway.example/v1")
+    stub_llm_providers(monkeypatch, {"gpt": make_provider_config(model_name="gpt-5.5")})
     monkeypatch.setenv("LLM_LOG_PAYLOAD", "false")
     set_llm_log_context(session_id="sess-no-payload", log_root=tmp_path)
     try:
@@ -383,6 +350,212 @@ def test_call_llm_skips_payload_log_when_disabled(monkeypatch, tmp_path) -> None
         set_llm_log_context(session_id=None, log_root=None)
 
     assert not (tmp_path / "sessions" / "sess-no-payload" / "llm_payloads.log.jsonl").exists()
+
+
+# ---------------------------------------------------------------------------
+# 自定义通道解析链（api_key 直写 / api_key_env / 约定名）
+# ---------------------------------------------------------------------------
+
+
+def _write_agent_config(monkeypatch, tmp_path, text: str) -> None:
+    yaml_path = tmp_path / "agents.yaml"
+    yaml_path.write_text(text, encoding="utf-8")
+    monkeypatch.setenv("AGENT_CONFIG_PATH", str(yaml_path))
+
+
+def test_load_provider_config_prefers_inline_api_key(monkeypatch, tmp_path) -> None:
+    _write_agent_config(
+        monkeypatch,
+        tmp_path,
+        "providers:\n"
+        "  my-chan:\n"
+        "    base_url: https://gw.example/v1\n"
+        "    model_name: my-model\n"
+        "    api_key: sk-inline\n"
+        "    api_key_env: MY_CHAN_SPECIAL_KEY\n",
+    )
+    monkeypatch.setenv("MY_CHAN_SPECIAL_KEY", "sk-from-env")
+
+    cfg = load_provider_config("my-chan")
+
+    assert cfg.api_key == "sk-inline"
+    assert cfg.base_url == "https://gw.example/v1"
+    assert cfg.model == "my-model"
+
+
+def test_load_provider_config_uses_api_key_env(monkeypatch, tmp_path) -> None:
+    _write_agent_config(
+        monkeypatch,
+        tmp_path,
+        "providers:\n"
+        "  my-chan:\n"
+        "    base_url: https://gw.example/v1\n"
+        "    model_name: my-model\n"
+        "    api_key_env: MY_CHAN_SPECIAL_KEY\n",
+    )
+    monkeypatch.setenv("MY_CHAN_SPECIAL_KEY", "sk-from-env")
+    monkeypatch.delenv("MY_CHAN_API_KEY", raising=False)
+
+    cfg = load_provider_config("my-chan")
+
+    assert cfg.api_key == "sk-from-env"
+
+
+def test_load_provider_config_uses_conventional_env_name(monkeypatch, tmp_path) -> None:
+    _write_agent_config(
+        monkeypatch,
+        tmp_path,
+        "providers:\n"
+        "  my-chan:\n"
+        "    base_url: https://gw.example/v1\n"
+        "    model_name: my-model\n",
+    )
+    # 约定：{通道名大写, 非字母数字转_}_API_KEY → MY_CHAN_API_KEY
+    monkeypatch.setenv("MY_CHAN_API_KEY", "sk-conventional")
+
+    cfg = load_provider_config("my-chan")
+
+    assert cfg.api_key == "sk-conventional"
+
+
+def test_load_provider_config_missing_key_names_env_var(monkeypatch, tmp_path) -> None:
+    _write_agent_config(
+        monkeypatch,
+        tmp_path,
+        "providers:\n"
+        "  my-chan:\n"
+        "    base_url: https://gw.example/v1\n"
+        "    model_name: my-model\n",
+    )
+    monkeypatch.delenv("MY_CHAN_API_KEY", raising=False)
+
+    with pytest.raises(LLMConfigurationError, match="MY_CHAN_API_KEY"):
+        load_provider_config("my-chan")
+
+
+def test_load_provider_config_missing_base_url_errors(monkeypatch, tmp_path) -> None:
+    _write_agent_config(
+        monkeypatch,
+        tmp_path,
+        "providers:\n  my-chan:\n    model_name: my-model\n    api_key: sk-x\n",
+    )
+
+    with pytest.raises(LLMConfigurationError, match="base_url"):
+        load_provider_config("my-chan")
+
+
+def test_load_provider_config_missing_model_errors(monkeypatch, tmp_path) -> None:
+    _write_agent_config(
+        monkeypatch,
+        tmp_path,
+        "providers:\n  my-chan:\n    base_url: https://gw.example/v1\n    api_key: sk-x\n",
+    )
+
+    with pytest.raises(LLMConfigurationError, match="model"):
+        load_provider_config("my-chan")
+
+
+def test_undefined_channel_error_lists_available(monkeypatch, tmp_path) -> None:
+    _write_agent_config(
+        monkeypatch,
+        tmp_path,
+        "providers:\n  jiji-deepseek:\n    base_url: https://gw.example/v1\n",
+    )
+
+    with pytest.raises(LLMConfigurationError, match="jiji-deepseek"):
+        load_provider_config("nope")
+
+
+def test_default_provider_resolution_from_yaml(monkeypatch, tmp_path) -> None:
+    _write_agent_config(
+        monkeypatch,
+        tmp_path,
+        "llm:\n"
+        "  default_provider: jiji-deepseek\n"
+        "providers:\n"
+        "  jiji-deepseek:\n"
+        "    base_url: https://gw.example/v1\n"
+        "    model_name: deepseek-v4-flash\n"
+        "    api_key: sk-x\n",
+    )
+    monkeypatch.delenv("DEFAULT_LLM_PROVIDER", raising=False)
+
+    cfg = load_provider_config()
+
+    assert cfg.provider == "jiji-deepseek"
+    assert cfg.model == "deepseek-v4-flash"
+
+
+def test_default_provider_unconfigured_errors_with_available_list(
+    monkeypatch, tmp_path
+) -> None:
+    _write_agent_config(
+        monkeypatch,
+        tmp_path,
+        "providers:\n  jiji-gpt:\n    base_url: https://gw.example/v1\n",
+    )
+    monkeypatch.delenv("DEFAULT_LLM_PROVIDER", raising=False)
+
+    with pytest.raises(LLMConfigurationError, match="jiji-gpt"):
+        load_provider_config()
+
+
+def test_yaml_default_provider_must_be_defined(monkeypatch, tmp_path) -> None:
+    _write_agent_config(
+        monkeypatch,
+        tmp_path,
+        "llm:\n"
+        "  default_provider: ghost\n"
+        "providers:\n"
+        "  jiji-gpt:\n"
+        "    base_url: https://gw.example/v1\n",
+    )
+
+    from backend.app.core.agent_runtime_config import load_agent_runtime_config
+
+    with pytest.raises(AgentRuntimeConfigError, match="ghost"):
+        load_agent_runtime_config()
+
+
+def test_models_list_validation_accepts_declared_model(monkeypatch, tmp_path) -> None:
+    _write_agent_config(
+        monkeypatch,
+        tmp_path,
+        "providers:\n"
+        "  jiji-gpt:\n"
+        "    base_url: https://gw.example/v1\n"
+        "    models: [gpt-5.4-mini, gpt-5.6-terra]\n"
+        "agents:\n"
+        "  judge:\n"
+        "    provider: jiji-gpt\n"
+        "    model_name: gpt-5.6-terra\n",
+    )
+
+    from backend.app.core.agent_runtime_config import load_agent_runtime_config
+
+    config = load_agent_runtime_config()
+
+    assert config.agents["judge"].model_name == "gpt-5.6-terra"
+
+
+def test_models_list_validation_rejects_typo(monkeypatch, tmp_path) -> None:
+    _write_agent_config(
+        monkeypatch,
+        tmp_path,
+        "providers:\n"
+        "  jiji-gpt:\n"
+        "    base_url: https://gw.example/v1\n"
+        "    models: [gpt-5.4-mini]\n"
+        "agents:\n"
+        "  judge:\n"
+        "    provider: jiji-gpt\n"
+        "    model_name: gpt-5.6-terra\n",
+    )
+
+    from backend.app.core.agent_runtime_config import load_agent_runtime_config
+
+    with pytest.raises(AgentRuntimeConfigError, match="gpt-5.6-terra"):
+        load_agent_runtime_config()
 
 
 # ---------------------------------------------------------------------------
@@ -556,6 +729,13 @@ def test_agent_without_fallback_keeps_default_retry_path(monkeypatch) -> None:
 def test_from_env_reads_fallback_config(monkeypatch, tmp_path) -> None:
     yaml_path = tmp_path / "agents.yaml"
     yaml_path.write_text(
+        "llm:\n"
+        "  default_provider: deepseek\n"
+        "providers:\n"
+        "  deepseek:\n"
+        "    base_url: https://gw.example/v1\n"
+        "  gpt:\n"
+        "    base_url: https://gw.example/v1\n"
         "agents:\n"
         "  expert_b:\n"
         "    provider: deepseek\n"
@@ -568,6 +748,7 @@ def test_from_env_reads_fallback_config(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("AGENT_CONFIG_PATH", str(yaml_path))
     for env_name in AGENT_PROVIDER_ENV.values():
         monkeypatch.setenv(env_name, "")
+    monkeypatch.delenv("DEFAULT_LLM_PROVIDER", raising=False)
 
     router = AgentLLMRouter.from_env()
 
@@ -580,6 +761,13 @@ def test_from_env_reads_fallback_config(monkeypatch, tmp_path) -> None:
 def test_env_provider_override_ignores_yaml_fallback(monkeypatch, tmp_path) -> None:
     yaml_path = tmp_path / "agents.yaml"
     yaml_path.write_text(
+        "llm:\n"
+        "  default_provider: deepseek\n"
+        "providers:\n"
+        "  deepseek:\n"
+        "    base_url: https://gw.example/v1\n"
+        "  gpt:\n"
+        "    base_url: https://gw.example/v1\n"
         "agents:\n"
         "  expert_b:\n"
         "    provider: deepseek\n"
@@ -589,6 +777,7 @@ def test_env_provider_override_ignores_yaml_fallback(monkeypatch, tmp_path) -> N
     monkeypatch.setenv("AGENT_CONFIG_PATH", str(yaml_path))
     for env_name in AGENT_PROVIDER_ENV.values():
         monkeypatch.setenv(env_name, "")
+    monkeypatch.delenv("DEFAULT_LLM_PROVIDER", raising=False)
     monkeypatch.setenv("EXPERT_B_PROVIDER", "gpt")
 
     router = AgentLLMRouter.from_env()

@@ -11,7 +11,6 @@ from typing import Any
 import httpx
 import pytest
 
-from backend.app.core.agent_runtime_config import ProviderRuntimeConfig
 from backend.app.core.llm import (
     AgentLLMRouter,
     AgentName,
@@ -22,6 +21,7 @@ from backend.app.core.llm import (
     ToolDefinition,
     call_llm_tools,
 )
+from backend.tests.helpers import make_provider_config, stub_llm_providers
 
 pytestmark = pytest.mark.unit
 
@@ -100,8 +100,9 @@ class TestLLMResponseWithTools:
 
 
 class TestCallLlmToolsWithMockTransport:
-    def test_sends_tools_not_response_format(self) -> None:
+    def test_sends_tools_not_response_format(self, monkeypatch) -> None:
         """Verify the request body has 'tools' not 'response_format'."""
+        stub_llm_providers(monkeypatch, {"qwen": make_provider_config()})
         captured_body: dict | None = None
 
         def handler(request: httpx.Request) -> httpx.Response:
@@ -154,8 +155,9 @@ class TestCallLlmToolsWithMockTransport:
         assert "response_format" not in captured_body
         assert captured_body["tools"][0]["type"] == "function"
 
-    def test_parses_tool_calls_from_response(self) -> None:
+    def test_parses_tool_calls_from_response(self, monkeypatch) -> None:
         """Verify tool_calls are correctly parsed from the response."""
+        stub_llm_providers(monkeypatch, {"qwen": make_provider_config()})
 
         def handler(request: httpx.Request) -> httpx.Response:
             return httpx.Response(
@@ -208,12 +210,9 @@ class TestCallLlmToolsWithMockTransport:
         assert result.tool_calls[0].arguments == {"query": "新颖性", "top_k": 3}
 
     def test_omits_temperature_for_gpt56_provider(self, monkeypatch) -> None:
-        monkeypatch.setattr(
-            "backend.app.core.llm.provider_runtime_config",
-            lambda _provider: ProviderRuntimeConfig(),
+        stub_llm_providers(
+            monkeypatch, {"luna": make_provider_config(model_name="gpt-5.6-luna")}
         )
-        monkeypatch.setenv("LUNA_API_KEY", "luna-key")
-        monkeypatch.setenv("LUNA_BASE_URL", "https://gateway.example/v1")
         captured_body: dict[str, Any] = {}
 
         def handler(request: httpx.Request) -> httpx.Response:
@@ -236,8 +235,9 @@ class TestCallLlmToolsWithMockTransport:
         assert captured_body["model"] == "gpt-5.6-luna"
         assert "temperature" not in captured_body
 
-    def test_no_tool_calls_in_response(self) -> None:
+    def test_no_tool_calls_in_response(self, monkeypatch) -> None:
         """Response without tool_calls — returns empty list."""
+        stub_llm_providers(monkeypatch, {"qwen": make_provider_config()})
 
         def handler(request: httpx.Request) -> httpx.Response:
             return httpx.Response(

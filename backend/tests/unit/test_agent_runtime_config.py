@@ -162,6 +162,11 @@ def test_yaml_config_controls_router_provider_and_model(
     config_path.write_text(
         "llm:\n"
         "  default_provider: qwen\n"
+        "providers:\n"
+        "  qwen:\n"
+        "    base_url: https://gw.example/v1\n"
+        "  glm:\n"
+        "    base_url: https://gw.example/v1\n"
         "agents:\n"
         "  diagnosis_feedback:\n"
         "    provider: qwen\n"
@@ -196,6 +201,9 @@ def test_yaml_config_keeps_temperature_for_gpt56_provider(
     config_path.write_text(
         "llm:\n"
         "  default_provider: luna\n"
+        "providers:\n"
+        "  luna:\n"
+        "    base_url: https://gw.example/v1\n"
         "agents:\n"
         "  expert_a:\n"
         f"    {temperature_field}: 0.2\n",
@@ -236,6 +244,9 @@ def test_yaml_config_allows_non_model_parameters_for_gpt56_provider(
 ) -> None:
     config_path = tmp_path / "agents.yaml"
     config_path.write_text(
+        "providers:\n"
+        "  luna:\n"
+        "    base_url: https://gw.example/v1\n"
         "agents:\n"
         "  expert_b:\n"
         "    provider: luna\n"
@@ -257,6 +268,11 @@ def test_provider_environment_override_takes_precedence_over_yaml(
     config_path.write_text(
         "llm:\n"
         "  default_provider: gpt\n"
+        "providers:\n"
+        "  gpt:\n"
+        "    base_url: https://gw.example/v1\n"
+        "  qwen:\n"
+        "    base_url: https://gw.example/v1\n"
         "agents:\n"
         "  expert_a:\n"
         "    provider: gpt\n"

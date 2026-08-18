@@ -15,7 +15,7 @@ from backend.app.api.models import (
     SessionsListResponse,
     SessionSnapshotResponse,
 )
-from backend.app.core.llm import AgentName, LLMProvider
+from backend.app.core.llm import AgentName
 from backend.app.services.session_service import SessionService
 from backend.app.services.session_types import SessionStatus
 
@@ -40,7 +40,7 @@ class CreateSessionRequest(BaseModel):
         default=None,
         description="学员唯一标识；mode=teach 时必填。",
     )
-    provider_overrides: dict[AgentName, LLMProvider] | None = Field(
+    provider_overrides: dict[AgentName, str] | None = Field(
         default=None,
         description="可选的 Agent 模型供应商覆盖；通常保持为空并使用服务端配置。",
     )

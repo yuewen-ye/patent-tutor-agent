@@ -167,27 +167,36 @@ def build_<name>_node(llm_client: LLMClient) -> Node:
 
 ## LLM Configuration
 
-`config/agents.yaml` is the primary non-secret runtime configuration:
+`config/agents.yaml` is the primary non-secret runtime configuration. Providers are
+**user-defined channels** in the `providers:` section — the channel name is arbitrary
+(e.g. `jiji-gpt`), not a code-level enum. Each channel carries:
 
-- `llm.default_provider`, timeout and retries
-- provider base URLs and default model names
+- `base_url` (required; there is no built-in fallback endpoint)
+- `api_key` (optional inline) / `api_key_env` (optional; default convention is
+  `{CHANNEL uppercased, non-alphanumeric → _}_API_KEY`, e.g. `my-chan` → `MY_CHAN_API_KEY`)
+- `model_name` (channel default model), `supports_strict_schema` (optional; runtime-probed
+  otherwise), and an optional `models` list that, when present, validates the spelling of
+  model names referenced by `agents.*`
+
+Other keys:
+
+- `llm.default_provider` (must reference a defined channel), timeout and retries
 - per-Agent provider/model/temperature/tool temperature/top_k
 - optional per-Agent model failover: `agents.<agent>.fallback_model_name` (plus optional
-  `fallback_provider`/`fallback_base_url`). Model-side failures (429/5xx/524, transport errors,
-  empty or unparsable content) fail over to the fallback model for one attempt, then the next
-  round starts from the primary model again, bounded by `retry_times`. Our-side errors
-  (400/401/403) never trigger failover. When `{AGENT}_PROVIDER` env override is set, the yaml
-  `model_name`/`fallback_*` for that Agent are ignored.
+  `fallback_provider`/`fallback_base_url`, may cross channels). Model-side failures
+  (429/5xx/524, transport errors, empty or unparsable content) fail over to the fallback
+  model for one attempt, then the next round starts from the primary model again, bounded
+  by `retry_times`. Our-side errors (400/401/403) never trigger failover. When
+  `{AGENT}_PROVIDER` env override is set, the yaml `model_name`/`fallback_*` for that Agent
+  are ignored.
 
-API keys and machine-local paths belong in `.env`. The `LLMProvider` literal supports `qwen`,
-`glm`, `gpt`, `luna`, `grok`, and `yangmao`; the recommended per-Agent mapping
-(route=qwen, chat_answer=qwen, diagnosis_feedback=qwen, planner=gpt, expert_b=luna,
-expert_a=grok, judge=gpt) is documented in `config/agents.example.yaml`. The five Krill providers
-share the same endpoint (`https://api-slb.krill-ai.net/codex/v1`) and a single key set through the
-five `*_API_KEY` variables in `.env`; `yangmao` is the retained DeepSeek Flash channel
-(`yangmao-main`, separate `YANGMAO_API_KEY`/base_url) for DeepSeek requests. `AgentLLMRouter`
-supports explicit `{AGENT}_PROVIDER` environment overrides for incident recovery. Planner uses the
-default provider unless a dedicated runtime setting is added.
+API keys and machine-local paths belong in `.env`. `llm.default_provider`,
+`agents.*.provider` and `agents.*.fallback_provider` must all reference channels defined in
+`providers:`; the config fails to load otherwise, and the error lists the available
+channels. A full annotated example lives in `config/agents.example.yaml`. `AgentLLMRouter`
+supports explicit `{AGENT}_PROVIDER` environment overrides (must also reference defined
+channels) for incident recovery. Planner uses the default provider unless a dedicated
+runtime setting is added.
 
 ## State And Contracts
 

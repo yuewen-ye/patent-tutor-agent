@@ -125,7 +125,7 @@ Q1–Q21 按标准答案判分后写入 `student_node_mastery` 与 `mastery_even
 | `user_input` | string | 是 | 用户问题或学习目标，不能为空 |
 | `learner_id` | string | 否 | 学员标识；`mode=teach` 时必填 |
 | `mode` | string | 否 | `auto`、`teach`、`chat`、`diagnose`；默认 `auto` |
-| `provider_overrides` | object | 否 | 按 Agent 覆盖模型供应商；供应商为 `qwen`、`glm`、`gpt`、`luna`、`grok` 或 `yangmao` |
+| `provider_overrides` | object | 否 | 按 Agent 覆盖模型通道；取值为 `config/agents.yaml` `providers:` 段里已定义的通道名 |
 
 示例：
 

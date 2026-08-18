@@ -205,16 +205,17 @@ JSONL 日志（started/completed/error）、Markdown artifact 落盘与 `manifes
 
 ### 5.1 Provider 体系（`core/llm.py`）
 
-`LLMProvider` 现为 5 个主力模型直连 + 1 个 DeepSeek 通道：`qwen`、`glm`、`gpt`、`luna`、`grok`
-统一走 Krill 单端点（`https://api-slb.krill-ai.net/codex/v1`，单 key，见 `.env` 的
-`QWEN_API_KEY` / `GLM_API_KEY` / `GPT_API_KEY` / `LUNA_API_KEY` / `GROK_API_KEY`，
-5 个变量均为同一 Krill key）；`yangmao` 为保留的 DeepSeek Flash 通道
-（`yangmao-main`，独立 `YANGMAO_API_KEY` 与 base_url）。
+`LLMProvider` 是 `str` 别名：provider 名 = `config/agents.yaml` 的 `providers:` 段里用户
+自由定义的通道名，代码不再内置通道表。每个通道自带 `base_url`（必填）、`api_key` /
+`api_key_env`（可选；缺省按约定 `{通道名大写、非字母数字转 _}_API_KEY` 从 `.env` 取 key，
+如 `jiji-gpt` → `JIJI_GPT_API_KEY`）、可选 `supports_strict_schema` 与 `models` 清单
+（配了则加载时校验 `agents.*` 引用的模型名拼写）。`llm.default_provider`、
+`agents.*.provider`、`agents.*.fallback_provider` 都必须引用已定义通道，否则配置加载即报错。
 
 `AgentLLMRouter` 按 Agent 路由 provider（`config/agents.yaml` 的 `agents.<agent>.provider`，
-可用 `{AGENT}_PROVIDER` 环境变量应急覆盖）；Planner 使用默认 provider。推荐映射：
-route=qwen、chat_answer=qwen、diagnosis_feedback=qwen、planner=gpt、expert_b=luna、
-expert_a=grok、judge=gpt。
+可用 `{AGENT}_PROVIDER` 环境变量应急覆盖，同样必须指向已定义通道）；Planner 使用默认
+provider。当前本机配置见 `config/agents.yaml`（gitignored），示例见
+`config/agents.example.yaml`。
 
 ### 5.2 调用层与容错
 

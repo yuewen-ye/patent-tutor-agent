@@ -4,118 +4,102 @@
 # config/agents.yaml is intentionally ignored by Git. Keep API keys in .env,
 # and tune local provider endpoints, models, and per-agent settings there.
 #
-# ============================ 模型更新日志 ===============================
-# 2026.08 主力 provider 统一走 GreatRouter 端点（https://endpoint.greatrouter.com）+ 单 key：
-#   - provider 全集与代码 LLMProvider 对齐：qwen / glm / gpt / luna / grok / yangmao / mistral / minimax / deepseek
-#   - qwen/glm/gpt/luna/grok/mistral/minimax/deepseek 全部 base_url=https://endpoint.greatrouter.com，
-#     key 见 .env 的 *_API_KEY（均为同一 GreatRouter key）
-#   - 可用模型：gpt-5.5 / gpt-5.6-luna / grok-4.3 / qwen3.7-plus / GLM-5.2 / mistral-small-2503 / MiniMax-M2.5 / DeepSeek-V4-Flash
-#   - yangmao 保留原 DeepSeek Flash 通道（yangmao-main，独立 base_url/key），
-#     需要请求 DeepSeek 时通过 {AGENT}_PROVIDER=yangmao 或 agents.<agent>.provider 使用
-#   - 建议避免在输出内容较多的节点使用弱推理模型，防止网关超时
+# ============================ provider = 自定义通道 ==========================
+# provider 名不再是代码内置的枚举，而是你在下面 providers: 段自由定义的通道名
+# （例如 jiji-gpt / my-deepseek）。每个通道是一个 OpenAI 兼容端点，字段：
+#   base_url:    必填（代码不再内置任何兜底端点）
+#   api_key:     可选直写（本文件已 gitignore）；优先级最高
+#   api_key_env: 可选，指定 .env 里的变量名；缺省按约定找
+#                {通道名大写、非字母数字转 _}_API_KEY（如 my-chan → MY_CHAN_API_KEY）
+#   model_name:  通道默认模型（节点未配 model_name 时使用）
+#   supports_strict_schema: 可选；不配则运行时探测（首调 400 自动降级）
+#   models:      可选模型清单；配了则加载时校验 agents.* 引用的模型名拼写，
+#                不配则任意模型名放行（中转站加模型即可用）
+#
+# llm.default_provider、agents.*.provider、agents.*.fallback_provider 都必须
+# 引用 providers 段里已定义的通道名，否则加载即报错（错误信息列出可用通道）。
+# {AGENT}_PROVIDER 环境变量可临时覆盖单个 Agent 的通道（事故恢复用），
+# 同样必须指向已定义通道；设置后该 Agent 的 yaml model/fallback 被忽略。
 
 llm:
-  default_provider: grok
+  default_provider: jiji-deepseek
   timeout_seconds: 90
   retry_times: 3
 
 providers:
-  qwen:
-    model_name: Qwen3.7-Plus
-    base_url: https://endpoint.greatrouter.com
+  jiji-gpt:
+    base_url: https://api.jiji.cc/v1
+    api_key_env: GPT_API_KEY          # key 放 .env；也可改成 api_key: sk-...
+    model_name: gpt-5.4-mini
     supports_strict_schema: true
-  glm:
-    model_name: GLM-5.2
-    base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: true
-  gpt:
-    model_name: gpt-4o
-    base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: true
-  luna:
-    model_name: gpt-5.6-luna
-    base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: true
-  grok:
-    model_name: grok-4.3
-    base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: true
-  terra:
-    model_name: gpt-5.6-terra
-    base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: true
-  yangmao:
-    model_name: yangmao-main
-    base_url: https://ai.gz404.com:54002/v1
-    supports_strict_schema: true
-  mistral:
-    model_name: mistral-small-2503
-    base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: true
-  minimax:
-    model_name: MiniMax-M2.5
-    base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: true
-  deepseek:
-    model_name: DeepSeek-V4-Flash
-    base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: true
+    models:                            # 可选：配了就校验节点引用的模型名
+      - gpt-5.4-mini
+      - gpt-5.6-terra
+  jiji-deepseek:
+    base_url: https://api.jiji.cc/v1
+    api_key_env: DEEPSEEK_API_KEY
+    model_name: deepseek-v4-flash
+    supports_strict_schema: false
+  jiji-grok:
+    base_url: https://api.jiji.cc/v1
+    api_key_env: GROK_API_KEY
+    model_name: grok-4.5
+    supports_strict_schema: false
 
-# 推荐 Agent → provider 映射（按 GreatRouter 节点分配表）：
+# 推荐 Agent → 通道映射示例：
 #
 # 可选 fallback（模型侧故障转移）：agents.<agent> 下加 fallback_model_name 即启用。
 # 主模型遇到模型侧错误（429/5xx/524、传输错误、空/坏响应）时，自动切到 fallback
 # 模型试一次；fallback 也失败则回到主模型进入下一轮，轮数由 llm.retry_times 控制。
 # 400（schema 被拒）/401/403（key 问题）属于我方问题，不触发 fallback。
-#   fallback_provider: gpt            # 可选，缺省 = 该 Agent 的主 provider（复用其 key/base_url）
-#   fallback_model_name: gpt-5.5      # 必填（不配则不启用 fallback）
-#   fallback_base_url: https://...    # 可选，覆盖 fallback provider 解析出的 base_url
+#   fallback_provider: jiji-gpt       # 可选，可跨通道；缺省 = 该 Agent 的主通道
+#   fallback_model_name: gpt-5.4-mini # 必填（不配则不启用 fallback）
+#   fallback_base_url: https://...    # 可选，覆盖 fallback 通道解析出的 base_url
 agents:
   route:
-    provider: mistral
+    provider: jiji-gpt
     temperature: 0.0
-    fallback_provider: qwen
-    fallback_model_name: Qwen3.7-Plus
+    fallback_provider: jiji-deepseek
+    fallback_model_name: deepseek-v4-flash
   diagnosis_feedback:
-    provider: deepseek
+    provider: jiji-deepseek
     temperature: 0.5
-    fallback_provider: qwen
-    fallback_model_name: Qwen3.7-Plus
+    fallback_provider: jiji-gpt
+    fallback_model_name: gpt-5.4-mini
   expert_a:
-    provider: grok
+    provider: jiji-grok
     temperature: 0.4
     tool_temperature: 0.2
     integration_temperature: 0.3
     top_k: 5
-    fallback_provider: deepseek
-    fallback_model_name: DeepSeek-V4-Pro
+    fallback_provider: jiji-deepseek
+    fallback_model_name: deepseek-v4-pro
   expert_b:
-    provider: deepseek
-    model_name: DeepSeek-V4-Pro
-    fallback_provider: gpt
-    fallback_model_name: gpt-5.5
+    provider: jiji-gpt
     temperature: 0.7
     tool_temperature: 0.3
     top_k: 5
+    fallback_provider: jiji-deepseek
+    fallback_model_name: deepseek-v4-pro
   judge:
-    provider: gpt
-    model_name: gpt-5.6-luna
+    provider: jiji-gpt
+    model_name: gpt-5.6-terra
     temperature: 0.0
-    fallback_provider: deepseek
-    fallback_model_name: DeepSeek-V4-Pro
+    fallback_provider: jiji-deepseek
+    fallback_model_name: deepseek-v4-pro
   chat_answer:
-    provider: minimax
+    provider: jiji-gpt
     temperature: 0.3
     top_k: 5
-    fallback_provider: qwen
-    fallback_model_name: Qwen3.7-Plus
+    fallback_provider: jiji-deepseek
+    fallback_model_name: deepseek-v4-flash
   planner:
-    provider: deepseek
+    provider: jiji-deepseek
     temperature: 0.0
-    fallback_provider: gpt
-    fallback_model_name: gpt-5.5
+    fallback_provider: jiji-gpt
+    fallback_model_name: gpt-5.4-mini
   slide_deck:
-    provider: grok
+    provider: jiji-grok
     temperature: 0.3
-    fallback_provider: deepseek
-    fallback_model_name: DeepSeek-V4-Flash
+    fallback_provider: jiji-deepseek
+    fallback_model_name: deepseek-v4-flash

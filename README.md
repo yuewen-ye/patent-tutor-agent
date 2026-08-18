@@ -70,12 +70,11 @@ Copy-Item .env.example .env
 # LangSmith — LangGraph Studio 连接需要（在 https://smith.langchain.com 获取）
 LANGSMITH_API_KEY=lsv2_pt_...
 
-# LLM Provider — 至少填一个 API Key（全部走 Krill 单端点，5 个变量用同一 key）
-QWEN_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
-GLM_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
-GPT_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
-LUNA_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
-GROK_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
+# LLM Provider — 按 config/agents.yaml 里通道的 api_key_env / 约定名填对应变量
+# （约定：{通道名大写、非字母数字转 _}_API_KEY）。本仓库 agents.example.yaml 示例用：
+GPT_API_KEY=sk-replace-me
+DEEPSEEK_API_KEY=sk-replace-me
+GROK_API_KEY=sk-replace-me
 
 # 非密钥模型参数从 YAML 读取
 AGENT_CONFIG_PATH=config/agents.yaml
@@ -85,35 +84,37 @@ PATENT_TUTOR_MYSQL_POOL_SIZE=5
 PATENT_TUTOR_MYSQL_AUTO_MIGRATE=true
 ```
 
-支持 `qwen`、`glm`、`gpt`、`luna`、`grok` 五个主力 provider，统一走
-`https://api-slb.krill-ai.net/codex/v1`（可用模型：gpt-5.5 / gpt-5.6-luna / grok-4.5 /
-qwen3.7-plus / GLM-5.2）；另有保留的 `yangmao`（DeepSeek Flash）独立通道，需要请求 DeepSeek 时
-通过 `{AGENT}_PROVIDER=yangmao` 或 `agents.<agent>.provider: yangmao` 使用。每个 Agent 的
-provider、model、temperature、top_k 等非密钥参数在 `config/agents.yaml` 里调整。首次本地运行前执行 `Copy-Item config/agents.example.yaml config/agents.yaml`；后者是本机配置，刻意不纳入 Git。
+provider 是 `config/agents.yaml` 的 `providers:` 段里自由定义的通道名（不再是代码内置枚举），
+每个通道自带 `base_url`（必填）、`api_key`/`api_key_env`（可选，缺省按约定
+`{通道名大写}_API_KEY` 从 `.env` 取 key）和可选 `models` 清单（配了就校验节点引用的模型名拼写）。
+每个 Agent 的 provider、model、temperature、top_k 等非密钥参数在 `config/agents.yaml` 里调整。
+首次本地运行前执行 `Copy-Item config/agents.example.yaml config/agents.yaml`；后者是本机配置，刻意不纳入 Git。
 
-配置分两层：`providers.<name>.model_name` 是该供应商的默认模型；`agents.<agent>.model_name` 只是单个 Agent 的覆盖项，通常不用重复写：
+配置分两层：`providers.<name>.model_name` 是该通道的默认模型；`agents.<agent>.model_name` 只是单个 Agent 的覆盖项，通常不用重复写：
 
 ```yaml
 providers:
-  qwen:
-    model_name: qwen3.7-plus
-    base_url: https://api-slb.krill-ai.net/codex/v1
-  gpt:
-    model_name: gpt-5.5
-    base_url: https://api-slb.krill-ai.net/codex/v1
+  jiji-gpt:
+    base_url: https://api.jiji.cc/v1
+    api_key_env: GPT_API_KEY
+    model_name: gpt-5.4-mini
+  jiji-deepseek:
+    base_url: https://api.jiji.cc/v1
+    api_key_env: DEEPSEEK_API_KEY
+    model_name: deepseek-v4-flash
 
 agents:
   planner:
-    provider: gpt
+    provider: jiji-deepseek
     temperature: 0.5
   expert_b:
-    provider: luna
+    provider: jiji-gpt
     temperature: 0.7
     tool_temperature: 0.3
     top_k: 5
   judge:
-    provider: gpt
-    model_name: gpt-5.5  # 只有需要覆盖 provider 默认模型时才写
+    provider: jiji-gpt
+    model_name: gpt-5.6-terra  # 只有需要覆盖通道默认模型时才写
     temperature: 0.0
 ```
 
@@ -373,45 +374,48 @@ bash scripts/langgraph-stop.sh 8124
 
 复制 `.env.example` 为 `.env`，填入真实 key。**不要提交 `.env` 或任何密钥。**
 
-`.env` 只放密钥和本机路径；模型、provider、temperature、top_k 等非密钥参数放在 `config/agents.yaml`。当前支持 provider：`qwen`、`glm`、`gpt`、`luna`、`grok`（统一走 Krill 单端点）与 `yangmao`（DeepSeek Flash）。
+`.env` 只放密钥和本机路径；模型、provider、temperature、top_k 等非密钥参数放在 `config/agents.yaml`。provider 是 yaml `providers:` 段自定义的通道名；key 按通道的 `api_key_env` 或约定 `{通道名大写}_API_KEY` 从 `.env` 读取。
 
 ```env
-QWEN_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
-GLM_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
-GPT_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
-LUNA_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
-GROK_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
-YANGMAO_API_KEY=sk-2026-yangmao-001-wobuzhidao
+GPT_API_KEY=sk-replace-me
+DEEPSEEK_API_KEY=sk-replace-me
+GROK_API_KEY=sk-replace-me
 AGENT_CONFIG_PATH=config/agents.yaml
 ```
 
 ```yaml
 llm:
-  default_provider: qwen
+  default_provider: jiji-deepseek
   timeout_seconds: 90
   retry_times: 3
 
 providers:
-  qwen:
-    model_name: qwen3.7-plus
-    base_url: https://api-slb.krill-ai.net/codex/v1
-  glm:
-    model_name: GLM-5.2
-    base_url: https://api-slb.krill-ai.net/codex/v1
+  jiji-deepseek:
+    base_url: https://api.jiji.cc/v1
+    api_key_env: DEEPSEEK_API_KEY
+    model_name: deepseek-v4-flash
+  jiji-gpt:
+    base_url: https://api.jiji.cc/v1
+    api_key_env: GPT_API_KEY
+    model_name: gpt-5.4-mini
+  jiji-grok:
+    base_url: https://api.jiji.cc/v1
+    api_key_env: GROK_API_KEY
+    model_name: grok-4.5
 
 agents:
   judge:
-    provider: gpt
+    provider: jiji-gpt
     temperature: 0.0
   expert_a:
-    provider: grok
+    provider: jiji-grok
     temperature: 0.4
     tool_temperature: 0.2
     integration_temperature: 0.3
     top_k: 5
   expert_b:
-    provider: luna
-    model_name: gpt-5.6-luna  # 可选：只在单个 agent 需要不同模型时覆盖
+    provider: jiji-gpt
+    model_name: gpt-5.6-terra  # 可选：只在单个 agent 需要不同模型时覆盖
     temperature: 0.7
 ```
 
@@ -420,11 +424,9 @@ agents:
 ```text
 agents.<agent>.model_name
 > providers.<provider>.model_name
-> 旧环境变量 *_MODEL
-> 代码内 provider 默认模型
 ```
 
-因此日常配置建议把模型名写在 `providers` 里，`agents` 里只写 `provider`、温度、`top_k` 等差异项；只有某个 Agent 要换成特殊模型时，才在该 Agent 下写 `model_name`。旧的 `DEFAULT_LLM_PROVIDER`、`*_PROVIDER`、`*_MODEL`、`*_BASE_URL` 环境变量仍作为兼容回退，但新配置优先使用 YAML。
+因此日常配置建议把模型名写在 `providers` 里，`agents` 里只写 `provider`、温度、`top_k` 等差异项；只有某个 Agent 要换成特殊模型时，才在该 Agent 下写 `model_name`。`DEFAULT_LLM_PROVIDER` 与 `{AGENT}_PROVIDER` 环境变量仍可用（事故恢复），但取值必须指向 yaml 里已定义的通道；设置 `{AGENT}_PROVIDER` 后该 Agent 的 yaml `model_name`/`fallback_*` 被忽略。
 
 当前只有这些 YAML 字段会被运行时代码读取。Prompt、系统消息、辩论轮数、RAG 模式、日志目录、learner memory 路径仍分别由 prompt 文件、CLI/API 参数或 `.env` 控制。
 
@@ -488,12 +490,10 @@ cp config/agents.example.yaml config/agents.yaml
 编辑 `.env`，至少确认以下项：
 
 ```env
-# LLM key（全部走 Krill 单端点，5 个变量用同一 key；另有 YANGMAO_API_KEY）
-QWEN_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
-GLM_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
-GPT_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
-LUNA_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
-GROK_API_KEY=nb_KlC8DLNDXHiRxQBIbPoJRJwNIqRfGJsXmD1PerJlvN8
+# LLM key（按 config/agents.yaml 通道的 api_key_env / 约定 {通道名大写}_API_KEY 填）
+GPT_API_KEY=sk-replace-me
+DEEPSEEK_API_KEY=sk-replace-me
+GROK_API_KEY=sk-replace-me
 ```
 
 - 数据库连接串不需要改：compose 会覆盖 `PATENT_TUTOR_MYSQL_URL` 指向容器内的 `mysql` 服务。
