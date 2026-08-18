@@ -782,7 +782,7 @@ def _course_package_markdown(title: str, value: dict[str, Any]) -> str:
 
     block_plan = value.get("block_plan")
     blocks = block_plan.get("blocks") if isinstance(block_plan, dict) else None
-    if isinstance(blocks, list) and blocks:
+    if isinstance(blocks, list) and blocks and isinstance(block_plan, dict):
         node = block_plan.get("node") or value.get("node") or "—"
         budget = block_plan.get("budget") or {}
         lines.extend([
@@ -936,7 +936,7 @@ def _expert_draft_markdown(title: str, value: dict[str, Any]) -> str:
     blocks = block_plan.get("blocks") if isinstance(block_plan, dict) else None
     teaching = value.get("teaching_content")
 
-    if isinstance(blocks, list) and blocks:
+    if isinstance(blocks, list) and blocks and isinstance(block_plan, dict):
         # 教学模块选择清单（展示该专家主张的块）
         node = block_plan.get("node") or value.get("node") or "—"
         budget = block_plan.get("budget") or {}
