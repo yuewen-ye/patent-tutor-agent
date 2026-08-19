@@ -1,25 +1,22 @@
-# Copy this file to config/agents.yaml before the first local run:
-#   Copy-Item config/agents.example.yaml config/agents.yaml
-#
-# config/agents.yaml is intentionally ignored by Git. Keep API keys in .env,
-# and tune local provider endpoints, models, and per-agent settings there.
-#
-# ============================ provider = 自定义通道 ==========================
-# provider 名不再是代码内置的枚举，而是你在下面 providers: 段自由定义的通道名
-# （例如 jiji-gpt / my-deepseek）。每个通道是一个 OpenAI 兼容端点，字段：
-#   base_url:    必填（代码不再内置任何兜底端点）
-#   api_key:     可选直写（本文件已 gitignore）；优先级最高
-#   api_key_env: 可选，指定 .env 里的变量名；缺省按约定找
-#                {通道名大写、非字母数字转 _}_API_KEY（如 my-chan → MY_CHAN_API_KEY）
-#   model_name:  通道默认模型（节点未配 model_name 时使用）
-#   supports_strict_schema: 可选；不配则运行时探测（首调 400 自动降级）
-#   models:      可选模型清单；配了则加载时校验 agents.* 引用的模型名拼写，
-#                不配则任意模型名放行（中转站加模型即可用）
-#
-# llm.default_provider、agents.*.provider、agents.*.fallback_provider 都必须
-# 引用 providers 段里已定义的通道名，否则加载即报错（错误信息列出可用通道）。
-# {AGENT}_PROVIDER 环境变量可临时覆盖单个 Agent 的通道（事故恢复用），
-# 同样必须指向已定义通道；设置后该 Agent 的 yaml model/fallback 被忽略。
+# config/agents.yaml — 全节点经 jiji.cc 聚合网关（2026-08-18 迁移为自定义通道）
+# ============================================================================
+# 网关：jiji.cc https://api.jiji.cc/v1
+# 三个自定义通道（provider 名完全自定义，通道自带 base_url / api_key_env）：
+#   jiji-gpt      api_key_env: GPT_API_KEY      → gpt-5.6-terra / gpt-5.6-luna / gpt-5.4-mini
+#   jiji-deepseek api_key_env: DEEPSEEK_API_KEY → deepseek-v4-flash / deepseek-v4-pro
+#   jiji-grok     api_key_env: GROK_API_KEY     → grok-4.5 / grok-4.6
+# 节点 → 通道 → 模型（用户指定映射）：
+#   route          → jiji-gpt      gpt-5.4-mini
+#   chat_answer    → jiji-gpt      gpt-5.4-mini
+#   planner        → jiji-deepseek deepseek-v4-flash
+#   diagnosis      → jiji-deepseek deepseek-v4-flash
+#   expert_a       → jiji-grok     grok-4.5
+#   expert_b       → jiji-gpt      gpt-5.4-mini（fallback deepseek-v4-pro）
+#   judge          → jiji-gpt      gpt-5.6-terra（per-agent 覆盖；luna 在 jiji.cc 曾 503）
+# 三系列异构：expert_a=grok(xAI) / expert_b=gpt / judge=gpt(OpenAI)
+# jiji-gpt 保持 supports_strict_schema=true：jiji.cc 拒绝 strict 时返回 400（在项目兜底集合
+#   {400,404,415,422} 内），系统首调撞 400 自动降级 json_object + schema 注入；其余通道为 false。
+# ============================================================================
 
 llm:
   default_provider: jiji-deepseek
@@ -29,7 +26,7 @@ llm:
 providers:
   jiji-gpt:
     base_url: https://api-slb.jiji.cc/v1
-    api_key_env: JIJI_GPT_API_KEY          # key 放 .env；也可改成 api_key: sk-...
+    api_key_env: JIJI_GPT_API_KEY
     model_name: gpt-5.4-mini
     supports_strict_schema: true
   jiji-deepseek:
@@ -41,17 +38,18 @@ providers:
     base_url: https://api-slb.jiji.cc/v1
     api_key_env: JIJI_GROK_API_KEY
     model_name: grok-4.5
-    supports_strict_schema: false
+    supports_strict_schema: true
+  ooio-gpt1:
+    base_url: https://ooioo.work/v1
+    api_key_env: OOIO_GPT1_API_KEY
+    model_name: gpt-5.4
+    supports_strict_schema: true
+  ooio-gpt2:
+    base_url: https://ooioo.work/v1
+    api_key_env: OOIO_GPT2_API_KEY
+    model_name: gpt-5.6-terra
+    supports_strict_schema: true
 
-# 推荐 Agent → 通道映射示例：
-#
-# 可选 fallback（故障转移）：agents.<agent> 下加 fallback_model_name 即启用。
-# 主模型任何请求失败（模型侧的 429/5xx/524、传输错误、空/坏响应，以及我方的
-# 400 schema 被拒、401/403 key 问题）都会自动切到 fallback 模型试一次；
-# fallback 也失败则回到主模型进入下一轮，轮数由 llm.retry_times 控制。
-#   fallback_provider: jiji-gpt       # 可选，可跨通道；缺省 = 该 Agent 的主通道
-#   fallback_model_name: gpt-5.4-mini # 必填（不配则不启用 fallback）
-#   fallback_base_url: https://...    # 可选，覆盖 fallback 通道解析出的 base_url
 agents:
   route:
     provider: jiji-gpt
@@ -59,12 +57,12 @@ agents:
     fallback_provider: jiji-deepseek
     fallback_model_name: deepseek-v4-flash
   diagnosis_feedback:
-    provider: jiji-deepseek
+    provider: ooio-gpt1
     temperature: 0.5
     fallback_provider: jiji-gpt
     fallback_model_name: gpt-5.4-mini
   expert_a:
-    provider: jiji-grok
+    provider: ooio-gpt2
     temperature: 0.4
     tool_temperature: 0.2
     integration_temperature: 0.3
@@ -72,32 +70,26 @@ agents:
     fallback_provider: jiji-deepseek
     fallback_model_name: deepseek-v4-pro
   expert_b:
-    provider: jiji-gpt
+    provider: ooio-gpt1
     temperature: 0.7
     tool_temperature: 0.3
     top_k: 5
     fallback_provider: jiji-deepseek
     fallback_model_name: deepseek-v4-pro
   judge:
-    provider: jiji-gpt
-    model_name: gpt-5.6-terra
+    provider: ooio-gpt2
     temperature: 0.0
-    max_revisions: 3                     # judge 打回上限；达到后带着当前课程继续收尾
+    max_revisions: 0   
     fallback_provider: jiji-deepseek
     fallback_model_name: deepseek-v4-pro
-  chat_answer:
-    provider: jiji-gpt
+  chat_answer: 
+    provider: ooio-gpt1
     temperature: 0.3
     top_k: 5
     fallback_provider: jiji-deepseek
     fallback_model_name: deepseek-v4-flash
   planner:
-    provider: jiji-deepseek
+    provider: ooio-gpt2
     temperature: 0.0
     fallback_provider: jiji-gpt
     fallback_model_name: gpt-5.4-mini
-  slide_deck:
-    provider: jiji-grok
-    temperature: 0.3
-    fallback_provider: jiji-deepseek
-    fallback_model_name: deepseek-v4-flash
