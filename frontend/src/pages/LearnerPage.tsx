@@ -10,6 +10,7 @@ import { LearningStyleRadar } from "@/components/profile/LearningStyleRadar";
 import { MasterySunburst } from "@/components/profile/MasterySunburst";
 import { ProfileTimeline } from "@/components/profile/ProfileTimeline";
 import { AchievementBadges } from "@/components/profile/AchievementBadges";
+import { BlindSpotGraph } from "@/components/profile/BlindSpotGraph";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -401,10 +402,16 @@ export function LearnerPage() {
                 </div>
                 <div>
                   <h2 className="text-lg md:text-xl font-bold text-[#5C3A26]">能力分析</h2>
-                  <p className="text-xs text-muted-foreground">知识掌握度与能力维度分布</p>
+                  <p className="text-xs text-muted-foreground">知识掌握度、盲区定位与能力维度分布</p>
                 </div>
               </div>
-              <MasterySunburst mastery={learner.mastery} />
+              <div className="grid grid-cols-1 gap-5">
+                <MasterySunburst mastery={learner.mastery} />
+                <BlindSpotGraph
+                  masterySnapshot={learner.mastery as Record<string, unknown> | undefined}
+                  weakPoints={latestProfile?.weak_points ?? null}
+                />
+              </div>
             </section>
 
             {/* ── 成就与风格：次要信息，并排展示 ── */}

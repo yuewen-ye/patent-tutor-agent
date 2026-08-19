@@ -11,6 +11,7 @@ import { DiagnosticResultCard } from "@/components/workflow/DiagnosticResultCard
 import { ChatQACard } from "@/components/workflow/ChatQACard";
 import { FeedbackResultCard } from "@/components/workflow/FeedbackResultCard";
 import { LearnerProfileCard } from "@/components/profile/LearnerProfileCard";
+import { BlindSpotGraph } from "@/components/profile/BlindSpotGraph";
 import { LearningPathSection } from "@/components/learning-path/LearningPathSection";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -202,6 +203,19 @@ export function SessionPage() {
 
               {state?.learner_profile && (
                 <LearnerProfileCard profile={state.learner_profile} />
+              )}
+
+              {state?.workflow_mode === "teach" && state?.diagnostic && (
+                <BlindSpotGraph
+                  masterySnapshot={
+                    (state.diagnostic as unknown as Record<string, unknown> | undefined)
+                      ?.knowledge_snapshot as Record<string, unknown> | undefined
+                  }
+                  weakPoints={state?.learner_profile?.weak_points ?? null}
+                  confusionAxis={state?.dual_axis_snapshot?.confusion_axis as unknown as
+                    | import("@/types").ConfusionAxisItem[]
+                    | undefined}
+                />
               )}
 
               {(state?.expert_a_draft || state?.expert_b_draft) && (
