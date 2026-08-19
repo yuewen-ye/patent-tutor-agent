@@ -15,6 +15,7 @@
 | `_experts_barrier` | 确定性汇合节点 | 等待 A/B 同阶段完成并推进专家阶段 |
 | `retrieve_context` | 检索服务 | `RetrievalChunk[]` |
 | `chat_answer` | 严格 JSON Schema | `ChatAnswer` |
+| `generate_pptx` | 确定性 Provider 边界 | `.pptx` artifact 与 `pptx_result`；输入为 `course_package` + `course_slides` |
 
 Provider 只能经 `AgentLLMRouter` 注入。Planner 使用默认 Provider，并接收完整知识 DAG、
 完整易混淆图及本地 A* 完整候选路线；其 LLM 提案表示完整学习路线，不再用 16 个节点截断，
@@ -67,7 +68,7 @@ expert_a + expert_b → _experts_barrier
 _experts_barrier → expert_a(revision) || expert_b(revision)
 expert_a + expert_b → _experts_barrier
 _experts_barrier → expert_a(integration) → judge
-judge(accept | accept_with_minor_revision) → END
+judge(accept | accept_with_minor_revision) → slide_deck → generate_pptx（PATENT_TUTOR_PPTX_ENABLED=true 时）→ END
 judge(revise) → expert_a(integration) → judge（循环，直到 accept 或 accept_with_minor_revision）
 exercise-responses → 独立 feedback 会话 → diagnosis_feedback(feedback) → END
 ```

@@ -74,7 +74,7 @@ def build_slide_deck_node(llm_client: LLMClient) -> Node:
         )
         return {
             "course_slides": deck.model_dump(),
-            # 流程最后一步：保持 completed 状态，避免 manifest 被回写成 running
+            # PPTX 阶段启用时会继续运行；未启用时这是课程生成的最后一个节点。
             "workflow_status": "completed",
             "events": [
                 completed_event(

@@ -29,11 +29,20 @@ export interface MarkdownArtifact {
   artifact_id: string;
   kind: string;
   path: string;
-  created_by: string;
+  created_by?: string;
   title: string;
-  mime_type: "text/markdown";
+  mime_type: string;
   sha256?: string;
   created_at?: string;
+}
+
+export interface PptxResult {
+  status: "generated" | "skipped" | "degraded";
+  provider: string;
+  source_slide_count: number;
+  speaker_notes_status: "written" | "unsupported" | "unknown";
+  artifact?: MarkdownArtifact | null;
+  error_summary?: string | null;
 }
 
 export interface LearnerProfile {
@@ -215,6 +224,8 @@ export interface WorkflowState {
   expert_a_revision?: ExpertDraft;
   expert_b_revision?: ExpertDraft;
   course_package?: Record<string, unknown>;
+  course_slides?: Record<string, unknown>;
+  pptx_result?: PptxResult;
   judge_report?: JudgeReport;
   judge_report_history?: JudgeReport[];
   revision_round?: number;
