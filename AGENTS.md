@@ -100,7 +100,8 @@ START -> _init -> route
                -> expert_a[revision] || expert_b[revision]
                -> _experts_barrier
                -> expert_a[integration] -> judge
-                    accept/minor -> slide_deck（可用 PATENT_TUTOR_SLIDE_DECK_ENABLED 关闭）-> END
+                    accept/minor -> slide_deck（可用 PATENT_TUTOR_SLIDE_DECK_ENABLED 关闭）
+                                  -> generate_pptx（可用 PATENT_TUTOR_PPTX_ENABLED 关闭）-> END
                     revise       -> expert_a[integration] -> judge（循环，上限
                                     agents.judge.max_revisions 次，缺省 3；达上限后带当前
                                     course_package 继续收尾）
@@ -132,6 +133,7 @@ later, which creates a separate feedback session. The graph has no interrupt-bas
 | `expert_b` | LLM + tool calling | draft, review A, revise | B draft/review/revision |
 | `judge` | LLM | evaluate integrated course without rewriting it | `judge_report` |
 | `chat_answer` | LLM | answer chat requests from retrieved context | `chat_answer` |
+| `generate_pptx` | LLM + deterministic renderer | choose visual direction/templates and render an editable PPTX from `course_package` + `course_slides` | `pptx_result`, session-scoped PPTX artifact |
 
 Do not reintroduce removed `tool_agent`, `finalize`, or debate-round counters,
 `final_learning_markdown`, `exercise_answer_key`, or `quality_gate_failed` nodes/fields.
@@ -294,12 +296,22 @@ artifacts/sessions/{session_id}/
   profile/learner_profile.md
   path/{dual_axis_snapshot,learning_path,path_decision}.md
   round-01/{retrieval_context,expert drafts,cross reviews,revisions,course_package,judge_report}.md
+  presentation/
+    course_deck.pptx
+    pptx_manifest.json
   feedback/{feedback_report,learner_profile_update,grading_report}.md
 ```
 
 The graph side-effect wrapper owns file I/O. Agent nodes must not write files directly. Artifact paths
-are session-scoped, Markdown-only through the API, and path traversal must remain rejected. There is
-no final Markdown file; `course_package.md` is the integrated course process artifact.
+are session-scoped and path traversal must remain rejected. Markdown artifacts remain the audit/read
+surface, while the optional `generate_pptx` node writes an editable PPTX under the same session directory:
+`artifacts/sessions/{session_id}/presentation/course_deck.pptx`. Its manifest records the PPTX artifact,
+source slide count and selected theme. PPTX generation uses the configured `generate_pptx` LLM only for
+strict `PresentationDesign` JSON; the backend deterministically renders the visual director decision,
+theme/template selection, decorative layer, semantic patent-course components and speaker notes. The
+LLM does not return binary PPTX, XML, SVG or arbitrary external resources. PPTX is controlled by
+`PATENT_TUTOR_PPTX_ENABLED` and degrades only that artifact on failure; the course and other artifacts
+continue. There is no final Markdown file; `course_package.md` is the integrated course process artifact.
 
 ## FastAPI Surface
 
