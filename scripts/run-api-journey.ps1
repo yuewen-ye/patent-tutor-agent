@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
     [string]$BaseUrl = "http://127.0.0.1:8000",
     [string]$LearnerId = "yueye005",
@@ -12,7 +12,8 @@ param(
     [ValidateRange(0, 40)]
     [int]$CatMaxAnswers = 5,
     [ValidateRange(1, 86400)]
-    [int]$WorkflowTimeout = 3600
+    [int]$WorkflowTimeout = 3600,
+    [switch]$AllowMissingPptx
 )
 
 $ErrorActionPreference = "Stop"
@@ -40,11 +41,15 @@ $journeyArgs = @(
     "--workflow-timeout", $WorkflowTimeout,
     "--output-json", $outputPath
 )
+if ($AllowMissingPptx) {
+    $journeyArgs += "--allow-missing-pptx"
+}
 
 Write-Host "[api-journey] FastAPI: $BaseUrl"
 Write-Host "[api-journey] learner_id: $LearnerId"
 Write-Host "[api-journey] answer_mode: $AnswerMode"
 Write-Host "[api-journey] cat_mode: $CatMode"
+Write-Host "[api-journey] require_pptx: $(-not $AllowMissingPptx)"
 
 & uv @journeyArgs
 $journeyExitCode = $LASTEXITCODE
