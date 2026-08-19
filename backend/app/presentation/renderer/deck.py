@@ -24,7 +24,9 @@ def render_design(design: PresentationDesign) -> bytes:
         slide = presentation.slides.add_slide(blank)
         background = slide.background.fill
         background.solid()
-        background.fore_color.rgb = __import__("pptx").dml.color.RGBColor.from_string(theme.background)
+        from pptx.dml.color import RGBColor
+
+        background.fore_color.rgb = RGBColor.from_string(theme.background)
         render_slide(slide, canvas, item, theme, page)
         slide.notes_slide.notes_text_frame.text = item.speaker_notes
     buffer = BytesIO()

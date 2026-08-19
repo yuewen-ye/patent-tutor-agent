@@ -34,25 +34,56 @@ class PresentationSource(PresentationContract):
     slides: list[PresentationSlide] = Field(min_length=1)
 
 
+PresentationTheme = Literal[
+    "patent_exam_classic",
+    "legal_case_analysis",
+    "technical_blueprint",
+    "minimal_academic",
+    "practice_workshop",
+    "patent_blue",
+    "professional_green",
+    "warm_orange",
+]
+PresentationLayout = Literal[
+    "title", "content", "two_column", "process", "comparison", "summary",
+    "cover_minimal", "cover_split", "content_rule_card", "content_bullet_grid",
+    "irac_flow", "legal_citation_focus", "case_analysis_split", "comparison_matrix",
+    "timeline_process", "exam_checklist", "summary_roadmap",
+]
+PresentationTemplate = Literal[
+    "cover_minimal", "cover_split", "content_rule_card", "content_bullet_grid",
+    "irac_flow", "legal_citation_focus", "case_analysis_split", "comparison_matrix",
+    "timeline_process", "exam_checklist", "summary_roadmap",
+]
+
+
 class PresentationVisualSlide(PresentationContract):
     id: str
     order: int = Field(ge=1)
-    layout: Literal["title", "content", "two_column", "process", "comparison", "summary"]
+    layout: PresentationLayout
+    template_id: PresentationTemplate | None = None
     title: str
     subtitle: str | None = None
     body: str | None = None
-    bullets: list[str] = Field(default_factory=list)
-    steps: list[str] = Field(default_factory=list)
+    bullets: list[str] = Field(default_factory=list, max_length=6)
+    steps: list[str] = Field(default_factory=list, max_length=6)
     left_title: str | None = None
-    left_items: list[str] = Field(default_factory=list)
+    left_items: list[str] = Field(default_factory=list, max_length=6)
     right_title: str | None = None
-    right_items: list[str] = Field(default_factory=list)
+    right_items: list[str] = Field(default_factory=list, max_length=6)
+    legal_reference: str | None = None
+    legal_summary: str | None = None
+    issue: str | None = None
+    rule: str | None = None
+    application: str | None = None
+    conclusion: str | None = None
+    warning: str | None = None
     speaker_notes: str
 
 
 class PresentationDesign(PresentationContract):
     title: str
-    theme: Literal["patent_blue", "professional_green", "warm_orange"] = "patent_blue"
+    theme: PresentationTheme = "patent_exam_classic"
     slides: list[PresentationVisualSlide] = Field(min_length=1)
 
 

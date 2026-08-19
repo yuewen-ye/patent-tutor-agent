@@ -164,10 +164,12 @@ artifacts/sessions/{session_id}/
 Judge 通过且 `PATENT_TUTOR_SLIDE_DECK_ENABLED` 开启时，`slide_deck` 先生成受控的
 `course_slides`（分页内容、讲稿和音频）。若 `PATENT_TUTOR_PPTX_ENABLED=true`，随后的
 `generate_pptx` 使用 `agents.generate_pptx` 配置的 LLM，将 `course_package` 与
-`course_slides` 转为严格 `PresentationDesign` JSON；后端再用原生 PowerPoint shape、文本框、卡片、
-流程连接线和 notes 渲染为 `presentation/course_deck.pptx`。PPT 内容、布局与主题均由合同和确定性
-renderer 控制，AI 不直接返回二进制文件。PPTX 生成失败只降级该 artifact，不影响课程、Markdown
-课件或逐页讲稿音频。
+`course_slides` 转为严格 `PresentationDesign` JSON；后端再用参考 ppt-master Brand/Style/Layout/Deck
+分层实现的确定性 renderer，将主题包、受控模板和专利教学组件（法条卡、IRAC 流程、审查时间线、
+对比矩阵、练习题卡）绘制为原生 PowerPoint shape、文本框、表格、流程连接线和 notes，生成
+`presentation/course_deck.pptx`。当前主题包包括法条考试、案例分析、技术蓝图、极简学术和练习工作坊风格；
+AI 不直接返回二进制文件、XML、任意坐标或网络资源。PPTX 生成失败只降级该 artifact，不影响课程、
+Markdown 课件或逐页讲稿音频。
 
 ## 5. 运行入口
 
