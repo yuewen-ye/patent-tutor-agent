@@ -175,6 +175,23 @@ Q1–Q21 按标准答案判分后写入 `student_node_mastery` 与 `mastery_even
 }
 ```
 
+### PPTX artifact 下载
+
+当课程会话启用了 `PATENT_TUTOR_PPTX_ENABLED=true` 且 `generate_pptx` 成功时，完整课件写入：
+
+```text
+presentation/course_deck.pptx
+```
+
+使用既有 artifact 端点下载：
+
+```text
+GET /sessions/{session_id}/artifacts/presentation/course_deck.pptx
+```
+
+响应为 `application/vnd.openxmlformats-officedocument.presentationml.presentation`，并带附件下载头。
+PPTX 生成失败不会使课程会话失败；客户端应读取会话 state 的 `pptx_result` 判断生成或降级状态。
+
 ### `GET /sessions/{session_id}`
 
 用途：查询单个会话的完整状态，用于判断后台任务是否结束、读取错误信息，以及在需要时获取 `state` 中的课程或反馈数据。

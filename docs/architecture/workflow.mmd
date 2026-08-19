@@ -16,6 +16,7 @@ graph TD;
 	_experts_barrier(_experts_barrier)
 	expert_a_integration(expert_a_integration)
 	judge(judge)
+	slide_deck(slide_deck)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> _init;
 	_experts_barrier -.-> expert_a;
@@ -28,14 +29,15 @@ graph TD;
 	expert_a --> _experts_barrier;
 	expert_a_integration --> judge;
 	expert_b --> _experts_barrier;
-	judge -.-> __end__;
 	judge -.-> expert_a_integration;
+	judge -.-> slide_deck;
 	planner --> expert_a;
 	planner --> expert_b;
 	retrieve_context -.-> chat_answer;
 	route -.-> diagnosis_feedback;
 	route -.-> retrieve_context;
 	chat_answer --> __end__;
+	slide_deck --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
 	classDef last fill:#bfb6fc

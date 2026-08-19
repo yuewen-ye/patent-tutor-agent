@@ -19,7 +19,10 @@
 
 Provider 只能经 `AgentLLMRouter` 注入。`generate_pptx` 与其他 Agent 一样使用
 `agents.generate_pptx.provider` / `model_name` / `temperature` / `fallback_*`，并可由
-`GENERATE_PPTX_PROVIDER` 环境变量应急覆盖；其 LLM 只生成严格的 `PresentationDesign`，后端负责把该设计渲染为 `.pptx`。Planner 使用默认 Provider，并接收完整知识 DAG、
+`GENERATE_PPTX_PROVIDER` 环境变量应急覆盖；其 LLM 只生成严格的 `PresentationDesign`，后端使用
+`python-pptx` 将其渲染为原生可编辑的 `.pptx`。第一版 layout 为 `title`、`content`、
+`two_column`、`comparison`、`process`、`summary`，分别输出封面、正文卡片、双栏对比、流程节点和总结卡；
+配色、网格、字号和形状由确定性主题层控制，模型不得直接输出 XML、任意坐标或网络资源。Planner 使用默认 Provider，并接收完整知识 DAG、
 完整易混淆图及本地 A* 完整候选路线；其 LLM 提案表示完整学习路线，不再用 16 个节点截断，
 但必须通过真实节点、去重和先修顺序校验。校验失败时回退到确定性路径算法，
 `path_decision.fallback_reason` 保存降级原因，最终路径仍由后端校正并负责。

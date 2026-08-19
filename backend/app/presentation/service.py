@@ -6,9 +6,12 @@ import hashlib
 import json
 import tempfile
 from datetime import UTC, datetime
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 from zipfile import BadZipFile, ZipFile
+
+from pptx import Presentation
 
 from backend.app.agents.common import generate_validated_json, load_prompt
 from backend.app.core.agent_runtime_config import agent_temperature
@@ -72,16 +75,32 @@ def _validate_design(design: PresentationDesign, source: PresentationSource) -> 
     return design
 
 
-def _validate_pptx(content: bytes) -> None:
+def _validate_pptx(content: bytes, design: PresentationDesign) -> None:
+    """Run package, Office parser, editable-shape and notes delivery checks."""
     if not content or not content.startswith(b"PK"):
         raise ValueError("renderer did not return a PPTX zip package")
     try:
-        with ZipFile(__import__("io").BytesIO(content)) as archive:
+        with ZipFile(BytesIO(content)) as archive:
             names = set(archive.namelist())
-            if "[Content_Types].xml" not in names or "ppt/presentation.xml" not in names:
+            required = {"[Content_Types].xml", "ppt/presentation.xml", "ppt/theme/theme1.xml"}
+            if not required.issubset(names):
                 raise ValueError("renderer returned an incomplete PPTX package")
+            notes = {name for name in names if name.startswith("ppt/notesSlides/notesSlide")}
+            if len(notes) != len(design.slides):
+                raise ValueError("renderer did not emit speaker notes for every slide")
     except BadZipFile as exc:
         raise ValueError("renderer returned an invalid PPTX zip package") from exc
+    presentation = Presentation(BytesIO(content))
+    if len(presentation.slides) != len(design.slides):
+        raise ValueError("renderer output slide count differs from PresentationDesign")
+    for source, rendered in zip(design.slides, presentation.slides, strict=True):
+        text = " ".join(shape.text for shape in rendered.shapes if hasattr(shape, "text"))
+        if source.title not in text:
+            raise ValueError(f"renderer lost title for slide {source.id}")
+        if not rendered.shapes:
+            raise ValueError(f"renderer emitted no editable shapes for slide {source.id}")
+        if source.speaker_notes not in rendered.notes_slide.notes_text_frame.text:
+            raise ValueError(f"renderer lost speaker notes for slide {source.id}")
 
 
 def generate_presentation_artifact(
@@ -111,7 +130,7 @@ def generate_presentation_artifact(
     )
     _validate_design(design, source)
     content = render_pptx(design)
-    _validate_pptx(content)
+    _validate_pptx(content, design)
     safe_session = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in session_id)
     safe_session = safe_session.strip("-_") or "session"
     target_dir = artifact_root / "sessions" / safe_session / "presentation"

@@ -159,6 +159,16 @@ artifacts/sessions/{session_id}/
 - 课程过程稿选择 `kind=course_package`，不要依赖固定绝对路径。
 - 是否完成以 Session/manifest 的 `status` 为准，不以某个“最终文件”是否存在为准。
 
+## 4.1 完整 PowerPoint 产物
+
+Judge 通过且 `PATENT_TUTOR_SLIDE_DECK_ENABLED` 开启时，`slide_deck` 先生成受控的
+`course_slides`（分页内容、讲稿和音频）。若 `PATENT_TUTOR_PPTX_ENABLED=true`，随后的
+`generate_pptx` 使用 `agents.generate_pptx` 配置的 LLM，将 `course_package` 与
+`course_slides` 转为严格 `PresentationDesign` JSON；后端再用原生 PowerPoint shape、文本框、卡片、
+流程连接线和 notes 渲染为 `presentation/course_deck.pptx`。PPT 内容、布局与主题均由合同和确定性
+renderer 控制，AI 不直接返回二进制文件。PPTX 生成失败只降级该 artifact，不影响课程、Markdown
+课件或逐页讲稿音频。
+
 ## 5. 运行入口
 
 - FastAPI：`uv run python backend/main.py`
