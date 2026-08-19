@@ -98,7 +98,6 @@ agents:
   # Provider 对应的 api_key_env 在 providers.* 中声明，密钥仅写入 .env。
   generate_pptx:
     provider: ooio-gpt2
-    model_name: gpt-5.6-terra
     temperature: 0.2
     fallback_provider: jiji-gpt
     fallback_model_name: gpt-5.4-mini
