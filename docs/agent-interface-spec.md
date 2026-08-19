@@ -15,9 +15,11 @@
 | `_experts_barrier` | 确定性汇合节点 | 等待 A/B 同阶段完成并推进专家阶段 |
 | `retrieve_context` | 检索服务 | `RetrievalChunk[]` |
 | `chat_answer` | 严格 JSON Schema | `ChatAnswer` |
-| `generate_pptx` | 确定性 Provider 边界 | `.pptx` artifact 与 `pptx_result`；输入为 `course_package` + `course_slides` |
+| `generate_pptx` | LLM 版式设计 + 确定性 OOXML 渲染 | `.pptx` artifact 与 `pptx_result`；输入为 `course_package` + `course_slides` |
 
-Provider 只能经 `AgentLLMRouter` 注入。Planner 使用默认 Provider，并接收完整知识 DAG、
+Provider 只能经 `AgentLLMRouter` 注入。`generate_pptx` 与其他 Agent 一样使用
+`agents.generate_pptx.provider` / `model_name` / `temperature` / `fallback_*`，并可由
+`GENERATE_PPTX_PROVIDER` 环境变量应急覆盖；其 LLM 只生成严格的 `PresentationDesign`，后端负责把该设计渲染为 `.pptx`。Planner 使用默认 Provider，并接收完整知识 DAG、
 完整易混淆图及本地 A* 完整候选路线；其 LLM 提案表示完整学习路线，不再用 16 个节点截断，
 但必须通过真实节点、去重和先修顺序校验。校验失败时回退到确定性路径算法，
 `path_decision.fallback_reason` 保存降级原因，最终路径仍由后端校正并负责。

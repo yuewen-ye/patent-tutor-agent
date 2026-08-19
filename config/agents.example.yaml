@@ -13,6 +13,7 @@
 #   expert_a       → jiji-grok     grok-4.5
 #   expert_b       → jiji-gpt      gpt-5.4-mini（fallback deepseek-v4-pro）
 #   judge          → jiji-gpt      gpt-5.6-terra（per-agent 覆盖；luna 在 jiji.cc 曾 503）
+#   generate_pptx  → ooio-gpt2     gpt-5.6-terra（生成完整 PPT 版式 JSON，后端渲染 .pptx）
 # 三系列异构：expert_a=grok(xAI) / expert_b=gpt / judge=gpt(OpenAI)
 # jiji-gpt 保持 supports_strict_schema=true：jiji.cc 拒绝 strict 时返回 400（在项目兜底集合
 #   {400,404,415,422} 内），系统首调撞 400 自动降级 json_object + schema 注入；其余通道为 false。
@@ -91,5 +92,13 @@ agents:
   planner:
     provider: ooio-gpt2
     temperature: 0.0
+    fallback_provider: jiji-gpt
+    fallback_model_name: gpt-5.4-mini
+  # 完整 PPT 节点：走和其他 Agent 相同的 provider/model/key/fallback 配置链。
+  # Provider 对应的 api_key_env 在 providers.* 中声明，密钥仅写入 .env。
+  generate_pptx:
+    provider: ooio-gpt2
+    model_name: gpt-5.6-terra
+    temperature: 0.2
     fallback_provider: jiji-gpt
     fallback_model_name: gpt-5.4-mini

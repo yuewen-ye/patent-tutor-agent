@@ -13,6 +13,9 @@ class _Client:
     def generate_json(self, *args, **kwargs):  # type: ignore[no-untyped-def]
         raise AssertionError("not called when inspecting graph")
 
+    def generate_structured_json(self, *args, **kwargs):  # type: ignore[no-untyped-def]
+        raise AssertionError("not called when inspecting graph")
+
 
 def test_workflow_adds_pptx_stage_only_when_enabled(monkeypatch) -> None:
     monkeypatch.setenv("PATENT_TUTOR_PPTX_ENABLED", "true")

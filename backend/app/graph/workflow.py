@@ -358,7 +358,9 @@ def _is_pptx_enabled() -> bool:
     return raw.lower() in {"1", "true", "on", "yes"}
 
 
-def _generate_pptx_node(state: StateDict, artifact_root: Path | None) -> dict[str, Any]:
+def _generate_pptx_node(
+    state: StateDict, artifact_root: Path | None, llm_client: LLMClient
+) -> dict[str, Any]:
     course_package = state.get("course_package") or {}
     course_slides = state.get("course_slides") or {}
     if not course_package or not course_slides:
@@ -380,6 +382,7 @@ def _generate_pptx_node(state: StateDict, artifact_root: Path | None) -> dict[st
         session_id=state["session_id"],
         course_package=course_package,
         course_slides=course_slides,
+        llm_client=llm_client,
     )
     message = "generated complete PPTX" if result["status"] == "generated" else "PPTX generation degraded"
     updates: dict[str, Any] = {
@@ -457,7 +460,8 @@ def build_workflow(
     slide_deck_enabled: bool | None = None,
 ) -> Any:
     builder = StateGraph(StateDict, context_schema=WorkflowContext)
-    nodes: dict[str, Node] = build_agent_nodes(llm_client or AgentLLMRouter.from_env())
+    active_llm_client = llm_client or AgentLLMRouter.from_env()
+    nodes: dict[str, Node] = build_agent_nodes(active_llm_client)
     root_path = Path(artifact_root) if artifact_root is not None else None
     log_root_path = Path(workflow_log_root) if workflow_log_root is not None else root_path
     slide_deck_enabled = (
@@ -507,7 +511,7 @@ def build_workflow(
             builder.add_node(
                 "generate_pptx",
                 cast(Any, _with_runtime_side_effects(
-                    lambda state, runtime=None: _generate_pptx_node(state, root_path),
+                    lambda state, runtime=None: _generate_pptx_node(state, root_path, active_llm_client),
                     root_path,
                     log_root_path,
                     update_sink,

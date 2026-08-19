@@ -1,4 +1,4 @@
-"""Presentation generation boundary for complete PowerPoint artifacts."""
+"""LLM-designed, backend-rendered complete PowerPoint artifacts."""
 
 from backend.app.presentation.service import generate_presentation_artifact
 

@@ -34,6 +34,28 @@ class PresentationSource(PresentationContract):
     slides: list[PresentationSlide] = Field(min_length=1)
 
 
+class PresentationVisualSlide(PresentationContract):
+    id: str
+    order: int = Field(ge=1)
+    layout: Literal["title", "content", "two_column", "process", "comparison", "summary"]
+    title: str
+    subtitle: str | None = None
+    body: str | None = None
+    bullets: list[str] = Field(default_factory=list)
+    steps: list[str] = Field(default_factory=list)
+    left_title: str | None = None
+    left_items: list[str] = Field(default_factory=list)
+    right_title: str | None = None
+    right_items: list[str] = Field(default_factory=list)
+    speaker_notes: str
+
+
+class PresentationDesign(PresentationContract):
+    title: str
+    theme: Literal["patent_blue", "professional_green", "warm_orange"] = "patent_blue"
+    slides: list[PresentationVisualSlide] = Field(min_length=1)
+
+
 class PresentationArtifact(PresentationContract):
     artifact_id: str
     path: str

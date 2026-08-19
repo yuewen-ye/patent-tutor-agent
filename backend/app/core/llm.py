@@ -39,6 +39,7 @@ AgentName = Literal[
     "chat_answer",
     "planner",
     "slide_deck",
+    "generate_pptx",
 ]
 
 _T = TypeVar("_T")
@@ -51,6 +52,7 @@ AGENT_PROVIDER_ENV: dict[AgentName, str] = {
     "chat_answer": "CHAT_ANSWER_PROVIDER",
     "planner": "PLANNER_PROVIDER",
     "slide_deck": "SLIDE_DECK_PROVIDER",
+    "generate_pptx": "GENERATE_PPTX_PROVIDER",
 }
 
 # ── Per-provider 并发信号量 ──────────────────────────────────────────────
