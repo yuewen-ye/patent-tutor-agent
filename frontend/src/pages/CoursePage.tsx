@@ -53,7 +53,6 @@ export function CoursePage() {
               <CourseResourceTabs
                 sessionId={sessionId!}
                 coursePackage={state?.course_package}
-                pptxResult={state?.pptx_result}
                 artifacts={state?.artifacts || []}
               />
             </div>

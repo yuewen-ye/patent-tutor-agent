@@ -12,17 +12,12 @@ import { ArtifactViewer } from "@/components/ArtifactViewer";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { sessionsApi } from "@/api/sessions";
 import { getAuth } from "@/api/auth";
-import { BookOpen, Wrench, ListChecks, FileText, Scale, Lightbulb, CheckCircle2, XCircle, Loader2, Send, RefreshCw, ArrowRight, Download, Presentation } from "lucide-react";
+import { BookOpen, Wrench, ListChecks, FileText, Scale, Lightbulb, CheckCircle2, XCircle, Loader2, Send, RefreshCw, ArrowRight } from "lucide-react";
 import type { MarkdownArtifact, ExerciseSubmission, ExerciseResponseItem, SessionsListResponse } from "@/types";
 
 interface CourseResourceTabsProps {
   sessionId: string;
   coursePackage?: Record<string, unknown>;
-  pptxResult?: {
-    status: "generated" | "skipped" | "degraded";
-    artifact?: MarkdownArtifact | null;
-    error_summary?: string | null;
-  };
   artifacts: MarkdownArtifact[];
 }
 
@@ -79,13 +74,12 @@ const BLOCK_TYPE_ICONS: Record<string, typeof BookOpen> = {
   summary_card: FileText,
 };
 
-export function CourseResourceTabs({ sessionId, coursePackage, pptxResult, artifacts }: CourseResourceTabsProps) {
+export function CourseResourceTabs({ sessionId, coursePackage, artifacts }: CourseResourceTabsProps) {
   const [activeTab, setActiveTab] = useState<string>("lecture");
   const packageArtifact = useMemo(
     () => artifacts.find((a) => a.kind === "course_package"),
     [artifacts]
   );
-  const pptxArtifact = pptxResult?.artifact;
 
   // Extract structured data from course_package
   const blockPlan = (coursePackage?.block_plan as { blocks?: BlockItem[]; order?: string[] }) || {};
@@ -126,26 +120,6 @@ export function CourseResourceTabs({ sessionId, coursePackage, pptxResult, artif
           分级习题
         </TabsTrigger>
       </TabsList>
-
-      {pptxArtifact && (
-        <div className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
-          <div className="flex items-center gap-2 text-sm">
-            <Presentation className="h-4 w-4 text-primary" />
-            <span>完整课程 PowerPoint 已生成（含逐页讲稿备注）</span>
-          </div>
-          <Button size="sm" asChild>
-            <a
-              href={`/api/sessions/${encodeURIComponent(sessionId)}/artifacts/${pptxArtifact.path.replace(/^artifacts\/sessions\/[^/]+\//, "")}`}
-              download
-            >
-              <Download className="mr-1.5 h-4 w-4" />下载 PPT
-            </a>
-          </Button>
-        </div>
-      )}
-      {pptxResult?.status === "degraded" && (
-        <p className="text-xs text-muted-foreground">完整 PPT 暂未生成；结构化课件、讲稿和音频仍可正常使用。{pptxResult.error_summary ? ` ${pptxResult.error_summary}` : ""}</p>
-      )}
 
       {/* ── 定制化讲义 ── */}
       <TabsContent value="lecture" className="mt-4 space-y-4">
