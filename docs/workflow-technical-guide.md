@@ -169,7 +169,7 @@ Judge 通过且 `PATENT_TUTOR_SLIDE_DECK_ENABLED` 开启时，`slide_deck` 先�
 对比矩阵、练习题卡）绘制为原生 PowerPoint shape、文本框、表格、流程连接线和 notes，生成
 `presentation/course_deck.pptx`。当前主题包包括法条考试、案例分析、技术蓝图、极简学术和练习工作坊风格；
 AI 不直接返回二进制文件、XML、任意坐标或网络资源。PPTX 生成失败只降级该 artifact，不影响课程、
-Markdown 课件或逐页讲稿音频。
+Markdown 课件或逐页讲稿音频。LLM 作为 Visual Director 自动选择主题包、模板、构图和语义图形；后端执行白名单校验、相邻模板去重和至少三种模板的 deck 多样性校验。
 
 ## 5. 运行入口
 

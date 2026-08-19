@@ -7,6 +7,7 @@ import json
 import tempfile
 from datetime import UTC, datetime
 from io import BytesIO
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
 from zipfile import BadZipFile, ZipFile
@@ -72,6 +73,11 @@ def _validate_design(design: PresentationDesign, source: PresentationSource) -> 
     actual = [(slide.id, slide.order) for slide in design.slides]
     if actual != expected:
         raise ValueError("PresentationDesign must preserve every source slide id and order")
+    templates = [slide.template_id or slide.layout for slide in design.slides]
+    if len(design.slides) >= 4 and len(set(templates)) < 3:
+        raise ValueError("PresentationDesign must use at least three visual templates")
+    if any(left == right for left, right in pairwise(templates)):
+        raise ValueError("Adjacent presentation slides must not reuse the same visual template")
     return design
 
 

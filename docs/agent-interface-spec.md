@@ -25,7 +25,7 @@ Provider 只能经 `AgentLLMRouter` 注入。`generate_pptx` 与其他 Agent 一
 `patent_exam_classic`、`legal_case_analysis`、`technical_blueprint`、`minimal_academic`、
 `practice_workshop` 五套主题包，以及 `cover_minimal`、`content_rule_card`、`irac_flow`、
 `legal_citation_focus`、`comparison_matrix`、`timeline_process`、`exam_checklist`、
-`summary_roadmap` 等模板。专利法条卡、IRAC 流程、审查时间线、对比矩阵和练习题卡均由
+`summary_roadmap`、`hero_statement`、`evidence_stack`、`decision_tree`、`concept_map` 等模板。PresentationDesign 还包含由 LLM 自动决定的 `visual_style`、`composition` 和语义 `visual_elements`，后端用装饰层与语义图形层防止整份 deck 退化为纯文字页。专利法条卡、IRAC 流程、审查时间线、对比矩阵和练习题卡均由
 确定性后端组件绘制；模型不得直接输出 XML、任意坐标或网络资源。Planner 使用默认 Provider，并接收完整知识 DAG、
 完整易混淆图及本地 A* 完整候选路线；其 LLM 提案表示完整学习路线，不再用 16 个节点截断，
 但必须通过真实节点、去重和先修顺序校验。校验失败时回退到确定性路径算法，

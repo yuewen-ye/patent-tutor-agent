@@ -48,13 +48,36 @@ PresentationLayout = Literal[
     "title", "content", "two_column", "process", "comparison", "summary",
     "cover_minimal", "cover_split", "content_rule_card", "content_bullet_grid",
     "irac_flow", "legal_citation_focus", "case_analysis_split", "comparison_matrix",
-    "timeline_process", "exam_checklist", "summary_roadmap",
+    "timeline_process", "exam_checklist", "summary_roadmap", "hero_statement",
+    "evidence_stack", "decision_tree", "concept_map",
 ]
 PresentationTemplate = Literal[
     "cover_minimal", "cover_split", "content_rule_card", "content_bullet_grid",
     "irac_flow", "legal_citation_focus", "case_analysis_split", "comparison_matrix",
-    "timeline_process", "exam_checklist", "summary_roadmap",
+    "timeline_process", "exam_checklist", "summary_roadmap", "hero_statement",
+    "evidence_stack", "decision_tree", "concept_map",
 ]
+VisualElementType = Literal[
+    "timeline", "irac", "comparison_matrix", "callout", "evidence_stack",
+    "decision_tree", "concept_map", "metric_cards", "warning_panel",
+]
+
+
+class PresentationVisualStyle(PresentationContract):
+    density: Literal["airy", "balanced", "dense"] = "balanced"
+    mood: Literal["legal", "technical", "academic", "workshop"] = "legal"
+    accent_strategy: Literal["rule", "risk", "process", "evidence"] = "rule"
+
+
+class PresentationVisualElement(PresentationContract):
+    type: VisualElementType
+    title: str | None = None
+    label: str | None = None
+    text: str | None = None
+    items: list[str] = Field(default_factory=list, max_length=6)
+    values: list[str] = Field(default_factory=list, max_length=6)
+    left_items: list[str] = Field(default_factory=list, max_length=6)
+    right_items: list[str] = Field(default_factory=list, max_length=6)
 
 
 class PresentationVisualSlide(PresentationContract):
@@ -62,6 +85,11 @@ class PresentationVisualSlide(PresentationContract):
     order: int = Field(ge=1)
     layout: PresentationLayout
     template_id: PresentationTemplate | None = None
+    visual_intent: str | None = None
+    composition: Literal[
+        "auto", "hero", "split", "grid", "timeline_with_callout", "flow", "matrix", "stack"
+    ] = "auto"
+    visual_elements: list[PresentationVisualElement] = Field(default_factory=list, max_length=4)
     title: str
     subtitle: str | None = None
     body: str | None = None
@@ -84,6 +112,7 @@ class PresentationVisualSlide(PresentationContract):
 class PresentationDesign(PresentationContract):
     title: str
     theme: PresentationTheme = "patent_exam_classic"
+    visual_style: PresentationVisualStyle = Field(default_factory=PresentationVisualStyle)
     slides: list[PresentationVisualSlide] = Field(min_length=1)
 
 

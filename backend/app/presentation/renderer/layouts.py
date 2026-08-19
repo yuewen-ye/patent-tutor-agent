@@ -13,6 +13,8 @@ from backend.app.presentation.renderer.components import (
     legal_citation_card,
     patent_timeline,
 )
+from backend.app.presentation.renderer.decor import apply_decor
+from backend.app.presentation.renderer.semantic import render_element
 from backend.app.presentation.renderer.shapes import bullets, line, rect, text_box
 from backend.app.presentation.renderer.theme import Theme
 
@@ -21,6 +23,7 @@ def header(slide, canvas: Canvas, item: PresentationVisualSlide, theme: Theme, p
     line(slide, canvas, canvas.margin_x, 0.34, 0.72, 0.07, theme.accent)
     text_box(slide, canvas, item.title, canvas.margin_x, 0.48, 11.4, 0.48, theme=theme, size=27, bold=True)
     text_box(slide, canvas, f"{page:02d}", 12.05, 0.5, 0.55, 0.3, theme=theme, size=10, fill=theme.muted, align=PP_ALIGN.RIGHT)
+    apply_decor(slide, canvas, theme, page)
 
 
 def cover(slide, canvas: Canvas, item: PresentationVisualSlide, theme: Theme, page: int) -> None:
@@ -125,5 +128,9 @@ def render_slide(slide, canvas: Canvas, item: PresentationVisualSlide, theme: Th
         "two_column": two_column, "case_analysis_split": two_column, "comparison": matrix, "comparison_matrix": matrix,
         "process": process, "timeline_process": process, "irac_flow": irac,
         "exam_checklist": checklist, "summary": summary, "summary_roadmap": summary,
+        "hero_statement": cover, "evidence_stack": content, "decision_tree": process, "concept_map": two_column,
     }
     handlers.get(template, content)(slide, canvas, item, theme, page)
+    if item.visual_elements:
+        for index, element in enumerate(item.visual_elements[:2]):
+            render_element(slide, canvas, theme, element, 0.85 + (index % 2) * 6.0, 5.35, 5.55, 1.25)
