@@ -20,11 +20,10 @@ import {
   AlertTriangle,
   Save,
   RotateCcw,
-  History,
   ArrowRight,
-  } from "lucide-react";
+} from "lucide-react";
 import { PixelMascot } from "@/components/auth/PixelMascot";
-import type { DiagnosticProgress, DiagnosticAnswerLogItem } from "@/types";
+import type { DiagnosticProgress } from "@/types";
 
 const SAVED_DIAGNOSTIC_KEY = "patent_tutor_diagnostic_session_id";
 
@@ -814,64 +813,8 @@ export function OnboardingPage() {
             </CardContent>
           </Card>
         )}
-
-        {progress?.answer_log && progress.answer_log.length > 0 && (
-          <AnswerHistoryCard answerLog={progress.answer_log} />
-        )}
       </div>
     </div>
-  );
-}
-
-function AnswerHistoryCard({ answerLog }: { answerLog: DiagnosticAnswerLogItem[] }) {
-  return (
-    <Card className="border-white/70 bg-white/90 shadow-soft">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-base font-medium flex items-center gap-2">
-          <History className="h-4 w-4 text-primary" />
-          已答题目
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {answerLog.map((entry, index) => (
-          <div
-            key={`${entry.question_id}-${index}`}
-            className="flex items-start gap-3 p-3 rounded-lg bg-secondary/20"
-          >
-            <div className="flex-shrink-0 mt-0.5">
-              {entry.is_correct == null ? (
-                <CheckCircle2 className="h-4 w-4 text-sky-600" />
-              ) : entry.is_correct ? (
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-              ) : (
-                <XCircle className="h-4 w-4 text-destructive" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground">
-                第 {index + 1} 题 · {entry.question_id}
-              </p>
-              <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                <span>
-                  你的答案：
-                  <span className="text-foreground font-medium">
-                    {entry.user_answer ?? "—"}
-                  </span>
-                </span>
-                {entry.correct_answer != null && (
-                  <span>
-                    正确答案：
-                    <span className="text-foreground font-medium">
-                      {entry.correct_answer}
-                    </span>
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
   );
 }
 

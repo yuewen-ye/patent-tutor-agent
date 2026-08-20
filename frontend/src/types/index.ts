@@ -189,6 +189,30 @@ export interface DiagnosticState {
   duration_seconds?: number;
 }
 
+export interface SlideNarration {
+  text?: string | null;
+  audio_url?: string | null;
+  duration_sec?: number | null;
+}
+
+export interface CourseSlide {
+  id?: string;
+  order?: number;
+  type?: string; // title / summary / content / scenario / law-basis / example / etc.
+  title?: string | null;
+  subtitle?: string | null;
+  content?: Record<string, unknown> | null;
+  narration?: SlideNarration | null;
+  [key: string]: unknown;
+}
+
+export interface CourseSlides {
+  slides?: CourseSlide[];
+  theme?: string | null;
+  slide_to_block_id?: Record<string, string> | null;
+  [key: string]: unknown;
+}
+
 export interface WorkflowState {
   session_id: string;
   user_input: string;
@@ -215,6 +239,8 @@ export interface WorkflowState {
   expert_a_revision?: ExpertDraft;
   expert_b_revision?: ExpertDraft;
   course_package?: Record<string, unknown>;
+  course_slides?: CourseSlides;
+  pptx_result?: Record<string, unknown>;
   judge_report?: JudgeReport;
   judge_report_history?: JudgeReport[];
   revision_round?: number;
@@ -223,6 +249,8 @@ export interface WorkflowState {
   chat_answer?: ChatAnswer;
   diagnostic?: DiagnosticState;
   error?: string;
+  error_traceback?: string[];
+  last_failed_node?: string;
 }
 
 export interface SessionSnapshot {

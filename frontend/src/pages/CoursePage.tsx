@@ -36,7 +36,6 @@ export function CoursePage() {
                 <StatusBadge status={session?.status} />
               </div>
             </div>
-            <p className="text-sm text-[#8B5A3C]">个性化学习资源：讲义 · 实务指南 · 分级习题</p>
           </div>
         </div>
 

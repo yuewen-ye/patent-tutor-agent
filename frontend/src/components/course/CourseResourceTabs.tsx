@@ -10,9 +10,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 import { ArtifactViewer } from "@/components/ArtifactViewer";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
+import { PresentationPlayer } from "@/components/course/PresentationPlayer";
 import { sessionsApi } from "@/api/sessions";
 import { getAuth } from "@/api/auth";
-import { BookOpen, Wrench, ListChecks, FileText, Scale, Lightbulb, CheckCircle2, XCircle, Loader2, Send, RefreshCw, ArrowRight } from "lucide-react";
+import { BookOpen, Wrench, ListChecks, FileText, Scale, Lightbulb, CheckCircle2, XCircle, Loader2, Send, RefreshCw, ArrowRight, Presentation as PresentationIcon } from "lucide-react";
 import type { MarkdownArtifact, ExerciseSubmission, ExerciseResponseItem, SessionsListResponse } from "@/types";
 
 interface CourseResourceTabsProps {
@@ -104,13 +105,20 @@ export function CourseResourceTabs({ sessionId, coursePackage, artifacts }: Cour
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-      <TabsList className="grid w-full grid-cols-2 bg-slate-100 text-slate-600 border border-slate-200 p-1 rounded-lg">
+      <TabsList className="grid w-full grid-cols-3 bg-slate-100 text-slate-600 border border-slate-200 p-1 rounded-lg">
         <TabsTrigger
           value="lecture"
           className="gap-2 data-[state=active]:bg-[#D9773E] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md"
         >
           <BookOpen className="h-4 w-4" />
           定制化讲义
+        </TabsTrigger>
+        <TabsTrigger
+          value="presentation"
+          className="gap-2 data-[state=active]:bg-[#D9773E] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md"
+        >
+          <PresentationIcon className="h-4 w-4" />
+          PPT 同步学习
         </TabsTrigger>
         <TabsTrigger
           value="exercises"
@@ -299,6 +307,13 @@ export function CourseResourceTabs({ sessionId, coursePackage, artifacts }: Cour
             </CardContent>
           </Card>
         )}
+        </div>
+      </TabsContent>
+
+      {/* ── PPT 同步学习 ── */}
+      <TabsContent value="presentation" className="mt-4">
+        <div className="max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
+          <PresentationPlayer sessionId={sessionId} />
         </div>
       </TabsContent>
 
