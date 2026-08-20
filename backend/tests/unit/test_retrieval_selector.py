@@ -54,3 +54,15 @@ def test_invalid_mode_raises(monkeypatch: pytest.MonkeyPatch) -> None:
 
     with pytest.raises(retrieval_selector.RetrievalModeError):
         retrieval_selector.retrieve_context("新颖性")
+
+
+def test_off_mode_returns_no_chunks(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RAG_RETRIEVAL_MODE", "off")
+
+    def forbidden(query: str = "", top_k: int = 5) -> list[RetrievalChunk]:
+        raise AssertionError("off mode must not call any retriever")
+
+    monkeypatch.setattr(retrieval_selector, "rag_retrieve", forbidden)
+    monkeypatch.setattr(retrieval_selector, "mock_rag_retrieve", forbidden)
+
+    assert retrieval_selector.retrieve_context("新颖性", top_k=2) == []

@@ -15,7 +15,7 @@ RAG_REAL_FALLBACK_TO_MOCK_ENV: Final = "RAG_REAL_FALLBACK_TO_MOCK"
 
 _logger = logging.getLogger(__name__)
 
-RetrievalMode = Literal["real", "mock"]
+RetrievalMode = Literal["real", "mock", "off"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,7 +23,7 @@ class RetrievalModeError(RuntimeError):
     mode: str
 
     def __str__(self) -> str:
-        return f"Unsupported {RAG_RETRIEVAL_MODE_ENV}: {self.mode!r}. Use 'real' or 'mock'."
+        return f"Unsupported {RAG_RETRIEVAL_MODE_ENV}: {self.mode!r}. Use 'real', 'mock' or 'off'."
 
 
 def _retrieval_mode() -> RetrievalMode:
@@ -33,6 +33,8 @@ def _retrieval_mode() -> RetrievalMode:
             return "real"
         case "mock":
             return "mock"
+        case "off":
+            return "off"
         case unsupported:
             raise RetrievalModeError(mode=unsupported)
 
@@ -57,5 +59,7 @@ def retrieve_context(query: str = "", top_k: int = 5) -> list[RetrievalChunk]:
                 return mock_rag_retrieve(query=query, top_k=top_k)
         case "mock":
             return mock_rag_retrieve(query=query, top_k=top_k)
+        case "off":
+            return []
         case unreachable:
             assert_never(unreachable)
