@@ -1,0 +1,81 @@
+{
+  "metadata": {
+    "profile_id": "B",
+    "round": 1,
+    "eval_type": "m4_resource_morphology_evaluation",
+    "model": "DeepSeek-V4-Flash",
+    "timestamp": "2026-08-17 12:28:34"
+  },
+  "raw_llm_response": {
+    "coverage_rate": 69.23,
+    "coverage_score": 75,
+    "matched_types": [
+      "anchor_scenario",
+      "legal_anchor",
+      "worked_example",
+      "decision_flow",
+      "common_pitfall",
+      "predict_activate",
+      "assessment",
+      "knowledge_synthesis",
+      "summary_card"
+    ],
+    "missing_types": [
+      "verbal_explanation",
+      "mnemonic",
+      "reflect_prompt",
+      "global_framework"
+    ],
+    "core_shapes_status": {
+      "lecture": true,
+      "practical_guide": true,
+      "tiered_questions": true
+    },
+    "fit_score": 80,
+    "fit_details": {
+      "knowledge_level_fit": "good",
+      "learning_style_fit": "good",
+      "weak_points_addressed": true
+    },
+    "overall_score": 78,
+    "overall_grade": "acceptable",
+    "reasoning": "课程内容覆盖了9种资源形态，覆盖率为69.23%，三种核心形态（讲义、实操指南、分阶题）全部覆盖，但缺少言语型讲解、记忆锚、反思提示和全局框架等形态。学员画像显示为中级水平（Q1-Q15答案正确率高），学习风格偏向视觉和活跃型（decision_flow和predict_activate已覆盖），适配度良好。综合评分78分，属于可接受水平。",
+    "suggestions": [
+      "建议增加verbal_explanation形态，提供更口语化的法条讲解，帮助学员理解抽象概念",
+      "建议增加mnemonic形态，为三性判断提供记忆口诀，强化记忆",
+      "建议增加reflect_prompt形态，引导学员反思案例中的关键决策点",
+      "建议增加global_framework形态，提供专利授权条件的整体知识图谱"
+    ]
+  },
+  "metrics": {
+    "value": 78.0,
+    "unit": "分",
+    "detail": {
+      "资源形态覆盖率": 69.23,
+      "覆盖率评分(100分制)": 75.0,
+      "学员画像适配度": 80.0,
+      "总体评分(100分制)": 78.0,
+      "评分等级": "acceptable",
+      "核心形态（讲义/实操/分阶题）": "3/3",
+      "已识别形态": [
+        "anchor_scenario",
+        "legal_anchor",
+        "worked_example",
+        "decision_flow",
+        "common_pitfall",
+        "predict_activate",
+        "assessment",
+        "knowledge_synthesis",
+        "summary_card"
+      ],
+      "缺失形态": [
+        "verbal_explanation",
+        "mnemonic",
+        "reflect_prompt",
+        "global_framework"
+      ],
+      "LLM理由": "课程内容覆盖了9种资源形态，覆盖率为69.23%，三种核心形态（讲义、实操指南、分阶题）全部覆盖，但缺少言语型讲解、记忆锚、反思提示和全局框架等形态。学员画像显示为中级水平（Q1-Q15答案正确率高），学习风格偏向视觉和活跃型（decision_flow和predict_activate已覆盖），适配度良好。综合评分78分，属于可接受水平。",
+      "评估方式": "外部 LLM 判定（resource_morphology_evaluator 提示词）"
+    }
+  }
+}

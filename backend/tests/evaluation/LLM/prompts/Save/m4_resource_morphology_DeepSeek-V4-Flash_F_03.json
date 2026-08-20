@@ -1,0 +1,81 @@
+{
+  "metadata": {
+    "profile_id": "F",
+    "round": 3,
+    "eval_type": "m4_resource_morphology_evaluation",
+    "model": "DeepSeek-V4-Flash",
+    "timestamp": "2026-08-17 12:30:39"
+  },
+  "raw_llm_response": {
+    "coverage_rate": 69.23,
+    "coverage_score": 70,
+    "matched_types": [
+      "global_framework",
+      "anchor_scenario",
+      "legal_anchor",
+      "worked_example",
+      "verbal_explanation",
+      "mnemonic",
+      "predict_activate",
+      "assessment",
+      "knowledge_synthesis"
+    ],
+    "missing_types": [
+      "summary_card",
+      "reflect_prompt",
+      "decision_flow",
+      "common_pitfall"
+    ],
+    "core_shapes_status": {
+      "lecture": true,
+      "practical_guide": true,
+      "tiered_questions": true
+    },
+    "fit_score": 85,
+    "fit_details": {
+      "knowledge_level_fit": "good",
+      "learning_style_fit": "good",
+      "weak_points_addressed": true
+    },
+    "overall_score": 77,
+    "overall_grade": "acceptable",
+    "reasoning": "课程覆盖了9种资源形态（共13种），覆盖率为69.23%，三种核心形态（讲义、实操指南、分阶题）全部覆盖，因此覆盖率评分为70分。学员画像为初学者，学习风格偏向言语型和活跃型，课程提供了丰富的口语化讲解、记忆口诀和预测激活，适配度良好，但缺少速查卡、反思提示等形态，且未明确针对视觉型学习者提供图表，因此适配度评分为85分。综合评分77分，等级为可接受。",
+    "suggestions": [
+      "建议增加速查卡（summary_card）以辅助初学者快速回顾三权对比",
+      "建议增加反思提示（reflect_prompt）以促进学员深度思考",
+      "建议增加决策流程图（decision_flow）帮助学员理清三权区分逻辑",
+      "建议增加常见误区（common_pitfall）以预防典型混淆"
+    ]
+  },
+  "metrics": {
+    "value": 77.0,
+    "unit": "分",
+    "detail": {
+      "资源形态覆盖率": 69.23,
+      "覆盖率评分(100分制)": 70.0,
+      "学员画像适配度": 85.0,
+      "总体评分(100分制)": 77.0,
+      "评分等级": "acceptable",
+      "核心形态（讲义/实操/分阶题）": "3/3",
+      "已识别形态": [
+        "global_framework",
+        "anchor_scenario",
+        "legal_anchor",
+        "worked_example",
+        "verbal_explanation",
+        "mnemonic",
+        "predict_activate",
+        "assessment",
+        "knowledge_synthesis"
+      ],
+      "缺失形态": [
+        "summary_card",
+        "reflect_prompt",
+        "decision_flow",
+        "common_pitfall"
+      ],
+      "LLM理由": "课程覆盖了9种资源形态（共13种），覆盖率为69.23%，三种核心形态（讲义、实操指南、分阶题）全部覆盖，因此覆盖率评分为70分。学员画像为初学者，学习风格偏向言语型和活跃型，课程提供了丰富的口语化讲解、记忆口诀和预测激活，适配度良好，但缺少速查卡、反思提示等形态，且未明确针对视觉型学习者提供图表，因此适配度评分为85分。综合评分77分，等级为可接受。",
+      "评估方式": "外部 LLM 判定（resource_morphology_evaluator 提示词）"
+    }
+  }
+}

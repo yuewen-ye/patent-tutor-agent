@@ -1,0 +1,80 @@
+{
+  "metadata": {
+    "profile_id": "B",
+    "round": 2,
+    "eval_type": "m4_resource_morphology_evaluation",
+    "model": "DeepSeek-V4-Flash",
+    "timestamp": "2026-08-17 12:28:41"
+  },
+  "raw_llm_response": {
+    "coverage_rate": 69.23,
+    "coverage_score": 70,
+    "matched_types": [
+      "global_framework",
+      "anchor_scenario",
+      "legal_anchor",
+      "worked_example",
+      "decision_flow",
+      "common_pitfall",
+      "predict_activate",
+      "assessment",
+      "knowledge_synthesis"
+    ],
+    "missing_types": [
+      "verbal_explanation",
+      "summary_card",
+      "mnemonic",
+      "reflect_prompt"
+    ],
+    "core_shapes_status": {
+      "lecture": true,
+      "practical_guide": true,
+      "tiered_questions": true
+    },
+    "fit_score": 80,
+    "fit_details": {
+      "knowledge_level_fit": "good",
+      "learning_style_fit": "good",
+      "weak_points_addressed": true
+    },
+    "overall_score": 75,
+    "overall_grade": "acceptable",
+    "reasoning": "课程内容覆盖了9种资源形态（共13种），覆盖率为69.23%，三种核心形态（讲义、实操指南、分阶题）全部覆盖，因此覆盖率评分为70分。学员画像显示学习目标为外观设计与实用新型结合消费电子案例，课程中大量使用手机、TWS耳机等案例，且通过场景锚定、案例演示、误区辨析等方式适配了学员的感知型（sensing）和活跃型（active）学习风格，知识水平适配良好，但缺少速查卡、记忆锚等辅助记忆的形态，且未提供反思提示，因此适配度评分为80分。综合评分75分，等级为可接受。",
+    "suggestions": [
+      "建议增加速查卡（summary_card）或记忆锚（mnemonic）以强化关键概念记忆，如外观设计四要件速查",
+      "建议增加反思提示（reflect_prompt）以促进学员对案例的深度思考",
+      "可考虑增加文字讲解（verbal_explanation）形态，对复杂概念进行更口语化的补充说明"
+    ]
+  },
+  "metrics": {
+    "value": 75.0,
+    "unit": "分",
+    "detail": {
+      "资源形态覆盖率": 69.23,
+      "覆盖率评分(100分制)": 70.0,
+      "学员画像适配度": 80.0,
+      "总体评分(100分制)": 75.0,
+      "评分等级": "acceptable",
+      "核心形态（讲义/实操/分阶题）": "3/3",
+      "已识别形态": [
+        "global_framework",
+        "anchor_scenario",
+        "legal_anchor",
+        "worked_example",
+        "decision_flow",
+        "common_pitfall",
+        "predict_activate",
+        "assessment",
+        "knowledge_synthesis"
+      ],
+      "缺失形态": [
+        "verbal_explanation",
+        "summary_card",
+        "mnemonic",
+        "reflect_prompt"
+      ],
+      "LLM理由": "课程内容覆盖了9种资源形态（共13种），覆盖率为69.23%，三种核心形态（讲义、实操指南、分阶题）全部覆盖，因此覆盖率评分为70分。学员画像显示学习目标为外观设计与实用新型结合消费电子案例，课程中大量使用手机、TWS耳机等案例，且通过场景锚定、案例演示、误区辨析等方式适配了学员的感知型（sensing）和活跃型（active）学习风格，知识水平适配良好，但缺少速查卡、记忆锚等辅助记忆的形态，且未提供反思提示，因此适配度评分为80分。综合评分75分，等级为可接受。",
+      "评估方式": "外部 LLM 判定（resource_morphology_evaluator 提示词）"
+    }
+  }
+}

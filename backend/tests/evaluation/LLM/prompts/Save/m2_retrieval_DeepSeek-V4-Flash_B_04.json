@@ -1,0 +1,375 @@
+{
+  "metadata": {
+    "profile_id": "B",
+    "round": 4,
+    "eval_type": "m2_retrieval",
+    "model": "DeepSeek-V4-Flash",
+    "timestamp": "2026-08-17 15:11:56"
+  },
+  "total_chunks": 20,
+  "accurate": 19,
+  "accurate_rate": 95.0,
+  "complete": 17,
+  "complete_rate": 85.0,
+  "evaluations": [
+    {
+      "chunk_index": 0,
+      "chunk_title": "教学模块选择清单",
+      "chunk_id": "教学模块选择清单",
+      "accuracy_score": 100,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 100,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "该chunk内容为完整的教学模块选择清单表格，包含模块编号、类型、触发原因、对应正文段及归属，所有信息清晰、无捏造或张冠李戴，且覆盖了该章节所需的全部模块信息，准确且完整。",
+      "inaccurate_items": [],
+      "missing_items": [],
+      "suggestions": []
+    },
+    {
+      "chunk_index": 1,
+      "chunk_title": "教学正文",
+      "chunk_id": "1",
+      "accuracy_score": 100,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 80,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "chunk内容准确描述了章节聚焦内容，无捏造或张冠李戴；但作为章节标题和概述，未包含具体申请流程、文件要求等细节内容，完整性略有不足。",
+      "inaccurate_items": [],
+      "missing_items": [
+        "具体的专利申请流程步骤",
+        "外观设计专利与实用新型专利的文件要求细节",
+        "消费电子真实案例的具体内容"
+      ],
+      "suggestions": [
+        "建议补充该章节的具体内容，如申请流程步骤、文件清单及案例详情，以提升完整性。"
+      ]
+    },
+    {
+      "chunk_index": 2,
+      "chunk_title": "场景导入",
+      "chunk_id": "场景导入",
+      "accuracy_score": 100,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 85,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "chunk内容与知识库中'外观设计专利申请的初步审查范围包括申请文件的形式审查、申请文件的明显实质性缺陷审查'完全一致，无捏造或张冠李戴；但未提及实用新型初步审查范围，对回答完整性问题略有影响，但非关键遗漏。",
+      "inaccurate_items": [],
+      "missing_items": [
+        "未提及实用新型专利申请的初步审查范围"
+      ],
+      "suggestions": [
+        "可补充实用新型初步审查范围的相关内容，以更全面支撑回答"
+      ]
+    },
+    {
+      "chunk_index": 3,
+      "chunk_title": "法条锚定",
+      "chunk_id": "法条锚定",
+      "accuracy_score": 95,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 85,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "chunk 中引用的四条法条内容与《专利法》原文完全一致，无捏造或张冠李戴；最后一段关于初步审查范围的描述也符合实务。但完整性上，未涵盖外观设计专利申请的其他关键法条（如《专利法》第23条关于授权条件的完整规定），略有遗漏。",
+      "inaccurate_items": [],
+      "missing_items": [
+        "《专利法》第23条关于外观设计授权条件的完整规定（新颖性、创造性等）"
+      ],
+      "suggestions": [
+        "可补充《专利法》第23条以增强对授权条件的覆盖"
+      ]
+    },
+    {
+      "chunk_index": 4,
+      "chunk_title": "消费电子案例演示",
+      "chunk_id": "1",
+      "accuracy_score": 95,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 85,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "该chunk内容与消费电子案例演示章节的常见流程一致，准确描述了外观设计专利申请的审查步骤（形式审查、新颖性比对、修改规则）及实用新型的初步审查要求，未发现捏造或张冠李戴。完整性方面，覆盖了主要审查流程和注意事项，但未提及外观设计专利的简要说明需明确设计要点、以及实用新型审查中关于明显新颖性的具体判断标准，存在少量非关键遗漏。",
+      "inaccurate_items": [],
+      "missing_items": [
+        "外观设计简要说明中需明确设计要点的要求",
+        "实用新型明显新颖性判断的具体标准"
+      ],
+      "suggestions": [
+        "补充外观设计简要说明中设计要点的撰写要求",
+        "增加实用新型明显新颖性判断的细化说明"
+      ]
+    },
+    {
+      "chunk_index": 5,
+      "chunk_title": "申请程序决策流程",
+      "chunk_id": "1",
+      "accuracy_score": 85,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 75,
+      "completeness_verdict": "acceptable",
+      "root_cause": "retrieval_incomplete",
+      "reason": "chunk内容基本准确，描述了外观设计和实用新型专利申请的初步审查流程，但将两者合并描述，未区分各自特有的审查标准（如实用新型需审查明显新颖性，外观设计需审查是否属于现有设计），且未提及驳回等终态，存在少量遗漏。",
+      "inaccurate_items": [],
+      "missing_items": [
+        "实用新型与外观设计审查标准的区别",
+        "驳回作为终态之一",
+        "明显实质性缺陷的具体类型（如实用新型的明显新颖性、外观设计的现有设计判断）"
+      ],
+      "suggestions": [
+        "补充实用新型与外观设计各自的审查要点",
+        "明确列出所有可能的终态（授权、补正、驳回）",
+        "细化明显实质性缺陷的审查内容"
+      ]
+    },
+    {
+      "chunk_index": 6,
+      "chunk_title": "常见误区辨析",
+      "chunk_id": "1",
+      "accuracy_score": 95,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 85,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "该chunk内容准确，与知识库中关于外观设计专利申请常见误区的描述一致，无捏造或张冠李戴。内容基本完整，覆盖了误区核心要点（审查会检查明显缺陷、修改限制），但未提及具体法条依据（如专利法第33条），略有遗漏。",
+      "inaccurate_items": [],
+      "missing_items": [
+        "未提及具体的法条依据（如专利法第33条关于修改不得超出原图片或照片表示范围的规定）"
+      ],
+      "suggestions": [
+        "可补充引用专利法第33条作为修改限制的权威依据，以增强完整性。"
+      ]
+    },
+    {
+      "chunk_index": 7,
+      "chunk_title": "预测激活",
+      "chunk_id": "1",
+      "accuracy_score": 100,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 100,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "该chunk内容与知识库一致，无捏造或张冠李戴，且完整覆盖了'预测激活'章节的核心内容，包括问题引导、提示和测评说明。",
+      "inaccurate_items": [],
+      "missing_items": [],
+      "suggestions": []
+    },
+    {
+      "chunk_index": 8,
+      "chunk_title": "知识综合",
+      "chunk_id": "1",
+      "accuracy_score": 95,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 85,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "该chunk内容与外观设计专利审查流程的权威事实一致，无捏造或张冠李戴；但未提及外观设计专利初步审查中不进行新颖性、创造性等实质审查（仅检查明显实质性缺陷），且未说明授权后还需办理登记手续，存在少量非关键遗漏。",
+      "inaccurate_items": [],
+      "missing_items": [
+        "外观设计初步审查不进行新颖性、创造性等实质审查（仅检查明显实质性缺陷）的明确说明",
+        "授权后需办理登记手续才能生效的步骤"
+      ],
+      "suggestions": [
+        "补充说明外观设计初步审查仅检查明显实质性缺陷，不进行新颖性、创造性等实质审查",
+        "增加授权后办理登记手续的步骤描述"
+      ]
+    },
+    {
+      "chunk_index": 9,
+      "chunk_title": "速查卡",
+      "chunk_id": "速查卡",
+      "accuracy_score": 95,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 85,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "该chunk内容准确，与《专利法》相关法条（第三十一条、第三十三条、第四十条、第四十二条）及专利审查实践一致，无捏造或张冠李戴。完整性方面，覆盖了初步审查范围、修改限制、单一性要求、保护期限等核心要点，但未涉及费用缴纳、优先权等次要程序细节，略有遗漏但不影响对主要问题的回答。",
+      "inaccurate_items": [],
+      "missing_items": [
+        "未提及申请费缴纳要求",
+        "未涉及优先权制度细节"
+      ],
+      "suggestions": [
+        "可补充费用缴纳要求以增强完整性",
+        "可简要提及优先权制度作为扩展知识"
+      ]
+    },
+    {
+      "chunk_index": 10,
+      "chunk_title": "结构化数据",
+      "chunk_id": "1",
+      "accuracy_score": 100,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 100,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "检索到的chunk内容与问题/陈述完全一致，准确且完整地覆盖了'结构化数据'章节标题，无任何捏造或遗漏。",
+      "inaccurate_items": [],
+      "missing_items": [],
+      "suggestions": [
+        "无需改进"
+      ]
+    },
+    {
+      "chunk_index": 11,
+      "chunk_title": "expert",
+      "chunk_id": "expert",
+      "accuracy_score": 100,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 100,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "chunk内容与章节标题完全一致，无捏造或遗漏，准确且完整地对应了'expert'章节。",
+      "inaccurate_items": [],
+      "missing_items": [],
+      "suggestions": [
+        "无需改进"
+      ]
+    },
+    {
+      "chunk_index": 12,
+      "chunk_title": "style",
+      "chunk_id": "1",
+      "accuracy_score": 100,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 100,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "chunk内容与章节标题'style'完全一致，且准确提供了'fused'这一值，无任何捏造或遗漏。",
+      "inaccurate_items": [],
+      "missing_items": [],
+      "suggestions": [
+        "无需改进"
+      ]
+    },
+    {
+      "chunk_index": 13,
+      "chunk_title": "knowledge_points",
+      "chunk_id": "knowledge_points",
+      "accuracy_score": 100,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 100,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "该chunk内容为JSON格式的知识点节点信息，包含节点ID和知识点名称，与知识库结构一致，无捏造或遗漏，准确且完整。",
+      "inaccurate_items": [],
+      "missing_items": [],
+      "suggestions": [
+        "无需改进"
+      ]
+    },
+    {
+      "chunk_index": 14,
+      "chunk_title": "legal_basis",
+      "chunk_id": "legal_basis",
+      "accuracy_score": 100,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 85,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "检索到的法条引用均来自权威来源《中华人民共和国专利法.txt》，内容准确无误，无捏造或张冠李戴。完整性方面，覆盖了外观设计初步审查相关的核心法条（第三十一条、第三十三条、第四十条、第四十二条）及专题讲座说明，但未明确是否包含所有可能相关的法条（如第二十七条），存在极少量非关键遗漏。",
+      "inaccurate_items": [],
+      "missing_items": [
+        "可能遗漏《专利法》第二十七条（外观设计专利申请文件要求）等关联法条"
+      ],
+      "suggestions": [
+        "若问题涉及外观设计申请文件具体要求，建议补充《专利法》第二十七条；当前chunk对于一般性法律依据检索已足够完整。"
+      ]
+    },
+    {
+      "chunk_index": 15,
+      "chunk_title": "risks",
+      "chunk_id": "risks",
+      "accuracy_score": 100,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 90,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "该chunk准确列出了三个与专利审查流程相关的风险点，内容与知识库一致，无捏造或张冠李戴；覆盖了申请文件修改、授权后无效风险以及学习者混淆风险等关键要点，仅可能遗漏其他潜在风险（如流程时间延误等），但已基本完整支撑对'risks'章节的理解。",
+      "inaccurate_items": [],
+      "missing_items": [
+        "可能遗漏了其他常见风险，如审查流程时间延误、费用风险等"
+      ],
+      "suggestions": [
+        "可考虑补充更多风险类型以增强完整性，如流程延误、费用超支等"
+      ]
+    },
+    {
+      "chunk_index": 16,
+      "chunk_title": "draft_stage",
+      "chunk_id": "draft_stage",
+      "accuracy_score": 0,
+      "accuracy_verdict": "inaccurate",
+      "completeness_score": 0,
+      "completeness_verdict": "incomplete",
+      "root_cause": "retrieval_error",
+      "reason": "检索到的chunk内容仅为字符串\"integration\"，与章节标题\"draft_stage\"完全不符，属于张冠李戴，且未包含任何与draft_stage相关的实质内容。",
+      "inaccurate_items": [
+        "chunk内容\"integration\"与draft_stage无关"
+      ],
+      "missing_items": [
+        "draft_stage章节的全部内容"
+      ],
+      "suggestions": [
+        "检查检索索引是否正确映射了章节标题与内容",
+        "确保检索时使用了正确的字段或关键词"
+      ]
+    },
+    {
+      "chunk_index": 17,
+      "chunk_title": "irac",
+      "chunk_id": "irac",
+      "accuracy_score": 85,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 70,
+      "completeness_verdict": "partially_complete",
+      "root_cause": "retrieval_incomplete",
+      "reason": "该chunk准确概括了IRAC分析框架的四个要素，内容与专利法相关程序一致，无捏造或张冠李戴；但作为对'IRAC'章节的检索，仅给出了一个具体案例的填充结果，未完整解释IRAC方法本身的定义、步骤或通用应用规则，遗漏了该章节应包含的核心方法论内容。",
+      "inaccurate_items": [],
+      "missing_items": [
+        "IRAC方法本身的定义和通用解释",
+        "IRAC各步骤（Issue、Rule、Application、Conclusion）的详细说明",
+        "IRAC在专利分析或法律推理中的典型应用场景"
+      ],
+      "suggestions": [
+        "补充IRAC方法论的通用定义和步骤说明",
+        "增加IRAC在法律文书或专利分析中的典型应用示例",
+        "将当前案例作为Application步骤的示例，而非替代整个章节内容"
+      ]
+    },
+    {
+      "chunk_index": 18,
+      "chunk_title": "interactive_questions",
+      "chunk_id": "interactive_questions",
+      "accuracy_score": 100,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 100,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "该chunk内容为结构化的题目数据，与知识库中'专利法基础'、'优先权'等知识点一致，无捏造或张冠李戴；且完整覆盖了该章节下所有题目，无遗漏。",
+      "inaccurate_items": [],
+      "missing_items": [],
+      "suggestions": [
+        "无需改进，检索结果准确且完整。"
+      ]
+    },
+    {
+      "chunk_index": 19,
+      "chunk_title": "knowledge_synthesis",
+      "chunk_id": "knowledge_synthesis",
+      "accuracy_score": 100,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 100,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "该chunk准确且完整地总结了专利流程章节的覆盖节点与易混淆对，内容与知识库一致，无捏造或遗漏。",
+      "inaccurate_items": [],
+      "missing_items": [],
+      "suggestions": [
+        "无需改进"
+      ]
+    }
+  ]
+}

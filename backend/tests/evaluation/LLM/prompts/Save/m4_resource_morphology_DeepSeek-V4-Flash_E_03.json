@@ -1,0 +1,81 @@
+{
+  "metadata": {
+    "profile_id": "E",
+    "round": 3,
+    "eval_type": "m4_resource_morphology_evaluation",
+    "model": "DeepSeek-V4-Flash",
+    "timestamp": "2026-08-17 12:30:03"
+  },
+  "raw_llm_response": {
+    "coverage_rate": 69.23,
+    "coverage_score": 75,
+    "matched_types": [
+      "anchor_scenario",
+      "legal_anchor",
+      "worked_example",
+      "decision_flow",
+      "common_pitfall",
+      "mnemonic",
+      "predict_activate",
+      "assessment",
+      "knowledge_synthesis"
+    ],
+    "missing_types": [
+      "verbal_explanation",
+      "summary_card",
+      "reflect_prompt",
+      "global_framework"
+    ],
+    "core_shapes_status": {
+      "lecture": true,
+      "practical_guide": true,
+      "tiered_questions": true
+    },
+    "fit_score": 80,
+    "fit_details": {
+      "knowledge_level_fit": "good",
+      "learning_style_fit": "good",
+      "weak_points_addressed": true
+    },
+    "overall_score": 78,
+    "overall_grade": "acceptable",
+    "reasoning": "课程覆盖了9种资源形态（覆盖率69.23%），三种核心形态（讲义、实操指南、分阶题）全部覆盖，但缺少verbal_explanation、summary_card、reflect_prompt和global_framework等形态。学员画像显示为研发人员，学习目标为搞懂创造性评价与权利要求边界，课程内容以场景导入、案例演示、决策流程和误区辨析为主，与研发视角高度匹配，且提供了分阶题（L1-L3）覆盖不同难度。但缺少口语化讲解和速查卡等形态，对言语型和视觉型学习者的适配性略有不足。综合评分75×0.5+80×0.5=77.5，四舍五入为78分。",
+    "suggestions": [
+      "建议增加verbal_explanation（文字讲解）形态，对法条和概念进行更口语化的解释，帮助言语型学习者理解",
+      "建议增加summary_card（速查卡）形态，将四类文件的关键要求浓缩为速查卡片，便于研发人员快速回顾",
+      "建议增加reflect_prompt（反思提示）形态，引导学员结合自身研发项目反思申请文件撰写中的常见问题",
+      "建议增加global_framework（全局框架）形态，在开头或结尾提供专利申请流程的整体框架图，帮助序列型学习者建立全局认知"
+    ]
+  },
+  "metrics": {
+    "value": 78.0,
+    "unit": "分",
+    "detail": {
+      "资源形态覆盖率": 69.23,
+      "覆盖率评分(100分制)": 75.0,
+      "学员画像适配度": 80.0,
+      "总体评分(100分制)": 78.0,
+      "评分等级": "acceptable",
+      "核心形态（讲义/实操/分阶题）": "3/3",
+      "已识别形态": [
+        "anchor_scenario",
+        "legal_anchor",
+        "worked_example",
+        "decision_flow",
+        "common_pitfall",
+        "mnemonic",
+        "predict_activate",
+        "assessment",
+        "knowledge_synthesis"
+      ],
+      "缺失形态": [
+        "verbal_explanation",
+        "summary_card",
+        "reflect_prompt",
+        "global_framework"
+      ],
+      "LLM理由": "课程覆盖了9种资源形态（覆盖率69.23%），三种核心形态（讲义、实操指南、分阶题）全部覆盖，但缺少verbal_explanation、summary_card、reflect_prompt和global_framework等形态。学员画像显示为研发人员，学习目标为搞懂创造性评价与权利要求边界，课程内容以场景导入、案例演示、决策流程和误区辨析为主，与研发视角高度匹配，且提供了分阶题（L1-L3）覆盖不同难度。但缺少口语化讲解和速查卡等形态，对言语型和视觉型学习者的适配性略有不足。综合评分75×0.5+80×0.5=77.5，四舍五入为78分。",
+      "评估方式": "外部 LLM 判定（resource_morphology_evaluator 提示词）"
+    }
+  }
+}

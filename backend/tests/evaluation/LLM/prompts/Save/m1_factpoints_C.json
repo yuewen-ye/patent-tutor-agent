@@ -1,0 +1,1807 @@
+{
+  "profile_id": "C",
+  "generated_at": "2026-08-18 08:31:15",
+  "total_factpoints": 256,
+  "topics": [
+    "新颖性",
+    "创造性",
+    "其他",
+    "专利法",
+    "对比文件",
+    "现有技术"
+  ],
+  "factpoints": [
+    {
+      "profile_id": "C",
+      "fact_point": "- **《专利法》第二十二条**：发明专利需同时满足新颖性、创造性和实用性，新颖性要求申请日前未公开具体技术方案",
+      "round": 1,
+      "topic": "新颖性",
+      "source": "artifacts/multi-C/course_package.md#course_package:法条锚定"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "- **化学领域发明创造性判断的其他若干规定**：结构接近的化合物必须证明具有预料不到的用途或效果才能具备创造性，通式不破坏具体化合物新颖性",
+      "round": 1,
+      "topic": "新颖性",
+      "source": "artifacts/multi-C/course_package.md#course_package:法条锚定"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "问：B是否具备新颖性和创造性？",
+      "round": 1,
+      "topic": "新颖性",
+      "source": "artifacts/multi-C/course_package.md#course_package:案例演示"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "1. 单独对比B与A的结构及用途，技术方案存在实质差异 → *B具备新颖性*",
+      "round": 1,
+      "topic": "新颖性",
+      "source": "artifacts/multi-C/course_package.md#course_package:案例演示"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "**结论**：化合物B具备新颖性和创造性，符合授权实质条件",
+      "round": 1,
+      "topic": "新颖性",
+      "source": "artifacts/multi-C/course_package.md#course_package:案例演示"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "**本题要点**：结构接近时必须证明预料不到效果，单独对比是新颖性核心",
+      "round": 1,
+      "topic": "新颖性",
+      "source": "artifacts/multi-C/course_package.md#course_package:案例演示"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "**常见误解**：结构与已知化合物接近的医药化合物一定缺乏新颖性或创造性",
+      "round": 1,
+      "topic": "新颖性",
+      "source": "artifacts/multi-C/course_package.md#course_package:常见误区"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "**为什么错**：新颖性采用单独对比原则，需具体化合物完全相同才丧失；创造性则需额外考察预料不到效果，结构接近仅触发进一步审查而非直接否定",
+      "round": 1,
+      "topic": "新颖性",
+      "source": "artifacts/multi-C/course_package.md#course_package:常见误区"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "**区分判据**：先单独对比判断新颖性，再看效果是否预料不到以判断创造性",
+      "round": 1,
+      "topic": "新颖性",
+      "source": "artifacts/multi-C/course_package.md#course_package:常见误区"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "patentability-substantive 新颖性判断",
+      "round": 1,
+      "topic": "新颖性",
+      "source": "artifacts/multi-C/course_package.md#course_package:knowledge_points"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "判断医药化合物新颖性时，正确的做法是？",
+      "round": 1,
+      "topic": "新颖性",
+      "source": "artifacts/multi-C/course_package.md#course_package:interactive_questions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "外观设计新颖性的核心判断标准是什么？",
+      "round": 2,
+      "topic": "新颖性",
+      "source": "artifacts/multi-C/course_package.md#course_package:interactive_questions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "本轮全部6题答对，设计专利性（5次观测）和专利性实质（4次观测）掌握度极高，新颖性首次观测即达0.8374，表现稳定。认知应用能力有证据提升，情感状态保持专注兴趣，学习风格偏好未发生显著变化。",
+      "round": 2,
+      "topic": "新颖性",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:profile_update_hint"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "- **《专利法》第二十二条第二款**：新颖性是指发明在申请日前不属于现有技术，也没有抵触申请，即全世界范围内不能有相同技术被公开或他人先申请后公开",
+      "round": 3,
+      "topic": "新颖性",
+      "source": "artifacts/multi-C/course_package.md#course_package:法条锚定"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "- **《专利法》第二十四条**：申请日前六个月内特定情形（如政府承认国际展览会首次展出、规定学术会议首次发表、他人未经同意泄露）不丧失新颖性",
+      "round": 3,
+      "topic": "新颖性",
+      "source": "artifacts/multi-C/course_package.md#course_package:法条锚定"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "**为何重要**：本节点核心目标是掌握化合物新颖性判断标准及宽限期，法条是所有判断的唯一溯源依据",
+      "round": 3,
+      "topic": "新颖性",
+      "source": "artifacts/multi-C/course_package.md#course_package:法条锚定"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "**常见误解**：通式一旦公开，通式内所有具体化合物都丧失新颖性",
+      "round": 3,
+      "topic": "新颖性",
+      "source": "artifacts/multi-C/course_package.md#course_package:常见误区"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "**为什么错**：通式仅公开一般范围，不能直接等同于具体化合物的结构公开，具体化合物仍可能具备新颖性",
+      "round": 3,
+      "topic": "新颖性",
+      "source": "artifacts/multi-C/course_package.md#course_package:常见误区"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "novelty 新颖性",
+      "round": 3,
+      "topic": "新颖性",
+      "source": "artifacts/multi-C/course_package.md#course_package:knowledge_points"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "根据《专利法》第二十四条，不丧失新颖性的宽限期为多长时间？",
+      "round": 3,
+      "topic": "新颖性",
+      "source": "artifacts/multi-C/course_package.md#course_package:interactive_questions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "新颖性判断通常在创造性判断之前进行，对吗？",
+      "round": 3,
+      "topic": "新颖性",
+      "source": "artifacts/multi-C/course_package.md#course_package:interactive_questions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "某对比文件公开通式化合物及其制备方法，申请人要求保护通式中一个具体化合物C20H25N3O2。若该具体化合物未被对比文件直接记载，则该具体化合物是否具备新颖性？",
+      "round": 3,
+      "topic": "新颖性",
+      "source": "artifacts/multi-C/course_package.md#course_package:interactive_questions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "**适用规则**：《专利法》第二十二条及化学领域创造性判断规定",
+      "round": 1,
+      "topic": "创造性",
+      "source": "artifacts/multi-C/course_package.md#course_package:案例演示"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "3. 整体技术方案带来意想不到的技术效果 → *B具备创造性*",
+      "round": 1,
+      "topic": "创造性",
+      "source": "artifacts/multi-C/course_package.md#course_package:案例演示"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "patentability-substantive 创造性判断（医药化合物）",
+      "round": 1,
+      "topic": "创造性",
+      "source": "artifacts/multi-C/course_package.md#course_package:knowledge_points"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "化学领域发明创造性判断的其他若干规定",
+      "round": 1,
+      "topic": "创造性",
+      "source": "artifacts/multi-C/course_package.md#course_package:legal_basis"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "inventive-step 创造性",
+      "round": 4,
+      "topic": "创造性",
+      "source": "artifacts/multi-C/course_package.md#course_package:knowledge_points"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "审查指南第二部分第四章关于创造性的三步法及化合物创造性判断规定",
+      "round": 4,
+      "topic": "创造性",
+      "source": "artifacts/multi-C/course_package.md#course_package:legal_basis"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "外观设计专利授权条件中“明显区别”的判断与发明创造性“三步法”的主要区别是什么？",
+      "round": 4,
+      "topic": "创造性",
+      "source": "artifacts/multi-C/course_package.md#course_package:interactive_questions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "在新药研发案例中，一种结构与已知抗癌化合物接近的新化合物，若要在专利审查中被认定具备创造性，最关键需证明什么？",
+      "round": 4,
+      "topic": "创造性",
+      "source": "artifacts/multi-C/course_package.md#course_package:interactive_questions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "patentability-substantive 专利授权实质条件",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/course_package.md#course_package:knowledge_points"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "patentability-substantive 实用性",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/course_package.md#course_package:knowledge_points"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-law-foundation 掌握度 PL=0.8374",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-system-overview 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-law-framework 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-rights-nature 掌握度 PL=0.1",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patentability-substantive 掌握度 PL=0.9992",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 novelty 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 prior-art-definition 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 conflicting-application 掌握度 PL=0.1",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 grace-period 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 inventive-step 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 three-step-method 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 person-skilled-in-art 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 practical-applicability 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 design-patentability 掌握度 PL=0.8374",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 non-patentable-subject 掌握度 PL=0.1",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 scientific-discovery-vs-invention 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 medical-method-exclusion 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 public-order-morality 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-application-process 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 application-documents 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 specification-requirements 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 claims-drafting-basics 掌握度 PL=0.1",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 priority-right 掌握度 PL=0.1",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 filing-date 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 divisional-application 掌握度 PL=0.1",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-examination 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 preliminary-examination 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 substantive-examination 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 office-action-response 掌握度 PL=0.1",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 amendment-limits 掌握度 PL=0.1",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-reexamination 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 reexamination-request 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 collegial-review 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-invalidation 掌握度 PL=0.1",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 invalidation-grounds 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 oral-proceeding 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-rights-protection 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 protection-scope 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 doctrine-of-equivalents 掌握度 PL=0.1",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 claim-interpretation 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 infringement-types 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 infringement-defenses 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 bolar-exemption 掌握度 PL=0.1",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 prior-use-right 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 remedies 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-agency-practice 掌握度 PL=0.1",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 claims-drafting-advanced 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 oa-response-practice 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 invalidation-practice 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 related-laws 掌握度 PL=0.1",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 civil-law-basics 掌握度 PL=0.1",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 contract-law-tech 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 administrative-procedure 掌握度 PL=0.1",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 civil-procedure 掌握度 PL=0.1",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 trips-agreement 掌握度 PL=0.1",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 pct-system 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 pct-filing 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 pct-national-phase 掌握度 PL=0.1",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 foreign-priority 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 domestic-priority 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 scientific-research-exemption 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 direct-infringement 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 indirect-infringement 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 independent-claim 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 dependent-claim 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 employee-invention 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 exhaustion-of-rights 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 implied-license 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 general-consumer 掌握度 PL=0.15",
+      "round": 1,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "design-patentability 外观设计授权条件",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/course_package.md#course_package:knowledge_points"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-law-foundation 掌握度 PL=0.8374",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-system-overview 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-law-framework 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-rights-nature 掌握度 PL=0.1",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patentability-substantive 掌握度 PL=0.9999",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 novelty 掌握度 PL=0.8374",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 prior-art-definition 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 conflicting-application 掌握度 PL=0.1",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 grace-period 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 inventive-step 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 three-step-method 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 person-skilled-in-art 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 practical-applicability 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 design-patentability 掌握度 PL=1.0",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 non-patentable-subject 掌握度 PL=0.1",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 scientific-discovery-vs-invention 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 medical-method-exclusion 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 public-order-morality 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-application-process 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 application-documents 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 specification-requirements 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 claims-drafting-basics 掌握度 PL=0.1",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 priority-right 掌握度 PL=0.1",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 filing-date 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 divisional-application 掌握度 PL=0.1",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-examination 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 preliminary-examination 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 substantive-examination 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 office-action-response 掌握度 PL=0.1",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 amendment-limits 掌握度 PL=0.1",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-reexamination 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 reexamination-request 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 collegial-review 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-invalidation 掌握度 PL=0.1",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 invalidation-grounds 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 oral-proceeding 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-rights-protection 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 protection-scope 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 doctrine-of-equivalents 掌握度 PL=0.1",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 claim-interpretation 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 infringement-types 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 infringement-defenses 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 bolar-exemption 掌握度 PL=0.1",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 prior-use-right 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 remedies 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-agency-practice 掌握度 PL=0.1",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 claims-drafting-advanced 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 oa-response-practice 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 invalidation-practice 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 related-laws 掌握度 PL=0.1",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 civil-law-basics 掌握度 PL=0.1",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 contract-law-tech 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 administrative-procedure 掌握度 PL=0.1",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 civil-procedure 掌握度 PL=0.1",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 trips-agreement 掌握度 PL=0.1",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 pct-system 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 pct-filing 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 pct-national-phase 掌握度 PL=0.1",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 foreign-priority 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 domestic-priority 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 scientific-research-exemption 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 direct-infringement 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 indirect-infringement 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 independent-claim 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 dependent-claim 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 employee-invention 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 exhaustion-of-rights 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 implied-license 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 general-consumer 掌握度 PL=0.15",
+      "round": 2,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-law-foundation 掌握度 PL=0.8374",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-system-overview 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-law-framework 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-rights-nature 掌握度 PL=0.1",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patentability-substantive 掌握度 PL=0.9999",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 novelty 掌握度 PL=1.0",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 prior-art-definition 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 conflicting-application 掌握度 PL=0.1",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 grace-period 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 inventive-step 掌握度 PL=0.7848",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 three-step-method 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 person-skilled-in-art 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 practical-applicability 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 design-patentability 掌握度 PL=1.0",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 non-patentable-subject 掌握度 PL=0.1",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 scientific-discovery-vs-invention 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 medical-method-exclusion 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 public-order-morality 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-application-process 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 application-documents 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 specification-requirements 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 claims-drafting-basics 掌握度 PL=0.1",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 priority-right 掌握度 PL=0.1",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 filing-date 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 divisional-application 掌握度 PL=0.1",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-examination 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 preliminary-examination 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 substantive-examination 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 office-action-response 掌握度 PL=0.1",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 amendment-limits 掌握度 PL=0.1",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-reexamination 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 reexamination-request 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 collegial-review 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-invalidation 掌握度 PL=0.1",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 invalidation-grounds 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 oral-proceeding 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-rights-protection 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 protection-scope 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 doctrine-of-equivalents 掌握度 PL=0.1",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 claim-interpretation 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 infringement-types 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 infringement-defenses 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 bolar-exemption 掌握度 PL=0.1",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 prior-use-right 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 remedies 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 patent-agency-practice 掌握度 PL=0.1",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 claims-drafting-advanced 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 oa-response-practice 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 invalidation-practice 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 related-laws 掌握度 PL=0.1",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 civil-law-basics 掌握度 PL=0.1",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 contract-law-tech 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 administrative-procedure 掌握度 PL=0.1",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 civil-procedure 掌握度 PL=0.1",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 trips-agreement 掌握度 PL=0.1",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 pct-system 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 pct-filing 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 pct-national-phase 掌握度 PL=0.1",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 foreign-priority 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 domestic-priority 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 scientific-research-exemption 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 direct-infringement 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 indirect-infringement 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 independent-claim 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 dependent-claim 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 employee-invention 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 exhaustion-of-rights 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 implied-license 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "节点 general-consumer 掌握度 PL=0.15",
+      "round": 3,
+      "topic": "其他",
+      "source": "artifacts/multi-C/learner_profile_update.md#profile_update:five_dimensions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "inventive-step 突出的实质性特点",
+      "round": 4,
+      "topic": "其他",
+      "source": "artifacts/multi-C/course_package.md#course_package:knowledge_points"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "inventive-step 显著的进步",
+      "round": 4,
+      "topic": "其他",
+      "source": "artifacts/multi-C/course_package.md#course_package:knowledge_points"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "inventive-step 三步法判断",
+      "round": 4,
+      "topic": "其他",
+      "source": "artifacts/multi-C/course_package.md#course_package:knowledge_points"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "inventive-step 所属技术领域技术人员",
+      "round": 4,
+      "topic": "其他",
+      "source": "artifacts/multi-C/course_package.md#course_package:knowledge_points"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "《专利法》第二十二条",
+      "round": 1,
+      "topic": "专利法",
+      "source": "artifacts/multi-C/course_package.md#course_package:legal_basis"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "根据专利法基础，发明专利授权的实质条件主要包括哪些？",
+      "round": 1,
+      "topic": "专利法",
+      "source": "artifacts/multi-C/course_package.md#course_package:interactive_questions"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "- **《专利法》第二十三条**：外观设计必须不属于现有设计、无抵触申请，与现有设计或其组合相比具有明显区别，且不与在先合法权利冲突",
+      "round": 2,
+      "topic": "专利法",
+      "source": "artifacts/multi-C/course_package.md#course_package:法条锚定"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "**适用规则**：《专利法》第二十三条第二款",
+      "round": 2,
+      "topic": "专利法",
+      "source": "artifacts/multi-C/course_package.md#course_package:案例演示"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "《专利法》第二十三条",
+      "round": 2,
+      "topic": "专利法",
+      "source": "artifacts/multi-C/course_package.md#course_package:legal_basis"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "- **《专利法实施细则》第三十三条**：宽限期具体适用条件与期限由实施细则进一步明确",
+      "round": 3,
+      "topic": "专利法",
+      "source": "artifacts/multi-C/course_package.md#course_package:法条锚定"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "《专利法》第二十二条第二款",
+      "round": 3,
+      "topic": "专利法",
+      "source": "artifacts/multi-C/course_package.md#course_package:legal_basis"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "《专利法》第二十四条",
+      "round": 3,
+      "topic": "专利法",
+      "source": "artifacts/multi-C/course_package.md#course_package:legal_basis"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "《专利法实施细则》第三十三条",
+      "round": 3,
+      "topic": "专利法",
+      "source": "artifacts/multi-C/course_package.md#course_package:legal_basis"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "《专利法》第二十二条第三款",
+      "round": 4,
+      "topic": "专利法",
+      "source": "artifacts/multi-C/course_package.md#course_package:legal_basis"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "**区分判据**：检查对比文件是否直接记载或等同公开该具体化合物的结构式、制备方法及性质参数",
+      "round": 3,
+      "topic": "对比文件",
+      "source": "artifacts/multi-C/course_package.md#course_package:常见误区"
+    },
+    {
+      "profile_id": "C",
+      "fact_point": "创造性判断三步法中，第一步“确定最接近的现有技术”的主要依据是什么？",
+      "round": 4,
+      "topic": "现有技术",
+      "source": "artifacts/multi-C/course_package.md#course_package:interactive_questions"
+    }
+  ]
+}

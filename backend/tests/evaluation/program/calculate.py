@@ -229,7 +229,10 @@ def _parse_learning_path_nodes(path_text: str) -> set[str]:
     return nodes
 
 def _expand_with_ancestors(nodes: set[str], dag: dict[str, Any]) -> set[str]:
-    """扩展节点集：基于 knowledge-dag.json 的 predecessors 关系。"""
+    """扩展节点集：基于 knowledge-dag.json 的 predecessors 关系（向上追溯祖先）。
+
+    用途：3.1 本节知识点覆盖率 —— 教了子节点 → 其前置祖先视为已覆盖。
+    """
     expanded = set(nodes)
     nodes_data = dag.get("dag", {}).get("nodes", [])
     predecessors_map: dict[str, list[str]] = {}
@@ -253,6 +256,43 @@ def _expand_with_ancestors(nodes: set[str], dag: dict[str, Any]) -> set[str]:
         ancestors = _find_ancestors(nid)
         expanded.update(ancestors)
     return expanded
+
+
+def _expand_with_descendants(nodes: set[str], dag: dict[str, Any]) -> set[str]:
+    """扩展节点集：基于 predecessors 反向（向下遍历 successors，得到所有子孙）。
+
+    用途：3.2 薄弱点命中率 / 3.3 混淆对覆盖率 —— 当系统只写入 level-1/2 的父节点时，
+    其 DAG 下的子/孙节点（也就是 expected 里的 weakness/confusion 叶节点）
+    应视为在同一教学范围内。
+    """
+    expanded = set(nodes)
+    nodes_data = dag.get("dag", {}).get("nodes", [])
+    # successors_map: node_id -> list of node_ids whose predecessors include node_id
+    successors_map: dict[str, list[str]] = {}
+    for node in nodes_data:
+        nid = node.get("node_id", "")
+        for pred in node.get("predecessors", []) or []:
+            successors_map.setdefault(pred, []).append(nid)
+
+    def _find_descendants(node_id: str) -> set[str]:
+        descendants = set()
+        to_visit = list(successors_map.get(node_id, []))
+        while to_visit:
+            current = to_visit.pop(0)
+            if current not in descendants:
+                descendants.add(current)
+                to_visit.extend(successors_map.get(current, []))
+        return descendants
+
+    for nid in list(nodes):
+        descendants = _find_descendants(nid)
+        expanded.update(descendants)
+    return expanded
+
+
+def _expand_fully(nodes: set[str], dag: dict[str, Any]) -> set[str]:
+    """双向扩展：祖先 + 子孙。"""
+    return _expand_with_descendants(_expand_with_ancestors(nodes, dag), dag)
 
 def _load_node_name_map() -> dict[str, str]:
     """加载 node_id -> node_name 映射。"""
@@ -310,7 +350,7 @@ def calc_objection_loop(judge_text: str, review_a_text: str, review_b_text: str)
     """1.1 闭环率 — 占位指标。
 
     闭环率 = 闭环条数 / 总🔴条数 × 100%。
-    实际值由外部 LLM 评估（m1_objection_loop_*.json）通过 `load_m8_external_result` 加载。
+    实际值由外部 LLM 评估（round_indicator_*.json > objection_loop section）通过 `load_m8_external_result` 加载。
     此处仅用于在外部LLM结果缺失时保留占位，并透出 🔴 计数供参考。
     无🔴异议时返回 100%（无需闭环即为满分）。
     """
@@ -323,7 +363,7 @@ def calc_objection_loop(judge_text: str, review_a_text: str, review_b_text: str)
         detail={
             "总🔴条数": total_critical,
             "闭环条数": None,
-            "note": "闭环判定需依赖外部LLM结果 (m1_objection_loop_*.json)",
+            "note": "闭环判定需依赖外部LLM结果 (round_indicator_*.json section=objection_loop)",
             "computed": False,
         }
     )
@@ -526,10 +566,25 @@ def calc_coverage_section(
         }
     )
 
-def calc_coverage_weakness(course_text: str, expected_content: dict[str, Any]) -> MetricResult:
-    """M3 覆盖率 — 薄弱点命中率。"""
+def calc_coverage_weakness(
+    course_text: str, expected_content: dict[str, Any],
+    history_nodes: set[str] | None = None,
+) -> MetricResult:
+    """M3 覆盖率 — 薄弱点命中率。
+
+    与 3.1 一致：节点池加入「当前教学节点 + 历史累计节点」，
+    并使用双向扩展（祖先+子孙）—— 当 course 写入 level-1 父节点时，
+    expected 中更深层的 weak_point 子孙节点也应算作在同一教学范围内。
+    """
     parsed = _parse_course_package(course_text)
     course_kp_ids = set(parsed.get("knowledge_node_ids", []))
+    current_node_id = parsed.get("current_node_id")
+    if current_node_id:
+        course_kp_ids.add(current_node_id)
+    if history_nodes:
+        course_kp_ids.update(history_nodes)
+    dag = _load_knowledge_dag()
+    expanded = _expand_fully(course_kp_ids, dag)
 
     expected_weakpoints = expected_content.get("weakness_kcs") or expected_content.get("weak_points", [])
     if not expected_weakpoints:
@@ -548,22 +603,43 @@ def calc_coverage_weakness(course_text: str, expected_content: dict[str, Any]) -
             if nid:
                 expected_wp_ids.add(nid)
                 raw_expected.append(nid)
-    hit = course_kp_ids & expected_wp_ids
+    hit = expanded & expected_wp_ids
     rate = round(len(hit) / len(expected_wp_ids) * 100, 2) if expected_wp_ids else 0.0
+    node_name_map = _load_node_name_map()
     return MetricResult(
         name="薄弱点命中率", value=rate, unit="%",
-        detail={"预期薄弱点数": len(expected_wp_ids), "预期薄弱点": raw_expected,
-                "命中数": len(hit), "命中节点": list(hit)}
+        detail={"预期薄弱点数": len(expected_wp_ids),
+                "预期薄弱点": raw_expected,
+                "命中数": len(hit),
+                "命中节点": [node_name_map.get(n, n) for n in hit],
+                "本轮节点数": len(course_kp_ids),
+                "双向扩展后节点数": len(expanded),
+                }
     )
 
-def calc_coverage_confusable(course_text: str, expected_content: dict[str, Any], node_name_map: dict[str, str]) -> MetricResult:
-    """M3 覆盖率 — 混淆对覆盖率。"""
+
+def calc_coverage_confusable(
+    course_text: str, expected_content: dict[str, Any],
+    node_name_map: dict[str, str],
+    history_nodes: set[str] | None = None,
+) -> MetricResult:
+    """M3 覆盖率 — 混淆对覆盖率。
+
+    与 3.1 一致：加入 current_node_id + 历史节点，并用双向扩展
+    （祖先+子孙）—— course 写入 level-1 父节点时，其下 sibling 形式的
+    confusion 子孙节点对也视为已覆盖（任一命中即算覆盖）。
+    """
     parsed = _parse_course_package(course_text)
     course_kp_ids = set(parsed.get("knowledge_node_ids", []))
+    current_node_id = parsed.get("current_node_id")
+    if current_node_id:
+        course_kp_ids.add(current_node_id)
+    if history_nodes:
+        course_kp_ids.update(history_nodes)
     dag = _load_knowledge_dag()
-    expanded = _expand_with_ancestors(course_kp_ids, dag)
+    expanded = _expand_fully(course_kp_ids, dag)
 
-    confusable_pairs = expected_content.get("confusable_pairs", [])
+    confusable_pairs = expected_content.get("confusable_pairs") or expected_content.get("confusion_pairs", [])
     if not confusable_pairs:
         return MetricResult(name="混淆对覆盖率", value=0.0, unit="%", detail={"note": "无混淆对"})
 
@@ -576,8 +652,8 @@ def calc_coverage_confusable(course_text: str, expected_content: dict[str, Any],
             node_a = _resolve_to_node_id(str(pair[0]), name_to_id)
             node_b = _resolve_to_node_id(str(pair[1]), name_to_id)
         elif isinstance(pair, dict):
-            node_a = _resolve_to_node_id(pair.get("node_a", ""), name_to_id)
-            node_b = _resolve_to_node_id(pair.get("node_b", ""), name_to_id)
+            node_a = _resolve_to_node_id(pair.get("node_a", pair.get("from", "")), name_to_id)
+            node_b = _resolve_to_node_id(pair.get("node_b", pair.get("to", "")), name_to_id)
         else:
             continue
         a_covered = node_a in expanded
@@ -594,7 +670,10 @@ def calc_coverage_confusable(course_text: str, expected_content: dict[str, Any],
     rate = round(covered_pairs / total_pairs * 100, 2) if total_pairs else 0.0
     return MetricResult(
         name="混淆对覆盖率", value=rate, unit="%",
-        detail={"总混淆对数": total_pairs, "覆盖对数": covered_pairs, "混淆对明细": pair_details}
+        detail={"总混淆对数": total_pairs, "覆盖对数": covered_pairs,
+                "本轮节点数": len(course_kp_ids),
+                "双向扩展后节点数": len(expanded),
+                "混淆对明细": pair_details}
     )
 
 # ── 其它指标计算 ──────────────────────────────────────────────────────────
@@ -751,66 +830,121 @@ def calc_bkt_advancement(prev_text: str | None, curr_text: str | None, course_te
         }
     )
 
-# ── 外部 LLM 结果加载 ──────────────────────────────────────────────────────
+# ── 外部 LLM 结果加载（统一三文件产物 + 命名 section 读取）─────────────────────
+
+def _glob_one(llm_dir: Path, pattern: str) -> Path | None:
+    """glob 单文件匹配；优先排除中间产物（answers）。"""
+    all_matching = list(llm_dir.glob(pattern))
+    eval_results = [f for f in all_matching if "answers" not in f.name]
+    matching = sorted(eval_results if eval_results else all_matching)
+    return matching[0] if matching else None
+
+
+def _read_json(path: Path) -> dict[str, Any] | None:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def _load_round_section(profile_letter: str, round_num: int, section: str) -> tuple[dict[str, Any] | None, Path | None]:
+    """从 round_indicator_{model}_{profile}_{round:02d}.json 的指定 section 读取数据。
+
+    Returns: (section_data, file_path) — 若文件不存在或无该 section 则 section_data 为 None。
+    """
+    llm_dir = _resolve_llm_results_dir()
+    path = _glob_one(llm_dir, f"round_indicator_*_{profile_letter}_{round_num:02d}.json")
+    if path is None:
+        return None, None
+    data = _read_json(path)
+    if data is None:
+        return None, path
+    # 兼容两种：新的 section 聚合 或 旧的独立文件
+    if section in data:
+        return data[section], path
+    # 回退：旧独立文件格式（例如整体 JSON 就是该 section 内容）
+    return data, path
+
+
+def _load_profile_section(profile_letter: str, section: str) -> tuple[dict[str, Any] | None, Path | None]:
+    """从 profile_indicator_{model}_{profile}.json 的指定 section 读取数据。"""
+    llm_dir = _resolve_llm_results_dir()
+    path = _glob_one(llm_dir, f"profile_indicator_*_{profile_letter}.json")
+    if path is None:
+        return None, None
+    data = _read_json(path)
+    if data is None:
+        return None, path
+    if section in data:
+        return data[section], path
+    return data, path
+
+
+def _load_system_section(section: str) -> tuple[dict[str, Any] | None, Path | None]:
+    """从 system_indicator_{model}.json 的指定 section 读取数据（全局唯一）。"""
+    llm_dir = _resolve_llm_results_dir()
+    path = _glob_one(llm_dir, "system_indicator_*.json")
+    if path is None:
+        return None, None
+    data = _read_json(path)
+    if data is None:
+        return None, path
+    if section in data:
+        return data[section], path
+    return data, path
+
 
 def load_m7_external_result(profile_letter: str, round_num: int) -> MetricResult | None:
-    """加载 M4.2 资源形态外部 LLM 评估结果（保留旧版兼容）。"""
-    llm_dir = _resolve_llm_results_dir()
-    pattern = f"m4_resource_morphology_*_{profile_letter}_{round_num:02d}.json"
-    matching = sorted(llm_dir.glob(pattern))
-    if not matching:
+    """加载 M4.2 资源形态外部 LLM 评估结果（round_indicator > resource_morphology）。"""
+    section, path = _load_round_section(profile_letter, round_num, "resource_morphology")
+    if section is None:
         return None
-    try:
-        data = json.loads(matching[0].read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return None
-    raw = data.get("raw_llm_response", {})
-    overall = raw.get("overall_score", data.get("overall_score", 0))
+    raw = section.get("raw_llm_response", {})
+    metrics = section.get("metrics", {})
+    overall = metrics.get("value") or raw.get("overall_score") or section.get("overall_score") or 0.0
     return MetricResult(
-        name="旧版资源形态评估", value=float(overall), unit="%",
-        detail={"评估方式": "外部 LLM (旧版)", "原始文件": matching[0].name,
-                "覆盖分": raw.get("coverage_score", 0),
-                "适配分": raw.get("fit_score", 0)}
+        name="2.2.2 资源形态匹配度（外部LLM）", value=float(overall), unit="分",
+        detail={
+            "评估方式": "外部 LLM (round-indicator 资源形态)",
+            "原始文件": path.name if path else "-",
+            "覆盖分": raw.get("coverage_score", 0),
+            "适配分": raw.get("fit_score", 0),
+        }
     )
+
 
 def load_m8_external_result(profile_letter: str, round_num: int) -> MetricResult | None:
-    """加载 M1.1 闭环率外部 LLM 评估结果。"""
-    llm_dir = _resolve_llm_results_dir()
-    pattern = f"m1_objection_loop_*_{profile_letter}_{round_num:02d}.json"
-    matching = sorted(llm_dir.glob(pattern))
-    if not matching:
+    """加载 1.1 闭环率外部 LLM 评估结果（round_indicator > objection_loop）。"""
+    section, path = _load_round_section(profile_letter, round_num, "objection_loop")
+    if section is None:
         return None
-    try:
-        data = json.loads(matching[0].read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return None
-    raw = data.get("raw_llm_response", {})
-    total = raw.get("total_objections", 0)
-    closed = raw.get("closed_loop_count", 0)
-    rate = round(closed / total * 100, 2) if total > 0 else 100.0
+    raw = section.get("raw_llm_response", {})
+    metrics = section.get("metrics", {})
+    detail = metrics.get("detail", {})
+    total = raw.get("total_objections") or detail.get("总🔴异议数", 0)
+    closed = raw.get("closed_loop_count") or detail.get("闭环数（采纳+修正）", 0)
+    rate = round((closed or 0) / (total or 1) * 100, 2) if total else 100.0
     return MetricResult(
-        name="1.1 闭环率", value=rate, unit="%",
-        detail={"评估方式": "外部 LLM", "原始文件": matching[0].name,
-                "总异议数": total, "闭环数": closed,
-                "整体评分": raw.get("overall_score", 0)}
+        name="1.1 闭环率", value=metrics.get("value", rate) if metrics else rate, unit="分",
+        detail={
+            "评估方式": "外部 LLM (round-indicator 异议闭环)",
+            "原始文件": path.name if path else "-",
+            "总异议数": total,
+            "闭环数": closed,
+            "整体评分": raw.get("overall_score", 0),
+        }
     )
 
-def load_m9_external_result(profile_letter: str, round_num: int) -> MetricResult | None:
-    """加载 M9 知识溯源可验证率外部评估结果 (1.5.1)。"""
-    llm_dir = _resolve_llm_results_dir()
-    pattern = f"statement_judge_*_{profile_letter}_{round_num:02d}.json"
-    matching = sorted(llm_dir.glob(pattern))
-    if not matching:
-        return None
-    try:
-        data = json.loads(matching[0].read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return None
 
-    evals = (data.get("evaluations") or [])
+def load_m9_external_result(profile_letter: str, round_num: int) -> MetricResult | None:
+    """加载 1.5.1 知识溯源可验证率外部评估结果（round_indicator > statement 内）。"""
+    section, _path = _load_round_section(profile_letter, round_num, "statement")
+    if section is None:
+        return None
+    evals = (section.get("evaluations") or [])
     total = len(evals)
     if total == 0:
-        return None
+        return MetricResult(name="1.5.1 知识溯源可验证率", value=0.0, unit="%", detail={"note": "无陈述"})
 
     sourced = [e for e in evals if e.get("source_verifiable") is True]
     total_sourced = len(sourced)
@@ -823,6 +957,7 @@ def load_m9_external_result(profile_letter: str, round_num: int) -> MetricResult
         )
     return MetricResult(name="1.5.1 知识溯源可验证率", value=0.0, unit="%", detail={"note": "无带来源陈述"})
 
+
 # ── 深化指标计算（M1 子分 / M9-b / M14-M17） ────────────────────────────
 
 def _heuristic_type(text: str) -> str:
@@ -834,22 +969,18 @@ def _heuristic_type(text: str) -> str:
         return "logical"
     return "factual"
 
+
 def load_statement_evaluations(profile_letter: str, round_num: int) -> list[dict[str, Any]] | None:
-    """加载 statement_judge 文件中的 evaluations。"""
-    llm_results_dir = _resolve_llm_results_dir()
-    pattern = f"statement_judge_*_{profile_letter}_{round_num:02d}.json"
-    matching = sorted(llm_results_dir.glob(pattern))
-    if not matching:
+    """加载 round_indicator statement section 中的 evaluations。"""
+    section, _path = _load_round_section(profile_letter, round_num, "statement")
+    if section is None:
         return None
-    try:
-        data = json.loads(matching[0].read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return None
-    evals = (data.get("evaluations") or [])
+    evals = (section.get("evaluations") or [])
     for e in evals:
         if not e.get("type"):
             e["type"] = _heuristic_type(e.get("text", ""))
     return evals
+
 
 def calc_m1_subtypes(evaluations: list[dict[str, Any]] | None) -> list[MetricResult]:
     """M1 拆三子分：事实性 / 逻辑性 / 指令性 谬误率。"""
@@ -862,7 +993,7 @@ def calc_m1_subtypes(evaluations: list[dict[str, Any]] | None) -> list[MetricRes
         return [
             MetricResult(
                 name=n, value=0.0, unit="%",
-                detail={"computed": False, "note": "未计算：缺少 statement_judge 外部LLM结果"}
+                detail={"computed": False, "note": "未计算：缺少 statement 外部LLM结果"}
             )
             for n in type_map
         ]
@@ -877,6 +1008,7 @@ def calc_m1_subtypes(evaluations: list[dict[str, Any]] | None) -> list[MetricRes
             detail={"computed": True, "该类型陈述数": total, "错误数": incorrect, "评估方式": "外部 LLM"}
         ))
     return out
+
 
 def calc_m9b(evaluations: list[dict[str, Any]] | None) -> MetricResult:
     """1.5.2 溯源内容支撑率。"""
@@ -893,50 +1025,63 @@ def calc_m9b(evaluations: list[dict[str, Any]] | None) -> MetricResult:
         detail={"computed": True, "带来源陈述数": total, "内容支撑数": supported}
     )
 
-def _load_external_json(prefix: str, profile_letter: str, round_num: int | None = None) -> dict[str, Any] | None:
-    """通用：按命名前缀 glob 外部 LLM 结果文件并解析。"""
-    llm_results_dir = _resolve_llm_results_dir()
-    if round_num is None:
-        pattern = f"{prefix}_*_{profile_letter}.json"
-    else:
-        pattern = f"{prefix}_*_{profile_letter}_{round_num:02d}.json"
-    all_matching = list(llm_results_dir.glob(pattern))
-    # 排除中间产物（answers），优先选择 LLM 评估结果
-    eval_results = [f for f in all_matching if "answers" not in f.name]
-    matching = sorted(eval_results if eval_results else all_matching)
-    if not matching:
-        print(f"  [DEBUG] _load_external_json: 未找到匹配文件")
-        print(f"    llm_results_dir: {llm_results_dir}")
-        print(f"    llm_results_dir exists: {llm_results_dir.exists()}")
-        print(f"    pattern: {pattern}")
-        print(f"    _EVAL_DIR: {_EVAL_DIR}")
-        print(f"    _PROJECT_ROOT: {_PROJECT_ROOT}")
-        return None
-    try:
-        result = json.loads(matching[0].read_text(encoding="utf-8"))
-        print(f"  [DEBUG] _load_external_json: 成功加载 {matching[0].name}")
-        return result
-    except (json.JSONDecodeError, OSError) as e:
-        print(f"  [DEBUG] _load_external_json: 解析失败 {e}")
-        return None
 
 def load_m14_external_result(profile_letter: str) -> dict[str, Any] | None:
-    return _load_external_json("m1_cross_round", profile_letter)
+    """加载 1.6 跨轮自洽率结果（profile_indicator > cross_round section）。"""
+    section, _path = _load_profile_section(profile_letter, "cross_round")
+    return section
+
 
 def load_m15_external_result(profile_letter: str) -> dict[str, Any] | None:
-    return _load_external_json("m6_adversarial", "system")
+    """加载 6.1 对抗稳健率结果（system_indicator > m6_adversarial section）。"""
+    section, _path = _load_system_section("m6_adversarial")
+    return section
+
 
 def load_m16_external_result(profile_letter: str) -> dict[str, Any] | None:
-    return _load_external_json("m6_boundary", "system")
+    """加载 6.2 边界拒答恰当率结果（system_indicator > m6_boundary section）。"""
+    section, _path = _load_system_section("m6_boundary")
+    return section
+
 
 def load_m17_external_result(profile_letter: str, round_num: int) -> dict[str, Any] | None:
-    return _load_external_json("m2_retrieval", profile_letter, round_num)
+    """加载 2.5 检索正确性结果（round_indicator > retrieval section）。"""
+    section, _path = _load_round_section(profile_letter, round_num, "retrieval")
+    return section
+
+
+def load_pii_external_result(profile_letter: str, round_num: int) -> MetricResult | None:
+    """加载 5.3 PII 合规检测结果（round_indicator > pii section）。"""
+    section, _path = _load_round_section(profile_letter, round_num, "pii")
+    if section is None:
+        return None
+
+    summary = section.get("summary", {})
+    compliance_rate = summary.get("compliance_rate", 100.0)
+    real_leaks = summary.get("real_leaks", 0)
+    total_checks = summary.get("total_checks", 0)
+    pii_details = section.get("pii_details", [])
+    verdict = section.get("compliance_verdict", "compliant")
+
+    return MetricResult(
+        name="5.3 PII合规检测", value=compliance_rate, unit="%",
+        detail={
+            "评估方式": "外部 LLM (round-indicator)",
+            "合规率": compliance_rate,
+            "泄露数": real_leaks,
+            "检测分块数": total_checks,
+            "合规判定": verdict,
+            "PII详情": pii_details[:10],
+        }
+    )
+
 
 def _placeholder_metric(name: str, mode: str) -> MetricResult:
     return MetricResult(
         name=name, value=0.0, unit="%",
         detail={"computed": False, "note": f"未计算：缺少外部LLM结果，请先运行 evaluator_LLM.py --mode {mode}"}
     )
+
 
 def calc_m14(data: dict[str, Any] | None, profile_letter: str) -> MetricResult:
     """1.6 跨轮自洽率。"""
@@ -947,6 +1092,7 @@ def calc_m14(data: dict[str, Any] | None, profile_letter: str) -> MetricResult:
         detail={"computed": True, "事实点总数": data.get("total_fact_points", 0), "矛盾数": data.get("contradicted", 0)}
     )
 
+
 def calc_m15(data: dict[str, Any] | None, profile_letter: str) -> MetricResult:
     """6.1 对抗稳健率（系统级单次探针）。"""
     if not data:
@@ -956,6 +1102,7 @@ def calc_m15(data: dict[str, Any] | None, profile_letter: str) -> MetricResult:
         detail={"computed": True, "问题数": data.get("total_questions", 0), "通过数": data.get("passed", 0), "评估方式": data.get("methodology", "material_proxy")}
     )
 
+
 def calc_m16(data: dict[str, Any] | None, profile_letter: str) -> MetricResult:
     """6.2 边界拒答恰当率（系统级单次探针）。"""
     if not data:
@@ -964,6 +1111,7 @@ def calc_m16(data: dict[str, Any] | None, profile_letter: str) -> MetricResult:
         name="6.2 边界拒答恰当率", value=data.get("appropriate_rate", 0.0), unit="%",
         detail={"computed": True, "问题数": data.get("total_questions", 0), "恰当数": data.get("appropriate", 0), "评估方式": data.get("methodology", "material_proxy")}
     )
+
 
 def calc_m17(data: dict[str, Any] | None, profile_letter: str, round_num: int) -> list[MetricResult]:
     """2.5 检索正确性：返回准确率 + 完整率两个子指标。"""
@@ -1106,7 +1254,7 @@ def calculate_round(
     # 4.1 产物完整率
     rm.metrics.append(check_artifact_completeness(round_dir, round_num, is_final_round=is_final))
 
-    # 1.1 闭环率：优先采用外部 LLM 结果（m1_objection_loop_*.json），缺失时回退占位
+    # 1.1 闭环率：优先采用外部 LLM 结果（round_indicator_*.json section=objection_loop），缺失时回退占位
     m8_result = load_m8_external_result(profile_letter, round_num)
     if m8_result:
         rm.metrics.append(m8_result)
@@ -1124,10 +1272,10 @@ def calculate_round(
     for mr in calc_resource_morphology(course_text):
         rm.metrics.append(mr)
 
-    # 覆盖率（累计 + 祖先匹配）
+    # 覆盖率（累计 + 祖先匹配 / 双向扩展）
     rm.metrics.append(calc_coverage_section(course_text, expected_content, learning_path_text=path_text, history_nodes=history_nodes, node_name_map=node_name_map))
-    rm.metrics.append(calc_coverage_weakness(course_text, expected_content))
-    rm.metrics.append(calc_coverage_confusable(course_text, expected_content, node_name_map))
+    rm.metrics.append(calc_coverage_weakness(course_text, expected_content, history_nodes=history_nodes))
+    rm.metrics.append(calc_coverage_confusable(course_text, expected_content, node_name_map, history_nodes=history_nodes))
 
     # M9 知识溯源可验证率
     m9_result = load_m9_external_result(profile_letter, round_num)
@@ -1160,8 +1308,13 @@ def calculate_round(
             detail={"触发": False, "note": "首轮：缺少前一轮 profile_update，无法比较"}
         ))
 
-    # M10 PII 泄露检测
-    rm.metrics.append(scan_pii_leaks(round_dir, profile_letter, round_num))
+    # M5.3 PII 合规检测（改用外部 LLM 评估，替代脚本正则扫描）
+    pii_result = load_pii_external_result(profile_letter, round_num)
+    if pii_result:
+        rm.metrics.append(pii_result)
+    else:
+        # 回退：使用旧版脚本计算（仅当无 LLM 评估结果时）
+        rm.metrics.append(scan_pii_leaks(round_dir, profile_letter, round_num))
 
     return rm
 

@@ -63,46 +63,47 @@
 
 ## 二、编写时机与流程
 
-### 2.1 编写时机
+### 2.1 编写时机与核心原则
 
-**每轮课程生成完成后、对应轮次指标计算前**，手动编写该轮的预设答案。不能提前写（因为路径规划结果每轮都不同，必须基于实际产物）。
+**核心原则：独立编写，严禁参考系统产出！**
 
-```
-运行 R01 课程 → 查看 R01 产物 → 写 expected_{X}_01.json → OK
-运行 R02 课程 → 查看 R02 产物 → 写 expected_{X}_02.json → OK
-运行 R03 课程 → 查看 R03 产物 → 写 expected_{X}_03.json → OK
-                                          ↓
-                    全部写完后，模块 5（外部LLM评估）+ 模块 2（指标计算）+ 模块 3（报告）
-```
+`expected_*.json` 必须是**人类专家（作为一名有经验的专利法老师）的独立判断**，基于学员画像和静态知识图谱，推断出该轮教学应该覆盖的理想内容。
+
+**严禁**参考以下系统生成的产物（这会使评估失效）：
+- `course_package.md`（课程实际生成内容）
+- `path_decision.md`（系统当前决策的节点）
+- `learning_path.md`（系统规划的路径）
+
+**编写时机**：在每轮课程生成后（但在查看课程具体内容前），或基于预先规划，独立完成编写。
 
 ### 2.2 每轮编写的具体步骤
 
 对某学员 profile_X 第 N 轮：
 
-#### Step 1：打开并阅读该轮三个关键产物
+#### Step 1：获取独立编写依据（仅以下两类信息）
 
-位置：`backend/tests/evaluation/artifacts/multi-X/round-{NN:02d}/`
+**唯一输入**：
+1.  **学员画像 (`learner_profile.md`)**：位于 `backend/tests/evaluation/artifacts/multi-X/round-{NN:02d}/` 或 `backend/tests/evaluation/profiles/profile_{X}.json`
+    - 重点关注：学员背景 (`education_background`)、知识水平 (`knowledge_level`)、学习目标 (`learning_goal`)、学习风格 (`learning_style`)。
+2.  **静态知识图谱**：位于 `backend/app/curriculum/data/`
+    - `knowledge-dag.json`：知识点层级结构（章节 -> 子节点）。
+    - `confusion-pairs.json`：预设的易混淆概念对。
 
-| 文件 | 关注什么 |
-|------|---------|
-| **learning_path.md** | ① 该轮 `path_decision` 中选定的当前学习节点（current_node，例如 `patentability-substantive`）及其前后继节点；② 难度上限分阶规则；③ activity_window 中的历史复习节点 |
-| **dual_axis_snapshot.md** | ① 知识轴：当前节点和前驱的薄弱点（weak points）；② 混淆轴：高风险的 confusion pairs（注意这是系统风险提示，作为 confusable_pairs 的参考依据） |
-| **learner_profile.md** | ① 学员知识水平（beginner / intermediate / advanced）；② 学习风格；③ 情感状态；④ 学习目标（learning_goal）；⑤ 已有的薄弱点名称列表 |
+#### Step 2：进行独立教学推演
 
-#### Step 2：结合静态知识库，设计"这节课应该教什么"
+**假设你是一名老师**，面对 `learner_profile.md` 中描述的学员，在学习的第 N 轮（例如，第 3 轮意味着学员已完成前两轮的基础学习），你会如何安排这节课的内容？
 
-查阅两份静态知识库（位于 `backend/app/curriculum/data/`）：
-
-| 文件 | 用途 |
-|------|------|
-| `knowledge-dag.json` | 查每个 node_id 对应的 node_name（中文名）、层级关系（9 个章节 → 子级 → 孙级） |
-| `confusion-pairs.json` | 查可用的混淆对列表（cp-001 ~ cp-015），每条有 pair_id、title、两个 node_id |
-
-设计视角：**假设你是有经验的专利法老师**，面对这个学员（特定背景 + 学习目标 + 当前知识水平），在**这一节课**（对应 learning_path 里的一个或两个活动节点），你会教什么：
-
-- **章节级知识点（section_kcs）**：从 9 个章节节点中选 1–3 个，对应这节课的主题范围
-- **薄弱知识点（weakness_kcs）**：从子级节点的 node_name（中文名）选 0–5 个，对应这个学员最需要补强的具体概念
-- **混淆对（confusable_pairs）**：从混淆对清单选 0–3 对，对应这节课应该辨析的概念对比
+**推演逻辑**：
+1.  **判断当前教学阶段**：
+    - 第几轮了？（R01, R02, R03）
+    - 这通常意味着学员已掌握了哪些前置知识（例如，R03 时，基础知识 `patent-law-foundation` 应该已经学过了）。
+2.  **结合学员目标与水平**：
+    - 学员的 `learning_goal` 是什么？（例如，“学习外观设计专利”）
+    - 学员的 `knowledge_level` 是高/中/低？这决定了内容的深度和复杂度。
+3.  **选择教学重点**：
+    - **章节 (section_kcs)**：根据教学阶段和学员目标，选择 1-3 个该阶段应当覆盖的章节级知识点。例如，R03 时，针对“外观设计”目标，可能会进入“专利申请程序”阶段。
+    - **薄弱点 (weakness_kcs)**：作为老师，你预判学员在学习该章节时，哪些具体的子概念（node_name）是容易出错或需要重点讲解的？（例如，“专利申请文件要求”）。
+    - **混淆对 (confusable_pairs)**：你认为在这节课中，哪些概念对容易混淆，需要重点辨析？（例如，“宽限期 vs 优先权期限”）。
 
 #### Step 3：按格式写入 JSON，保存到指定位置
 
@@ -302,45 +303,50 @@ expected_{学员首字母}_{两位轮次编号}.json
 
 ## 六、设计原则（编写时必须遵守）
 
-### 原则 1：区分度优先 + 匹配学员背景 + 匹配学习目标
+### 原则 1：独立性优先（核心！）
+
+- **严禁参考系统产出**：编写时，不得查看或参考 `course_package.md`、`learning_path.md`、`path_decision.md` 等任何由被测系统生成的文件。
+- **基于独立推理**：所有 `expected_*.json` 必须完全基于对学员画像的分析和对知识图谱的理解独立完成。
+
+### 原则 2：区分度优先 + 匹配学员背景 + 匹配学习目标
 
 - **区分度优先 + 匹配学员背景**
-- 同一学员不同轮次的 `section_kcs` 应反映学习路径推进（不重复）
+- 同一学员不同轮次的 `section_kcs` 应反映合理的学习路径推进（不重复）
 - 不同学员（不同画像不同背景的 `section_kcs` 应覆盖至少 5 个不同章节节点
 
-### 原则 2：section_kcs 只从 9 个章节级节点选（node_id）
+### 原则 3：section_kcs 只从 9 个章节级节点选（node_id）
 
 只能从 5.1 节 9 个 node_id 中选择。
 
 - 不准用子级节点填 section_kcs（子级节点只用在 weakness_kcs（用中文名）
 - 每个值必须是 knowledge-dag.json 中 level=1 的 node_id
 
-### 原则 3：weakness_kcs 必须具体
+### 原则 4：weakness_kcs 必须具体
 
 - 必须用**具体的 node_name（中文名）**
 - 不准"专利法"、"保护" 这样的泛泛词
 - 应从 5.2 节的子级节点清单中选择
 
-### 原则 4：confusable_pairs 必须核对 node_id 对
+### 原则 5：confusable_pairs 必须核对 node_id 对
 
 - 必须从 5.3 节的清单中选择
 - 不准自造不存在的 node_id
 - 每对必须是长度为 2 的 string 数组
 
-### 原则 5：数量合理
+### 原则 6：数量合理
 
 - `section_kcs`：1–3 个/轮
 - `weakness_kcs`：0–5 个/轮（无明显薄弱点时可为空数组）
 - `confusable_pairs`：0–3 对/轮（无混淆点可为空数组）
 
-### 原则 6：从教师视角设计
+### 原则 7：从教师视角设计（独立推演）
 
-想象你是专利法老师，面对这个学员在这一节课应该教什么：
+想象你是一名经验丰富的专利法老师，根据学员画像和教学进度，独立判断在这一节课应该教什么：
 
-1. 这节课主题（对应 learning_path 的当前节点（current_node）是什么章节）
-2. 这个学员最需要补哪几个具体概念（weakness_kcs）
-3. 这节课学员最容易混淆哪几组概念（confusable_pairs）
-4. 与学员学习目标直接关联的章节（section_kcs）
+1.  **阶段定位**：这是第几节课？学员应该已经掌握了哪些基础知识？
+2.  **教学主题**：结合学员的学习目标，这个阶段的合理教学主题（章节）是什么？
+3.  **重点难点**：预判学员在学习这些主题时，会在哪些具体概念上遇到困难（薄弱点）？
+4.  **易错辨析**：预判学员在学习这些主题时，容易混淆哪些概念（混淆对）？
 
 ---
 
@@ -356,9 +362,10 @@ profiles/expected_{letter}_{round:02d}.json
 ```
 
 2. 读该轮 `course_package.md` 解析出实际覆盖内容：
-   - 本节知识点覆盖率：比对 `course_package.knowledge_points[].node_id` vs `section_kcs`
-   - 薄弱点命中率：在 `course_package.md` 正文匹配 `weakness_kcs`（中文名）
-   - 混淆风险覆盖率：在 `course_package.md` 正文 + `risks[]` 中匹配混淆对描述
+   - **重要**：`course_package.md` 通常为**纯 Markdown 文本**，无 `knowledge_points` 等结构化字段。
+   - 本节知识点覆盖率：通过**语义匹配**（查找 node_id 或 node_name）比对 `section_kcs`。
+   - 薄弱点命中率：在 `course_package.md` 正文匹配 `weakness_kcs`（中文名）。
+   - 混淆风险覆盖率：在 `course_package.md` 正文 + `risks[]` 中匹配混淆对描述。
 
 3. 输出逐轮结果 + 多轮算术平均
 

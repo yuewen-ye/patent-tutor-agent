@@ -1,0 +1,280 @@
+{
+  "metadata": {
+    "profile_id": "B",
+    "round": 1,
+    "eval_type": "m2_retrieval",
+    "model": "DeepSeek-V4-Flash",
+    "timestamp": "2026-08-17 15:04:53"
+  },
+  "total_chunks": 16,
+  "accurate": 15,
+  "accurate_rate": 93.75,
+  "complete": 14,
+  "complete_rate": 87.5,
+  "evaluations": [
+    {
+      "chunk_index": 0,
+      "chunk_title": "教学模块选择清单",
+      "chunk_id": "教学模块选择清单",
+      "accuracy_score": 100,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 100,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "该chunk内容为教学模块选择清单的完整表格，包含节点、预算、9个模块的详细信息（类型、触发原因、对应正文段、归属），与问题要求完全一致，无捏造、无遗漏，准确且完整。",
+      "inaccurate_items": [],
+      "missing_items": [],
+      "suggestions": []
+    },
+    {
+      "chunk_index": 1,
+      "chunk_title": "教学正文",
+      "chunk_id": "1",
+      "accuracy_score": 100,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 100,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "该chunk内容与章节标题'教学正文'完全一致，描述了章节聚焦的主题（专利授权实质条件）和教学方法（结合消费电子案例、法条框架与场景化解释），无任何捏造或张冠李戴，且完整覆盖了该章节的核心要点。",
+      "inaccurate_items": [],
+      "missing_items": [],
+      "suggestions": [
+        "无需改进，该chunk准确且完整。"
+      ]
+    },
+    {
+      "chunk_index": 2,
+      "chunk_title": "I — 法律问题",
+      "chunk_id": "1",
+      "accuracy_score": 95,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 85,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "该chunk准确概括了专利法关于新颖性、创造性、实用性的核心判断要素，并针对消费电子产品场景提出了展会展示、结构改进等具体争点，内容与权威事实一致，无捏造或张冠李戴。但未提及外观设计‘明显区别’的具体判断标准（如整体视觉效果），完整性略有不足。",
+      "inaccurate_items": [],
+      "missing_items": [
+        "外观设计‘明显区别’的具体判断标准（如整体视觉效果）"
+      ],
+      "suggestions": [
+        "补充外观设计‘明显区别’的判断标准，例如是否与现有设计在整体视觉效果上具有明显区别。"
+      ]
+    },
+    {
+      "chunk_index": 3,
+      "chunk_title": "R — 适用规则",
+      "chunk_id": "R — 适用规则",
+      "accuracy_score": 100,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 100,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "该chunk准确引用了《中华人民共和国专利法》第二十二条、第二十三条、第二十四条的原文，内容与法律条文完全一致，无捏造或张冠李戴；且完整覆盖了专利授权条件（新颖性、创造性、实用性）及不丧失新颖性的例外情形，无关键要点遗漏。",
+      "inaccurate_items": [],
+      "missing_items": [],
+      "suggestions": [
+        "无需改进，检索结果准确且完整。"
+      ]
+    },
+    {
+      "chunk_index": 4,
+      "chunk_title": "A — 规则适用",
+      "chunk_id": "A — 规则适用",
+      "accuracy_score": 95,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 85,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "该chunk准确描述了专利三性（新颖性、创造性、实用性）的判断步骤和基本要求，内容与专利法权威规定一致，无捏造或张冠李戴。但未提及新颖性中单独对比原则、创造性中三步法等细节，完整性略有不足，但核心要点均已覆盖。",
+      "inaccurate_items": [],
+      "missing_items": [
+        "新颖性判断中的单独对比原则",
+        "创造性判断中的三步法具体步骤"
+      ],
+      "suggestions": [
+        "可补充新颖性单独对比原则的说明",
+        "可增加创造性三步法的详细描述以提升完整性"
+      ]
+    },
+    {
+      "chunk_index": 5,
+      "chunk_title": "C — 结论",
+      "chunk_id": "C — 结论",
+      "accuracy_score": 95,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 90,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "该chunk内容准确，与《专利法》第二十二、二十三、二十四条等权威法条完全一致，无捏造或张冠李戴；内容完整覆盖了授权三性、宽限期、外观设计明显区别等核心要点，并包含消费电子案例演示和常见误区辨析，仅缺少对实用性中“积极效果”的细化解释，但不影响整体完整性。",
+      "inaccurate_items": [],
+      "missing_items": [
+        "实用性中“积极效果”的具体判断标准未展开说明"
+      ],
+      "suggestions": [
+        "可补充实用性中“积极效果”的常见判断示例，以增强完整性"
+      ]
+    },
+    {
+      "chunk_index": 6,
+      "chunk_title": "结构化数据",
+      "chunk_id": "1",
+      "accuracy_score": 95,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 90,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "检索到的chunk内容与标题'结构化数据'完全一致，无捏造或张冠李戴，且标题本身已覆盖该章节的核心主题，未遗漏关键要点。",
+      "inaccurate_items": [],
+      "missing_items": [],
+      "suggestions": [
+        "若后续需要更详细的内容，可补充该章节下的具体定义、特征或示例。"
+      ]
+    },
+    {
+      "chunk_index": 7,
+      "chunk_title": "expert",
+      "chunk_id": "expert",
+      "accuracy_score": 100,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 100,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "该chunk内容为章节标题'expert'，与问题/陈述中的章节标识完全一致，且内容准确无误，无任何捏造或遗漏。",
+      "inaccurate_items": [],
+      "missing_items": [],
+      "suggestions": []
+    },
+    {
+      "chunk_index": 8,
+      "chunk_title": "style",
+      "chunk_id": "style_chunk",
+      "accuracy_score": 100,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 100,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "chunk 内容与章节标题'style'完全一致，且准确提供了'fused'这一值，无任何捏造或遗漏。",
+      "inaccurate_items": [],
+      "missing_items": [],
+      "suggestions": [
+        "无需改进"
+      ]
+    },
+    {
+      "chunk_index": 9,
+      "chunk_title": "knowledge_points",
+      "chunk_id": "knowledge_points",
+      "accuracy_score": 100,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 100,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "该chunk内容为JSON格式的章节节点信息，准确列出了节点ID和知识块名称，与知识库结构一致，无捏造或遗漏。",
+      "inaccurate_items": [],
+      "missing_items": [],
+      "suggestions": [
+        "无需改进"
+      ]
+    },
+    {
+      "chunk_index": 10,
+      "chunk_title": "legal_basis",
+      "chunk_id": "legal_basis",
+      "accuracy_score": 100,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 100,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "该chunk准确列出了《专利法》第二十二至二十四条，来源明确为'中华人民共和国专利法.txt'，内容与权威法律文件一致，无捏造或张冠李戴；且作为'legal_basis'章节，完整覆盖了该章节应包含的法条依据，无遗漏。",
+      "inaccurate_items": [],
+      "missing_items": [],
+      "suggestions": [
+        "无需改进，检索结果准确完整。"
+      ]
+    },
+    {
+      "chunk_index": 11,
+      "chunk_title": "risks",
+      "chunk_id": "risks",
+      "accuracy_score": 100,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 100,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "该chunk内容与知识库中'risks'章节完全一致，准确列出了两项风险，无捏造或遗漏，且完整覆盖了该章节的全部要点。",
+      "inaccurate_items": [],
+      "missing_items": [],
+      "suggestions": []
+    },
+    {
+      "chunk_index": 12,
+      "chunk_title": "draft_stage",
+      "chunk_id": "draft_stage",
+      "accuracy_score": 0,
+      "accuracy_verdict": "inaccurate",
+      "completeness_score": 0,
+      "completeness_verdict": "incomplete",
+      "root_cause": "retrieval_error",
+      "reason": "chunk内容为'integration'，与章节标题'draft_stage'完全不符，属于张冠李戴，且未提供任何与draft_stage相关的实质内容。",
+      "inaccurate_items": [
+        "chunk内容'integration'与章节'draft_stage'不匹配"
+      ],
+      "missing_items": [
+        "draft_stage章节应有的全部内容"
+      ],
+      "suggestions": [
+        "检索系统应返回与'draft_stage'章节对应的正确内容，而非无关的'integration'内容"
+      ]
+    },
+    {
+      "chunk_index": 13,
+      "chunk_title": "irac",
+      "chunk_id": "irac",
+      "accuracy_score": 90,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 70,
+      "completeness_verdict": "partially_complete",
+      "root_cause": "retrieval_incomplete",
+      "reason": "该chunk准确概括了IRAC框架在专利三性判断中的应用，内容与《专利法》相关法条一致，无捏造或张冠李戴。但作为对'IRAC'章节的检索，它仅给出了一个具体案例的IRAC应用示例，未完整覆盖IRAC方法论本身的定义、步骤、目的等核心内容，导致完整性不足。",
+      "inaccurate_items": [],
+      "missing_items": [
+        "IRAC方法论本身的定义和起源",
+        "IRAC各步骤（Issue, Rule, Application, Conclusion）的通用解释和写作要点",
+        "IRAC在法律分析中的目的和适用场景"
+      ],
+      "suggestions": [
+        "补充IRAC方法论本身的定义和通用解释",
+        "增加IRAC各步骤的详细说明和写作要点",
+        "提供IRAC在不同法律问题中的适用示例"
+      ]
+    },
+    {
+      "chunk_index": 14,
+      "chunk_title": "interactive_questions",
+      "chunk_id": "interactive_questions",
+      "accuracy_score": 100,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 100,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "该chunk内容为JSON格式的题目数据，结构完整、字段清晰，无捏造或张冠李戴，且作为独立章节内容，完整呈现了所有题目信息，无遗漏。",
+      "inaccurate_items": [],
+      "missing_items": [],
+      "suggestions": []
+    },
+    {
+      "chunk_index": 15,
+      "chunk_title": "knowledge_synthesis",
+      "chunk_id": "knowledge_synthesis",
+      "accuracy_score": 100,
+      "accuracy_verdict": "accurate",
+      "completeness_score": 100,
+      "completeness_verdict": "complete",
+      "root_cause": "retrieval_normal",
+      "reason": "该chunk内容与知识库中'knowledge_synthesis'章节的JSON结构完全一致，准确覆盖了专利性实质条件的所有子节点（新颖性、创造性、实用性、外观设计明显区别）及其覆盖状态，并提供了易混淆概念的区分说明，无任何捏造或遗漏。",
+      "inaccurate_items": [],
+      "missing_items": [],
+      "suggestions": []
+    }
+  ]
+}

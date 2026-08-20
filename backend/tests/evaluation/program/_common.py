@@ -59,15 +59,48 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 _ENV_LOADED = False
+_AGENT_CONFIG_PINNED = False
 
 
 def ensure_dotenv() -> None:
-    """Load ``.env`` exactly once so every helper sees consistent env."""
-    global _ENV_LOADED
-    if _ENV_LOADED:
-        return
-    load_dotenv(PROJECT_ROOT / ".env")
-    _ENV_LOADED = True
+    """Load ``.env`` exactly once so every helper sees consistent env.
+
+    Also pins ``AGENT_CONFIG_PATH`` to ``$PROJECT_ROOT/config/agents.yaml`` so
+    evaluation helpers (which often run from a cwd *inside*
+    ``backend/tests/evaluation/...``) still pick up the project-wide agent
+    runtime config.  Without this pin the default ``Path("config/agents.yaml")``
+    resolves relative to whatever cwd the shell happens to be in, silently
+    falls back to an empty :class:`AgentRuntimeConfig`, and chat_answer (and
+    all other agents) end up using the hard-coded ``DEFAULT_PROVIDER``
+    fallback instead of the user's ``agents.yaml`` mapping.
+    """
+    global _ENV_LOADED, _AGENT_CONFIG_PINNED
+    if not _ENV_LOADED:
+        load_dotenv(PROJECT_ROOT / ".env")
+        _ENV_LOADED = True
+    if not _AGENT_CONFIG_PINNED:
+        import os as _os
+        from pathlib import Path as _Path
+
+        config_path = _Path(_os.getenv(
+            "AGENT_CONFIG_PATH",
+            str(PROJECT_ROOT / "config" / "agents.yaml"),
+        ))
+        # Always force the project-root-relative path *unless* the user has
+        # explicitly set AGENT_CONFIG_PATH themselves (we honour that override).
+        env_forced = "AGENT_CONFIG_PATH" in _os.environ and _os.environ["AGENT_CONFIG_PATH"]
+        if not env_forced:
+            _os.environ["AGENT_CONFIG_PATH"] = str(config_path)
+        # Clear the lru_cache on load_agent_runtime_config() in case it was
+        # already primed with an empty/missing YAML before we pinned the path.
+        try:
+            from backend.app.core.agent_runtime_config import (
+                clear_agent_runtime_config_cache,
+            )
+            clear_agent_runtime_config_cache()
+        except Exception:  # noqa: BLE001 - config patching must never block boot
+            pass
+        _AGENT_CONFIG_PINNED = True
 
 
 # ── profiles ────────────────────────────────────────────────────────────────

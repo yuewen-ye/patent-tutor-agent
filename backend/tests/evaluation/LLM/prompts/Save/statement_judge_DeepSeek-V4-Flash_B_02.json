@@ -1,0 +1,141 @@
+{
+  "metadata": {
+    "profile_id": "B",
+    "round": 2,
+    "eval_type": "statement_evaluation",
+    "model": "DeepSeek-V4-Flash",
+    "timestamp": "2026-08-17 12:23:05"
+  },
+  "statements_count": 7,
+  "evaluations": [
+    {
+      "text": "《专利法》第二十三条 | 中华人民共和国专利法.txt",
+      "score": 100,
+      "verdict": "correct",
+      "reasoning": "《专利法》第二十三条是关于外观设计专利授权条件的核心法条，内容准确无误。",
+      "source_verifiable": true,
+      "source_score": 100,
+      "source_check_result": "verified",
+      "content_relevance": true,
+      "relevance_score": 100,
+      "relevance_check_result": "relevant",
+      "relevance_reasoning": "来源文件《中华人民共和国专利法.txt》中确实包含第二十三条，且内容直接对应外观设计新颖性、创造性等规定。"
+    },
+    {
+      "text": "《专利法》第二十四条 | 中华人民共和国专利法.txt",
+      "score": 100,
+      "verdict": "correct",
+      "reasoning": "《专利法》第二十四条是关于不丧失新颖性的宽限期的规定，法条引用准确。",
+      "source_verifiable": true,
+      "source_score": 100,
+      "source_check_result": "verified",
+      "content_relevance": true,
+      "relevance_score": 100,
+      "relevance_check_result": "relevant",
+      "relevance_reasoning": "来源文件《中华人民共和国专利法.txt》中确实包含第二十四条，内容直接对应宽限期规定。"
+    },
+    {
+      "text": "学习者可能混淆外观设计与实用新型的保护客体",
+      "score": 90,
+      "verdict": "correct",
+      "reasoning": "该陈述为教学风险提示，外观设计保护的是产品外观（形状、图案、色彩），实用新型保护的是产品形状、构造的技术方案，两者确实容易混淆，表述准确。",
+      "source_verifiable": false,
+      "source_score": 0,
+      "source_check_result": "unverified",
+      "content_relevance": true,
+      "relevance_score": 100,
+      "relevance_check_result": "relevant",
+      "relevance_reasoning": "该陈述为教学经验总结，虽无直接法条来源，但与专利法客体区分原则高度相关。"
+    },
+    {
+      "text": "学习者可能混淆外观设计的‘明显区别’与发明/实用新型的‘创造性’标准",
+      "score": 90,
+      "verdict": "correct",
+      "reasoning": "外观设计专利要求‘与现有设计或者现有设计特征的组合相比，应当具有明显区别’（《专利法》第23条第2款），而发明/实用新型要求‘创造性’（《专利法》第22条第3款），两者标准不同，学习者确实容易混淆，表述准确。",
+      "source_verifiable": false,
+      "source_score": 0,
+      "source_check_result": "unverified",
+      "content_relevance": true,
+      "relevance_score": 100,
+      "relevance_check_result": "relevant",
+      "relevance_reasoning": "该陈述为教学风险提示，虽无直接法条来源，但与专利法第23条第2款和第22条第3款的核心区别高度相关。"
+    },
+    {
+      "text": "学习者可能忽略‘抵触申请’也破坏外观设计新颖性",
+      "score": 100,
+      "verdict": "correct",
+      "reasoning": "根据《专利法》第23条第1款，授予专利权的外观设计，应当不属于现有设计；也没有任何单位或者个人就同样的外观设计在申请日以前向国务院专利行政部门提出过申请，并记载在申请日以后公告的专利文件中。这实质上包含了抵触申请的概念，学习者确实容易忽略，表述准确。",
+      "source_verifiable": false,
+      "source_score": 0,
+      "source_check_result": "unverified",
+      "content_relevance": true,
+      "relevance_score": 100,
+      "relevance_check_result": "relevant",
+      "relevance_reasoning": "该陈述为教学风险提示，虽无直接法条来源，但与《专利法》第23条第1款关于外观设计新颖性（含抵触申请）的规定高度相关。"
+    },
+    {
+      "text": "2024年1月推出一款TWS耳机充电仓，外观为圆角矩形盒体，盒盖采用磁吸翻盖设计。2024年6月，另一品牌申请了一件外观设计专利，其充电仓同样为圆角矩形盒体，区别仅在于将磁吸翻盖改为滑盖设计，并将LED指示灯从盒体正面移至盒体侧面。已知圆角矩形充电仓为该类产品的惯常设计。根据《专利法》第二十三条，该在后",
+      "score": 60,
+      "verdict": "uncertain",
+      "reasoning": "陈述不完整，缺少结论。根据《专利法》第23条第2款，该在后申请与现有设计相比，主要区别在于翻盖方式（磁吸翻盖→滑盖）和指示灯位置，且圆角矩形为惯常设计。该区别是否属于‘明显区别’存在争议，可能被认定为不具有明显区别（因为整体造型相同，仅局部变化），也可能被认定为具有明显区别（如果滑盖与翻盖在整体视觉效果上差异显著）。因此无法给出确定结论。",
+      "source_verifiable": false,
+      "source_score": 0,
+      "source_check_result": "unverified",
+      "content_relevance": true,
+      "relevance_score": 100,
+      "relevance_check_result": "relevant",
+      "relevance_reasoning": "该陈述为期限断言，虽无直接法条来源，但与《专利法》第23条第2款关于外观设计明显区别的判断高度相关。"
+    },
+    {
+      "text": "满足全部要件方可授权，与实用新型保护重点不同，可双重申请。",
+      "score": 85,
+      "verdict": "correct",
+      "reasoning": "该陈述基本正确：外观设计专利需满足新颖性、明显区别等全部要件方可授权；外观设计与实用新型保护客体不同（外观设计保护外观，实用新型保护技术方案）；同一产品可以同时申请外观设计和实用新型专利（双重申请），但需注意《专利法》第9条关于禁止重复授权的规定。表述略有简化，但核心意思准确。",
+      "source_verifiable": true,
+      "source_score": 100,
+      "source_check_result": "verified",
+      "content_relevance": true,
+      "relevance_score": 100,
+      "relevance_check_result": "relevant",
+      "relevance_reasoning": "来源文件为IRAC结论，内容直接对应外观设计授权条件、与实用新型的区别及双重申请的可能性，完全支撑陈述。"
+    }
+  ],
+  "m1_hallucination_rate": {
+    "name": "专业知识谬误率",
+    "value": 89.3,
+    "unit": "分",
+    "total": 7,
+    "incorrect": 0,
+    "correct": 6,
+    "uncertain": 1,
+    "score_based_avg": 89.3,
+    "verdict_based_rate": 0.0,
+    "weighted_value": 0.0,
+    "weighted_error_sum": 0.0,
+    "max_weight_sum": 7.0,
+    "error_type_distribution": {},
+    "weights_used": {
+      "legal_scope": 1.0,
+      "time_limit": 0.8,
+      "procedure": 0.7,
+      "amount": 0.5,
+      "terminology": 0.3,
+      "other": 0.5
+    },
+    "note": "value 为 100 分制平均正确率，verdict_based_rate 为传统谬误率，weighted_value 为加权谬误率"
+  },
+  "m9_source_verifiable_rate": {
+    "name": "知识溯源可验证率",
+    "value": 100.0,
+    "unit": "分",
+    "total_with_source": 3,
+    "verified": 3,
+    "content_relevant": 3,
+    "fully_verified": 3,
+    "unverified": 0,
+    "avg_source_score": 100.0,
+    "avg_relevance_score": 100.0,
+    "verdict_based_rate": 100.0,
+    "note": "value 为 100 分制平均溯源得分，verdict_based_rate 为传统溯源率"
+  }
+}

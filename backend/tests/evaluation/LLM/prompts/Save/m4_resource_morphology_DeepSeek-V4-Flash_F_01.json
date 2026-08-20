@@ -1,0 +1,81 @@
+{
+  "metadata": {
+    "profile_id": "F",
+    "round": 1,
+    "eval_type": "m4_resource_morphology_evaluation",
+    "model": "DeepSeek-V4-Flash",
+    "timestamp": "2026-08-17 12:30:22"
+  },
+  "raw_llm_response": {
+    "coverage_rate": 69.23,
+    "coverage_score": 75,
+    "matched_types": [
+      "global_framework",
+      "anchor_scenario",
+      "legal_anchor",
+      "worked_example",
+      "verbal_explanation",
+      "predict_activate",
+      "assessment",
+      "knowledge_synthesis",
+      "summary_card"
+    ],
+    "missing_types": [
+      "mnemonic",
+      "reflect_prompt",
+      "decision_flow",
+      "common_pitfall"
+    ],
+    "core_shapes_status": {
+      "lecture": true,
+      "practical_guide": true,
+      "tiered_questions": true
+    },
+    "fit_score": 85,
+    "fit_details": {
+      "knowledge_level_fit": "good",
+      "learning_style_fit": "good",
+      "weak_points_addressed": true
+    },
+    "overall_score": 80,
+    "overall_grade": "good",
+    "reasoning": "课程覆盖了9种资源形态（共13种），覆盖率为69.23%，三种核心形态（讲义、实操指南、分阶题）全部覆盖，因此覆盖率评分为75分。学员画像为初学者，学习目标是从零建立知识产权框架，课程提供了丰富的全局框架、场景锚定、口语化讲解等适合初学者的资源，且包含视觉型（速查卡）、言语型（口语化讲解）、活跃型（预测激活）等多种学习风格适配，适配度评分为85分。综合评分80分，等级为good。",
+    "suggestions": [
+      "建议增加记忆锚（mnemonic）帮助初学者记忆关键概念",
+      "建议增加反思提示（reflect_prompt）促进深度思考",
+      "建议增加决策流程图（decision_flow）辅助理解专利、商标、著作权的选择路径",
+      "建议增加常见误区（common_pitfall）模块，提前规避典型错误"
+    ]
+  },
+  "metrics": {
+    "value": 80.0,
+    "unit": "分",
+    "detail": {
+      "资源形态覆盖率": 69.23,
+      "覆盖率评分(100分制)": 75.0,
+      "学员画像适配度": 85.0,
+      "总体评分(100分制)": 80.0,
+      "评分等级": "good",
+      "核心形态（讲义/实操/分阶题）": "3/3",
+      "已识别形态": [
+        "global_framework",
+        "anchor_scenario",
+        "legal_anchor",
+        "worked_example",
+        "verbal_explanation",
+        "predict_activate",
+        "assessment",
+        "knowledge_synthesis",
+        "summary_card"
+      ],
+      "缺失形态": [
+        "mnemonic",
+        "reflect_prompt",
+        "decision_flow",
+        "common_pitfall"
+      ],
+      "LLM理由": "课程覆盖了9种资源形态（共13种），覆盖率为69.23%，三种核心形态（讲义、实操指南、分阶题）全部覆盖，因此覆盖率评分为75分。学员画像为初学者，学习目标是从零建立知识产权框架，课程提供了丰富的全局框架、场景锚定、口语化讲解等适合初学者的资源，且包含视觉型（速查卡）、言语型（口语化讲解）、活跃型（预测激活）等多种学习风格适配，适配度评分为85分。综合评分80分，等级为good。",
+      "评估方式": "外部 LLM 判定（resource_morphology_evaluator 提示词）"
+    }
+  }
+}

@@ -1,0 +1,143 @@
+{
+  "metadata": {
+    "profile_id": "E",
+    "round": 1,
+    "eval_type": "statement_evaluation",
+    "model": "DeepSeek-V4-Flash",
+    "timestamp": "2026-08-17 12:25:31"
+  },
+  "statements_count": 7,
+  "evaluations": [
+    {
+      "text": "《专利法》第一条 | 中华人民共和国专利法.txt",
+      "score": 100,
+      "verdict": "correct",
+      "reasoning": "《专利法》第一条是真实存在的法条，内容为立法目的，引用准确无误。",
+      "source_verifiable": true,
+      "source_score": 100,
+      "source_check_result": "verified",
+      "content_relevance": true,
+      "relevance_score": 100,
+      "relevance_check_result": "relevant",
+      "relevance_reasoning": "来源文件《中华人民共和国专利法.txt》应包含第一条原文，直接支撑该陈述。"
+    },
+    {
+      "text": "学习者对专利制度历史沿革与特点的掌握度低（BKT 0.15），需严格基于检索上下文避免记忆偏差",
+      "score": 70,
+      "verdict": "correct",
+      "reasoning": "该陈述为教学风险提示，BKT 0.15 表示掌握度低，逻辑合理，但缺乏具体数据来源验证，属于合理推断。",
+      "source_verifiable": false,
+      "source_score": 0,
+      "source_check_result": "unverified",
+      "content_relevance": false,
+      "relevance_score": 0,
+      "relevance_check_result": "irrelevant",
+      "relevance_reasoning": "无来源文件，无法验证。"
+    },
+    {
+      "text": "学员可能混淆“新”与“技术方案”，认为只要是新的就是发明专利保护客体",
+      "score": 85,
+      "verdict": "correct",
+      "reasoning": "该陈述正确指出了学员常见误解：新颖性（新）与客体资格（技术方案）的混淆，符合专利法教学经验。",
+      "source_verifiable": false,
+      "source_score": 0,
+      "source_check_result": "unverified",
+      "content_relevance": false,
+      "relevance_score": 0,
+      "relevance_check_result": "irrelevant",
+      "relevance_reasoning": "无来源文件，无法验证。"
+    },
+    {
+      "text": "20年，到期后",
+      "score": 30,
+      "verdict": "incorrect",
+      "reasoning": "表述不完整，未指明是何种期限。发明专利保护期为20年，但实用新型和外观设计分别为10年、15年，且“到期后”无上下文，易产生歧义。",
+      "source_verifiable": false,
+      "source_score": 0,
+      "source_check_result": "unverified",
+      "content_relevance": false,
+      "relevance_score": 0,
+      "relevance_check_result": "irrelevant",
+      "relevance_reasoning": "无来源文件，无法验证。"
+    },
+    {
+      "text": "1474年威尼斯专利法雏形 → 1883年巴黎公约国际化 → 1984年中国首部专利法 → 1992/2000/2008/2020年四次修改，每步关键变化为逐步扩大保护范围、延长保护期",
+      "score": 90,
+      "verdict": "correct",
+      "reasoning": "该陈述准确描述了专利制度发展历程：1474年威尼斯专利法、1883年巴黎公约、1984年中国专利法及四次修改，修改趋势正确。",
+      "source_verifiable": false,
+      "source_score": 0,
+      "source_check_result": "unverified",
+      "content_relevance": false,
+      "relevance_score": 0,
+      "relevance_check_result": "irrelevant",
+      "relevance_reasoning": "无来源文件，无法验证。"
+    },
+    {
+      "text": "6个月内",
+      "score": 50,
+      "verdict": "uncertain",
+      "reasoning": "表述不完整，未指明是何种期限。专利法中有多个6个月期限（如优先权期限、恢复权利期限等），缺乏上下文导致无法准确判断。",
+      "source_verifiable": false,
+      "source_score": 0,
+      "source_check_result": "unverified",
+      "content_relevance": false,
+      "relevance_score": 0,
+      "relevance_check_result": "irrelevant",
+      "relevance_reasoning": "无来源文件，无法验证。"
+    },
+    {
+      "text": "专利制度以公开换保护，实现创新激励与社会公平",
+      "score": 100,
+      "verdict": "correct",
+      "reasoning": "该陈述准确概括了专利制度的核心原则：以公开技术内容换取独占保护，从而激励创新并促进社会技术进步。",
+      "source_verifiable": true,
+      "source_score": 100,
+      "source_check_result": "verified",
+      "content_relevance": true,
+      "relevance_score": 100,
+      "relevance_check_result": "relevant",
+      "relevance_reasoning": "来源文件内容与陈述完全一致，直接支撑。"
+    }
+  ],
+  "m1_hallucination_rate": {
+    "name": "专业知识谬误率",
+    "value": 75.0,
+    "unit": "分",
+    "total": 7,
+    "incorrect": 1,
+    "correct": 5,
+    "uncertain": 1,
+    "score_based_avg": 75.0,
+    "verdict_based_rate": 14.3,
+    "weighted_value": 11.4,
+    "weighted_error_sum": 0.8,
+    "max_weight_sum": 7.0,
+    "error_type_distribution": {
+      "time_limit": 1
+    },
+    "weights_used": {
+      "legal_scope": 1.0,
+      "time_limit": 0.8,
+      "procedure": 0.7,
+      "amount": 0.5,
+      "terminology": 0.3,
+      "other": 0.5
+    },
+    "note": "value 为 100 分制平均正确率，verdict_based_rate 为传统谬误率，weighted_value 为加权谬误率"
+  },
+  "m9_source_verifiable_rate": {
+    "name": "知识溯源可验证率",
+    "value": 100.0,
+    "unit": "分",
+    "total_with_source": 2,
+    "verified": 2,
+    "content_relevant": 2,
+    "fully_verified": 2,
+    "unverified": 0,
+    "avg_source_score": 100.0,
+    "avg_relevance_score": 100.0,
+    "verdict_based_rate": 100.0,
+    "note": "value 为 100 分制平均溯源得分，verdict_based_rate 为传统溯源率"
+  }
+}

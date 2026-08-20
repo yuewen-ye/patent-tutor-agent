@@ -1,0 +1,115 @@
+{
+  "metadata": {
+    "profile_id": "C",
+    "round": 2,
+    "eval_type": "statement_evaluation",
+    "model": "DeepSeek-V4-Flash",
+    "timestamp": "2026-08-17 12:24:31"
+  },
+  "statements_count": 5,
+  "evaluations": [
+    {
+      "text": "《专利法》第二十三条 | 中华人民共和国专利法.txt",
+      "score": 95,
+      "verdict": "correct",
+      "reasoning": "《专利法》第二十三条确实存在，规定了授予专利权的外观设计应当不属于现有设计、与现有设计有明显区别、不得与他人在先权利相冲突等条件。陈述仅引用法条号，内容准确无误。",
+      "source_verifiable": true,
+      "source_score": 95,
+      "source_check_result": "verified",
+      "content_relevance": true,
+      "relevance_score": 95,
+      "relevance_check_result": "relevant",
+      "relevance_reasoning": "引用的法条号《专利法》第二十三条真实存在，且其内容直接对应外观设计专利的授权条件，与陈述完全相关。"
+    },
+    {
+      "text": "将外观设计创造性判断标准与发明创造性混淆",
+      "score": 85,
+      "verdict": "correct",
+      "reasoning": "这是一个风险提示，指出学员可能混淆两种创造性判断标准。外观设计采用‘一般消费者’视角和‘明显区别’标准，发明采用‘所属技术领域的技术人员’视角和‘实质性特点’标准，两者确实不同。该陈述作为教学风险提示基本正确，但未具体说明混淆的具体表现，略有瑕疵。",
+      "source_verifiable": false,
+      "source_score": 0,
+      "source_check_result": "unverified",
+      "content_relevance": false,
+      "relevance_score": 0,
+      "relevance_check_result": "irrelevant",
+      "relevance_reasoning": "该陈述未引用任何具体来源，无法验证其来源可验证性和内容相关性。"
+    },
+    {
+      "text": "学员可能误以为外观设计也有新颖性宽限期",
+      "score": 90,
+      "verdict": "correct",
+      "reasoning": "根据《专利法》第二十四条，新颖性宽限期适用于发明、实用新型和外观设计。外观设计同样享有新颖性宽限期（6个月），因此学员的‘误以为’本身是错误的，但该陈述正确指出了学员可能存在的误解。陈述本身作为风险提示准确。",
+      "source_verifiable": false,
+      "source_score": 0,
+      "source_check_result": "unverified",
+      "content_relevance": false,
+      "relevance_score": 0,
+      "relevance_check_result": "irrelevant",
+      "relevance_reasoning": "该陈述未引用任何具体来源，无法验证其来源可验证性和内容相关性。"
+    },
+    {
+      "text": "学员可能混淆外观设计的判断主体（一般消费者）与发明/实用新型的判断主体（所属技术领域的技术人员）",
+      "score": 95,
+      "verdict": "correct",
+      "reasoning": "该陈述准确指出了外观设计与发明/实用新型在判断主体上的核心区别：外观设计采用‘一般消费者’（《专利法》第二十三条第二款），发明/实用新型采用‘所属技术领域的技术人员’（《专利法》第二十二条第三款）。作为风险提示，内容完全正确。",
+      "source_verifiable": false,
+      "source_score": 0,
+      "source_check_result": "unverified",
+      "content_relevance": false,
+      "relevance_score": 0,
+      "relevance_check_result": "irrelevant",
+      "relevance_reasoning": "该陈述未引用任何具体来源，无法验证其来源可验证性和内容相关性。"
+    },
+    {
+      "text": "符合三项要求可授权",
+      "score": 50,
+      "verdict": "uncertain",
+      "reasoning": "该陈述过于模糊，未指明是哪三项要求。在专利授权中，不同专利类型（发明、实用新型、外观设计）的授权条件不同。例如，发明需满足新颖性、创造性、实用性（《专利法》第二十二条），外观设计需满足新颖性、明显区别、不与他人在先权利冲突（《专利法》第二十三条）。‘三项要求’表述不明确，存在争议，无法确定其正确性。",
+      "source_verifiable": true,
+      "source_score": 70,
+      "source_check_result": "partially_verified",
+      "content_relevance": true,
+      "relevance_score": 70,
+      "relevance_check_result": "partially_relevant",
+      "relevance_reasoning": "来源‘irac.conclusion’表明这是IRAC结论，但未提供具体法条或内容。‘符合三项要求可授权’作为结论性陈述，其来源存在但内容不具体，无法完全验证其支撑性。"
+    }
+  ],
+  "m1_hallucination_rate": {
+    "name": "专业知识谬误率",
+    "value": 83.0,
+    "unit": "分",
+    "total": 5,
+    "incorrect": 0,
+    "correct": 4,
+    "uncertain": 1,
+    "score_based_avg": 83.0,
+    "verdict_based_rate": 0.0,
+    "weighted_value": 0.0,
+    "weighted_error_sum": 0.0,
+    "max_weight_sum": 5.0,
+    "error_type_distribution": {},
+    "weights_used": {
+      "legal_scope": 1.0,
+      "time_limit": 0.8,
+      "procedure": 0.7,
+      "amount": 0.5,
+      "terminology": 0.3,
+      "other": 0.5
+    },
+    "note": "value 为 100 分制平均正确率，verdict_based_rate 为传统谬误率，weighted_value 为加权谬误率"
+  },
+  "m9_source_verifiable_rate": {
+    "name": "知识溯源可验证率",
+    "value": 82.5,
+    "unit": "分",
+    "total_with_source": 2,
+    "verified": 1,
+    "content_relevant": 1,
+    "fully_verified": 1,
+    "unverified": 1,
+    "avg_source_score": 82.5,
+    "avg_relevance_score": 82.5,
+    "verdict_based_rate": 50.0,
+    "note": "value 为 100 分制平均溯源得分，verdict_based_rate 为传统溯源率"
+  }
+}

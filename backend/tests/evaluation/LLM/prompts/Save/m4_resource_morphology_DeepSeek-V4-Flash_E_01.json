@@ -1,0 +1,80 @@
+{
+  "metadata": {
+    "profile_id": "E",
+    "round": 1,
+    "eval_type": "m4_resource_morphology_evaluation",
+    "model": "DeepSeek-V4-Flash",
+    "timestamp": "2026-08-17 12:29:46"
+  },
+  "raw_llm_response": {
+    "coverage_rate": 76.92,
+    "coverage_score": 75,
+    "matched_types": [
+      "anchor_scenario",
+      "legal_anchor",
+      "worked_example",
+      "decision_flow",
+      "mnemonic",
+      "predict_activate",
+      "assessment",
+      "knowledge_synthesis",
+      "summary_card",
+      "common_pitfall"
+    ],
+    "missing_types": [
+      "verbal_explanation",
+      "reflect_prompt",
+      "global_framework"
+    ],
+    "core_shapes_status": {
+      "lecture": true,
+      "practical_guide": true,
+      "tiered_questions": true
+    },
+    "fit_score": 80,
+    "fit_details": {
+      "knowledge_level_fit": "good",
+      "learning_style_fit": "good",
+      "weak_points_addressed": true
+    },
+    "overall_score": 78,
+    "overall_grade": "acceptable",
+    "reasoning": "课程内容覆盖了10种资源形态（共13种），覆盖率为76.92%，三种核心形态（讲义、实操指南、分阶题）全部覆盖，因此覆盖率评分为75分。学员画像显示为研发人员，学习目标为理解创造性评价与权利要求边界，课程通过研发场景导入、案例演示、决策流程等形态较好地适配了其知识水平和学习风格（视觉型、序列型、活跃型），但缺少言语型学习者偏好的文字讲解形态，且未提供反思提示和全局框架，适配度评分为80分。综合评分为75×0.5 + 80×0.5 = 77.5，四舍五入为78分，等级为Acceptable。",
+    "suggestions": [
+      "建议增加 verbal_explanation 形态，提供更口语化的文字讲解，以适配言语型学习者",
+      "建议增加 reflect_prompt 形态，引导学员反思研发场景中的专利策略，增强互动性",
+      "建议增加 global_framework 形态，提供专利法律制度全局框架图，帮助学员建立整体认知"
+    ]
+  },
+  "metrics": {
+    "value": 78.0,
+    "unit": "分",
+    "detail": {
+      "资源形态覆盖率": 76.92,
+      "覆盖率评分(100分制)": 75.0,
+      "学员画像适配度": 80.0,
+      "总体评分(100分制)": 78.0,
+      "评分等级": "acceptable",
+      "核心形态（讲义/实操/分阶题）": "3/3",
+      "已识别形态": [
+        "anchor_scenario",
+        "legal_anchor",
+        "worked_example",
+        "decision_flow",
+        "mnemonic",
+        "predict_activate",
+        "assessment",
+        "knowledge_synthesis",
+        "summary_card",
+        "common_pitfall"
+      ],
+      "缺失形态": [
+        "verbal_explanation",
+        "reflect_prompt",
+        "global_framework"
+      ],
+      "LLM理由": "课程内容覆盖了10种资源形态（共13种），覆盖率为76.92%，三种核心形态（讲义、实操指南、分阶题）全部覆盖，因此覆盖率评分为75分。学员画像显示为研发人员，学习目标为理解创造性评价与权利要求边界，课程通过研发场景导入、案例演示、决策流程等形态较好地适配了其知识水平和学习风格（视觉型、序列型、活跃型），但缺少言语型学习者偏好的文字讲解形态，且未提供反思提示和全局框架，适配度评分为80分。综合评分为75×0.5 + 80×0.5 = 77.5，四舍五入为78分，等级为Acceptable。",
+      "评估方式": "外部 LLM 判定（resource_morphology_evaluator 提示词）"
+    }
+  }
+}

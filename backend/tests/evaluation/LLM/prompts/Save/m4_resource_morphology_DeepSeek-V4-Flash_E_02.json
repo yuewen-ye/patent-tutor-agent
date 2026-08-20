@@ -1,0 +1,81 @@
+{
+  "metadata": {
+    "profile_id": "E",
+    "round": 2,
+    "eval_type": "m4_resource_morphology_evaluation",
+    "model": "DeepSeek-V4-Flash",
+    "timestamp": "2026-08-17 12:29:56"
+  },
+  "raw_llm_response": {
+    "coverage_rate": 69.23,
+    "coverage_score": 75,
+    "matched_types": [
+      "anchor_scenario",
+      "legal_anchor",
+      "worked_example",
+      "decision_flow",
+      "common_pitfall",
+      "predict_activate",
+      "assessment",
+      "knowledge_synthesis",
+      "summary_card"
+    ],
+    "missing_types": [
+      "verbal_explanation",
+      "mnemonic",
+      "global_framework",
+      "reflect_prompt"
+    ],
+    "core_shapes_status": {
+      "lecture": true,
+      "practical_guide": true,
+      "tiered_questions": true
+    },
+    "fit_score": 80,
+    "fit_details": {
+      "knowledge_level_fit": "good",
+      "learning_style_fit": "good",
+      "weak_points_addressed": true
+    },
+    "overall_score": 78,
+    "overall_grade": "acceptable",
+    "reasoning": "课程内容覆盖了9种资源形态，覆盖率69.23%，三种核心形态（讲义、实操指南、分阶题）全部覆盖，但缺少verbal_explanation、mnemonic、global_framework和reflect_prompt四种形态。学员画像显示为研发人员，学习目标为搞懂创造性评价与权利要求边界，课程内容以案例、流程、误区、测评等形式较好地适配了其知识水平和学习风格（视觉型、活跃型），但缺少针对言语型学习者的详细讲解和记忆锚点，整体适配度良好。综合评分75*0.5+80*0.5=77.5，四舍五入为78分。",
+    "suggestions": [
+      "建议增加verbal_explanation形态，对核心概念（如优先权三要素）进行更口语化的文字讲解，以适配言语型学习者",
+      "建议增加mnemonic形态，提供更易记的口诀或记忆锚点，帮助学员记忆关键手续和期限",
+      "建议增加global_framework形态，在开头或结尾提供一个全局框架图，帮助学员理解申请日确定与优先权制度在整个专利申请流程中的位置",
+      "建议增加reflect_prompt形态，在案例或测评后引导学员反思自己的理解，强化学习效果"
+    ]
+  },
+  "metrics": {
+    "value": 78.0,
+    "unit": "分",
+    "detail": {
+      "资源形态覆盖率": 69.23,
+      "覆盖率评分(100分制)": 75.0,
+      "学员画像适配度": 80.0,
+      "总体评分(100分制)": 78.0,
+      "评分等级": "acceptable",
+      "核心形态（讲义/实操/分阶题）": "3/3",
+      "已识别形态": [
+        "anchor_scenario",
+        "legal_anchor",
+        "worked_example",
+        "decision_flow",
+        "common_pitfall",
+        "predict_activate",
+        "assessment",
+        "knowledge_synthesis",
+        "summary_card"
+      ],
+      "缺失形态": [
+        "verbal_explanation",
+        "mnemonic",
+        "global_framework",
+        "reflect_prompt"
+      ],
+      "LLM理由": "课程内容覆盖了9种资源形态，覆盖率69.23%，三种核心形态（讲义、实操指南、分阶题）全部覆盖，但缺少verbal_explanation、mnemonic、global_framework和reflect_prompt四种形态。学员画像显示为研发人员，学习目标为搞懂创造性评价与权利要求边界，课程内容以案例、流程、误区、测评等形式较好地适配了其知识水平和学习风格（视觉型、活跃型），但缺少针对言语型学习者的详细讲解和记忆锚点，整体适配度良好。综合评分75*0.5+80*0.5=77.5，四舍五入为78分。",
+      "评估方式": "外部 LLM 判定（resource_morphology_evaluator 提示词）"
+    }
+  }
+}

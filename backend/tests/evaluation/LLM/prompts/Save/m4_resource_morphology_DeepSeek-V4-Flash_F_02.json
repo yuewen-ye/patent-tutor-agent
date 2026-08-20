@@ -1,0 +1,80 @@
+{
+  "metadata": {
+    "profile_id": "F",
+    "round": 2,
+    "eval_type": "m4_resource_morphology_evaluation",
+    "model": "DeepSeek-V4-Flash",
+    "timestamp": "2026-08-17 12:30:30"
+  },
+  "raw_llm_response": {
+    "coverage_rate": 69.23,
+    "coverage_score": 70,
+    "matched_types": [
+      "global_framework",
+      "anchor_scenario",
+      "legal_anchor",
+      "worked_example",
+      "verbal_explanation",
+      "predict_activate",
+      "assessment",
+      "knowledge_synthesis"
+    ],
+    "missing_types": [
+      "summary_card",
+      "mnemonic",
+      "reflect_prompt",
+      "decision_flow",
+      "common_pitfall"
+    ],
+    "core_shapes_status": {
+      "lecture": true,
+      "practical_guide": true,
+      "tiered_questions": true
+    },
+    "fit_score": 85,
+    "fit_details": {
+      "knowledge_level_fit": "good",
+      "learning_style_fit": "good",
+      "weak_points_addressed": true
+    },
+    "overall_score": 78,
+    "overall_grade": "acceptable",
+    "reasoning": "覆盖率评分70分：识别出8种资源形态（global_framework, anchor_scenario, legal_anchor, worked_example, verbal_explanation, predict_activate, assessment, knowledge_synthesis），覆盖率为69.23%，三种核心形态（讲义、实操指南、分阶题）全部覆盖，但缺少summary_card、mnemonic、reflect_prompt、decision_flow、common_pitfall等5种形态。适配度评分85分：学员为初学者，学习目标是从零建立知识产权整体框架，课程提供了丰富的global_framework、anchor_scenario、verbal_explanation等适合初学者的资源，且通过predict_activate和assessment适配活跃型学习风格，但缺少mnemonic和summary_card等记忆辅助工具，对初学者记忆巩固略有不足。综合评分78分，等级为acceptable。",
+    "suggestions": [
+      "建议增加mnemonic（记忆锚）形态，如口诀或记忆卡片，帮助初学者记忆三类知识产权的核心区别",
+      "建议增加summary_card（速查卡）形态，提供专利、商标、著作权对比速查表，便于复习",
+      "建议增加common_pitfall（常见误区）形态，针对学习者可能混淆保护客体的风险进行预警"
+    ]
+  },
+  "metrics": {
+    "value": 78.0,
+    "unit": "分",
+    "detail": {
+      "资源形态覆盖率": 69.23,
+      "覆盖率评分(100分制)": 70.0,
+      "学员画像适配度": 85.0,
+      "总体评分(100分制)": 78.0,
+      "评分等级": "acceptable",
+      "核心形态（讲义/实操/分阶题）": "3/3",
+      "已识别形态": [
+        "global_framework",
+        "anchor_scenario",
+        "legal_anchor",
+        "worked_example",
+        "verbal_explanation",
+        "predict_activate",
+        "assessment",
+        "knowledge_synthesis"
+      ],
+      "缺失形态": [
+        "summary_card",
+        "mnemonic",
+        "reflect_prompt",
+        "decision_flow",
+        "common_pitfall"
+      ],
+      "LLM理由": "覆盖率评分70分：识别出8种资源形态（global_framework, anchor_scenario, legal_anchor, worked_example, verbal_explanation, predict_activate, assessment, knowledge_synthesis），覆盖率为69.23%，三种核心形态（讲义、实操指南、分阶题）全部覆盖，但缺少summary_card、mnemonic、reflect_prompt、decision_flow、common_pitfall等5种形态。适配度评分85分：学员为初学者，学习目标是从零建立知识产权整体框架，课程提供了丰富的global_framework、anchor_scenario、verbal_explanation等适合初学者的资源，且通过predict_activate和assessment适配活跃型学习风格，但缺少mnemonic和summary_card等记忆辅助工具，对初学者记忆巩固略有不足。综合评分78分，等级为acceptable。",
+      "评估方式": "外部 LLM 判定（resource_morphology_evaluator 提示词）"
+    }
+  }
+}

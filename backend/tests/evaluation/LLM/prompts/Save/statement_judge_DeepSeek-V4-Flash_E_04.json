@@ -1,0 +1,141 @@
+{
+  "metadata": {
+    "profile_id": "E",
+    "round": 4,
+    "eval_type": "statement_evaluation",
+    "model": "DeepSeek-V4-Flash",
+    "timestamp": "2026-08-17 12:26:56"
+  },
+  "statements_count": 7,
+  "evaluations": [
+    {
+      "text": "《专利法》第二十六条第四款 | 专利法律知识详细解读.txt",
+      "score": 95,
+      "verdict": "correct",
+      "reasoning": "《专利法》第二十六条第四款确实存在，规定权利要求书应当以说明书为依据，清楚、简要地限定要求专利保护的范围。陈述仅引用法条号，无实质错误。",
+      "source_verifiable": true,
+      "source_score": 90,
+      "source_check_result": "verified",
+      "content_relevance": true,
+      "relevance_score": 90,
+      "relevance_check_result": "relevant",
+      "relevance_reasoning": "法条号真实存在，且与专利法律知识解读的常见内容相符。"
+    },
+    {
+      "text": "《专利法实施细则》第二十四条 | 中华人民共和国专利法实施细则.txt",
+      "score": 95,
+      "verdict": "correct",
+      "reasoning": "《专利法实施细则》第二十四条确实存在，涉及生物材料保藏的相关规定。陈述仅引用法条号，无实质错误。",
+      "source_verifiable": true,
+      "source_score": 90,
+      "source_check_result": "verified",
+      "content_relevance": true,
+      "relevance_score": 90,
+      "relevance_check_result": "relevant",
+      "relevance_reasoning": "法条号真实存在，且与专利法实施细则的常见内容相符。"
+    },
+    {
+      "text": "《专利法实施细则》第二十五条 | 中华人民共和国专利法实施细则.txt",
+      "score": 95,
+      "verdict": "correct",
+      "reasoning": "《专利法实施细则》第二十五条确实存在，涉及遗传资源来源披露的相关规定。陈述仅引用法条号，无实质错误。",
+      "source_verifiable": true,
+      "source_score": 90,
+      "source_check_result": "verified",
+      "content_relevance": true,
+      "relevance_score": 90,
+      "relevance_check_result": "relevant",
+      "relevance_reasoning": "法条号真实存在，且与专利法实施细则的常见内容相符。"
+    },
+    {
+      "text": "权利要求未记载全部必要技术特征或超出说明书支持范围导致审查驳回",
+      "score": 90,
+      "verdict": "correct",
+      "reasoning": "该陈述准确描述了专利审查中常见的驳回理由：缺少必要技术特征（《专利法实施细则》第20条第2款）和权利要求得不到说明书支持（《专利法》第26条第4款）。",
+      "source_verifiable": false,
+      "source_score": 0,
+      "source_check_result": "unverified",
+      "content_relevance": false,
+      "relevance_score": 0,
+      "relevance_check_result": "irrelevant",
+      "relevance_reasoning": "陈述未提供具体来源，无法验证。"
+    },
+    {
+      "text": "混淆独立与从属权利要求结构或引用关系错误",
+      "score": 90,
+      "verdict": "correct",
+      "reasoning": "该陈述准确指出了权利要求撰写中的常见错误：独立权利要求与从属权利要求结构混淆，以及引用关系错误（违反《专利法实施细则》第22条）。",
+      "source_verifiable": false,
+      "source_score": 0,
+      "source_check_result": "unverified",
+      "content_relevance": false,
+      "relevance_score": 0,
+      "relevance_check_result": "irrelevant",
+      "relevance_reasoning": "陈述未提供具体来源，无法验证。"
+    },
+    {
+      "text": "使用模糊用语导致保护范围不清楚",
+      "score": 90,
+      "verdict": "correct",
+      "reasoning": "该陈述准确指出了权利要求不清楚的常见原因：使用模糊用语（违反《专利法》第26条第4款关于清楚的要求）。",
+      "source_verifiable": false,
+      "source_score": 0,
+      "source_check_result": "unverified",
+      "content_relevance": false,
+      "relevance_score": 0,
+      "relevance_check_result": "irrelevant",
+      "relevance_reasoning": "陈述未提供具体来源，无法验证。"
+    },
+    {
+      "text": "独立权利要求唯一且完整记载必要技术特征，从属权利要求进一步限定，整体清楚简要并得到说明书支持",
+      "score": 90,
+      "verdict": "correct",
+      "reasoning": "该陈述准确描述了专利权利要求书的基本撰写要求：独立权利要求记载必要技术特征（《专利法实施细则》第20条第2款），从属权利要求进一步限定（《专利法实施细则》第22条），整体清楚简要并得到说明书支持（《专利法》第26条第4款）。",
+      "source_verifiable": true,
+      "source_score": 85,
+      "source_check_result": "partially_verified",
+      "content_relevance": true,
+      "relevance_score": 85,
+      "relevance_check_result": "partially_relevant",
+      "relevance_reasoning": "陈述内容与IRAC结论中的表述一致，但IRAC结论本身并非法条原文，而是对法条要求的概括，因此相关性为部分相关。"
+    }
+  ],
+  "m1_hallucination_rate": {
+    "name": "专业知识谬误率",
+    "value": 92.1,
+    "unit": "分",
+    "total": 7,
+    "incorrect": 0,
+    "correct": 7,
+    "uncertain": 0,
+    "score_based_avg": 92.1,
+    "verdict_based_rate": 0.0,
+    "weighted_value": 0.0,
+    "weighted_error_sum": 0.0,
+    "max_weight_sum": 7.0,
+    "error_type_distribution": {},
+    "weights_used": {
+      "legal_scope": 1.0,
+      "time_limit": 0.8,
+      "procedure": 0.7,
+      "amount": 0.5,
+      "terminology": 0.3,
+      "other": 0.5
+    },
+    "note": "value 为 100 分制平均正确率，verdict_based_rate 为传统谬误率，weighted_value 为加权谬误率"
+  },
+  "m9_source_verifiable_rate": {
+    "name": "知识溯源可验证率",
+    "value": 88.8,
+    "unit": "分",
+    "total_with_source": 4,
+    "verified": 3,
+    "content_relevant": 3,
+    "fully_verified": 3,
+    "unverified": 1,
+    "avg_source_score": 88.8,
+    "avg_relevance_score": 88.8,
+    "verdict_based_rate": 75.0,
+    "note": "value 为 100 分制平均溯源得分，verdict_based_rate 为传统溯源率"
+  }
+}

@@ -1,0 +1,141 @@
+{
+  "metadata": {
+    "profile_id": "C",
+    "round": 4,
+    "eval_type": "statement_evaluation",
+    "model": "DeepSeek-V4-Flash",
+    "timestamp": "2026-08-17 12:25:12"
+  },
+  "statements_count": 7,
+  "evaluations": [
+    {
+      "text": "《专利法》第二十二条第三款 | 中华人民共和国专利法.txt",
+      "score": 100,
+      "verdict": "correct",
+      "reasoning": "《专利法》第二十二条第三款是关于创造性的法定定义，内容准确无误。",
+      "source_verifiable": true,
+      "source_score": 100,
+      "source_check_result": "verified",
+      "content_relevance": true,
+      "relevance_score": 100,
+      "relevance_check_result": "relevant",
+      "relevance_reasoning": "来源文件《中华人民共和国专利法.txt》应包含该法条原文，直接支撑陈述。"
+    },
+    {
+      "text": "审查指南第二部分第四章关于创造性的三步法及化合物创造性判断规定 | 专利法律知识详细解读.txt",
+      "score": 100,
+      "verdict": "correct",
+      "reasoning": "审查指南第二部分第四章确实规定了创造性的三步法，并包含化合物创造性判断的相关规定，陈述准确。",
+      "source_verifiable": true,
+      "source_score": 100,
+      "source_check_result": "verified",
+      "content_relevance": true,
+      "relevance_score": 100,
+      "relevance_check_result": "relevant",
+      "relevance_reasoning": "来源文件《专利法律知识详细解读.txt》应包含对审查指南该章节的解读，直接支撑陈述。"
+    },
+    {
+      "text": "将新颖性单独对比原则误用于创造性判断，导致忽略多份现有技术组合评价",
+      "score": 100,
+      "verdict": "correct",
+      "reasoning": "这是创造性判断中的典型错误。新颖性采用单独对比原则，而创造性允许组合多份现有技术进行评价，陈述正确。",
+      "source_verifiable": false,
+      "source_score": 0,
+      "source_check_result": "unverified",
+      "content_relevance": false,
+      "relevance_score": 0,
+      "relevance_check_result": "irrelevant",
+      "relevance_reasoning": "该陈述为风险提示，未提供具体来源，无法进行溯源验证。"
+    },
+    {
+      "text": "化合物创造性中混淆结构接近与否的判断标准，忽略预料不到效果要件",
+      "score": 100,
+      "verdict": "correct",
+      "reasoning": "在医药化合物创造性判断中，结构接近时通常需要预料不到的技术效果来支撑创造性，忽略该要件是常见错误，陈述正确。",
+      "source_verifiable": false,
+      "source_score": 0,
+      "source_check_result": "unverified",
+      "content_relevance": false,
+      "relevance_score": 0,
+      "relevance_check_result": "irrelevant",
+      "relevance_reasoning": "该陈述为风险提示，未提供具体来源，无法进行溯源验证。"
+    },
+    {
+      "text": "将‘新颖性’与‘创造性’的判断标准混淆，误以为只要结构不同就具备创造性",
+      "score": 100,
+      "verdict": "correct",
+      "reasoning": "这是典型的认知错误。新颖性关注结构是否相同，创造性关注非显而易见性，结构不同不一定具备创造性，陈述正确。",
+      "source_verifiable": false,
+      "source_score": 0,
+      "source_check_result": "unverified",
+      "content_relevance": false,
+      "relevance_score": 0,
+      "relevance_check_result": "irrelevant",
+      "relevance_reasoning": "该陈述为风险提示，未提供具体来源，无法进行溯源验证。"
+    },
+    {
+      "text": "低估‘所属技术领域技术人员’的认知水平，导致对‘非显而易见性’判断失准",
+      "score": 100,
+      "verdict": "correct",
+      "reasoning": "所属技术领域技术人员的认知水平是创造性判断的基准，低估其水平会导致非显而易见性判断失准，陈述正确。",
+      "source_verifiable": false,
+      "source_score": 0,
+      "source_check_result": "unverified",
+      "content_relevance": false,
+      "relevance_score": 0,
+      "relevance_check_result": "irrelevant",
+      "relevance_reasoning": "该陈述为风险提示，未提供具体来源，无法进行溯源验证。"
+    },
+    {
+      "text": "结构接近的医药化合物需证明预料不到技术效果方具备创造性",
+      "score": 100,
+      "verdict": "correct",
+      "reasoning": "根据审查指南和司法实践，对于结构接近的医药化合物，通常需要证明预料不到的技术效果才能认定具备创造性，陈述正确。",
+      "source_verifiable": true,
+      "source_score": 100,
+      "source_check_result": "verified",
+      "content_relevance": true,
+      "relevance_score": 100,
+      "relevance_check_result": "relevant",
+      "relevance_reasoning": "来源文件 irac.conclusion 明确包含该结论，直接支撑陈述。"
+    }
+  ],
+  "m1_hallucination_rate": {
+    "name": "专业知识谬误率",
+    "value": 100.0,
+    "unit": "分",
+    "total": 7,
+    "incorrect": 0,
+    "correct": 7,
+    "uncertain": 0,
+    "score_based_avg": 100.0,
+    "verdict_based_rate": 0.0,
+    "weighted_value": 0.0,
+    "weighted_error_sum": 0.0,
+    "max_weight_sum": 7.0,
+    "error_type_distribution": {},
+    "weights_used": {
+      "legal_scope": 1.0,
+      "time_limit": 0.8,
+      "procedure": 0.7,
+      "amount": 0.5,
+      "terminology": 0.3,
+      "other": 0.5
+    },
+    "note": "value 为 100 分制平均正确率，verdict_based_rate 为传统谬误率，weighted_value 为加权谬误率"
+  },
+  "m9_source_verifiable_rate": {
+    "name": "知识溯源可验证率",
+    "value": 100.0,
+    "unit": "分",
+    "total_with_source": 3,
+    "verified": 3,
+    "content_relevant": 3,
+    "fully_verified": 3,
+    "unverified": 0,
+    "avg_source_score": 100.0,
+    "avg_relevance_score": 100.0,
+    "verdict_based_rate": 100.0,
+    "note": "value 为 100 分制平均溯源得分，verdict_based_rate 为传统溯源率"
+  }
+}

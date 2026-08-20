@@ -171,7 +171,7 @@ METRIC_META: dict[str, tuple[str, str]] = {
     # M1 幻觉率
     "1.1 闭环率": (
         "闭环条数 / 总🔴条数 × 100%（外部LLM判定）",
-        "m1_objection_loop_*.json（外部LLM评估结果）",
+        "round_indicator_{model}_{profile}_{round}.json > objection_loop（round-indicator.md 外部LLM评估）",
     ),
     "1.2 裁判Agent准确性评分": (
         "直接取 X/5",
@@ -179,39 +179,39 @@ METRIC_META: dict[str, tuple[str, str]] = {
     ),
     "1.3.1 上下文正确性": (
         "外部LLM评估：事实准确性+关键信息完整性（0-100分）",
-        "judge_*.json（外部LLM评估 scores.context_correctness）",
+        "round_indicator_{model}_{profile}_{round}.json > overall.scores.context_correctness（round-indicator.md 外部LLM评估）",
     ),
     "1.3.2 答案正确性": (
         "外部LLM评估：生成内容与专利法/实践/逻辑的一致性（0-100分）",
-        "judge_*.json（外部LLM评估 scores.correctness）",
+        "round_indicator_{model}_{profile}_{round}.json > overall.scores.correctness（round-indicator.md 外部LLM评估）",
     ),
     "1.3.3 幻觉评估": (
         "外部LLM评估：与客观事实/可验证数据/逻辑推理相违背的内容比例（0-100分）",
-        "judge_*.json（外部LLM评估 scores.hallucination）",
+        "round_indicator_{model}_{profile}_{round}.json > overall.scores.hallucination（round-indicator.md 外部LLM评估）",
     ),
     "1.4.1 事实性谬误率": (
         "事实性错误陈述数 / 事实性陈述总数 × 100%",
-        "statement_judge_*.json（外部LLM评估结果）",
+        "round_indicator_{model}_{profile}_{round}.json > statement（round-indicator.md 外部LLM评估）",
     ),
     "1.4.2 逻辑性谬误率": (
         "逻辑性错误陈述数 / 逻辑性陈述总数 × 100%",
-        "statement_judge_*.json（外部LLM评估结果）",
+        "round_indicator_{model}_{profile}_{round}.json > statement（round-indicator.md 外部LLM评估）",
     ),
     "1.4.3 指令性谬误率": (
         "指令性错误陈述数 / 指令性陈述总数 × 100%",
-        "statement_judge_*.json（外部LLM评估结果）",
+        "round_indicator_{model}_{profile}_{round}.json > statement（round-indicator.md 外部LLM评估）",
     ),
     "1.5.1 知识溯源可验证率": (
         "完全验证的带来源陈述数 / 带来源陈述总数 × 100%",
-        "statement_judge_*.json（外部LLM评估结果）",
+        "round_indicator_{model}_{profile}_{round}.json > statement（round-indicator.md 外部LLM评估）",
     ),
     "1.5.2 溯源内容支撑率": (
         "内容支撑的带来源陈述数 / 带来源陈述总数 × 100%",
-        "statement_judge_*.json（外部LLM评估结果）",
+        "round_indicator_{model}_{profile}_{round}.json > statement（round-indicator.md 外部LLM评估）",
     ),
     "1.6 跨轮自洽率": (
         "1 - 矛盾事实点数 / 总事实点数 × 100%",
-        "m1_cross_round_*.json（外部LLM评估结果）",
+        "profile_indicator_{model}_{profile}.json > cross_round（profile-indicator.md 外部LLM评估）",
     ),
     # M2 匹配度
     "2.1 难度符合度": (
@@ -220,11 +220,11 @@ METRIC_META: dict[str, tuple[str, str]] = {
     ),
     "2.2 有用性": (
         "外部LLM评估：内容对学员的实际帮助程度，含清晰性/友好性（0-100分）",
-        "judge_*.json（外部LLM评估 scores.helpfulness）",
+        "round_indicator_{model}_{profile}_{round}.json > overall.scores.helpfulness（round-indicator.md 外部LLM评估）",
     ),
     "2.3 相关性": (
         "外部LLM评估：内容与学习主题的聚焦程度，无冗余/跑题（0-100分）",
-        "judge_*.json（外部LLM评估 scores.relevance）",
+        "round_indicator_{model}_{profile}_{round}.json > overall.scores.relevance（round-indicator.md 外部LLM评估）",
     ),
     "2.4 动态迭代触发率": (
         "每轮：是否触发动态迭代（|Δpl| ≥ 0.05 的节点变化），画像级：触发轮次数 / 有效轮次数 × 100%",
@@ -232,11 +232,11 @@ METRIC_META: dict[str, tuple[str, str]] = {
     ),
     "2.5 检索准确率": (
         "准确检索chunk数 / 总检索chunk数 × 100%",
-        "m2_retrieval_*.json（外部LLM评估结果）",
+        "round_indicator_{model}_{profile}_{round}.json > retrieval（round-indicator.md 外部LLM评估）",
     ),
     "2.5 检索完整率": (
         "完整检索chunk数 / 总检索chunk数 × 100%",
-        "m2_retrieval_*.json（外部LLM评估结果）",
+        "round_indicator_{model}_{profile}_{round}.json > retrieval（round-indicator.md 外部LLM评估）",
     ),
     # M3 覆盖率
     "3.1 本节知识点覆盖率": (
@@ -266,8 +266,8 @@ METRIC_META: dict[str, tuple[str, str]] = {
     ),
     # M5 其它指标
     "5.3 PII合规检测": (
-        "正则白名单扫描 learner_profile_update.md / session_snapshot.json",
-        "learner_profile_update.md + session_snapshot.json",
+        "LLM 评估课程内容中的 PII 合规性（替代原正则扫描）",
+        "round_indicator_{model}_{profile}_{round}.json > pii（round-indicator.md 外部LLM评估）",
     ),
     "5.4 异议率": (
         "(🔴+🟡) / 总批注数 × 100%",
@@ -276,15 +276,15 @@ METRIC_META: dict[str, tuple[str, str]] = {
     # M6 问答质量测试
     "6.1 对抗稳健率": (
         "通过对抗探针题数 / 总对抗探针题数 × 100%（系统级独立评估）",
-        "m6_adversarial_*_system.json（系统级外部LLM评估）",
+        "system_indicator_{model}.json > m6_adversarial（system-indicator.md 系统级外部LLM评估）",
     ),
     "6.2 边界拒答恰当率": (
         "恰当拒答题数 / 总边界探针题数 × 100%（系统级独立评估）",
-        "m6_boundary_*_system.json（系统级外部LLM评估）",
+        "system_indicator_{model}.json > m6_boundary（system-indicator.md 系统级外部LLM评估）",
     ),
 }
 
-# 旧指标名 → 新展示名映射（用于从 calculate.MetricResult 到报告展示）
+# 指标名规范化映射：calculate.MetricResult.name → 统一展示名
 _RENAME_MAP: dict[str, str] = {
     "1.1 闭环率": "1.1 闭环率",
     "1.2 裁判Agent准确性评分": "1.2 裁判Agent准确性评分",
@@ -292,7 +292,6 @@ _RENAME_MAP: dict[str, str] = {
     "上下文正确性(Context Correctness)": "1.3.1 上下文正确性",
     "答案正确性(Correctness)": "1.3.2 答案正确性",
     "幻觉评估(Hallucination)": "1.3.3 幻觉评估",
-    # 新名自引用（calculate.py 直接使用新名）
     "1.4.1 事实性谬误率": "1.4.1 事实性谬误率",
     "1.4.2 逻辑性谬误率": "1.4.2 逻辑性谬误率",
     "1.4.3 指令性谬误率": "1.4.3 指令性谬误率",
@@ -314,33 +313,9 @@ _RENAME_MAP: dict[str, str] = {
     "5.3 PII合规检测": "5.3 PII合规检测",
     "6.1 对抗稳健率": "6.1 对抗稳健率",
     "6.2 边界拒答恰当率": "6.2 边界拒答恰当率",
-    # 旧名 → 新名（兼容 calculate.py 旧名输出）
-    "M1.1 事实性谬误率": "1.4.1 事实性谬误率",
-    "M1.2 逻辑性谬误率": "1.4.2 逻辑性谬误率",
-    "M1.3 指令性谬误率": "1.4.3 指令性谬误率",
-    "知识溯源可验证率": "1.5.1 知识溯源可验证率",
-    "M9-b 溯源内容支撑率": "1.5.2 溯源内容支撑率",
-    "M14 跨轮自洽率": "1.6 跨轮自洽率",
-    "M17-a 检索准确率": "2.5 检索准确率",
-    "M17-b 检索完整率": "2.5 检索完整率",
-    # 兼容旧名
-    "专家互评异议率": "5.4 异议率",
-    "异议闭环率": "1.1 闭环率",
-    "裁判准确性评分": "1.2 裁判Agent准确性评分",
-    "难度符合度": "2.1 难度符合度",
-    "动态迭代触发率": "2.4 动态迭代触发率",
-    "本节知识点覆盖率": "3.1 本节知识点覆盖率",
-    "薄弱点命中率": "3.2 薄弱点命中率",
-    "混淆对覆盖率": "3.3 混淆对覆盖率",
-    "产物完整率": "4.1 产物完整率",
-    "PII泄露条数": "5.3 PII合规检测",
-    "M15 对抗稳健率": "6.1 对抗稳健率",
-    "M16 边界拒答恰当率": "6.2 边界拒答恰当率",
-    "裁判Agent准确性评分": "1.2 裁判Agent准确性评分",
-    "专业知识谬误率": "1.4.1 事实性谬误率",
 }
 
-# 反向映射：新展示名 → 旧名（用于在 calculate.py 返回的列表中查找）
+# 反向映射：展示名 → 计算侧名称（用于在 calculate.py 返回的列表中查找）
 _DISPLAY_TO_OLD: dict[str, str] = {v: k for k, v in _RENAME_MAP.items()}
 
 # 直接映射：展示名 → LLM 维度 key（用于把 1.3.1 等展示名翻译回 LLM 维度）
@@ -416,6 +391,16 @@ class FullReportContext:
 
 
 def _load_llm_eval_results() -> dict[str, Any]:
+    """从新的聚合产物目录加载评估结果。
+
+    统一文件体系（每个提示词对应一份聚合 JSON）：
+    - 轮次级：round_indicator_{model}_{profile}_{round:02d}.json
+      内含 section：overall / statement / retrieval / resource_morphology / pii / objection_loop
+    - 画像级：profile_indicator_{model}_{profile}.json
+      内含 section：cross_round
+    - 系统级：system_indicator_{model}.json
+      内含 section：m6_adversarial / m6_boundary
+    """
     results: dict[str, Any] = {}
     llm_dir = _resolve_llm_results_dir()
     if not llm_dir.exists():
@@ -428,79 +413,96 @@ def _load_llm_eval_results() -> dict[str, Any]:
             results[profile_id][round_num] = {}
         results[profile_id][round_num][key] = data
 
-    for json_file in sorted(llm_dir.glob("judge_*.json")):
+    # 轮次级：round_indicator_{model}_{profile}_{round:02d}.json
+    for json_file in sorted(llm_dir.glob("round_indicator_*_*_*.json")):
+        # 排除 pii / statement / resource / retrieval / objection 等旧拆分名；
+        # 新的聚合名格式是 round_indicator_{model}_{profile}_{NN}.json 共 4 段
+        stem = json_file.stem
+        parts = stem.split("_")
+        # round_indicator_{model}_{profile}_{NN} 共 5 段下划线切出的部分?
+        # round_indicator_A_B_01 → split("_") = ["round","indicator","A","B","01"]
+        if len(parts) != 5:
+            continue
+        if parts[0] != "round" or parts[1] != "indicator":
+            continue
+        if not parts[4].isdigit():
+            continue
         try:
             data = json.loads(json_file.read_text(encoding="utf-8"))
-            metadata = data.get("metadata", {})
-            profile_id = metadata.get("profile_id", "")
-            round_num = metadata.get("round", 0)
-            if profile_id and round_num:
-                _store(profile_id, round_num, "judge_eval", data)
-        except (json.JSONDecodeError, KeyError):
+        except (json.JSONDecodeError, OSError):
             continue
+        metadata = data.get("metadata", {})
+        profile_id = metadata.get("profile_id", "") or parts[3]
+        round_num = metadata.get("round", 0) or int(parts[4])
+        if not profile_id or not round_num:
+            continue
+        # overall → judge_eval
+        if "overall" in data:
+            _store(profile_id, round_num, "judge_eval",
+                   {"metadata": metadata, "overall_evaluation": data["overall"]})
+        # statement → statement_eval
+        if "statement" in data:
+            _store(profile_id, round_num, "statement_eval",
+                   {"metadata": metadata, **data["statement"]})
+        # resource_morphology → m7_resource
+        if "resource_morphology" in data:
+            _store(profile_id, round_num, "m7_resource",
+                   {"metadata": metadata, "raw_llm_response": data["resource_morphology"]})
+        # retrieval → m2_retrieval
+        if "retrieval" in data:
+            _store(profile_id, round_num, "m2_retrieval",
+                   {"metadata": metadata, **data["retrieval"]})
+        # pii → pii_compliance
+        if "pii" in data:
+            _store(profile_id, round_num, "pii_compliance",
+                   {"metadata": metadata, **data["pii"]})
+        # objection_loop → objection_eval（用于 1.1 闭环率，若 calculate.py 需要）
+        if "objection_loop" in data:
+            _store(profile_id, round_num, "objection_eval",
+                   {"metadata": metadata, **data["objection_loop"]})
 
-    for json_file in sorted(llm_dir.glob("statement_judge_*.json")):
+    # 画像级：profile_indicator_{model}_{profile}.json
+    for json_file in sorted(llm_dir.glob("profile_indicator_*_*.json")):
+        stem = json_file.stem
+        parts = stem.split("_")
+        # profile_indicator_{model}_{profile} → ["profile","indicator", model, profile]
+        if len(parts) != 4:
+            continue
+        if parts[0] != "profile" or parts[1] != "indicator":
+            continue
         try:
             data = json.loads(json_file.read_text(encoding="utf-8"))
-            metadata = data.get("metadata", {})
-            profile_id = metadata.get("profile_id", "")
-            round_num = metadata.get("round", 0)
-            if profile_id and round_num:
-                _store(profile_id, round_num, "statement_eval", data)
-        except (json.JSONDecodeError, KeyError):
+        except (json.JSONDecodeError, OSError):
             continue
+        metadata = data.get("metadata", {})
+        profile_id = metadata.get("profile_id", "") or parts[3]
+        if not profile_id:
+            continue
+        if "cross_round" in data:
+            if profile_id not in results:
+                results[profile_id] = {}
+            results[profile_id]["_m14"] = {"metadata": metadata, **data["cross_round"]}
 
-    for json_file in sorted(llm_dir.glob("m4_resource_morphology_*.json")):
+    # 系统级：system_indicator_{model}.json
+    for json_file in sorted(llm_dir.glob("system_indicator_*.json")):
+        stem = json_file.stem
+        # 排除旧的带 _system / _boundary / _adversarial 后缀名
+        # system_indicator_{model} → 三段式
+        parts = stem.split("_")
+        if len(parts) != 3:
+            continue
+        if parts[0] != "system" or parts[1] != "indicator":
+            continue
         try:
             data = json.loads(json_file.read_text(encoding="utf-8"))
-            metadata = data.get("metadata", {})
-            profile_id = metadata.get("profile_id", "")
-            round_num = metadata.get("round", 0)
-            if profile_id and round_num:
-                _store(profile_id, round_num, "m7_resource", data)
-        except (json.JSONDecodeError, KeyError):
+        except (json.JSONDecodeError, OSError):
             continue
-
-    for json_file in sorted(llm_dir.glob("m2_retrieval_*.json")):
-        try:
-            data = json.loads(json_file.read_text(encoding="utf-8"))
-            metadata = data.get("metadata", {})
-            profile_id = metadata.get("profile_id", "")
-            round_num = metadata.get("round", 0)
-            if profile_id and round_num:
-                _store(profile_id, round_num, "m2_retrieval", data)
-        except (json.JSONDecodeError, KeyError):
-            continue
-
-    for json_file in sorted(llm_dir.glob("m1_cross_round_*.json")):
-        try:
-            data = json.loads(json_file.read_text(encoding="utf-8"))
-            metadata = data.get("metadata", {})
-            profile_id = metadata.get("profile_id", "")
-            if profile_id:
-                if profile_id not in results:
-                    results[profile_id] = {}
-                results[profile_id]["_m14"] = data
-        except (json.JSONDecodeError, KeyError):
-            continue
-
-    for json_file in sorted(llm_dir.glob("m6_adversarial_*_system.json")):
-        try:
-            data = json.loads(json_file.read_text(encoding="utf-8"))
-            if "system" not in results:
-                results["system"] = {}
-            results["system"]["_m15"] = data
-        except (json.JSONDecodeError, KeyError):
-            continue
-
-    for json_file in sorted(llm_dir.glob("m6_boundary_*_system.json")):
-        try:
-            data = json.loads(json_file.read_text(encoding="utf-8"))
-            if "system" not in results:
-                results["system"] = {}
-            results["system"]["_m16"] = data
-        except (json.JSONDecodeError, KeyError):
-            continue
+        if "system" not in results:
+            results["system"] = {}
+        if "m6_adversarial" in data:
+            results["system"]["_m15"] = data["m6_adversarial"]
+        if "m6_boundary" in data:
+            results["system"]["_m16"] = data["m6_boundary"]
 
     return results
 
@@ -849,7 +851,7 @@ def _render_m6_detail_section(
         lines.append("")
         lines.append(f"- **数值**: {_format_value(adv_metric.value, adv_metric.unit)}")
         lines.append(f"- **计算公式**: 通过对抗探针题数 / 总对抗探针题数 × 100%")
-        lines.append(f"- **数据来源**: `m6_adversarial_*_system.json`（系统级外部LLM评估）")
+        lines.append(f"- **数据来源**: `system_indicator_*_system.json`（系统级外部LLM评估）")
         if adv_metric.detail:
             detail = adv_metric.detail
             if isinstance(detail, dict):
@@ -882,7 +884,7 @@ def _render_m6_detail_section(
         lines.append("")
         lines.append(f"- **数值**: {_format_value(bnd_metric.value, bnd_metric.unit)}")
         lines.append(f"- **计算公式**: 恰当拒答题数 / 总边界探针题数 × 100%")
-        lines.append(f"- **数据来源**: `m6_boundary_*_system.json`（系统级外部LLM评估）")
+        lines.append(f"- **数据来源**: `system_indicator_*_system.json`（系统级外部LLM评估）")
         if bnd_metric.detail:
             detail = bnd_metric.detail
             if isinstance(detail, dict):
