@@ -71,7 +71,7 @@ uv export --format requirements-txt --output-file requirements.txt
 │   ├── tests/                   # unit and real-provider integration tests
 │   └── main.py                  # FastAPI entry point
 ├── frontend/                    # React 18 + TypeScript + Vite UI (pages, API client, components)
-├── config/agents.example.yaml   # provider/model/temperature template; copy to config/agents.yaml (ignored)
+├── config/agents.example.yaml   # channel/model/temperature template; copy to config/agents.yaml (ignored)
 ├── docs/                        # active contracts, guides, architecture and output examples
 ├── scripts/                     # Studio start/stop scripts
 ├── artifacts/                   # ignored runtime Markdown, manifests and logs
@@ -100,8 +100,11 @@ START -> _init -> route
                -> expert_a[revision] || expert_b[revision]
                -> _experts_barrier
                -> expert_a[integration] -> judge
-                    accept/minor -> END
-                    revise       -> expert_a[integration] -> judge（循环直到通过）
+                    accept/minor -> slide_deck（可用 PATENT_TUTOR_SLIDE_DECK_ENABLED 关闭）
+                                  -> generate_pptx（可用 PATENT_TUTOR_PPTX_ENABLED 关闭）-> END
+                    revise       -> expert_a[integration] -> judge（循环，上限
+                                    agents.judge.max_revisions 次，缺省 3；达上限后带当前
+                                    course_package 继续收尾）
 
 POST /sessions/{course_session_id}/exercise-responses
   -> independent feedback session
@@ -113,7 +116,9 @@ experts finish the same phase. `expert_a_integration` is a graph alias that invo
 Expert A node in integration phase; it is not a sixth Agent.
 
 Judge approval ends the course-generation session. A `revise` decision returns to Expert A
-integration and repeats until Judge accepts the course. The learner studies and submits exercises
+integration and repeats until Judge accepts the course or the revision count reaches
+`agents.judge.max_revisions` (default 3); at the cap the workflow keeps the current
+`course_package` and finishes instead of looping forever. The learner studies and submits exercises
 later, which creates a separate feedback session. The graph has no interrupt-based long wait.
 
 ## Node Responsibilities
@@ -128,6 +133,7 @@ later, which creates a separate feedback session. The graph has no interrupt-bas
 | `expert_b` | LLM + tool calling | draft, review A, revise | B draft/review/revision |
 | `judge` | LLM | evaluate integrated course without rewriting it | `judge_report` |
 | `chat_answer` | LLM | answer chat requests from retrieved context | `chat_answer` |
+| `generate_pptx` | LLM + deterministic renderer | choose visual direction/templates and render an editable PPTX from `course_package` + `course_slides` | `pptx_result`, session-scoped PPTX artifact |
 
 Do not reintroduce removed `tool_agent`, `finalize`, or debate-round counters,
 `final_learning_markdown`, `exercise_answer_key`, or `quality_gate_failed` nodes/fields.
@@ -167,21 +173,37 @@ def build_<name>_node(llm_client: LLMClient) -> Node:
 
 ## LLM Configuration
 
-`config/agents.yaml` is the primary non-secret runtime configuration:
+`config/agents.yaml` is the primary non-secret runtime configuration. Providers are
+**user-defined channels** in the `providers:` section — the channel name is arbitrary
+(e.g. `jiji-gpt`), not a code-level enum. Each channel carries:
 
-- `llm.default_provider`, timeout and retries
-- provider base URLs and default model names
+- `base_url` (required; there is no built-in fallback endpoint)
+- `api_key` (optional inline) / `api_key_env` (optional; default convention is
+  `{CHANNEL uppercased, non-alphanumeric → _}_API_KEY`, e.g. `my-chan` → `MY_CHAN_API_KEY`)
+- `model_name` (channel default model), `supports_strict_schema` (optional; runtime-probed
+  otherwise), and an optional `models` list that, when present, validates the spelling of
+  model names referenced by `agents.*`
+
+Other keys:
+
+- `llm.default_provider` (must reference a defined channel), timeout and retries
 - per-Agent provider/model/temperature/tool temperature/top_k
+- optional per-Agent model failover: `agents.<agent>.fallback_model_name` (plus optional
+  `fallback_provider`/`fallback_base_url`, may cross channels). Any primary-model
+  failure — model-side (429/5xx/524, transport errors, empty or unparsable content)
+  or our-side (400 schema rejection, 401/403 auth) — fails over to the fallback model
+  for one attempt, then the next round starts from the primary model again, bounded
+  by `retry_times`. When
+  `{AGENT}_PROVIDER` env override is set, the yaml `model_name`/`fallback_*` for that Agent
+  are ignored.
 
-API keys and machine-local paths belong in `.env`. The `LLMProvider` literal supports `qwen`,
-`glm`, `gpt`, `luna`, `grok`, and `yangmao`; the recommended per-Agent mapping
-(route=qwen, chat_answer=qwen, diagnosis_feedback=qwen, planner=gpt, expert_b=luna,
-expert_a=grok, judge=gpt) is documented in `config/agents.example.yaml`. The five Krill providers
-share the same endpoint (`https://api-slb.krill-ai.net/codex/v1`) and a single key set through the
-five `*_API_KEY` variables in `.env`; `yangmao` is the retained DeepSeek Flash channel
-(`yangmao-main`, separate `YANGMAO_API_KEY`/base_url) for DeepSeek requests. `AgentLLMRouter`
-supports explicit `{AGENT}_PROVIDER` environment overrides for incident recovery. Planner uses the
-default provider unless a dedicated runtime setting is added.
+API keys and machine-local paths belong in `.env`. `llm.default_provider`,
+`agents.*.provider` and `agents.*.fallback_provider` must all reference channels defined in
+`providers:`; the config fails to load otherwise, and the error lists the available
+channels. A full annotated example lives in `config/agents.example.yaml`. `AgentLLMRouter`
+supports explicit `{AGENT}_PROVIDER` environment overrides (must also reference defined
+channels) for incident recovery. Planner uses the default provider unless a dedicated
+runtime setting is added.
 
 ## State And Contracts
 
@@ -267,16 +289,29 @@ Runtime files live under:
 artifacts/sessions/{session_id}/
   manifest.json
   workflow.log.jsonl
+  llm_calls.log.jsonl      # per-call LLM telemetry (tokens, status, duration)
+  llm_payloads.log.jsonl   # per-call request bodies (incl. response_format schema) and raw
+                           # responses; enabled by default, LLM_LOG_PAYLOAD=false disables
   onboarding/{questionnaire,submission}.md
   profile/learner_profile.md
   path/{dual_axis_snapshot,learning_path,path_decision}.md
   round-01/{retrieval_context,expert drafts,cross reviews,revisions,course_package,judge_report}.md
+  presentation/
+    course_deck.pptx
+    pptx_manifest.json
   feedback/{feedback_report,learner_profile_update,grading_report}.md
 ```
 
 The graph side-effect wrapper owns file I/O. Agent nodes must not write files directly. Artifact paths
-are session-scoped, Markdown-only through the API, and path traversal must remain rejected. There is
-no final Markdown file; `course_package.md` is the integrated course process artifact.
+are session-scoped and path traversal must remain rejected. Markdown artifacts remain the audit/read
+surface, while the optional `generate_pptx` node writes an editable PPTX under the same session directory:
+`artifacts/sessions/{session_id}/presentation/course_deck.pptx`. Its manifest records the PPTX artifact,
+source slide count and selected theme. PPTX generation uses the configured `generate_pptx` LLM only for
+strict `PresentationDesign` JSON; the backend deterministically renders the visual director decision,
+theme/template selection, decorative layer, semantic patent-course components and speaker notes. The
+LLM does not return binary PPTX, XML, SVG or arbitrary external resources. PPTX is controlled by
+`PATENT_TUTOR_PPTX_ENABLED` and degrades only that artifact on failure; the course and other artifacts
+continue. There is no final Markdown file; `course_package.md` is the integrated course process artifact.
 
 ## FastAPI Surface
 

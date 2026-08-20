@@ -27,6 +27,133 @@ const completedNode = "bg-slate-800/60 border-slate-600/50 text-slate-400";
 const activeNode =
   "bg-[#D9773E] border-[#F4A261] text-white shadow-[0_0_24px_4px_rgba(217,119,62,0.55)]";
 
+// 并行阶段：专家 A/B 同时运行的阶段
+const PARALLEL_PHASES: readonly string[] = ["draft", "cross_review", "revision"];
+
+// 根据 currentNode + expertPhase 推断所有已完成的节点集合
+function buildCompletedSet(
+  currentNode: string | undefined,
+  expertPhase: ExpertPhase | undefined,
+  status: SessionStatus | undefined
+): Set<string> {
+  if (status === "completed") {
+    return new Set([
+      "_init", "route", "diagnosis_feedback", "planner",
+      "expert_a", "expert_b", "_experts_barrier",
+      "expert_a_integration", "judge", "slide_deck", "generate_pptx",
+    ]);
+  }
+  const done = new Set<string>();
+  if (!currentNode) return done;
+
+  // 基础线性链路：_init → route → diagnosis_feedback → planner
+  switch (currentNode) {
+    case "_init":
+      break;
+    case "route":
+      done.add("_init");
+      break;
+    case "diagnosis_feedback":
+      done.add("_init");
+      done.add("route");
+      break;
+    case "planner":
+      done.add("_init");
+      done.add("route");
+      done.add("diagnosis_feedback");
+      break;
+    case "retrieve_context":
+    case "chat_answer":
+      done.add("_init");
+      done.add("route");
+      break;
+    case "expert_a":
+    case "expert_b": {
+      // 专家并行阶段
+      done.add("_init");
+      done.add("route");
+      done.add("diagnosis_feedback");
+      done.add("planner");
+      // barrier 是否已完成取决于当前 phase
+      // draft: barrier 还没运行过
+      // cross_review/revision: barrier 已完成（上一阶段的汇合）
+      if (expertPhase === "cross_review" || expertPhase === "revision") {
+        done.add("_experts_barrier");
+        // 上一阶段的专家也已完成
+        done.add("expert_a");
+        done.add("expert_b");
+      }
+      // 注意：并行阶段当前运行的专家不算完成
+      break;
+    }
+    case "_experts_barrier": {
+      // barrier 运行时，两个专家刚刚完成
+      done.add("_init");
+      done.add("route");
+      done.add("diagnosis_feedback");
+      done.add("planner");
+      done.add("expert_a");
+      done.add("expert_b");
+      // 如果在 cross_review/revision，之前的 barrier 也完成了
+      if (expertPhase === "revision") {
+        // barrier 在 revision 阶段前已运行过 1 次
+        // 但 _experts_barrier 本身在图中是单一节点，已完成状态由 expertPhase 决定
+      }
+      break;
+    }
+    case "expert_a_integration": {
+      // integration 阶段：所有并行阶段均已完成
+      done.add("_init");
+      done.add("route");
+      done.add("diagnosis_feedback");
+      done.add("planner");
+      done.add("expert_a");
+      done.add("expert_b");
+      done.add("_experts_barrier");
+      break;
+    }
+    case "judge": {
+      done.add("_init");
+      done.add("route");
+      done.add("diagnosis_feedback");
+      done.add("planner");
+      done.add("expert_a");
+      done.add("expert_b");
+      done.add("_experts_barrier");
+      done.add("expert_a_integration");
+      break;
+    }
+    case "slide_deck": {
+      done.add("_init");
+      done.add("route");
+      done.add("diagnosis_feedback");
+      done.add("planner");
+      done.add("expert_a");
+      done.add("expert_b");
+      done.add("_experts_barrier");
+      done.add("expert_a_integration");
+      done.add("judge");
+      break;
+    }
+    case "generate_pptx": {
+      done.add("_init");
+      done.add("route");
+      done.add("diagnosis_feedback");
+      done.add("planner");
+      done.add("expert_a");
+      done.add("expert_b");
+      done.add("_experts_barrier");
+      done.add("expert_a_integration");
+      done.add("judge");
+      done.add("slide_deck");
+      break;
+    }
+    default:
+      break;
+  }
+  return done;
+}
+
 export function WorkflowGraph({
   intent = "teach",
   workflowMode,
@@ -34,42 +161,61 @@ export function WorkflowGraph({
   expertPhase,
   status,
 }: WorkflowGraphProps) {
+  // 是否已结束
+  const isFinished = Boolean(status && ["completed", "failed", "canceled"].includes(status));
+
+  // 并行阶段判断：draft/cross_review/revision 中专家 A/B 同时运行
+  const isExpertParallel =
+    !isFinished &&
+    (currentNode === "expert_a" || currentNode === "expert_b") &&
+    Boolean(expertPhase && PARALLEL_PHASES.includes(expertPhase));
+
+  // integration 阶段判断：currentNode 是 expert_a（node_label 映射），但实际节点是 expert_a_integration
+  const isIntegration =
+    !isFinished &&
+    currentNode === "expert_a" &&
+    expertPhase === "integration";
+
+  // 已完成节点集合
+  const completedSet = useMemo(
+    () => buildCompletedSet(currentNode, expertPhase, status),
+    [currentNode, expertPhase, status]
+  );
+
   const isActive = useCallback(
     (nodeId: string) => {
-      if (status && ["completed", "failed", "canceled"].includes(status)) {
-        return false;
+      if (isFinished) return false;
+      // integration 阶段：expert_a_integration 节点运行中
+      if (isIntegration) {
+        return nodeId === "expert_a_integration";
       }
+      // 并行阶段：两个专家同时高亮
+      if (isExpertParallel) {
+        return nodeId === "expert_a" || nodeId === "expert_b";
+      }
+      // barrier 节点
+      if (nodeId === "_experts_barrier" && currentNode === "_experts_barrier") return true;
+      // 默认：currentNode 匹配
       if (nodeId === currentNode) return true;
-      if (
-        nodeId === "expert_a" &&
-        currentNode === "expert_a" &&
-        expertPhase === "integration"
-      )
-        return true;
       return false;
     },
-    [status, currentNode, expertPhase]
+    [isFinished, isIntegration, isExpertParallel, currentNode]
   );
 
   const isCompleted = useCallback(
     (nodeId: string) => {
-      if (status === "completed") return true;
-      const completedSet = new Set<string>();
-      if (currentNode) completedSet.add(currentNode);
-      if (currentNode === "planner") {
-        completedSet.add("_init");
-        completedSet.add("route");
-        completedSet.add("diagnosis_feedback");
+      if (isFinished && status === "completed") return true;
+      // 并行阶段：正在运行的专家不算完成
+      if (isExpertParallel && (nodeId === "expert_a" || nodeId === "expert_b")) {
+        return false;
       }
-      if (currentNode === "expert_a" || currentNode === "expert_b" || currentNode === "judge") {
-        completedSet.add("_init");
-        completedSet.add("route");
-        completedSet.add("diagnosis_feedback");
-        completedSet.add("planner");
+      // integration 阶段：expert_a 本身不算完成（是 expert_a_integration 在运行）
+      if (isIntegration && nodeId === "expert_a") {
+        return false;
       }
       return completedSet.has(nodeId);
     },
-    [status, currentNode]
+    [isFinished, status, isExpertParallel, isIntegration, completedSet]
   );
 
   const nodes = useMemo(() => {
@@ -83,8 +229,18 @@ export function WorkflowGraph({
         type: "default",
       },
       { id: "planner", position: { x: 50, y: 270 }, data: { label: "路径规划" }, type: "default" },
-      { id: "expert_a", position: { x: -80, y: 370 }, data: { label: "专家 A", phase: expertPhase }, type: "default" },
-      { id: "expert_b", position: { x: 180, y: 370 }, data: { label: "专家 B", phase: expertPhase }, type: "default" },
+      {
+        id: "expert_a",
+        position: { x: -80, y: 370 },
+        data: { label: "专家 A", phase: expertPhase },
+        type: "default",
+      },
+      {
+        id: "expert_b",
+        position: { x: 180, y: 370 },
+        data: { label: "专家 B", phase: expertPhase },
+        type: "default",
+      },
       {
         id: "_experts_barrier",
         position: { x: 50, y: 470 },
@@ -97,7 +253,24 @@ export function WorkflowGraph({
         data: { label: "专家 A 整合" },
         type: "default",
       },
-      { id: "judge", position: { x: 50, y: 650 }, data: { label: "审核裁判" }, type: "default" },
+      {
+        id: "judge",
+        position: { x: 50, y: 650 },
+        data: { label: "审核裁判" },
+        type: "default",
+      },
+      {
+        id: "slide_deck",
+        position: { x: -80, y: 730 },
+        data: { label: "课件生成" },
+        type: "default",
+      },
+      {
+        id: "generate_pptx",
+        position: { x: 180, y: 730 },
+        data: { label: "PPT 渲染" },
+        type: "default",
+      },
     ];
 
     const chatNodes: Node<{ label: string }>[] = [
@@ -220,18 +393,25 @@ export function WorkflowGraph({
           { id: "e_route_diag", source: "route", target: "diagnosis_feedback" },
         ];
       }
+      // teach 模式完整链路
       return [
         { id: "e_init_route", source: "_init", target: "route" },
         { id: "e_route_diag", source: "route", target: "diagnosis_feedback" },
         { id: "e_diag_planner", source: "diagnosis_feedback", target: "planner" },
+        // 并行分叉
         { id: "e_planner_a", source: "planner", target: "expert_a" },
         { id: "e_planner_b", source: "planner", target: "expert_b" },
+        // 并行汇合
         { id: "e_a_barrier", source: "expert_a", target: "_experts_barrier" },
         { id: "e_b_barrier", source: "expert_b", target: "_experts_barrier" },
-        { id: "e_barrier_a", source: "_experts_barrier", target: "expert_a", label: "多阶段" },
-        { id: "e_barrier_b", source: "_experts_barrier", target: "expert_b", label: "多阶段" },
+        // barrier → 下一轮并行（cross_review / revision）或 → integration
+        { id: "e_barrier_a", source: "_experts_barrier", target: "expert_a" },
+        { id: "e_barrier_b", source: "_experts_barrier", target: "expert_b" },
         { id: "e_barrier_integration", source: "_experts_barrier", target: "expert_a_integration" },
+        // integration → judge → slide_deck → generate_pptx
         { id: "e_integration_judge", source: "expert_a_integration", target: "judge" },
+        { id: "e_judge_slide_deck", source: "judge", target: "slide_deck" },
+        { id: "e_slide_deck_pptx", source: "slide_deck", target: "generate_pptx" },
       ];
     })();
 
@@ -242,10 +422,10 @@ export function WorkflowGraph({
       return {
         ...e,
         type: "smoothstep",
-        animated: isHot,
+        animated: false,
         style: isHot
-          ? { stroke: "#e2e8f0", strokeWidth: 2 }
-          : { stroke: "#334155", strokeWidth: 1 },
+          ? { stroke: "#94a3b8", strokeWidth: 2.5 } // 激活边：更亮的灰蓝色粗实线
+          : { stroke: "#475569", strokeWidth: 1.5 }, // 普通边：清晰的深灰色实线
       };
     });
   }, [intent, workflowMode, isActive]);

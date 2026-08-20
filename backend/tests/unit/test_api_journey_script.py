@@ -7,8 +7,8 @@ import httpx
 import pytest
 
 from backend.scripts.run_api_journey import (
-    ApiJourney,
     DEFAULT_QUESTIONNAIRE_RESPONSES,
+    ApiJourney,
     JourneyConfig,
     JourneyError,
     _artifact_api_path,
@@ -17,7 +17,6 @@ from backend.scripts.run_api_journey import (
     _validate_questionnaire_responses,
     _workflow_progress,
 )
-
 
 pytestmark = pytest.mark.unit
 
@@ -400,6 +399,17 @@ def test_api_journey_calls_complete_rest_flow() -> None:
                     "session_id": "course-session",
                     "status": "completed",
                     "state": {
+                        "pptx_result": {
+                            "status": "generated",
+                            "artifact": {
+                                "path": "artifacts/sessions/course-session/presentation/course_deck.pptx"
+                            },
+                        },
+                        "course_slides": {
+                            "slides": [
+                                {"id": "slide_001", "order": 1, "narration": {"text": "讲稿"}}
+                            ]
+                        },
                         "course_package": {
                             "assessment": {
                                 "items": [
@@ -412,6 +422,10 @@ def test_api_journey_calls_complete_rest_flow() -> None:
                             }
                         },
                         "artifacts": [
+                            {
+                                "kind": "pptx",
+                                "path": "artifacts/sessions/course-session/presentation/course_deck.pptx",
+                            },
                             {
                                 "kind": "course_package",
                                 "path": (
@@ -428,6 +442,8 @@ def test_api_journey_calls_complete_rest_flow() -> None:
                 request,
                 {"sessions": [], "total": 1, "offset": 0, "limit": 20},
             )
+        if request.method == "GET" and path.endswith("/course_deck.pptx"):
+            return httpx.Response(200, content=b"PK-test-presentation", request=request)
         if request.method == "GET" and path.endswith("/course_package.md"):
             return httpx.Response(200, text="# Course", request=request)
         if request.method == "POST" and path.endswith("/exercise-responses"):

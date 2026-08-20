@@ -1,5 +1,7 @@
 import { getApiBaseUrl } from "@/lib/utils";
 
+export { getApiBaseUrl } from "@/lib/utils";
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -113,4 +115,34 @@ export const api = {
       body: JSON.stringify(body),
     }),
   delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+  getBlobUrl: async (path: string): Promise<{ url: string; filename: string; contentType: string | null }> => {
+    const base = getApiBaseUrl().replace(/\/$/, "");
+    const url = `${base}${path.startsWith("/") ? path : `/${path}`}`;
+    const response = await fetch(url, { method: "GET" });
+    if (!response.ok) {
+      let body: unknown;
+      try { body = await response.json(); } catch { body = await response.text().catch(() => undefined); }
+      const detail = extractDetail(body);
+      const errorMsg = extractError(body);
+      throw new ApiError(response.status, detail || errorMsg || response.statusText, body);
+    }
+    const blob = await response.blob();
+    const cd = response.headers.get("content-disposition");
+    let filename = `file-${Date.now()}`;
+    if (cd) {
+      const m = cd.match(/filename\*=UTF-8''([^;]+)/i) || cd.match(/filename="?([^";]+)"?/i);
+      if (m?.[1]) filename = decodeURIComponent(m[1]);
+    }
+    return { url: URL.createObjectURL(blob), filename, contentType: response.headers.get("content-type") };
+  },
+  head: async (path: string): Promise<{ ok: boolean; status: number; contentType: string | null }> => {
+    const base = getApiBaseUrl().replace(/\/$/, "");
+    const url = `${base}${path.startsWith("/") ? path : `/${path}`}`;
+    try {
+      const response = await fetch(url, { method: "HEAD" });
+      return { ok: response.ok, status: response.status, contentType: response.headers.get("content-type") };
+    } catch {
+      return { ok: false, status: 0, contentType: null };
+    }
+  },
 };

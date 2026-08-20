@@ -1,6 +1,4 @@
 from backend.app.core.llm import (
-    DEFAULT_CONFIG,
-    DEFAULT_PROVIDER,
     DefaultLLMClient,
     LLMClient,
     LLMConfigurationError,
@@ -14,8 +12,6 @@ from backend.app.core.llm import (
 )
 
 __all__ = [
-    "DEFAULT_CONFIG",
-    "DEFAULT_PROVIDER",
     "DefaultLLMClient",
     "LLMClient",
     "LLMConfigurationError",

@@ -15,8 +15,18 @@
 | `_experts_barrier` | 确定性汇合节点 | 等待 A/B 同阶段完成并推进专家阶段 |
 | `retrieve_context` | 检索服务 | `RetrievalChunk[]` |
 | `chat_answer` | 严格 JSON Schema | `ChatAnswer` |
+| `generate_pptx` | LLM 版式设计 + 确定性 OOXML 渲染 | `.pptx` artifact 与 `pptx_result`；输入为 `course_package` + `course_slides` |
 
-Provider 只能经 `AgentLLMRouter` 注入。Planner 使用默认 Provider，并接收完整知识 DAG、
+Provider 只能经 `AgentLLMRouter` 注入。`generate_pptx` 与其他 Agent 一样使用
+`agents.generate_pptx.provider` / `model_name` / `temperature` / `fallback_*`，并可由
+`GENERATE_PPTX_PROVIDER` 环境变量应急覆盖；其 LLM 只生成严格的 `PresentationDesign`，后端使用
+`python-pptx` 将其渲染为原生可编辑的 `.pptx`。PPT renderer 参考 MIT 许可的
+`hugohe3/ppt-master` 的 Brand/Style/Layout/Deck 分层，但未整体引入该项目。当前支持
+`patent_exam_classic`、`legal_case_analysis`、`technical_blueprint`、`minimal_academic`、
+`practice_workshop` 五套主题包，以及 `cover_minimal`、`content_rule_card`、`irac_flow`、
+`legal_citation_focus`、`comparison_matrix`、`timeline_process`、`exam_checklist`、
+`summary_roadmap`、`hero_statement`、`evidence_stack`、`decision_tree`、`concept_map` 等模板。PresentationDesign 还包含由 LLM 自动决定的 `visual_style`、`composition` 和语义 `visual_elements`，后端用装饰层与语义图形层防止整份 deck 退化为纯文字页。专利法条卡、IRAC 流程、审查时间线、对比矩阵和练习题卡均由
+确定性后端组件绘制；模型不得直接输出 XML、任意坐标或网络资源。Planner 使用默认 Provider，并接收完整知识 DAG、
 完整易混淆图及本地 A* 完整候选路线；其 LLM 提案表示完整学习路线，不再用 16 个节点截断，
 但必须通过真实节点、去重和先修顺序校验。校验失败时回退到确定性路径算法，
 `path_decision.fallback_reason` 保存降级原因，最终路径仍由后端校正并负责。
@@ -67,7 +77,7 @@ expert_a + expert_b → _experts_barrier
 _experts_barrier → expert_a(revision) || expert_b(revision)
 expert_a + expert_b → _experts_barrier
 _experts_barrier → expert_a(integration) → judge
-judge(accept | accept_with_minor_revision) → END
+judge(accept | accept_with_minor_revision) → slide_deck → generate_pptx（PATENT_TUTOR_PPTX_ENABLED=true 时）→ END
 judge(revise) → expert_a(integration) → judge（循环，直到 accept 或 accept_with_minor_revision）
 exercise-responses → 独立 feedback 会话 → diagnosis_feedback(feedback) → END
 ```
@@ -141,14 +151,24 @@ Planner 必须：
 - 真实 Provider 调用使用 OpenAI 兼容的 `response_format.type=json_schema`，携带完整 Pydantic
   JSON Schema 和 `strict=true`；同时把完整 Schema 注入模型上下文，以兼容接受参数但不真正
   强制 Schema 的网关，不再只依赖 `json_object` 与提示词示例。
-- OpenAI 兼容请求必须按最终 `provider + model_name` 的能力组装。GPT-5.6 系列（包括
-  `luna` provider 别名）不发送 `temperature`。共享 Agent 配置可以保留
+- OpenAI 兼容请求必须按最终 `provider + model_name` 的能力组装。能力判定按模型名前缀
+  （如 GPT-5.6 系列）进行，与 provider 通道名无关；GPT-5.6 系列不发送 `temperature`。共享 Agent 配置可以保留
   `temperature`、`tool_temperature` 或 `integration_temperature`；最终模型不支持时
   请求层忽略对应值，不得因此阻止配置加载或会话启动。
 - Provider 返回结果仍须经过字段别名归一化与 Pydantic 二次校验；首次校验失败时，系统把具体
   校验错误回传模型并自动修复一次，第二次仍失败才终止节点。
 - `agent_output_json_schemas()` 导出全部实际结构化输出合同：诊断、反馈、Planner、专家 A/B
-  各阶段、Judge、Route、ChatAnswer。
+  各阶段、Judge、Route、ChatAnswer。全部合同均为封闭对象（无 `dict[str, Any]` 自由字典），
+  可直接以 `json_schema + strict` 发送。
+- `BlockPlan.payload` 为 13 种模块各自的封闭 payload 模型的并集（与
+  `curriculum/block_content_spec.py` 的 `BLOCK_CONTENT_SPEC` 一一对应；spec 标记
+  「非空/≥N/三类齐全」的字段为 required，「可选/建议」为 optional）。嵌套条目统一使用英文键：
+  `steps` 条目为 `{reasoning, summary}`（worked_example）或 `{condition, outcome}`
+  （decision_flow），`key_terms`/`mapping` 条目为 `{term, explanation}`，`cards` 条目为
+  `{concept, one_liner}`；normalize 层兼容真实 LLM 偶发的中文键（推理/小结/条件/走向/
+  术语/人话/概念/一句话）与 `mapping` 的动态键值对。`BlockPlanPackage.budget` 为封闭
+  `BlockBudget`（`adaptive_used/adaptive_max/total/total_max`）。`block_type` 与 payload
+  模型的对应关系由提示词与 `validate_block_payloads` 软校验保证，schema 层不做跨字段判别。
 - Planner 使用 `PlannerAgentResult` Schema；检索服务返回 `RetrievalChunk`。
 - Provider 字段别名必须先规范化再校验。
 - `FeedbackAgentResult.error_pattern` 只接受 `unknown`、`no_prior_knowledge`、

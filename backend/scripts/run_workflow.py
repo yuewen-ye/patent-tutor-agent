@@ -56,20 +56,18 @@ def main() -> None:
         sys.path.insert(0, str(PROJECT_ROOT))
 
     from backend.app.config import load_service_settings
-    from backend.app.core.llm import AGENT_PROVIDER_ENV, AgentLLMRouter, AgentName, LLMProvider
+    from backend.app.core.llm import AGENT_PROVIDER_ENV, AgentLLMRouter, AgentName
     from backend.app.graph.workflow import run_workflow
     from backend.app.persistence.repositories import MySQLLearnerStore
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--provider",
-        choices=["qwen", "glm", "gpt", "luna", "grok", "yangmao"],
         help="Override DEFAULT_LLM_PROVIDER for Agent nodes without a specific provider.",
     )
     for agent in AGENT_PROVIDER_ENV:
         parser.add_argument(
             f"--{agent.replace('_', '-')}-provider",
-            choices=["qwen", "glm", "gpt", "luna", "grok", "yangmao"],
             help=f"Override {AGENT_PROVIDER_ENV[agent]} for this run.",
         )
     parser.add_argument("--session-id", default="local-llm-smoke")
@@ -83,13 +81,13 @@ def main() -> None:
     args = parser.parse_args()
 
     router = AgentLLMRouter.from_env()
-    overrides: dict[AgentName, LLMProvider] = dict(router.agent_providers)
+    overrides: dict[AgentName, str] = dict(router.agent_providers)
     for agent in AGENT_PROVIDER_ENV:
         value = getattr(args, f"{agent}_provider")
         if value:
-            overrides[agent] = cast(LLMProvider, value)
-    default_provider: LLMProvider = (
-        cast(LLMProvider, args.provider) if args.provider else router.default_provider
+            overrides[agent] = cast(str, value)
+    default_provider: str | None = (
+        cast(str, args.provider) if args.provider else router.default_provider
     )
     overridden_agents: set[AgentName] = {
         agent for agent in AGENT_PROVIDER_ENV if getattr(args, f"{agent}_provider")
@@ -99,10 +97,16 @@ def main() -> None:
         for agent, model_name in router.agent_model_names.items()
         if agent not in overridden_agents
     }
+    agent_fallbacks = {
+        agent: fallback
+        for agent, fallback in router.agent_fallbacks.items()
+        if agent not in overridden_agents
+    }
     router = AgentLLMRouter(
         default_provider=default_provider,
         agent_providers=overrides,
         agent_model_names=agent_model_names,
+        agent_fallbacks=agent_fallbacks,
     )
 
     provider_plan = {agent: router.provider_for(agent) for agent in AGENT_PROVIDER_ENV}

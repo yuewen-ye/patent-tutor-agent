@@ -24,7 +24,6 @@ from backend.app.core.llm import (
     AgentName,
     LLMClient,
     LLMConfigurationError,
-    LLMProvider,
     load_provider_config,
 )
 from backend.app.curriculum.learning_progress import advance_learning_progress
@@ -88,7 +87,7 @@ class SessionService:
         *,
         user_input: str,
         learner_id: str | None = None,
-        provider_overrides: Mapping[AgentName, LLMProvider] | None = None,
+        provider_overrides: Mapping[AgentName, str] | None = None,
         workflow_mode: Literal["auto", "teach", "chat", "diagnose", "feedback"] = "auto",
         input_payload: dict[str, Any] | None = None,
         parent_session_id: str | None = None,
@@ -1073,24 +1072,31 @@ class SessionService:
         )
 
     def _resolve_llm_client(
-        self, provider_overrides: Mapping[AgentName, LLMProvider] | None
+        self, provider_overrides: Mapping[AgentName, str] | None
     ) -> LLMClient:
         if self._llm_client is not None and not provider_overrides:
             return self._llm_client
         router = AgentLLMRouter.from_env()
         if not provider_overrides:
             return router
-        overrides: dict[AgentName, LLMProvider] = dict(router.agent_providers)
+        overrides: dict[AgentName, str] = dict(router.agent_providers)
         overrides.update(provider_overrides)
         agent_model_names: dict[AgentName, str] = {
             agent: model_name
             for agent, model_name in router.agent_model_names.items()
             if agent not in provider_overrides
         }
+        # 未被覆盖的 agent 保留 yaml fallback；被覆盖的按既有规则丢弃模型/fallback。
+        agent_fallbacks = {
+            agent: fallback
+            for agent, fallback in router.agent_fallbacks.items()
+            if agent not in provider_overrides
+        }
         return AgentLLMRouter(
             default_provider=router.default_provider,
             agent_providers=overrides,
             agent_model_names=agent_model_names,
+            agent_fallbacks=agent_fallbacks,
         )
 
     def _run_session(

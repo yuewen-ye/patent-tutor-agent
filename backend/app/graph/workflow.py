@@ -17,8 +17,9 @@ from langgraph.runtime import Runtime
 from langgraph.store.memory import InMemoryStore
 
 from backend.app.agents import Node, build_agent_nodes
-from backend.app.core.agent_runtime_config import agent_top_k
+from backend.app.core.agent_runtime_config import agent_runtime_settings, agent_top_k
 from backend.app.core.llm import AgentLLMRouter, DefaultLLMClient, LLMClient, set_llm_log_context
+from backend.app.presentation.service import generate_presentation_artifact
 from backend.app.retrieval.selector import retrieve_context
 from backend.app.runtime_outputs.artifacts import (
     attach_markdown_artifact,
@@ -352,6 +353,48 @@ def _route_after_experts_barrier(
             assert_never(unreachable)
 
 
+def _is_pptx_enabled() -> bool:
+    raw = os.environ.get("PATENT_TUTOR_PPTX_ENABLED", "").strip()
+    return raw.lower() in {"1", "true", "on", "yes"}
+
+
+def _generate_pptx_node(
+    state: StateDict, artifact_root: Path | None, llm_client: LLMClient
+) -> dict[str, Any]:
+    course_package = state.get("course_package") or {}
+    course_slides = state.get("course_slides") or {}
+    if not course_package or not course_slides:
+        return {
+            "pptx_result": {
+                "status": "degraded",
+                "provider": "unavailable",
+                "source_slide_count": 0,
+                "speaker_notes_status": "unknown",
+                "error_summary": "PPTX generation requires course_package and course_slides.",
+            },
+            "workflow_status": "completed",
+            "events": [completed_event("generate_pptx", "PPTX generation skipped: source unavailable")],
+        }
+    if artifact_root is None:
+        raise RuntimeError("generate_pptx requires an artifact root")
+    result = generate_presentation_artifact(
+        artifact_root=artifact_root,
+        session_id=state["session_id"],
+        course_package=course_package,
+        course_slides=course_slides,
+        llm_client=llm_client,
+    )
+    message = "generated complete PPTX" if result["status"] == "generated" else "PPTX generation degraded"
+    updates: dict[str, Any] = {
+        "pptx_result": result,
+        "workflow_status": "completed",
+        "events": [completed_event("generate_pptx", message)],
+    }
+    if result.get("artifact"):
+        updates["artifacts"] = [result["artifact"]]
+    return updates
+
+
 def _is_slide_deck_enabled() -> bool:
     """读取环境变量控制是否启用 slide_deck 节点；默认为开启。"""
     raw = (
@@ -383,13 +426,21 @@ def _make_route_after_judge(
             print("▸ [路由] judge 通过 → slide_deck 已关闭，直接完成", file=sys.stderr)
             return "_complete"
         current_round = state.get("revision_round", 0) or 0
-        if current_round >= 3:
+        configured_cap = agent_runtime_settings("judge").max_revisions
+        max_revisions = configured_cap if configured_cap is not None else 3
+        if current_round >= max_revisions:
             # 修订达上限：course_package 已由 expert_a integration 生成。
             # 若 slide_deck 开启则生成配套课件，否则直接收尾。
             if slide_deck_enabled:
-                print("▸ [路由] judge 修订已达上限 3 次 → 仍生成结构化课件", file=sys.stderr)
+                print(
+                    f"▸ [路由] judge 修订已达上限 {max_revisions} 次 → 仍生成结构化课件",
+                    file=sys.stderr,
+                )
                 return "slide_deck"
-            print("▸ [路由] judge 修订已达上限 3 次 → slide_deck 已关闭，直接完成", file=sys.stderr)
+            print(
+                f"▸ [路由] judge 修订已达上限 {max_revisions} 次 → slide_deck 已关闭，直接完成",
+                file=sys.stderr,
+            )
             return "_complete"
         print("▸ [路由] judge 未通过 → expert_a_integration 重新整合", file=sys.stderr)
         return "expert_a_integration"
@@ -409,12 +460,14 @@ def build_workflow(
     slide_deck_enabled: bool | None = None,
 ) -> Any:
     builder = StateGraph(StateDict, context_schema=WorkflowContext)
-    nodes: dict[str, Node] = build_agent_nodes(llm_client or AgentLLMRouter.from_env())
+    active_llm_client = llm_client or AgentLLMRouter.from_env()
+    nodes: dict[str, Node] = build_agent_nodes(active_llm_client)
     root_path = Path(artifact_root) if artifact_root is not None else None
     log_root_path = Path(workflow_log_root) if workflow_log_root is not None else root_path
     slide_deck_enabled = (
         _is_slide_deck_enabled() if slide_deck_enabled is None else slide_deck_enabled
     )
+    pptx_enabled = slide_deck_enabled and _is_pptx_enabled()
 
     def _ensure_session_id(state: StateDict) -> dict[str, Any]:
         """Auto-generate session_id if not provided (e.g. from LangGraph Studio)."""
@@ -454,6 +507,18 @@ def build_workflow(
     builder.add_node("judge", _wrap("judge"))
     if slide_deck_enabled:
         builder.add_node("slide_deck", _wrap("slide_deck"))
+        if pptx_enabled:
+            builder.add_node(
+                "generate_pptx",
+                cast(Any, _with_runtime_side_effects(
+                    lambda state, runtime=None: _generate_pptx_node(state, root_path, active_llm_client),
+                    root_path,
+                    log_root_path,
+                    update_sink,
+                    event_sink,
+                    node_label="generate_pptx",
+                )),
+            )
     else:
         builder.add_node(
             "_complete",
@@ -524,7 +589,9 @@ def build_workflow(
                 "slide_deck": "slide_deck",
             },
         )
-        builder.add_edge("slide_deck", END)
+        builder.add_edge("slide_deck", "generate_pptx" if pptx_enabled else END)
+        if pptx_enabled:
+            builder.add_edge("generate_pptx", END)
     else:
         builder.add_conditional_edges(
             "judge",
@@ -637,5 +704,5 @@ async def arun_workflow(
 
 
 def export_workflow_mermaid(workflow: Any | None = None) -> str:
-    compiled = workflow or build_workflow(llm_client=DefaultLLMClient(provider="qwen"))
+    compiled = workflow or build_workflow(llm_client=DefaultLLMClient())
     return cast(str, compiled.get_graph().draw_mermaid())

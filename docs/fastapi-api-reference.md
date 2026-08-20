@@ -125,7 +125,7 @@ Q1–Q21 按标准答案判分后写入 `student_node_mastery` 与 `mastery_even
 | `user_input` | string | 是 | 用户问题或学习目标，不能为空 |
 | `learner_id` | string | 否 | 学员标识；`mode=teach` 时必填 |
 | `mode` | string | 否 | `auto`、`teach`、`chat`、`diagnose`；默认 `auto` |
-| `provider_overrides` | object | 否 | 按 Agent 覆盖模型供应商；供应商为 `qwen`、`glm`、`gpt`、`luna`、`grok` 或 `yangmao` |
+| `provider_overrides` | object | 否 | 按 Agent 覆盖模型通道；取值为 `config/agents.yaml` `providers:` 段里已定义的通道名 |
 
 示例：
 
@@ -174,6 +174,23 @@ Q1–Q21 按标准答案判分后写入 `student_node_mastery` 与 `mastery_even
   "limit": 50
 }
 ```
+
+### PPTX artifact 下载
+
+当课程会话启用了 `PATENT_TUTOR_PPTX_ENABLED=true` 且 `generate_pptx` 成功时，完整课件写入：
+
+```text
+presentation/course_deck.pptx
+```
+
+使用既有 artifact 端点下载：
+
+```text
+GET /sessions/{session_id}/artifacts/presentation/course_deck.pptx
+```
+
+响应为 `application/vnd.openxmlformats-officedocument.presentationml.presentation`，并带附件下载头。
+PPTX 生成失败不会使课程会话失败；客户端应读取会话 state 的 `pptx_result` 判断生成或降级状态。
 
 ### `GET /sessions/{session_id}`
 

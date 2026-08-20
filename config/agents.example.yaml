@@ -1,97 +1,103 @@
-# Copy this file to config/agents.yaml before the first local run:
-#   Copy-Item config/agents.example.yaml config/agents.yaml
-#
-# config/agents.yaml is intentionally ignored by Git. Keep API keys in .env,
-# and tune local provider endpoints, models, and per-agent settings there.
-#
-# ============================ 模型更新日志 ===============================
-# 2026.08 主力 provider 统一走 GreatRouter 端点（https://endpoint.greatrouter.com）+ 单 key：
-#   - provider 全集与代码 LLMProvider 对齐：qwen / glm / gpt / luna / grok / yangmao / mistral / minimax / deepseek
-#   - qwen/glm/gpt/luna/grok/mistral/minimax/deepseek 全部 base_url=https://endpoint.greatrouter.com，
-#     key 见 .env 的 *_API_KEY（均为同一 GreatRouter key）
-#   - 可用模型：gpt-5.5 / gpt-5.6-luna / grok-4.3 / qwen3.7-plus / GLM-5.2 / mistral-small-2503 / MiniMax-M2.5 / DeepSeek-V4-Flash
-#   - yangmao 保留原 DeepSeek Flash 通道（yangmao-main，独立 base_url/key），
-#     需要请求 DeepSeek 时通过 {AGENT}_PROVIDER=yangmao 或 agents.<agent>.provider 使用
-#   - 建议避免在输出内容较多的节点使用弱推理模型，防止网关超时
+# config/agents.yaml — 全节点经 jiji.cc 聚合网关（2026-08-18 迁移为自定义通道）
+# ============================================================================
+# 网关：jiji.cc https://api.jiji.cc/v1
+# 三个自定义通道（provider 名完全自定义，通道自带 base_url / api_key_env）：
+#   jiji-gpt      api_key_env: GPT_API_KEY      → gpt-5.6-terra / gpt-5.6-luna / gpt-5.4-mini
+#   jiji-deepseek api_key_env: DEEPSEEK_API_KEY → deepseek-v4-flash / deepseek-v4-pro
+#   jiji-grok     api_key_env: GROK_API_KEY     → grok-4.5 / grok-4.6
+# 节点 → 通道 → 模型（用户指定映射）：
+#   route          → jiji-gpt      gpt-5.4-mini
+#   chat_answer    → jiji-gpt      gpt-5.4-mini
+#   planner        → jiji-deepseek deepseek-v4-flash
+#   diagnosis      → jiji-deepseek deepseek-v4-flash
+#   expert_a       → jiji-grok     grok-4.5
+#   expert_b       → jiji-gpt      gpt-5.4-mini（fallback deepseek-v4-pro）
+#   judge          → jiji-gpt      gpt-5.6-terra（per-agent 覆盖；luna 在 jiji.cc 曾 503）
+#   generate_pptx  → ooio-gpt2     gpt-5.6-terra（生成完整 PPT 版式 JSON，后端渲染 .pptx）
+# 三系列异构：expert_a=grok(xAI) / expert_b=gpt / judge=gpt(OpenAI)
+# jiji-gpt 保持 supports_strict_schema=true：jiji.cc 拒绝 strict 时返回 400（在项目兜底集合
+#   {400,404,415,422} 内），系统首调撞 400 自动降级 json_object + schema 注入；其余通道为 false。
+# ============================================================================
 
 llm:
-  default_provider: grok
+  default_provider: jiji-deepseek
   timeout_seconds: 90
   retry_times: 3
 
 providers:
-  qwen:
-    model_name: Qwen3.7-Plus
-    base_url: https://endpoint.greatrouter.com
+  jiji-gpt:
+    base_url: https://api-slb.jiji.cc/v1
+    api_key_env: JIJI_GPT_API_KEY
+    model_name: gpt-5.4-mini
+    supports_strict_schema: true
+  jiji-deepseek:
+    base_url: https://api-slb.jiji.cc/v1
+    api_key_env: JIJI_DEEPSEEK_API_KEY
+    model_name: deepseek-v4-flash
     supports_strict_schema: false
-  glm:
-    model_name: GLM-5.2
-    base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: false
-  gpt:
-    model_name: gpt-4o
-    base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: false
-  luna:
-    model_name: gpt-5.6-luna
-    base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: false
-  grok:
-    model_name: grok-4.3
-    base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: false
-  terra:
+  jiji-grok:
+    base_url: https://api-slb.jiji.cc/v1
+    api_key_env: JIJI_GROK_API_KEY
+    model_name: grok-4.5
+    supports_strict_schema: true
+  ooio-gpt1:
+    base_url: https://ooioo.work/v1
+    api_key_env: OOIO_GPT1_API_KEY
+    model_name: gpt-5.4
+    supports_strict_schema: true
+  ooio-gpt2:
+    base_url: https://ooioo.work/v1
+    api_key_env: OOIO_GPT2_API_KEY
     model_name: gpt-5.6-terra
-    base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: false
-  yangmao:
-    model_name: yangmao-main
-    base_url: https://ai.gz404.com:54002/v1
-    supports_strict_schema: false
-  mistral:
-    model_name: mistral-small-2503
-    base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: false
-  minimax:
-    model_name: MiniMax-M2.5
-    base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: false
-  deepseek:
-    model_name: DeepSeek-V4-Flash
-    base_url: https://endpoint.greatrouter.com
-    supports_strict_schema: false
+    supports_strict_schema: true
 
-# 推荐 Agent → provider 映射（按 GreatRouter 节点分配表）：
 agents:
   route:
-    provider: mistral
+    provider: jiji-gpt
     temperature: 0.0
+    fallback_provider: jiji-deepseek
+    fallback_model_name: deepseek-v4-flash
   diagnosis_feedback:
-    provider: deepseek
+    provider: ooio-gpt1
     temperature: 0.5
+    fallback_provider: jiji-gpt
+    fallback_model_name: gpt-5.4-mini
   expert_a:
-    provider: grok
+    provider: ooio-gpt2
     temperature: 0.4
     tool_temperature: 0.2
     integration_temperature: 0.3
     top_k: 5
+    fallback_provider: jiji-deepseek
+    fallback_model_name: deepseek-v4-pro
   expert_b:
-    provider: deepseek
-    model_name: DeepSeek-V4-Pro
+    provider: ooio-gpt1
     temperature: 0.7
     tool_temperature: 0.3
     top_k: 5
+    fallback_provider: jiji-deepseek
+    fallback_model_name: deepseek-v4-pro
   judge:
-    provider: gpt
-    model_name: gpt-5.6-luna
+    provider: ooio-gpt2
     temperature: 0.0
-  chat_answer:
-    provider: minimax
+    max_revisions: 0   
+    fallback_provider: jiji-deepseek
+    fallback_model_name: deepseek-v4-pro
+  chat_answer: 
+    provider: ooio-gpt1
     temperature: 0.3
     top_k: 5
+    fallback_provider: jiji-deepseek
+    fallback_model_name: deepseek-v4-flash
   planner:
-    provider: deepseek
+    provider: ooio-gpt2
     temperature: 0.0
-  slide_deck:
-    provider: grok
-    temperature: 0.3
+    fallback_provider: jiji-gpt
+    fallback_model_name: gpt-5.4-mini
+  # 完整 PPT 节点：走和其他 Agent 相同的 provider/model/key/fallback 配置链。
+  # Provider 对应的 api_key_env 在 providers.* 中声明，密钥仅写入 .env。
+  generate_pptx:
+    provider: ooio-gpt2
+    temperature: 0.2
+    fallback_provider: jiji-gpt
+    fallback_model_name: gpt-5.4-mini

@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import threading
 import time
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Literal, Protocol, Self, cast
+from typing import Literal, Protocol, Self, TypeVar
+from uuid import uuid4
 
 import httpx
 from dotenv import load_dotenv
@@ -18,15 +20,15 @@ from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponen
 
 from backend.app.core.agent_runtime_config import (
     agent_runtime_settings,
+    available_provider_names,
     llm_runtime_config,
     provider_runtime_config,
 )
 from backend.app.core.model_capabilities import model_supports_request_parameter
 
-# 准确映射：provider 名 = 真实厂商/模型，不再用壳名套壳复用。
-# qwen / glm / gpt / luna / grok 经 Krill 单端点 + 单 key（nb_ 开头，
-# 5 个 *_API_KEY 已统一为该值）；yangmao 为原 DeepSeek Flash 通道（保留）。
-LLMProvider = Literal["qwen", "glm", "gpt", "luna", "grok", "yangmao", "mistral", "minimax", "deepseek"]
+# provider 名 = 用户在 config/agents.yaml 的 providers 段自由定义的通道名，
+# 通道自带 base_url / api_key(_env) / 可选 models 清单；代码不再内置任何通道表。
+LLMProvider = str
 LLMRole = Literal["system", "user", "assistant", "tool"]
 AgentName = Literal[
     "diagnosis_feedback",
@@ -37,81 +39,10 @@ AgentName = Literal[
     "chat_answer",
     "planner",
     "slide_deck",
+    "generate_pptx",
 ]
 
-DEFAULT_PROVIDER: LLMProvider = "deepseek"
-# 节点 → 真实模型：
-#   qwen    → qwen3.7-plus    (route / chat_answer / diagnosis，通用；Krill)
-#   glm     → GLM-5.2         (可用，默认未分配给节点；Krill)
-#   gpt     → gpt-5.5         (planner / judge；Krill)
-#   luna    → gpt-5.6-luna    (expert_b 强推理；Krill)
-#   grok    → grok-4.5        (expert_a 内容生成；Krill)
-#   yangmao → yangmao-main    (DeepSeek Flash，原独立通道，默认未分配给节点)
-DEFAULT_CONFIG: dict[LLMProvider, dict[str, str]] = {
-    "qwen": {
-        "api_key_env": "QWEN_API_KEY",
-        "model_env": "QWEN_MODEL",
-        "base_url_env": "QWEN_BASE_URL",
-        "model": "Qwen3.7-Plus",
-        "base_url": "https://endpoint.greatrouter.com",
-    },
-    "glm": {
-        "api_key_env": "GLM_API_KEY",
-        "model_env": "GLM_MODEL",
-        "base_url_env": "GLM_BASE_URL",
-        "model": "GLM-5.2",
-        "base_url": "https://endpoint.greatrouter.com",
-    },
-    "gpt": {
-        "api_key_env": "GPT_API_KEY",
-        "model_env": "GPT_MODEL",
-        "base_url_env": "GPT_BASE_URL",
-        "model": "gpt-4o",
-        "base_url": "https://endpoint.greatrouter.com",
-    },
-    "luna": {
-        "api_key_env": "LUNA_API_KEY",
-        "model_env": "LUNA_MODEL",
-        "base_url_env": "LUNA_BASE_URL",
-        "model": "gpt-5.6-luna",
-        "base_url": "https://endpoint.greatrouter.com",
-    },
-    "grok": {
-        "api_key_env": "GROK_API_KEY",
-        "model_env": "GROK_MODEL",
-        "base_url_env": "GROK_BASE_URL",
-        "model": "grok-4.3",
-        "base_url": "https://endpoint.greatrouter.com",
-    },
-    "yangmao": {
-        "api_key_env": "YANGMAO_API_KEY",
-        "model_env": "YANGMAO_MODEL",
-        "base_url_env": "YANGMAO_BASE_URL",
-        "model": "yangmao-main",
-        "base_url": "https://ai.gz404.com:54002/v1",
-    },
-    "mistral": {
-        "api_key_env": "MISTRAL_API_KEY",
-        "model_env": "MISTRAL_MODEL",
-        "base_url_env": "MISTRAL_BASE_URL",
-        "model": "mistral-small-2503",
-        "base_url": "https://endpoint.greatrouter.com",
-    },
-    "minimax": {
-        "api_key_env": "MINIMAX_API_KEY",
-        "model_env": "MINIMAX_MODEL",
-        "base_url_env": "MINIMAX_BASE_URL",
-        "model": "MiniMax-M2.5",
-        "base_url": "https://endpoint.greatrouter.com",
-    },
-    "deepseek": {
-        "api_key_env": "DEEPSEEK_API_KEY",
-        "model_env": "DEEPSEEK_MODEL",
-        "base_url_env": "DEEPSEEK_BASE_URL",
-        "model": "DeepSeek-V4-Flash",
-        "base_url": "https://endpoint.greatrouter.com",
-    },
-}
+_T = TypeVar("_T")
 AGENT_PROVIDER_ENV: dict[AgentName, str] = {
     "diagnosis_feedback": "DIAGNOSIS_FEEDBACK_PROVIDER",
     "expert_a": "EXPERT_A_PROVIDER",
@@ -121,6 +52,7 @@ AGENT_PROVIDER_ENV: dict[AgentName, str] = {
     "chat_answer": "CHAT_ANSWER_PROVIDER",
     "planner": "PLANNER_PROVIDER",
     "slide_deck": "SLIDE_DECK_PROVIDER",
+    "generate_pptx": "GENERATE_PPTX_PROVIDER",
 }
 
 # ── Per-provider 并发信号量 ──────────────────────────────────────────────
@@ -178,7 +110,7 @@ class LLMMessage:
 
 @dataclass(frozen=True)
 class LLMProviderConfig:
-    provider: LLMProvider
+    provider: str
     api_key: str
     model: str
     base_url: str
@@ -317,33 +249,104 @@ def _log_llm_call(**kwargs: object) -> None:
         f.write(line)
 
 
-def _validate_provider(value: str, source: str) -> LLMProvider:
-    provider = value.lower()
-    if provider not in DEFAULT_CONFIG:
-        raise LLMConfigurationError(f"Unsupported {source}: {value}")
-    return cast(LLMProvider, provider)
+def _llm_payload_log_enabled() -> bool:
+    return os.getenv("LLM_LOG_PAYLOAD", "true").strip().lower() not in {"0", "false", "no", "off"}
 
 
-def load_provider_config(provider: LLMProvider, model_name: str | None = None) -> LLMProviderConfig:
+def _log_llm_payload(call_id: str, direction: str, **kwargs: object) -> None:
+    """Write a full request/response record paired by ``call_id``.
+
+    Enabled by default; set ``LLM_LOG_PAYLOAD=false`` to disable. Records land in
+    ``llm_payloads.log.jsonl`` next to ``llm_calls.log.jsonl``. Request records
+    carry the exact JSON ``body`` sent to the provider (messages, response_format
+    schema, tools); response records carry the raw provider payload or the full
+    error body. ``Authorization`` headers are never logged.
+    """
+    if not _llm_payload_log_enabled():
+        return
+    log_path = getattr(_llm_log_ctx, "log_path", None)
+    if log_path is None:
+        return
+    payload_path = log_path.with_name("llm_payloads.log.jsonl")
+    record: dict[str, object] = {
+        "timestamp": datetime.now(UTC).isoformat(),
+        "session_id": getattr(_llm_log_ctx, "session_id", ""),
+        "type": "llm_payload",
+        "call_id": call_id,
+        "direction": direction,
+    }
+    record.update(kwargs)
+    line = json.dumps(record, ensure_ascii=False, default=str, separators=(",", ":")) + chr(10)
+    with _LLM_LOG_LOCK, payload_path.open("a", encoding="utf-8") as f:
+        f.write(line)
+
+
+def _available_providers_hint() -> str:
+    available = available_provider_names()
+    return ", ".join(available) if available else "(none defined in agents.yaml providers)"
+
+
+def _validate_provider(value: str, source: str) -> str:
+    provider = value.strip()
+    if provider not in available_provider_names():
+        raise LLMConfigurationError(
+            f"Unsupported {source}: {value}. Available providers: {_available_providers_hint()}"
+        )
+    return provider
+
+
+def _resolve_provider(provider: str | None, source: str = "provider") -> str:
+    if provider is None:
+        load_dotenv(encoding="utf-8")
+        provider = os.getenv("DEFAULT_LLM_PROVIDER") or llm_runtime_config().default_provider
+        if not provider:
+            raise LLMConfigurationError(
+                "No LLM provider configured: set DEFAULT_LLM_PROVIDER or "
+                "llm.default_provider in agents.yaml. "
+                f"Available providers: {_available_providers_hint()}"
+            )
+    return _validate_provider(provider, source)
+
+
+def _conventional_api_key_env(provider: str) -> str:
+    return f"{re.sub(r'[^A-Z0-9]', '_', provider.upper())}_API_KEY"
+
+
+def load_provider_config(
+    provider: str | None = None,
+    model_name: str | None = None,
+    base_url_override: str | None = None,
+) -> LLMProviderConfig:
     load_dotenv(encoding="utf-8")
     normalize_socks_proxy_env()
-    defaults = DEFAULT_CONFIG[provider]
-    provider_config = provider_runtime_config(provider)
+    resolved = _resolve_provider(provider)
+    provider_config = provider_runtime_config(resolved)
     llm_config = llm_runtime_config()
-    api_key = os.getenv(defaults["api_key_env"], "")
+    api_key = provider_config.api_key or ""
+    if not api_key and provider_config.api_key_env:
+        api_key = os.getenv(provider_config.api_key_env, "")
+    conventional_env = _conventional_api_key_env(resolved)
     if not api_key:
-        raise LLMConfigurationError(f"{defaults['api_key_env']} is required for {provider} calls.")
-    configured_model = (
-        model_name
-        or provider_config.model_name
-        or os.getenv(defaults["model_env"])
-        or defaults["model"]
-    )
-    configured_base_url = (
-        provider_config.base_url or os.getenv(defaults["base_url_env"]) or defaults["base_url"]
-    )
+        api_key = os.getenv(conventional_env, "")
+    if not api_key:
+        raise LLMConfigurationError(
+            f"API key for provider '{resolved}' is not configured: set providers.{resolved}.api_key "
+            f"in agents.yaml, or export {provider_config.api_key_env or conventional_env}."
+        )
+    configured_model = model_name or provider_config.model_name
+    if not configured_model:
+        raise LLMConfigurationError(
+            f"No model configured for provider '{resolved}': pass model_name or set "
+            f"providers.{resolved}.model_name in agents.yaml."
+        )
+    configured_base_url = base_url_override or provider_config.base_url
+    if not configured_base_url:
+        raise LLMConfigurationError(
+            f"No base_url configured for provider '{resolved}': set "
+            f"providers.{resolved}.base_url in agents.yaml."
+        )
     return LLMProviderConfig(
-        provider=provider,
+        provider=resolved,
         api_key=api_key,
         model=configured_model,
         base_url=configured_base_url.rstrip("/"),
@@ -354,11 +357,16 @@ def load_provider_config(provider: LLMProvider, model_name: str | None = None) -
     )
 
 
+# Transient upstream/gateway failures worth an automatic retry. 524 is
+# Cloudflare's origin timeout (gateway cut a slow generation), same class as 502/504.
+_RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504, 524}
+
+
 def _is_retryable_error(exc: BaseException) -> bool:
     if isinstance(exc, httpx.TransportError):
         return True
     if isinstance(exc, LLMProviderError):
-        return exc.status_code in {429, 500, 502, 503, 504} or exc.retryable
+        return exc.status_code in _RETRYABLE_STATUS_CODES or exc.retryable
     return False
 
 
@@ -517,6 +525,7 @@ def _post_chat_completion(
     )
 
     _call_start = time.monotonic()
+    call_id = uuid4().hex
     _log_llm_call(
         provider=config.provider,
         model=config.model,
@@ -526,6 +535,14 @@ def _post_chat_completion(
         message_count=len(truncated_messages),
         estimated_input_tokens=sum(_estimate_tokens(m.content) for m in truncated_messages),
         status="attempting",
+    )
+    _log_llm_payload(
+        call_id,
+        "request",
+        provider=config.provider,
+        model=config.model,
+        base_url=config.base_url,
+        body=body,
     )
 
     try:
@@ -549,8 +566,15 @@ def _post_chat_completion(
                 error_type="HTTPStatusError",
                 error_message=f"{response.status_code} {response.text[:300]}",
                 status_code=response.status_code,
-                retryable=response.status_code in {429, 500, 502, 503, 504},
+                retryable=response.status_code in _RETRYABLE_STATUS_CODES,
                 duration_ms=round((time.monotonic() - _call_start) * 1000),
+            )
+            _log_llm_payload(
+                call_id,
+                "response",
+                status="error",
+                status_code=response.status_code,
+                error_body=response.text,
             )
             raise LLMProviderError(
                 f"{config.provider} API request failed: {response.status_code} {response.text}",
@@ -591,6 +615,7 @@ def _post_chat_completion(
             content_length=len(content),
             duration_ms=round((time.monotonic() - _call_start) * 1000),
         )
+        _log_llm_payload(call_id, "response", status="success", payload=payload)
         return content
     except (KeyError, IndexError, json.JSONDecodeError) as exc:
         _log_llm_call(
@@ -605,6 +630,13 @@ def _post_chat_completion(
             body_preview=response.text[:300],
             retryable=True,
             duration_ms=round((time.monotonic() - _call_start) * 1000),
+        )
+        _log_llm_payload(
+            call_id,
+            "response",
+            status="error",
+            status_code=response.status_code,
+            error_body=response.text,
         )
         raise LLMProviderError(
             f"{config.provider} returned an invalid chat response "
@@ -624,6 +656,13 @@ def _post_chat_completion(
             retryable=True,
             duration_ms=round((time.monotonic() - _call_start) * 1000),
         )
+        _log_llm_payload(
+            call_id,
+            "response",
+            status="error",
+            error_type=type(exc).__name__,
+            error_message=str(exc),
+        )
         raise LLMProviderError(
             f"{config.provider} transport error: {exc}",
             provider=config.provider,
@@ -636,7 +675,7 @@ def _post_chat_completion(
 
 def call_llm(
     *,
-    provider: LLMProvider = DEFAULT_PROVIDER,
+    provider: str | None = None,
     messages: list[LLMMessage],
     temperature: float = 0.5,
     json_mode: bool = False,
@@ -644,10 +683,12 @@ def call_llm(
     model_name: str | None = None,
     schema_name: str | None = None,
     json_schema: dict[str, object] | None = None,
+    base_url_override: str | None = None,
+    max_attempts: int | None = None,
 ) -> str:
-    config = load_provider_config(provider, model_name=model_name)
+    config = load_provider_config(provider, model_name=model_name, base_url_override=base_url_override)
     retrying = retry(
-        stop=stop_after_attempt(config.retry_times),
+        stop=stop_after_attempt(max_attempts or config.retry_times),
         wait=wait_exponential(multiplier=0.5, min=0.5, max=4),
         retry=retry_if_exception(_is_retryable_error),
         reraise=True,
@@ -661,6 +702,31 @@ def call_llm(
         schema_name,
         json_schema,
     )
+
+
+def _salvage_first_json_value(text: str) -> tuple[bool, object]:
+    """Tolerant parse: decode the first complete JSON value and drop surrounding junk.
+
+    Compatible endpoints occasionally emit a duplicated payload (``{...}{...}``),
+    trailing prose, or a garbage prefix before the real object (e.g. a stray
+    ``{"`` before ``{"slides": ...}``) even in JSON mode. Only reached after
+    ``json.loads`` has failed, so any extra content here is genuinely unusable.
+    Tries ``raw_decode`` at the start, then at each later ``{``/``[`` position,
+    and returns ``(True, value)`` for the first complete value that decodes;
+    ``(False, None)`` otherwise (caller keeps the normal parse_error path).
+    Downstream Pydantic validation remains the contract guard.
+    """
+    decoder = json.JSONDecoder()
+    stripped = text.lstrip()
+    candidates = [0] if stripped[:1] in "{[" else []
+    candidates.extend(i for i, ch in enumerate(stripped) if ch in "{[" and i > 0)
+    for start in candidates:
+        try:
+            value, _end = decoder.raw_decode(stripped[start:])
+        except json.JSONDecodeError:
+            continue
+        return True, value
+    return False, None
 
 
 def _strip_json_fence(content: str) -> str:
@@ -685,21 +751,24 @@ def _strip_json_fence(content: str) -> str:
 
 def call_llm_json(
     *,
-    provider: LLMProvider = DEFAULT_PROVIDER,
+    provider: str | None = None,
     messages: list[LLMMessage],
     temperature: float = 0.5,
     http_client: httpx.Client | None = None,
     model_name: str | None = None,
     schema_name: str | None = None,
     json_schema: dict[str, object] | None = None,
+    base_url_override: str | None = None,
+    max_attempts: int | None = None,
 ) -> object:
     # Drop json_schema if provider is known to not support strict schema
-    if json_schema is not None and not provider_supports_strict_schema(provider):
+    resolved = _resolve_provider(provider)
+    if json_schema is not None and not provider_supports_strict_schema(resolved):
         json_schema = None
         schema_name = None
     try:
         content = call_llm(
-            provider=provider,
+            provider=resolved,
             messages=messages,
             temperature=temperature,
             json_mode=True,
@@ -707,19 +776,21 @@ def call_llm_json(
             model_name=model_name,
             schema_name=schema_name,
             json_schema=json_schema,
+            base_url_override=base_url_override,
+            max_attempts=max_attempts,
         )
     except LLMProviderError as exc:
         if exc.status_code in {401, 403}:
             raise
         _log_llm_call(
-            provider=provider,
+            provider=resolved,
             status="fallback",
             from_json_mode=True,
             to_json_mode=False,
             reason=str(exc)[:300],
         )
         content = call_llm(
-            provider=provider,
+            provider=resolved,
             messages=messages,
             temperature=temperature,
             json_mode=False,
@@ -727,20 +798,31 @@ def call_llm_json(
             model_name=model_name,
             schema_name=None,
             json_schema=None,
+            base_url_override=base_url_override,
+            max_attempts=max_attempts,
         )
     cleaned = _strip_json_fence(content)
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError as exc:
+        salvaged, value = _salvage_first_json_value(cleaned)
+        if salvaged:
+            _log_llm_call(
+                provider=resolved,
+                status="parse_salvaged",
+                content_preview=content[:300],
+                error_message=str(exc)[:300],
+            )
+            return value
         _log_llm_call(
-            provider=provider,
+            provider=resolved,
             status="parse_error",
             content_preview=content[:300],
             error_message=str(exc)[:300],
         )
         raise LLMProviderError(
-            f"{provider} returned non-JSON content: {content[:500]}",
-            provider=provider,
+            f"{resolved} returned non-JSON content: {content[:500]}",
+            provider=resolved,
             retryable=True,
         ) from exc
 
@@ -764,6 +846,7 @@ def _post_chat_completion_with_tools(
     )
 
     _call_start = time.monotonic()
+    call_id = uuid4().hex
     _log_llm_call(
         provider=config.provider,
         model=config.model,
@@ -773,6 +856,15 @@ def _post_chat_completion_with_tools(
         estimated_input_tokens=sum(_estimate_tokens(m.content) for m in messages),
         status="attempting",
         tool_call=True,
+    )
+    _log_llm_payload(
+        call_id,
+        "request",
+        provider=config.provider,
+        model=config.model,
+        base_url=config.base_url,
+        tool_call=True,
+        body=body,
     )
 
     try:
@@ -795,9 +887,17 @@ def _post_chat_completion_with_tools(
                 error_type="HTTPStatusError",
                 error_message=f"{response.status_code} {response.text[:300]}",
                 status_code=response.status_code,
-                retryable=response.status_code in {429, 500, 502, 503, 504},
+                retryable=response.status_code in _RETRYABLE_STATUS_CODES,
                 tool_call=True,
                 duration_ms=round((time.monotonic() - _call_start) * 1000),
+            )
+            _log_llm_payload(
+                call_id,
+                "response",
+                status="error",
+                status_code=response.status_code,
+                tool_call=True,
+                error_body=response.text,
             )
             raise LLMProviderError(
                 f"{config.provider} tools API request failed: {response.status_code} {response.text}",
@@ -831,6 +931,7 @@ def _post_chat_completion_with_tools(
             tool_call=True,
             duration_ms=round((time.monotonic() - _call_start) * 1000),
         )
+        _log_llm_payload(call_id, "response", status="success", tool_call=True, payload=payload)
         return LLMResponseWithTools(
             content=content if isinstance(content, str) and content.strip() else None,
             tool_calls=tool_calls,
@@ -845,6 +946,14 @@ def _post_chat_completion_with_tools(
             retryable=True,
             tool_call=True,
             duration_ms=round((time.monotonic() - _call_start) * 1000),
+        )
+        _log_llm_payload(
+            call_id,
+            "response",
+            status="error",
+            status_code=response.status_code,
+            tool_call=True,
+            error_body=response.text,
         )
         raise LLMProviderError(
                 f"{config.provider} returned an invalid tools chat response.",
@@ -862,6 +971,14 @@ def _post_chat_completion_with_tools(
             tool_call=True,
             duration_ms=round((time.monotonic() - _call_start) * 1000),
         )
+        _log_llm_payload(
+            call_id,
+            "response",
+            status="error",
+            error_type=type(exc).__name__,
+            tool_call=True,
+            error_message=str(exc),
+        )
         raise LLMProviderError(
             f"{config.provider} transport error: {exc}",
             provider=config.provider,
@@ -874,16 +991,18 @@ def _post_chat_completion_with_tools(
 
 def call_llm_tools(
     *,
-    provider: LLMProvider = DEFAULT_PROVIDER,
+    provider: str | None = None,
     messages: list[LLMMessage],
     tools: list[ToolDefinition],
     temperature: float = 0.5,
     http_client: httpx.Client | None = None,
     model_name: str | None = None,
+    base_url_override: str | None = None,
+    max_attempts: int | None = None,
 ) -> LLMResponseWithTools:
-    config = load_provider_config(provider, model_name=model_name)
+    config = load_provider_config(provider, model_name=model_name, base_url_override=base_url_override)
     retrying = retry(
-        stop=stop_after_attempt(config.retry_times),
+        stop=stop_after_attempt(max_attempts or config.retry_times),
         wait=wait_exponential(multiplier=0.5, min=0.5, max=4),
         retry=retry_if_exception(_is_retryable_error),
         reraise=True,
@@ -894,11 +1013,11 @@ def call_llm_tools(
 class DefaultLLMClient:
     """Adapter used when all Agent nodes should use one provider."""
 
-    provider: LLMProvider
+    provider: str | None
     model_name: str | None
 
     def __init__(
-        self, provider: LLMProvider = DEFAULT_PROVIDER, model_name: str | None = None
+        self, provider: str | None = None, model_name: str | None = None
     ) -> None:
         self.provider = provider
         self.model_name = model_name
@@ -906,15 +1025,7 @@ class DefaultLLMClient:
     @classmethod
     def from_env(cls) -> Self:
         load_dotenv(encoding="utf-8")
-        llm_config = llm_runtime_config()
-        default_provider_name = (
-            os.getenv("DEFAULT_LLM_PROVIDER") or llm_config.default_provider or DEFAULT_PROVIDER
-        )
-        provider = _validate_provider(
-            default_provider_name,
-            "DEFAULT_LLM_PROVIDER",
-        )
-        return cls(provider=provider)
+        return cls(provider=_resolve_provider(None, "DEFAULT_LLM_PROVIDER"))
 
     def generate_json(
         self, messages: list[LLMMessage], temperature: float, agent: AgentName | None = None
@@ -960,51 +1071,81 @@ class DefaultLLMClient:
         )
 
 
-class AgentLLMRouter:
-    """Routes each Agent node to its configured provider, falling back to the default provider."""
+@dataclass(frozen=True)
+class FallbackTarget:
+    """Per-agent fallback model used when the primary model fails for any reason."""
 
-    default_provider: LLMProvider
-    agent_providers: dict[AgentName, LLMProvider]
+    provider: str
+    model_name: str
+    base_url: str | None = None
+
+
+class AgentLLMRouter:
+    """Routes each Agent node to its configured provider, falling back to the default provider.
+
+    When an agent configures ``fallback_model_name`` (``agents.<agent>.fallback_*`` in
+    agents.yaml), any failure of the primary model — model-side errors (retryable
+    statuses such as 524, transport errors, empty/unparsable content) or our-side
+    errors (400 schema rejection, 401/403 auth) — fails over to the fallback model for
+    one attempt; if the fallback also fails, the next round starts from the primary
+    model again. Rounds are bounded by ``retry_times``.
+    """
+
+    default_provider: str | None
+    agent_providers: dict[AgentName, str]
     agent_model_names: dict[AgentName, str]
+    agent_fallbacks: dict[AgentName, FallbackTarget]
 
     def __init__(
         self,
-        default_provider: LLMProvider = DEFAULT_PROVIDER,
-        agent_providers: Mapping[AgentName, LLMProvider] | None = None,
+        default_provider: str | None = None,
+        agent_providers: Mapping[AgentName, str] | None = None,
         agent_model_names: Mapping[AgentName, str] | None = None,
+        agent_fallbacks: Mapping[AgentName, FallbackTarget] | None = None,
     ) -> None:
         self.default_provider = default_provider
         self.agent_providers = dict(agent_providers or {})
         self.agent_model_names = dict(agent_model_names or {})
+        self.agent_fallbacks = dict(agent_fallbacks or {})
 
     @classmethod
     def from_env(cls) -> Self:
         load_dotenv(encoding="utf-8")
-        llm_config = llm_runtime_config()
-        default_provider_name = (
-            os.getenv("DEFAULT_LLM_PROVIDER") or llm_config.default_provider or DEFAULT_PROVIDER
-        )
-        default_provider = _validate_provider(
-            default_provider_name,
-            "DEFAULT_LLM_PROVIDER",
-        )
-        agent_providers: dict[AgentName, LLMProvider] = {}
+        default_provider = _resolve_provider(None, "DEFAULT_LLM_PROVIDER")
+        agent_providers: dict[AgentName, str] = {}
         agent_model_names: dict[AgentName, str] = {}
+        agent_fallbacks: dict[AgentName, FallbackTarget] = {}
         for agent, env_name in AGENT_PROVIDER_ENV.items():
             settings = agent_runtime_settings(agent)
             environment_provider = os.getenv(env_name)
             value = environment_provider or settings.provider
             if value:
                 agent_providers[agent] = _validate_provider(value, env_name)
-            if settings.model_name and not environment_provider:
+            if environment_provider:
+                # env override is an incident-recovery switch; ignore yaml model/fallback
+                # to avoid model/provider mismatch.
+                continue
+            if settings.model_name:
                 agent_model_names[agent] = settings.model_name
+            if settings.fallback_model_name:
+                fallback_provider = (
+                    _validate_provider(settings.fallback_provider, f"{agent}.fallback_provider")
+                    if settings.fallback_provider
+                    else agent_providers.get(agent, default_provider)
+                )
+                agent_fallbacks[agent] = FallbackTarget(
+                    provider=fallback_provider,
+                    model_name=settings.fallback_model_name,
+                    base_url=settings.fallback_base_url,
+                )
         return cls(
             default_provider=default_provider,
             agent_providers=agent_providers,
             agent_model_names=agent_model_names,
+            agent_fallbacks=agent_fallbacks,
         )
 
-    def provider_for(self, agent: AgentName | None) -> LLMProvider:
+    def provider_for(self, agent: AgentName | None) -> str | None:
         if agent is None:
             return self.default_provider
         return self.agent_providers.get(agent, self.default_provider)
@@ -1014,15 +1155,64 @@ class AgentLLMRouter:
             return None
         return self.agent_model_names.get(agent)
 
+    def _with_fallback(
+        self,
+        agent: AgentName | None,
+        invoke: Callable[[str | None, str | None, str | None, int | None], _T],
+    ) -> _T:
+        """Run ``invoke(provider, model_name, base_url, max_attempts)`` with failover.
+
+        No fallback configured -> single passthrough with default retry behavior.
+        Configured -> any LLMProviderError (model-side or our-side) fails over to the
+        fallback model; if the fallback also fails, the next round starts from the
+        primary again. Rounds are bounded by retry_times.
+        """
+        primary = self.provider_for(agent)
+        primary_model = self.model_for(agent)
+        fallback = self.agent_fallbacks.get(agent) if agent is not None else None
+        if fallback is None:
+            return invoke(primary, primary_model, None, None)
+        rounds = load_provider_config(primary, model_name=primary_model).retry_times
+        last_exc: LLMProviderError | None = None
+        for round_no in range(1, rounds + 1):
+            try:
+                return invoke(primary, primary_model, None, 1)
+            except LLMProviderError as exc:
+                last_exc = exc
+                _log_llm_call(
+                    provider=primary,
+                    status="model_fallback",
+                    from_model=primary_model,
+                    to_provider=fallback.provider,
+                    to_model=fallback.model_name,
+                    reason=str(exc)[:300],
+                    round=round_no,
+                )
+            try:
+                return invoke(fallback.provider, fallback.model_name, fallback.base_url, 1)
+            except LLMProviderError as exc:
+                last_exc = exc
+                if round_no < rounds:
+                    time.sleep(min(0.5 * 2 ** (round_no - 1), 4.0))
+        assert last_exc is not None
+        raise last_exc
+
     def generate_json(
         self, messages: list[LLMMessage], temperature: float, agent: AgentName | None = None
     ) -> object:
-        return call_llm_json(
-            provider=self.provider_for(agent),
-            messages=messages,
-            temperature=temperature,
-            model_name=self.model_for(agent),
-        )
+        def invoke(
+            provider: str | None, model_name: str | None, base_url: str | None, attempts: int | None
+        ) -> object:
+            return call_llm_json(
+                provider=provider,
+                messages=messages,
+                temperature=temperature,
+                model_name=model_name,
+                base_url_override=base_url,
+                max_attempts=attempts,
+            )
+
+        return self._with_fallback(agent, invoke)
 
     def generate_structured_json(
         self,
@@ -1033,14 +1223,21 @@ class AgentLLMRouter:
         json_schema: dict[str, object],
         agent: AgentName | None = None,
     ) -> object:
-        return call_llm_json(
-            provider=self.provider_for(agent),
-            messages=messages,
-            temperature=temperature,
-            model_name=self.model_for(agent),
-            schema_name=schema_name,
-            json_schema=json_schema,
-        )
+        def invoke(
+            provider: str | None, model_name: str | None, base_url: str | None, attempts: int | None
+        ) -> object:
+            return call_llm_json(
+                provider=provider,
+                messages=messages,
+                temperature=temperature,
+                model_name=model_name,
+                schema_name=schema_name,
+                json_schema=json_schema,
+                base_url_override=base_url,
+                max_attempts=attempts,
+            )
+
+        return self._with_fallback(agent, invoke)
 
     def generate_with_tools(
         self,
@@ -1049,10 +1246,17 @@ class AgentLLMRouter:
         temperature: float,
         agent: AgentName | None = None,
     ) -> LLMResponseWithTools:
-        return call_llm_tools(
-            provider=self.provider_for(agent),
-            messages=messages,
-            tools=tools,
-            temperature=temperature,
-            model_name=self.model_for(agent),
-        )
+        def invoke(
+            provider: str | None, model_name: str | None, base_url: str | None, attempts: int | None
+        ) -> LLMResponseWithTools:
+            return call_llm_tools(
+                provider=provider,
+                messages=messages,
+                tools=tools,
+                temperature=temperature,
+                model_name=model_name,
+                base_url_override=base_url,
+                max_attempts=attempts,
+            )
+
+        return self._with_fallback(agent, invoke)

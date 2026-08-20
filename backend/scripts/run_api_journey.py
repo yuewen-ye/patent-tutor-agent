@@ -3,21 +3,20 @@
 from __future__ import annotations
 
 import argparse
-from collections.abc import Callable
-from dataclasses import dataclass
-from datetime import UTC, datetime
 import hashlib
 import json
-from pathlib import Path
 import re
 import sys
 import time
+import uuid
+from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import quote, urlencode
-import uuid
 
 import httpx
-
 
 TERMINAL_STATUSES = {"completed", "failed", "canceled"}
 PROGRESS_HEARTBEAT_SECONDS = 30.0
@@ -86,6 +85,7 @@ class JourneyConfig:
     education_background: str = "其他"
     cat_mode: Literal["interactive", "off"] = "off"
     cat_max_answers: int = 0
+    require_pptx: bool = True
 
 
 def _workflow_events(snapshot: dict[str, Any]) -> tuple[dict[str, Any], ...]:
@@ -364,6 +364,28 @@ class ApiJourney:
                 cat_knowledge_snapshot=cat_knowledge_snapshot,
             )
 
+        # generate_pptx 已在课程工作流中运行；API journey 默认把它作为完整流程验收项。
+        pptx_result = course_state.get("pptx_result")
+        if self.config.require_pptx:
+            if not isinstance(pptx_result, dict) or pptx_result.get("status") != "generated":
+                raise JourneyError(
+                    "课程会话未成功生成 PPTX；请确认 PATENT_TUTOR_PPTX_ENABLED=true，"
+                    f"pptx_result={pptx_result!r}"
+                )
+            pptx_artifact = _find_artifact(
+                course_state,
+                preferred_kinds=("presentation", "pptx"),
+                preferred_suffixes=("course_deck.pptx",),
+            )
+            if pptx_artifact is None:
+                artifact = pptx_result.get("artifact")
+                pptx_artifact = artifact if isinstance(artifact, dict) else None
+            if pptx_artifact is None:
+                raise JourneyError("PPTX 已标记 generated，但 session artifacts 缺少 course_deck.pptx。")
+            pptx_artifact_path = self._read_binary_artifact(course_session_id, pptx_artifact)
+        else:
+            pptx_artifact_path = None
+
         # 校验结构化课件（course_slides）：PPT 分页 + 逐页讲稿（音频可选）
         course_slides = course_state.get("course_slides")
         if not isinstance(course_slides, dict):
@@ -476,6 +498,7 @@ class ApiJourney:
                 item["question_id"] for item in exercise_responses
             ],
             "course_artifact": course_artifact_path,
+            "pptx_artifact": pptx_artifact_path,
             "feedback_artifact": feedback_artifact_path,
             "course_slides": {
                 "slide_count": len(slides),
@@ -748,6 +771,24 @@ class ApiJourney:
         print(f"    {relative_path}：{len(response.text)} 字符，首行：{first_line}")
         return relative_path
 
+    def _read_binary_artifact(
+        self, session_id: str, artifact: dict[str, Any]
+    ) -> str:
+        raw_path = self._required_string(artifact, "path")
+        relative_path = _artifact_api_path(raw_path, session_id)
+        api_path = (
+            f"/sessions/{quote(session_id, safe='')}/artifacts/"
+            f"{quote(relative_path, safe='/')}"
+        )
+        response = self.client.get(api_path)
+        self._announce_response("GET", api_path, response)
+        if response.status_code != 200:
+            raise JourneyError(_response_error("GET", api_path, response))
+        if not response.content.startswith(b"PK"):
+            raise JourneyError(f"PPTX Artifact {relative_path} 不是有效 ZIP/PPTX 文件。")
+        print(f"    {relative_path}：{len(response.content)} bytes，PPTX 下载验证通过")
+        return relative_path
+
     def _request_json(
         self,
         method: str,
@@ -993,6 +1034,11 @@ def _parser() -> argparse.ArgumentParser:
         help="Submit the answer key or a deliberately wrong answer.",
     )
     parser.add_argument("--output-json", type=Path)
+    parser.add_argument(
+        "--allow-missing-pptx",
+        action="store_true",
+        help="Do not fail when PATENT_TUTOR_PPTX_ENABLED is disabled or PPTX is degraded.",
+    )
     return parser
 
 
@@ -1026,6 +1072,7 @@ def main(argv: list[str] | None = None) -> int:
             education_background=args.education_background,
             cat_mode=args.cat_mode,
             cat_max_answers=args.cat_max_answers,
+            require_pptx=not args.allow_missing_pptx,
         )
         with httpx.Client(
             base_url=args.base_url.rstrip("/"), timeout=args.request_timeout

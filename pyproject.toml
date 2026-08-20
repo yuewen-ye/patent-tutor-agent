@@ -28,6 +28,7 @@ dependencies = [
     "flagembedding>=1.4.0",
     "modelscope>=1.39.0",
     "edge-tts>=6.1.0",
+    "python-pptx>=1.0.2",
 ]
 
 [dependency-groups]

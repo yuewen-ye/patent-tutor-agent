@@ -48,11 +48,11 @@ export function LearningPathSection({ path, pathDecision, dualAxisSnapshot, mast
           <TabsList className="grid w-full grid-cols-3 bg-secondary/50 p-1 rounded-lg">
             <TabsTrigger value="graph" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-soft rounded-md">
               <Route className="h-4 w-4" />
-              学习路线图
+              学习路径规划图
             </TabsTrigger>
             <TabsTrigger value="curve" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-soft rounded-md">
               <TrendingUp className="h-4 w-4" />
-              难度曲线
+              资源难度匹配曲线
             </TabsTrigger>
             <TabsTrigger value="risks" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-soft rounded-md">
               <AlertTriangle className="h-4 w-4" />

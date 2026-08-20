@@ -11,7 +11,6 @@ from typing import cast
 from backend.app.core.llm import (
     LLMConfigurationError,
     LLMMessage,
-    LLMProvider,
     LLMProviderError,
     call_llm_json,
 )
@@ -26,11 +25,11 @@ MESSAGES = [
 ]
 
 
-@pytest.mark.parametrize("provider", ["qwen", "glm", "gpt"])
+@pytest.mark.parametrize("provider", ["jiji-gpt", "jiji-deepseek", "jiji-grok"])
 def test_provider_returns_valid_json(provider: str) -> None:
     try:
         result = call_llm_json(
-            provider=cast(LLMProvider, provider), messages=MESSAGES, temperature=0.1
+            provider=cast(str, provider), messages=MESSAGES, temperature=0.1
         )
     except LLMConfigurationError as exc:
         pytest.skip(f"{provider} not configured: {exc}")

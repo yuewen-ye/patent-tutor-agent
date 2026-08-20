@@ -7,7 +7,7 @@ from typing import Final
 
 import yaml
 from dotenv import load_dotenv
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 DEFAULT_AGENT_CONFIG_PATH: Final = Path("config/agents.yaml")
 AGENT_CONFIG_PATH_ENV: Final = "AGENT_CONFIG_PATH"
@@ -26,11 +26,16 @@ class LLMRuntimeConfig(BaseModel):
 
 
 class ProviderRuntimeConfig(BaseModel):
+    """A user-defined provider channel (OpenAI-compatible endpoint)."""
+
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     model_name: str | None = None
     base_url: str | None = None
+    api_key: str | None = None
+    api_key_env: str | None = None
     supports_strict_schema: bool | None = None
+    models: list[str] | None = None
 
 
 class AgentRuntimeSettings(BaseModel):
@@ -42,6 +47,10 @@ class AgentRuntimeSettings(BaseModel):
     tool_temperature: float | None = Field(default=None, ge=0, le=2)
     integration_temperature: float | None = Field(default=None, ge=0, le=2)
     top_k: int | None = Field(default=None, ge=1, le=10)
+    fallback_provider: str | None = None
+    fallback_model_name: str | None = None
+    fallback_base_url: str | None = None
+    max_revisions: int | None = Field(default=None, ge=0)
 
 
 class AgentRuntimeConfig(BaseModel):
@@ -50,6 +59,41 @@ class AgentRuntimeConfig(BaseModel):
     llm: LLMRuntimeConfig = Field(default_factory=LLMRuntimeConfig)
     providers: dict[str, ProviderRuntimeConfig] = Field(default_factory=dict)
     agents: dict[str, AgentRuntimeSettings] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _validate_provider_references(self) -> AgentRuntimeConfig:
+        available = sorted(self.providers)
+
+        def check_provider(name: str | None, source: str) -> None:
+            if name is None:
+                return
+            if name not in self.providers:
+                raise ValueError(
+                    f"{source} references undefined provider '{name}'. "
+                    f"Available providers: {available or '(none defined)'}"
+                )
+
+        def check_model(model: str | None, provider: str | None, source: str) -> None:
+            if model is None or provider is None:
+                return
+            declared = self.providers[provider].models
+            if declared is not None and model not in declared:
+                raise ValueError(
+                    f"{source} references model '{model}' not listed in "
+                    f"providers.{provider}.models: {declared}"
+                )
+
+        check_provider(self.llm.default_provider, "llm.default_provider")
+        for agent, settings in self.agents.items():
+            check_provider(settings.provider, f"agents.{agent}.provider")
+            check_provider(settings.fallback_provider, f"agents.{agent}.fallback_provider")
+            primary = settings.provider or self.llm.default_provider
+            check_model(settings.model_name, primary, f"agents.{agent}.model_name")
+            fallback = settings.fallback_provider or primary
+            check_model(
+                settings.fallback_model_name, fallback, f"agents.{agent}.fallback_model_name"
+            )
+        return self
 
 
 def clear_agent_runtime_config_cache() -> None:
@@ -77,6 +121,10 @@ def load_agent_runtime_config() -> AgentRuntimeConfig:
 
 def llm_runtime_config() -> LLMRuntimeConfig:
     return load_agent_runtime_config().llm
+
+
+def available_provider_names() -> list[str]:
+    return sorted(load_agent_runtime_config().providers)
 
 
 def provider_runtime_config(provider: str) -> ProviderRuntimeConfig:

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import APIRouter, HTTPException, Response
 
 from backend.app.api.models import ArtifactNotFoundResponse, ErrorResponse
@@ -15,6 +17,7 @@ _MEDIA_TYPES = {
     ".wav": "audio/wav",
     ".ogg": "audio/ogg",
     ".m4a": "audio/mp4",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 }
 
 
@@ -36,7 +39,7 @@ def create_artifacts_router(session_service: SessionService) -> APIRouter:
         suffix = artifact_path.rsplit(".", 1)[-1].lower() if "." in artifact_path else ""
         media_type = _MEDIA_TYPES.get(f".{suffix}", "application/octet-stream")
         try:
-            if media_type.startswith("audio/"):
+            if media_type.startswith("audio/") or suffix == "pptx":
                 content: str | bytes = session_service.read_artifact_bytes(
                     session_id, artifact_path
                 )
@@ -48,6 +51,9 @@ def create_artifacts_router(session_service: SessionService) -> APIRouter:
             raise HTTPException(status_code=400, detail="Invalid artifact path.") from exc
         except FileNotFoundError as exc:
             raise HTTPException(status_code=404, detail="Artifact not found.") from exc
-        return Response(content=content, media_type=media_type)
+        headers = {}
+        if suffix == "pptx":
+            headers["Content-Disposition"] = f'attachment; filename="{Path(artifact_path).name}"'
+        return Response(content=content, media_type=media_type, headers=headers)
 
     return router
