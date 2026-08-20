@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { artifactsApi } from "@/api/artifacts";
+import { init as initPptxPreview } from "pptx-preview";
+import { artifactsApi, type AudioManifest } from "@/api/artifacts";
 import { sessionsApi } from "@/api/sessions";
-import { getApiBaseUrl } from "@/lib/utils";
 import type { CourseSlide, CourseSlides } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,10 +35,92 @@ import {
   ListChecks,
   FileText,
   Sparkles,
+  MonitorPlay,
 } from "lucide-react";
 
 interface PresentationPlayerProps {
   sessionId: string;
+}
+
+interface PptxViewerProps {
+  srcUrl: string;
+}
+
+function PptxViewer({ srcUrl }: PptxViewerProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<ReturnType<typeof initPptxPreview> | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAndRender() {
+      if (!containerRef.current) return;
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch(srcUrl);
+        if (!response.ok) {
+          throw new Error(`PPTX 文件获取失败 (${response.status})`);
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        if (cancelled) return;
+
+        const container = containerRef.current;
+        if (!container) return;
+
+        container.innerHTML = "";
+        viewerRef.current = initPptxPreview(container, {
+          width: container.clientWidth || 800,
+          height: container.clientHeight || 600,
+        });
+        await viewerRef.current.preview(arrayBuffer);
+        if (!cancelled) {
+          setLoading(false);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "PPTX 渲染失败");
+          setLoading(false);
+        }
+      }
+    }
+
+    loadAndRender();
+
+    return () => {
+      cancelled = true;
+      if (containerRef.current) {
+        containerRef.current.innerHTML = "";
+      }
+      viewerRef.current = null;
+    };
+  }, [srcUrl]);
+
+  return (
+    <div className="relative w-full h-full min-h-[400px]">
+      <div ref={containerRef} className="w-full h-full min-h-[400px]" />
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            正在加载 PPT 原稿...
+          </div>
+        </div>
+      )}
+      {error && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white/90">
+          <div className="text-center space-y-2 p-4">
+            <AlertTriangle className="h-6 w-6 text-amber-500 mx-auto" />
+            <p className="text-sm text-amber-700 font-medium">PPT 原稿加载失败</p>
+            <p className="text-xs text-muted-foreground">{error}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface ResolvedSlide {
@@ -50,9 +132,6 @@ interface ResolvedSlide {
   hasAudio: boolean;
   durationSec: number | null;
 }
-
-const MAX_SLIDES_PROBE = 50;
-const MAX_CONSECUTIVE_MISS = 2;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SlideCard：用 HTML/CSS 渲染一页 PPT，保证切页毫秒级同步
@@ -266,7 +345,6 @@ export function PresentationPlayer({ sessionId }: PresentationPlayerProps) {
   const slides = useMemo<ResolvedSlide[]>(() => {
     const raw = courseSlides?.slides;
     if (!Array.isArray(raw) || raw.length === 0) return [];
-    const base = getApiBaseUrl().replace(/\/$/, "");
     return raw
       .map((s, i) => {
         const order = typeof s.order === "number" ? s.order : i + 1;
@@ -278,7 +356,6 @@ export function PresentationPlayer({ sessionId }: PresentationPlayerProps) {
           absolute = /^https?:\/\//i.test(relPath)
             ? relPath
             : artifactsApi.buildArtifactUrl(sessionId, relPath);
-          if (!/^https?:\/\//i.test(absolute)) absolute = `${base}${absolute}`;
         }
         return {
           index: index1,
@@ -293,28 +370,42 @@ export function PresentationPlayer({ sessionId }: PresentationPlayerProps) {
       .sort((a, b) => a.index - b.index);
   }, [courseSlides, sessionId]);
 
-  // 若 course_slides 中无 slides，则回退到逐页音频探测（兼容老会话）
-  const { data: probedAudioIndices, isLoading: probingLoading } = useQuery<number[]>({
-    queryKey: ["presentation-slides-probe", sessionId],
-    queryFn: async (): Promise<number[]> => {
-      if (slides.length > 0) return []; // 已有权威数据不探测
-      const indices: number[] = [];
-      let consecutiveMiss = 0;
-      for (let i = 1; i <= MAX_SLIDES_PROBE; i++) {
-        const head = await artifactsApi.headSlideAudio(sessionId, i);
-        if (head.ok) {
-          indices.push(i);
-          consecutiveMiss = 0;
-        } else {
-          consecutiveMiss++;
-          if (consecutiveMiss >= MAX_CONSECUTIVE_MISS) break;
-        }
+  // 若 course_slides 中无 slides，则回退到 audio_manifest.json 探测（兼容老会话/会话重启后）
+  const { data: audioManifest, isLoading: manifestLoading } = useQuery<AudioManifest | null>({
+    queryKey: ["presentation-audio-manifest", sessionId],
+    queryFn: async (): Promise<AudioManifest | null> => {
+      try {
+        return await artifactsApi.getAudioManifest(sessionId);
+      } catch {
+        return null;
       }
-      return indices;
     },
-    enabled: !!sessionId && slides.length === 0 && pptxExists?.ok === true,
+    enabled: !!sessionId && slides.length === 0,
     staleTime: 10 * 60 * 1000,
   });
+
+  // 从 audio_manifest 构造 fallback slides（当 course_slides 不可用时）
+  const manifestSlides = useMemo<ResolvedSlide[]>(() => {
+    if (slides.length > 0) return [];
+    if (!audioManifest?.slides?.length) return [];
+    return audioManifest.slides.map((entry, i) => {
+      const slideNum = i + 1;
+      const absolute = artifactsApi.getSlideAudioUrlByRelPath(sessionId, entry.audio_url);
+      return {
+        index: slideNum,
+        slide: { id: entry.slide_id, order: slideNum, type: "content", title: `第 ${slideNum} 页`, content: {} },
+        title: `第 ${slideNum} 页`,
+        audioUrl: absolute,
+        hasAudio: true,
+        durationSec: entry.duration_sec ?? null,
+      } satisfies ResolvedSlide;
+    });
+  }, [audioManifest, slides.length, sessionId]);
+
+  const probedAudioIndices = useMemo<number[]>(() => {
+    if (manifestSlides.length === 0) return [];
+    return manifestSlides.map((s) => s.index);
+  }, [manifestSlides]);
 
   // 整体音频兜底
   const { data: fullAudioExists } = useQuery({
@@ -329,19 +420,24 @@ export function PresentationPlayer({ sessionId }: PresentationPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioProgress, setAudioProgress] = useState(0); // 0–100
   const [showNarration, setShowNarration] = useState(false);
+  const [viewMode, setViewMode] = useState<"slides" | "pptx">("slides");
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const totalSlides = useMemo(() => {
     if (slides.length > 0) return slides.length;
+    if (manifestSlides.length > 0) return manifestSlides.length;
     if (probedAudioIndices && probedAudioIndices.length > 0) {
       return Math.max(...probedAudioIndices);
     }
     return 0;
-  }, [slides, probedAudioIndices]);
+  }, [slides, manifestSlides, probedAudioIndices]);
 
   const slideWithAudioCount = useMemo(
-    () => slides.filter((s) => s.hasAudio).length,
-    [slides]
+    () => {
+      if (slides.length > 0) return slides.filter((s) => s.hasAudio).length;
+      return manifestSlides.filter((s) => s.hasAudio).length;
+    },
+    [slides, manifestSlides]
   );
 
   const overallProgress = useMemo(() => {
@@ -353,8 +449,8 @@ export function PresentationPlayer({ sessionId }: PresentationPlayerProps) {
   }, [currentIndex, totalSlides, audioProgress]);
 
   const currentResolved = useMemo(
-    () => slides.find((s) => s.index === currentIndex),
-    [slides, currentIndex]
+    () => slides.find((s) => s.index === currentIndex) || manifestSlides.find((s) => s.index === currentIndex),
+    [slides, manifestSlides, currentIndex]
   );
 
   // 本页讲述内容：优先 narration.text（配音讲稿），缺失时回退到正文/要点
@@ -376,14 +472,16 @@ export function PresentationPlayer({ sessionId }: PresentationPlayerProps) {
     return parts.join("\n");
   }, [currentResolved]);
 
-  // 回退音频：没有 course_slides 时探测 slide_{N}.mp3
+  // 回退音频：优先使用 manifestSlides 中的音频 URL
   const currentFallbackAudioUrl = useMemo(() => {
-    if (currentResolved) return null;
+    if (currentResolved?.audioUrl) return currentResolved.audioUrl;
+    if (!currentResolved) {
+      const manifestSlide = manifestSlides.find((s) => s.index === currentIndex);
+      if (manifestSlide?.audioUrl) return manifestSlide.audioUrl;
+    }
     if (fullAudioExists?.ok && currentIndex === 1) return artifactsApi.getFullAudioUrl(sessionId);
-    if (probedAudioIndices?.includes(currentIndex))
-      return artifactsApi.getSlideAudioUrl(sessionId, currentIndex);
     return null;
-  }, [currentResolved, currentIndex, probedAudioIndices, fullAudioExists, sessionId]);
+  }, [currentResolved, currentIndex, manifestSlides, fullAudioExists, sessionId]);
 
   const currentAudioUrl = currentResolved?.audioUrl ?? currentFallbackAudioUrl;
   const currentHasAudio = currentResolved?.hasAudio ?? Boolean(currentFallbackAudioUrl);
@@ -492,7 +590,7 @@ export function PresentationPlayer({ sessionId }: PresentationPlayerProps) {
   });
 
   // ── 空态 / 加载态 ───────────────────────────────────────────────────
-  const probingAny = pptxChecking || probingLoading || detailLoading;
+  const probingAny = pptxChecking || manifestLoading || detailLoading;
 
   if (probingAny) {
     return (
@@ -513,7 +611,13 @@ export function PresentationPlayer({ sessionId }: PresentationPlayerProps) {
     );
   }
 
-  if (!pptxExists?.ok) {
+  // 判定课件是否可用：PPTX 文件存在，或 course_slides 有结构化数据，
+  // 或探测到逐页音频（兼容老会话）。仅当所有来源均为空时才显示空态。
+  const hasSlideData = slides.length > 0;
+  const hasProbedAudio = (probedAudioIndices?.length ?? 0) > 0;
+  const hasAnyContent = pptxExists?.ok || hasSlideData || hasProbedAudio;
+
+  if (!hasAnyContent) {
     return (
       <Card className="border-border/40 bg-card shadow-soft">
         <CardHeader className="pb-3">
@@ -573,22 +677,37 @@ export function PresentationPlayer({ sessionId }: PresentationPlayerProps) {
               <Play className="h-3.5 w-3.5 mr-1.5 fill-white/90" />
               开始学习
             </Button>
-            <Button variant="outline" size="sm" onClick={() => window.open(pptxUrl, "_blank", "noopener,noreferrer")}>
-              <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-              新标签页打开 PPT
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => downloadMutation.mutate()}
-              disabled={downloadMutation.isPending}
-            >
-              {downloadMutation.isPending ? (
-                <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />下载中</>
-              ) : (
-                <><Download className="h-3.5 w-3.5 mr-1.5" />下载 PPT</>
-              )}
-            </Button>
+            {pptxExists?.ok && (
+              <Button variant="outline" size="sm" onClick={() => window.open(pptxUrl, "_blank", "noopener,noreferrer")}>
+                <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                新标签页打开 PPT
+              </Button>
+            )}
+            {pptxExists?.ok && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => downloadMutation.mutate()}
+                disabled={downloadMutation.isPending}
+              >
+                {downloadMutation.isPending ? (
+                  <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />下载中</>
+                ) : (
+                  <><Download className="h-3.5 w-3.5 mr-1.5" />下载 PPT</>
+                )}
+              </Button>
+            )}
+            {pptxExists?.ok && (
+              <Button
+                variant={viewMode === "pptx" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode((v) => (v === "pptx" ? "slides" : "pptx"))}
+                className={viewMode === "pptx" ? "bg-[#D9773E] hover:bg-[#C15B27]" : ""}
+              >
+                <MonitorPlay className="h-3.5 w-3.5 mr-1.5" />
+                {viewMode === "pptx" ? "幻灯片预览" : "PPT 原稿"}
+              </Button>
+            )}
           </div>
         </div>
 
@@ -610,37 +729,55 @@ export function PresentationPlayer({ sessionId }: PresentationPlayerProps) {
           <div className="xl:col-span-3 rounded-2xl border border-border/40 bg-gradient-to-br from-[#FFF7ED] to-white overflow-hidden p-3">
             <div className="flex items-center justify-between px-2 py-1.5 mb-2">
               <div className="flex items-center gap-2 text-xs">
-                <Eye className="h-3.5 w-3.5 text-[#C15B27]" />
-                <span className="font-medium text-[#5C3A26]">幻灯片预览</span>
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
-                  第 {currentIndex} / {totalLabel} 页
-                </Badge>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowNarration(true)}
-                  disabled={!currentResolved}
-                  className="h-6 px-2 text-[11px] border-[#D9773E]/30 bg-[#FFE8D0]/30 hover:bg-[#FFE8D0]/60 text-[#9A4A1C]"
-                  title="查看本页讲述内容（配音讲稿）"
-                >
-                  <FileText className="h-3 w-3 mr-1" />
-                  查看讲述内容
-                </Button>
-                {currentHasAudio && (
-                  <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
-                    <FileAudio className="h-3 w-3" />
-                    本页有配音
-                  </span>
+                {viewMode === "pptx" ? (
+                  <>
+                    <MonitorPlay className="h-3.5 w-3.5 text-[#C15B27]" />
+                    <span className="font-medium text-[#5C3A26]">PPT 原稿预览</span>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">矢量渲染</Badge>
+                  </>
+                ) : (
+                  <>
+                    <Eye className="h-3.5 w-3.5 text-[#C15B27]" />
+                    <span className="font-medium text-[#5C3A26]">幻灯片预览</span>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                      第 {currentIndex} / {totalLabel} 页
+                    </Badge>
+                  </>
                 )}
               </div>
+              {viewMode === "slides" && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowNarration(true)}
+                    disabled={!currentResolved}
+                    className="h-6 px-2 text-[11px] border-[#D9773E]/30 bg-[#FFE8D0]/30 hover:bg-[#FFE8D0]/60 text-[#9A4A1C]"
+                    title="查看本页讲述内容（配音讲稿）"
+                  >
+                    <FileText className="h-3 w-3 mr-1" />
+                    查看讲述内容
+                  </Button>
+                  {currentHasAudio && (
+                    <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
+                      <FileAudio className="h-3 w-3" />
+                      本页有配音
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
-            <SlideCard
-              slide={currentSlide as CourseSlide}
-              pageLabel={String(currentIndex)}
-              totalLabel={totalLabel}
-            />
+            {viewMode === "pptx" && pptxExists?.ok ? (
+              <div className="h-[500px] relative">
+                <PptxViewer srcUrl={pptxUrl} />
+              </div>
+            ) : (
+              <SlideCard
+                slide={currentSlide as CourseSlide}
+                pageLabel={String(currentIndex)}
+                totalLabel={totalLabel}
+              />
+            )}
           </div>
 
           {/* 控制 + 列表 */}

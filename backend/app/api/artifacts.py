@@ -24,6 +24,30 @@ _MEDIA_TYPES = {
 def create_artifacts_router(session_service: SessionService) -> APIRouter:
     router = APIRouter(tags=["artifacts"])
 
+    @router.head(
+        "/sessions/{session_id}/artifacts/{artifact_path:path}",
+        responses={
+            400: {"model": ErrorResponse},
+            404: {"model": ArtifactNotFoundResponse},
+        },
+        description="Check artifact existence without downloading content.",
+    )
+    def head_artifact(session_id: str, artifact_path: str) -> Response:
+        suffix = artifact_path.rsplit(".", 1)[-1].lower() if "." in artifact_path else ""
+        media_type = _MEDIA_TYPES.get(f".{suffix}", "application/octet-stream")
+        try:
+            session_service.read_artifact_bytes(session_id, artifact_path)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="Session not found.") from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="Invalid artifact path.") from exc
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail="Artifact not found.") from exc
+        headers = {}
+        if suffix == "pptx":
+            headers["Content-Disposition"] = f'attachment; filename="{Path(artifact_path).name}"'
+        return Response(content=None, media_type=media_type, headers=headers, status_code=200)
+
     @router.get(
         "/sessions/{session_id}/artifacts/{artifact_path:path}",
         responses={
