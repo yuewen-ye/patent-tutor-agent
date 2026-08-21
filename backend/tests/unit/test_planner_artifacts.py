@@ -64,7 +64,7 @@ def test_planner_markdown_distinguishes_target_path_from_lesson_window(tmp_path:
     ).read_text(encoding="utf-8")
     assert path_artifact["path"].endswith("path/learning_path.md")
     assert decision_artifact["path"].endswith("path/path_decision.md")
-    assert "长期目标路径" in path_markdown
+    assert "路径节点数：" in path_markdown
     assert "`patent-law-foundation`" in path_markdown
     assert "专利法律制度基础" in path_markdown
     assert "规划决策" in decision_markdown

@@ -319,7 +319,7 @@ def _profile_markdown(title: str, value: dict[str, Any]) -> str:
 
 
 def _learning_path_markdown(title: str, value: list[Any]) -> str:
-    lines = [f"# {title}", "", "> 这是从当前学习起点到目标知识点的长期目标路径，不是本节教学活动窗口。", ""]
+    lines = [f"# {title}", ""]
     if not value:
         return "\n".join(lines) + "（暂无路径）\n"
     lines.extend([
