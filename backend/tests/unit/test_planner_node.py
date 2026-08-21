@@ -142,6 +142,57 @@ def test_planner_semantic_guard_canonicalizes_names_and_rejects_invalid_nodes() 
         _parse_planner_plan({**base, "nodes": [{**base["nodes"][0], "node_id": "invented-node"}]}, known_node_ids={"novelty"}, canonical_names={"novelty": "新颖性"})
 
 
+def test_planner_normalizes_model_route_to_static_prerequisite_order() -> None:
+    base = {
+        "plan_action": "replace",
+        "decision_reason": "初始路线",
+        "question_scope": _scope(),
+        "iteration_directive": {},
+        "teaching_guidance": _guidance(),
+    }
+    protection_scope = {
+        "node_id": "protection-scope",
+        "node_name": "错误名称",
+        "duration_min": 20,
+        "strategy": "案例",
+        "prerequisites": [],
+        "difficulty_cap": "L2",
+    }
+    rights_protection = {
+        "node_id": "patent-rights-protection",
+        "node_name": "错误名称",
+        "duration_min": 20,
+        "strategy": "规则",
+        "prerequisites": [],
+        "difficulty_cap": "L2",
+    }
+    prerequisites = {
+        "patent-rights-protection": [],
+        "protection-scope": ["patent-rights-protection"],
+    }
+    parsed = _parse_planner_plan(
+        {**base, "nodes": [protection_scope, rights_protection]},
+        known_node_ids=set(prerequisites),
+        canonical_names={
+            "patent-rights-protection": "专利权保护",
+            "protection-scope": "专利权保护范围",
+        },
+        static_prerequisites=prerequisites,
+    )
+    assert [item.node_id for item in parsed["learning_path"]] == [
+        "patent-rights-protection",
+        "protection-scope",
+    ]
+    assert parsed["learning_path"][1].prerequisites == ["patent-rights-protection"]
+    with pytest.raises(ValueError, match="missing static prerequisites"):
+        _parse_planner_plan(
+            {**base, "nodes": [protection_scope]},
+            known_node_ids=set(prerequisites),
+            canonical_names={"protection-scope": "专利权保护范围"},
+            static_prerequisites=prerequisites,
+        )
+
+
 def test_planner_always_calls_llm_and_builds_enriched_context() -> None:
     client = PlannerLLMClient()
     result = build_planner_node(client)({"session_id": "debug", "user_input": "学习新颖性", "events": []})

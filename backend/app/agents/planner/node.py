@@ -113,7 +113,13 @@ def _static_pairs_for_node(confusion: dict[str, Any], node_id: str | None) -> li
     return result
 
 
-def _parse_planner_plan(raw: dict[str, Any], *, known_node_ids: set[str], canonical_names: dict[str, str]) -> dict[str, Any]:
+def _parse_planner_plan(
+    raw: dict[str, Any],
+    *,
+    known_node_ids: set[str],
+    canonical_names: dict[str, str],
+    static_prerequisites: dict[str, list[str]] | None = None,
+) -> dict[str, Any]:
     action = raw.get("plan_action")
     if action not in {"keep", "replace"}:
         raise ValueError("Planner plan_action must be keep or replace")
@@ -124,24 +130,66 @@ def _parse_planner_plan(raw: dict[str, Any], *, known_node_ids: set[str], canoni
     if action == "replace":
         if not isinstance(nodes, list) or not nodes:
             raise ValueError("Planner replace proposal has no path nodes")
-        seen: set[str] = set()
-        for raw_node in nodes:
+        selected: dict[str, dict[str, Any]] = {}
+        original_order: dict[str, int] = {}
+        for index, raw_node in enumerate(nodes):
             if not isinstance(raw_node, dict):
                 raise TypeError("Planner path contains a non-object node")
             node_id = str(raw_node.get("node_id") or "")
             if node_id not in known_node_ids:
                 raise ValueError(f"Planner invented unknown node_id: {node_id}")
-            if node_id in seen:
+            if node_id in selected:
                 raise ValueError(f"Planner repeated node_id: {node_id}")
-            node = {**raw_node, "node_name": canonical_names[node_id]}
-            item = LearningPathItem.model_validate(
-                {key: value for key, value in node.items() if key in LearningPathItem.model_fields}
+            selected[node_id] = dict(raw_node)
+            original_order[node_id] = index
+
+        def prerequisites_for(node_id: str) -> list[str]:
+            if static_prerequisites is not None:
+                return list(static_prerequisites.get(node_id, []))
+            proposed = selected[node_id].get("prerequisites") or []
+            return [str(value) for value in proposed]
+
+        missing_prerequisites = {
+            node_id: [value for value in prerequisites_for(node_id) if value not in selected]
+            for node_id in selected
+        }
+        missing_prerequisites = {
+            node_id: values for node_id, values in missing_prerequisites.items() if values
+        }
+        if missing_prerequisites:
+            node_id, missing = next(iter(missing_prerequisites.items()))
+            raise ValueError(f"Planner node {node_id} missing static prerequisites: {missing}")
+
+        remaining = set(selected)
+        emitted: set[str] = set()
+        while remaining:
+            ready = sorted(
+                (
+                    node_id
+                    for node_id in remaining
+                    if set(prerequisites_for(node_id)).issubset(emitted)
+                ),
+                key=original_order.__getitem__,
             )
-            missing = [value for value in item.prerequisites if value not in seen]
-            if missing:
-                raise ValueError(f"Planner node {node_id} has prerequisites not earlier: {missing}")
-            parsed.append(item)
-            seen.add(node_id)
+            if not ready:
+                raise ValueError("Planner selected nodes contain a prerequisite cycle")
+            for node_id in ready:
+                node = {
+                    **selected[node_id],
+                    "node_name": canonical_names[node_id],
+                    "prerequisites": prerequisites_for(node_id),
+                }
+                parsed.append(
+                    LearningPathItem.model_validate(
+                        {
+                            key: value
+                            for key, value in node.items()
+                            if key in LearningPathItem.model_fields
+                        }
+                    )
+                )
+                emitted.add(node_id)
+                remaining.remove(node_id)
     scope = raw.get("question_scope")
     if not isinstance(scope, dict):
         raise TypeError("Planner question_scope must be an object")
@@ -188,10 +236,18 @@ def build_planner_node(llm_client: LLMClient) -> Node:
             for node in knowledge.get("nodes", [])
             if isinstance(node, dict) and node.get("node_id")
         }
+        static_prerequisites = {
+            str(node["node_id"]): [str(value) for value in node.get("predecessors", [])]
+            for node in knowledge.get("nodes", [])
+            if isinstance(node, dict) and node.get("node_id")
+        }
 
         def validate_planner_semantics(result: PlannerAgentResult) -> None:
             _parse_planner_plan(
-                result.model_dump(), known_node_ids=known_ids, canonical_names=canonical_names
+                result.model_dump(),
+                known_node_ids=known_ids,
+                canonical_names=canonical_names,
+                static_prerequisites=static_prerequisites,
             )
 
         proposal = generate_validated_json(
@@ -206,7 +262,10 @@ def build_planner_node(llm_client: LLMClient) -> Node:
             semantic_validate=validate_planner_semantics,
         )
         plan = _parse_planner_plan(
-            proposal.model_dump(), known_node_ids=known_ids, canonical_names=canonical_names
+            proposal.model_dump(),
+            known_node_ids=known_ids,
+            canonical_names=canonical_names,
+            static_prerequisites=static_prerequisites,
         )
         if plan["plan_action"] == "keep":
             if not isinstance(active_plan, dict) or not active_plan.get("nodes"):
