@@ -103,8 +103,8 @@ Planner 每次进入 teach 路径都调用 LLM 作出 `keep` 或 `replace` 决�
 尚未掌握拓扑节点写入 `five_dimensions.progress.current_node`，其余未完成节点写入 `pending_nodes`；
 CAT/BKT 已有充分观测且 `P(L) >= 0.8` 的节点进入 `completed_nodes`。`path_decision.current_node_id`
 必须与画像游标一致。Expert A/B 不消费完整长期路线，只消费后端生成的 `teaching_context`：规范的
-当前知识点名称、该节点涉及的静态易混淆对、Planner 本节建议、少量向后复习节点和至多一个 L1
-向前探测节点。完整路线保存为学员级活动计划；`keep` 保留该版本，`replace` 创建新 `plan_version`
+当前知识点名称、该节点涉及的静态易混淆对、Planner 本节建议、受限出题范围和迭代指令、少量向后复习节点和至多一个 L1
+向前探测节点。Expert A/B 的所有 draft、cross-review、revision 和 integration 阶段都只读取该投影；不得从 `StateDict.learning_path` 重建教学上下文。完整路线保存为学员级活动计划；`keep` 保留该版本，`replace` 创建新 `plan_version`
 并保留旧版本为 `superseded`。每次模型决策及其活动窗口追加保存到
 `learner_learning_plan_decisions`，同时在会话 `StateDict` 中保留本次路线快照。
 `teaching_context.backward_review_nodes` 为后端确定的 0 到 2 个风险复习节点：当存在有风险的

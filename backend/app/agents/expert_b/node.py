@@ -43,15 +43,17 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
             ),
             (
                 "user",
-                "问题：{user_input}\n"
-                "学习者画像：{learner_profile}\n"
-                "路径规划指令（来自 planner）：{planning_directive}\n"
-                "本节单节点教学上下文：{teaching_context}\n"
-                "检索上下文：{retrieval_context}\n"
-                "辩论上下文：{revision_context}\n"
-                "【教学模块选择硬约束（须严格遵循，据此产出 block_plan）】{block_plan_directive}\n"
-                "【各模块 payload 内容要素约束（须填实，禁空心 payload）】{block_content_directive}\n"
-                "请生成专家 B 草稿。",
+                (
+                    "问题：{user_input}\n"
+                    "学习者画像：{learner_profile}\n"
+                    "路径规划指令（来自 planner）：{planning_directive}\n"
+                    "本节单节点教学上下文：{teaching_context}\n"
+                    "检索上下文：{retrieval_context}\n"
+                    "辩论上下文：{revision_context}\n"
+                    "【教学模块选择硬约束（须严格遵循，据此产出 block_plan）】{block_plan_directive}\n"
+                    "【各模块 payload 内容要素约束（须填实，禁空心 payload）】{block_content_directive}\n"
+                    "请生成专家 B 草稿。"
+                ),
             ),
         ]
     )
@@ -59,6 +61,7 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
     def expert_b_node(state: StateDict) -> dict[str, Any]:
         phase = state.get("expert_phase", "draft")
         if phase == "cross_review":
+            teaching_context = extract_teaching_context(state)
             review = generate_validated_json(
                 llm_client,
                 messages=[
@@ -69,9 +72,11 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
                     LLMMessage(
                         role="user",
                         content=(
-                    f"学习者画像：{json.dumps(state.get('learner_profile', {}), ensure_ascii=False)}\n"
-                    f"专家A草稿：{json.dumps(_slim_draft_for_review(state.get('expert_a_draft', {})), ensure_ascii=False)}"
-                ),
+                            f"学习者画像：{json.dumps(state.get('learner_profile', {}), ensure_ascii=False)}\n"
+                            f"受限教学上下文（窗口权威）：{json.dumps(teaching_context, ensure_ascii=False)}\n"
+                            "请仅依据该窗口审查专家A草稿，发现超出窗口的教学节点时提出修改意见。\n"
+                            f"专家A草稿：{json.dumps(_slim_draft_for_review(state.get('expert_a_draft', {})), ensure_ascii=False)}"
+                        ),
                     ),
                 ],
                 temperature=agent_temperature("expert_b", 0.3),
@@ -85,6 +90,7 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
                 "events": [completed_event("expert_b", "reviewed expert A draft")],
             }
         if phase == "revision":
+            teaching_context = extract_teaching_context(state)
             draft = generate_validated_json(
                 llm_client,
                 messages=[
@@ -95,6 +101,8 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
                     LLMMessage(
                         role="user",
                         content=(
+                            "受限教学上下文（窗口权威，禁止扩展到其他路线节点）："
+                            f"{json.dumps(teaching_context, ensure_ascii=False)}\n"
                             f"原草稿：{json.dumps(state.get('expert_b_draft', {}), ensure_ascii=False)}\n"
                             f"专家A互评：{json.dumps(state.get('expert_a_cross_review', {}), ensure_ascii=False)}"
                         ),
@@ -127,7 +135,7 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
                 )
                 _bp_dir = format_default_block_plan_directive(_default)
                 _bc_dir = format_block_content_directive(_default.get("required_blocks", []))
-            except Exception:
+            except (KeyError, TypeError, ValueError):
                 _bp_dir = ""
                 _bc_dir = ""
 

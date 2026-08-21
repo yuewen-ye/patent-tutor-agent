@@ -802,6 +802,22 @@ class LightweightReview(ContractModel):
     unresolved: list[str] | None = None
 
 
+class TeachingContext(ContractModel):
+    """Backend-owned bounded lesson window passed to teaching Experts."""
+
+    current_node_id: str | None = None
+    current_topic: dict[str, Any] = Field(default_factory=dict)
+    current_node: dict[str, Any] | None = None
+    current_static_confusion_pairs: list[dict[str, Any]] = Field(default_factory=list)
+    planner_guidance: dict[str, Any] = Field(default_factory=dict)
+    planning_directive: dict[str, Any] = Field(default_factory=dict)
+    backward_review_nodes: list[dict[str, Any]] = Field(default_factory=list)
+    forward_probe_nodes: list[dict[str, Any]] = Field(default_factory=list)
+    weakness_probe_nodes: list[dict[str, Any]] = Field(default_factory=list)
+    progress: dict[str, Any] = Field(default_factory=dict)
+    lesson_policy: dict[str, Any] = Field(default_factory=dict)
+
+
 class StateDict(TypedDict):
     session_id: str
     user_input: str
@@ -828,6 +844,7 @@ class StateDict(TypedDict):
     expert_phase: NotRequired[Literal["draft", "cross_review", "revision", "integration"]]
     dual_axis_snapshot: NotRequired[dict[str, Any]]
     path_decision: NotRequired[dict[str, Any]]
+    # Serialized TeachingContext; full learning_path remains Planner/navigation/audit-only.
     teaching_context: NotRequired[dict[str, Any]]
     expert_a_cross_review: NotRequired[dict[str, Any]]
     expert_b_cross_review: NotRequired[dict[str, Any]]

@@ -245,6 +245,7 @@ def build_planner_node(llm_client: LLMClient) -> Node:
             question_scope=scope,
             static_confusion_pairs=_static_pairs_for_node(confusion, selected),
             planner_guidance=guidance,
+            iteration_directive=plan["iteration_directive"],
         )
         plan_metadata: dict[str, Any] = {"plan_action": plan["plan_action"], "decision_reason": plan["decision_reason"]}
         if learner_id and callable(getattr(store, "create_learning_plan", None)) and plan["plan_action"] == "replace":

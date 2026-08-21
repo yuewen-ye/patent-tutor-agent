@@ -433,6 +433,7 @@ def build_teaching_context(
     question_scope: dict[str, list[dict[str, Any]]],
     static_confusion_pairs: list[dict[str, Any]] | None = None,
     planner_guidance: dict[str, Any] | None = None,
+    iteration_directive: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the small, explicit context consumed by both teaching Experts."""
 
@@ -465,6 +466,13 @@ def build_teaching_context(
             dict(pair) for pair in (static_confusion_pairs or []) if isinstance(pair, dict)
         ],
         "planner_guidance": dict(planner_guidance or {}),
+        "planning_directive": {
+            "question_scope": {
+                key: [dict(item) for item in values]
+                for key, values in question_scope.items()
+            },
+            "iteration_directive": dict(iteration_directive or {}),
+        },
         "backward_review_nodes": scoped_nodes("backward_review"),
         "forward_probe_nodes": scoped_nodes("forward_probe"),
         "weakness_probe_nodes": scoped_nodes("weakness_probe"),
