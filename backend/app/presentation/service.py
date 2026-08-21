@@ -58,6 +58,16 @@ def _normalize_presentation_design(raw: object) -> object:
         if composition == "timeline":
             normalized["composition"] = "timeline_with_callout"
 
+        allowed_templates = {
+            "cover_minimal", "cover_split", "content_rule_card", "content_bullet_grid",
+            "irac_flow", "legal_citation_focus", "case_analysis_split", "comparison_matrix",
+            "timeline_process", "exam_checklist", "summary_roadmap", "hero_statement",
+            "evidence_stack", "decision_tree", "concept_map",
+        }
+        template_id = normalized.get("template_id")
+        if template_id is not None and str(template_id) not in allowed_templates:
+            normalized["template_id"] = None
+
         visual_elements = normalized.get("visual_elements")
         if isinstance(visual_elements, list):
             normalized_elements: list[dict[str, Any]] = []
