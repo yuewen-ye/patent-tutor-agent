@@ -18,7 +18,7 @@ from backend.app.agents.common import (
     schema_note,
 )
 from backend.app.agents.rag_tools import collect_judge_retrieval_context
-from backend.app.core.agent_runtime_config import agent_temperature
+from backend.app.core.agent_runtime_config import agent_runtime_settings, agent_temperature
 from backend.app.core.llm import LLMClient, LLMMessage
 from backend.app.schemas.state import JudgeReport, StateDict, completed_event
 
@@ -331,7 +331,9 @@ def build_judge_node(llm_client: LLMClient) -> Node:
             case "revise":
                 new_round = current_round + 1
                 updates["revision_round"] = new_round
-                if new_round >= 3:
+                max_revisions = agent_runtime_settings("judge").max_revisions
+                cap = max_revisions if max_revisions is not None else 3
+                if new_round >= cap:
                     updates["workflow_status"] = "completed"
             case unreachable:
                 assert_never(unreachable)

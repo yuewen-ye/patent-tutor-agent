@@ -33,6 +33,49 @@ PPTX_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presen
 _PRESENTATION_SYSTEM = load_prompt(__file__)
 
 
+def _normalize_presentation_design(raw: object) -> object:
+    """Normalize common LLM deviations before Pydantic validation."""
+    if not isinstance(raw, dict):
+        return raw
+    design = dict(raw)
+    slides = design.get("slides")
+    if not isinstance(slides, list):
+        return design
+    normalized_slides: list[dict[str, Any]] = []
+    for slide in slides:
+        if not isinstance(slide, dict):
+            normalized_slides.append(slide)
+            continue
+        normalized = dict(slide)
+        legal_ref = normalized.get("legal_reference")
+        if isinstance(legal_ref, list):
+            parts = [str(item) for item in legal_ref if item]
+            normalized["legal_reference"] = "; ".join(parts) if parts else None
+        elif legal_ref == "":
+            normalized["legal_reference"] = None
+
+        composition = str(normalized.get("composition") or "")
+        if composition == "timeline":
+            normalized["composition"] = "timeline_with_callout"
+
+        visual_elements = normalized.get("visual_elements")
+        if isinstance(visual_elements, list):
+            normalized_elements: list[dict[str, Any]] = []
+            for element in visual_elements:
+                if not isinstance(element, dict):
+                    normalized_elements.append(element)
+                    continue
+                normalized_element = dict(element)
+                element_type = str(normalized_element.get("type") or "")
+                if element_type == "summary_roadmap":
+                    normalized_element["type"] = "concept_map"
+                normalized_elements.append(normalized_element)
+            normalized["visual_elements"] = normalized_elements
+        normalized_slides.append(normalized)
+    design["slides"] = normalized_slides
+    return design
+
+
 def build_presentation_source(
     course_package: dict[str, Any], course_slides: dict[str, Any]
 ) -> PresentationSource:
@@ -135,6 +178,7 @@ def generate_presentation_artifact(
         agent="generate_pptx",
         output_model=PresentationDesign,
         schema_name="PresentationDesign",
+        normalize=_normalize_presentation_design,
     )
     _validate_design(design, source)
     content = render_pptx(design)
