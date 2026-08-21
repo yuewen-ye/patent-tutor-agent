@@ -86,6 +86,7 @@ class JourneyConfig:
     cat_mode: Literal["interactive", "off"] = "off"
     cat_max_answers: int = 0
     require_pptx: bool = True
+    verify_reteach_planning: bool = True
 
 
 def _workflow_events(snapshot: dict[str, Any]) -> tuple[dict[str, Any], ...]:
@@ -265,20 +266,18 @@ def _completed_event_summary(
     duration_suffix = ""
     if isinstance(duration, int | float):
         duration_suffix = f"（耗时 {_format_elapsed(float(duration) / 1000)}）"
-    message = str(event.get("message") or "")
-    algorithm_suffix = ""
-    if label == "Planner 学习路径规划" and "deterministic_astar" in message:
-        algorithm_suffix = "；使用 deterministic_astar"
+    planner_suffix = ""
+    if label == "Planner 学习路径规划":
         state = snapshot.get("state")
         path_decision = state.get("path_decision") if isinstance(state, dict) else None
-        fallback_reason = (
-            path_decision.get("fallback_reason")
-            if isinstance(path_decision, dict)
-            else None
-        )
-        if fallback_reason:
-            algorithm_suffix += f"；Agent 降级原因：{fallback_reason}"
-    return f"{label}完成{duration_suffix}{algorithm_suffix}"
+        if isinstance(path_decision, dict):
+            action = path_decision.get("plan_action")
+            algorithm = path_decision.get("algorithm")
+            if action in {"keep", "replace"}:
+                planner_suffix += f"；LLM 决策={action}"
+            if algorithm:
+                planner_suffix += f"；算法={algorithm}"
+    return f"{label}完成{duration_suffix}{planner_suffix}"
 
 
 class ApiJourney:
@@ -354,9 +353,10 @@ class ApiJourney:
         if isinstance(path_decision, dict) and path_decision.get("plan_id"):
             print(
                 "    学习计划："
+                f"action={path_decision.get('plan_action')}；"
                 f"id={path_decision['plan_id']}；"
                 f"version={path_decision.get('plan_version')}；"
-                f"reused={path_decision.get('plan_reused')}"
+                f"algorithm={path_decision.get('algorithm')}"
             )
         if cat_knowledge_snapshot is not None:
             self._validate_cat_course_handoff(
@@ -478,19 +478,65 @@ class ApiJourney:
             feedback_session_id, feedback_artifact
         )
 
-        self._step("11", "查询学员画像、画像历史、学习历史和会话历史")
+        reteach_session_id: str | None = None
+        reteach_path_decision: dict[str, Any] | None = None
+        if self.config.verify_reteach_planning:
+            self._step("11", "创建复教会话，验证 Planner 再次调用与计划决策")
+            reteach_created = self._request_json(
+                "POST",
+                f"/sessions/{quote(course_session_id, safe='')}/reteach",
+                json_body={"learner_id": self.config.learner_id},
+            )
+            reteach_session_id = self._required_string(reteach_created, "session_id")
+            if reteach_session_id == course_session_id:
+                raise JourneyError("复教会话 ID 不应与原课程会话 ID 相同。")
+            reteach = self._wait_for_session(reteach_session_id)
+            reteach_state = self._required_mapping(reteach, "state")
+            reteach_path_decision = self._required_mapping(reteach_state, "path_decision")
+            if reteach_path_decision.get("algorithm") != "llm_planner":
+                raise JourneyError(
+                    "复教会话未使用 LLM Planner："
+                    f"algorithm={reteach_path_decision.get('algorithm')!r}"
+                )
+            if reteach_path_decision.get("plan_action") not in {"keep", "replace"}:
+                raise JourneyError(
+                    "复教会话缺少 Planner keep/replace 决策："
+                    f"plan_action={reteach_path_decision.get('plan_action')!r}"
+                )
+            print(
+                "    复教 Planner："
+                f"action={reteach_path_decision['plan_action']}；"
+                f"plan_id={reteach_path_decision.get('plan_id')}；"
+                f"version={reteach_path_decision.get('plan_version')}"
+            )
+
+        self._step("12", "查询学员画像、画像历史、学习历史、计划历史和会话历史")
         learner = self._request_json("GET", f"/learners/{learner_path}")
         profiles = self._request_json("GET", f"/learners/{learner_path}/profiles")
         history = self._request_json("GET", f"/learners/{learner_path}/history")
         learner_sessions = self._request_json(
             "GET", f"/learners/{learner_path}/sessions"
         )
+        planning_history = learner.get("planning_history")
+        if self.config.verify_reteach_planning:
+            if not isinstance(planning_history, list) or len(planning_history) < 2:
+                raise JourneyError(
+                    "复教后 planning_history 应至少包含首次与复教两条 Planner 生命周期记录。"
+                )
+            if not any(
+                isinstance(item, dict)
+                and item.get("decision_kind") in {"keep", "replace"}
+                for item in planning_history
+            ):
+                raise JourneyError("planning_history 缺少 Planner keep/replace 决策。")
+            print(f"    计划历史：{len(planning_history)} 条决策记录。")
 
         summary = {
             "success": True,
             "learner_id": self.config.learner_id,
             "course_session_id": course_session_id,
             "feedback_session_id": feedback_session_id,
+            "reteach_session_id": reteach_session_id,
             "questionnaire_version": questionnaire.get("version"),
             "questionnaire_question_count": len(question_ids),
             "questionnaire_response_count": len(self.config.questionnaire_responses),
@@ -506,6 +552,9 @@ class ApiJourney:
             },
             "mastery": learner.get("mastery", {}),
             "active_learning_plan": learner.get("active_learning_plan"),
+            "planning_history": planning_history,
+            "initial_planner_decision": path_decision,
+            "reteach_planner_decision": reteach_path_decision,
             "profile_count": len(profiles.get("profiles", [])),
             "history_count": len(history.get("history", [])),
             "learner_session_count": len(learner_sessions.get("sessions", [])),
@@ -1039,6 +1088,11 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Do not fail when PATENT_TUTOR_PPTX_ENABLED is disabled or PPTX is degraded.",
     )
+    parser.add_argument(
+        "--skip-reteach-planning-check",
+        action="store_true",
+        help="Skip the post-feedback reteach session and Planner history verification.",
+    )
     return parser
 
 
@@ -1073,6 +1127,7 @@ def main(argv: list[str] | None = None) -> int:
             cat_mode=args.cat_mode,
             cat_max_answers=args.cat_max_answers,
             require_pptx=not args.allow_missing_pptx,
+            verify_reteach_planning=not args.skip_reteach_planning_check,
         )
         with httpx.Client(
             base_url=args.base_url.rstrip("/"), timeout=args.request_timeout
