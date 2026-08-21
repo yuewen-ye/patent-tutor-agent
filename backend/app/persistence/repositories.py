@@ -558,6 +558,7 @@ class MySQLLearnerStore:
             active_learning_plan = self._active_learning_plan_on_connection(
                 connection, learner_id
             )
+        decisions = self.list_learning_plan_decisions(learner_id, limit=limit)
         return {
             "learner_id": learner_id,
             "latest_profile": dict(profiles[0].value) if profiles else None,
@@ -566,6 +567,7 @@ class MySQLLearnerStore:
             "history": [dict(item.value) for item in history],
             "mastery": mastery,
             "active_learning_plan": active_learning_plan,
+            "planning_history": decisions,
         }
 
     def active_learning_plan(self, learner_id: str) -> dict[str, Any] | None:
@@ -752,6 +754,78 @@ class MySQLLearnerStore:
             )
             updated = cursor.fetchone()
             return self._learning_plan_from_row(connection, updated)
+
+    def record_learning_plan_decision(
+        self,
+        *,
+        learner_id: str,
+        session_id: str | None,
+        plan_id: str | None,
+        previous_plan_id: str | None = None,
+        decision_kind: str,
+        outcome: str,
+        reason_code: str,
+        learning_goal_hash: str | None = None,
+        knowledge_graph_version: str | None = None,
+        from_plan_version: int | None = None,
+        to_plan_version: int | None = None,
+        from_current_node_id: str | None = None,
+        to_current_node_id: str | None = None,
+        progress_before: dict[str, Any] | None = None,
+        progress_after: dict[str, Any] | None = None,
+        path_decision: dict[str, Any] | None = None,
+        teaching_context: dict[str, Any] | None = None,
+        decision_key: str | None = None,
+    ) -> dict[str, Any]:
+        now = _db_now()
+        key = decision_key or f"{session_id or 'manual'}:{decision_kind}:{plan_id or 'none'}"
+        decision_id = uuid.uuid4().hex
+        with self.database.transaction() as connection:
+            self._ensure_student(connection, learner_id, now)
+            session_ref = (
+                self._existing_id(connection, "sessions", "session_id", session_id)
+                if session_id
+                else None
+            )
+            cursor = connection.cursor()
+            cursor.execute(
+                "INSERT INTO learner_learning_plan_decisions("
+                "decision_id, decision_key, student_id, session_id, plan_id, previous_plan_id, "
+                "decision_kind, outcome, reason_code, learning_goal_hash, knowledge_graph_version, "
+                "from_plan_version, to_plan_version, from_current_node_id, to_current_node_id, "
+                "progress_before_json, progress_after_json, path_decision_json, teaching_context_json, created_at"
+                ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
+                "ON DUPLICATE KEY UPDATE decision_id=decision_id",
+                (
+                    decision_id, key, learner_id, session_ref, plan_id, previous_plan_id,
+                    decision_kind, outcome, reason_code, learning_goal_hash, knowledge_graph_version,
+                    from_plan_version, to_plan_version, from_current_node_id, to_current_node_id,
+                    _json_dump(progress_before) if progress_before is not None else None,
+                    _json_dump(progress_after) if progress_after is not None else None,
+                    _json_dump(path_decision) if path_decision is not None else None,
+                    _json_dump(teaching_context) if teaching_context is not None else None, now,
+                ),
+            )
+            cursor.execute(
+                "SELECT * FROM learner_learning_plan_decisions WHERE student_id=%s AND decision_key=%s",
+                (learner_id, key),
+            )
+            return self._learning_plan_decision_from_row(cursor.fetchone())
+
+    def list_learning_plan_decisions(
+        self, learner_id: str, *, limit: int = 50, plan_id: str | None = None
+    ) -> list[dict[str, Any]]:
+        with self.database.transaction() as connection:
+            cursor = connection.cursor()
+            query = "SELECT * FROM learner_learning_plan_decisions WHERE student_id=%s"
+            parameters: list[Any] = [learner_id]
+            if plan_id:
+                query += " AND (plan_id=%s OR previous_plan_id=%s)"
+                parameters.extend([plan_id, plan_id])
+            query += " ORDER BY created_at DESC, decision_id DESC LIMIT %s"
+            parameters.append(limit)
+            cursor.execute(query, tuple(parameters))
+            return [self._learning_plan_decision_from_row(row) for row in cursor.fetchall()]
 
     def mastery(self, learner_id: str) -> dict[str, float]:
         with self.database.transaction() as connection:
@@ -1698,6 +1772,30 @@ class MySQLLearnerStore:
             "completed_at": (
                 _iso(row["completed_at"]) if row.get("completed_at") else None
             ),
+        }
+
+    def _learning_plan_decision_from_row(self, row: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "decision_id": str(row["decision_id"]),
+            "decision_key": str(row["decision_key"]),
+            "learner_id": str(row["student_id"]),
+            "session_id": row.get("session_id"),
+            "plan_id": row.get("plan_id"),
+            "previous_plan_id": row.get("previous_plan_id"),
+            "decision_kind": str(row["decision_kind"]),
+            "outcome": str(row["outcome"]),
+            "reason_code": str(row.get("reason_code") or ""),
+            "learning_goal_hash": row.get("learning_goal_hash"),
+            "knowledge_graph_version": row.get("knowledge_graph_version"),
+            "from_plan_version": row.get("from_plan_version"),
+            "to_plan_version": row.get("to_plan_version"),
+            "from_current_node_id": row.get("from_current_node_id"),
+            "to_current_node_id": row.get("to_current_node_id"),
+            "progress_before": _json_load(row.get("progress_before_json"), None),
+            "progress_after": _json_load(row.get("progress_after_json"), None),
+            "path_decision": _json_load(row.get("path_decision_json"), None),
+            "teaching_context": _json_load(row.get("teaching_context_json"), None),
+            "created_at": _iso(row["created_at"]),
         }
 
     def _mastery_on_connection(self, connection: Any, learner_id: str) -> dict[str, float]:

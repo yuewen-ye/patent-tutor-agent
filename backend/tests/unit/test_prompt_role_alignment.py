@@ -107,11 +107,12 @@ def test_planner_preserves_full_route_role_with_backend_as_final_guard() -> None
     planner = _prompt("planner", "system.md")
 
     assert "双知识结构图" in planner
-    assert "A*" in planner
     assert "完整学习路径" in planner
     assert "PlannerAgentResult" in planner
     assert "后端负责拓扑校验、课程游标和最终活动窗口" in planner
-    assert "`nodes` 表示完整学习路线" in planner
+    assert "`nodes` 表示完整学习路径" in planner
+    assert "plan_action=\"keep\"" in planner
+    assert "A* 路线降级" not in planner
     assert "仅为字段结构示例，不是固定答案" in planner
     assert "禁止照抄" in planner
 

@@ -36,6 +36,17 @@ class QueueLLMClient:
                     "five_dimensions": {"knowledge": {"novelty": {"pl": 0.3, "ci_low": 0.15, "ci_high": 0.5, "observations": 3, "low_confidence": False}}, "cognition": {"remember": 0.8, "understand": 0.6, "apply": 0.4, "analyze": 0.3, "evaluate": 0.2, "create": 0.1}, "style": {"perception": {"chosen": "sensing", "strength": 0.7}, "input": {"chosen": "visual", "strength": 0.6}, "processing": {"chosen": "active", "strength": 0.55}, "understanding": {"chosen": "sequential", "strength": 0.65}}, "progress": {"completed_nodes": ["patent-law-basic"], "current_node": "novelty-basic", "pending_nodes": ["inventiveness"], "avg_time_per_node_min": 22, "overall_completion_ratio": 0.3}, "affect": {"primary_state": "interested", "confidence": 0.6, "signals": ["主动提问"]}},
                 },
             ],
+            "planner": [{
+                "plan_action": "replace",
+                "decision_reason": "首次建立路线",
+                "nodes": [
+                    {"node_id": "patent-law-foundation", "node_name": "专利法律制度基础", "duration_min": 20, "strategy": "概念", "prerequisites": [], "difficulty_cap": "L1"},
+                    {"node_id": "patent-system-overview", "node_name": "专利制度概论", "duration_min": 20, "strategy": "框架", "prerequisites": ["patent-law-foundation"], "difficulty_cap": "L2"},
+                ],
+                "question_scope": {"backward_review": [], "forward_probe": [], "weakness_probe": []},
+                "iteration_directive": {"type": "无", "trigger": "首轮", "action": "反馈后调整"},
+                "teaching_guidance": {"lesson_focus": ["制度基础"], "priority_weaknesses": [], "teaching_strategy": "规则讲解", "confusion_guidance": "辨析相关概念"},
+            }],
             "expert_a": [
                 {
                     "expert": "expert_a",

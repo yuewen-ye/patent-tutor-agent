@@ -40,11 +40,14 @@ def test_agent_output_json_schemas_follow_interface_spec() -> None:
     planner_schema = schemas["planner"]
     assert planner_schema["additionalProperties"] is False
     assert set(planner_schema["required"]) == {
-        "nodes",
+        "plan_action",
+        "decision_reason",
         "question_scope",
         "iteration_directive",
+        "teaching_guidance",
     }
-    assert "maxItems" not in planner_schema["properties"]["nodes"]
+    assert "maxItems" not in planner_schema["properties"]["nodes"]["anyOf"][0]
+    assert planner_schema["properties"]["plan_action"]["enum"] == ["keep", "replace"]
     planner_node = planner_schema["$defs"]["PlannerPathNode"]
     assert set(planner_node["required"]) == {
         "node_id",

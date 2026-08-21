@@ -161,7 +161,11 @@ def test_mysql_schema_contains_business_tables() -> None:
 def test_fresh_schema_contains_unified_mastery_and_diagnostic_contract() -> None:
     database = MySQLDatabase(url="mysql://root:password@localhost/patent_tutor")
 
-    assert database.expected_migrations() == ["001_initial", "002_mastery_events"]
+    assert database.expected_migrations() == [
+        "001_initial",
+        "002_mastery_events",
+        "003_learning_plan_decisions",
+    ]
 
     migration = Path("backend/app/persistence/migrations/001_initial.sql").read_text(
         encoding="utf-8"
@@ -376,7 +380,7 @@ def test_diagnostic_repository_persists_ungraded_profile_attempt() -> None:
         idempotency_key="profile-attempt-1",
     )
 
-    attempts_insert_sql, attempts_insert_params = next(
+    _attempts_insert_sql, attempts_insert_params = next(
         (sql, params)
         for sql, params in database.connection.recording_cursor.executions
         if "INSERT IGNORE INTO attempts" in sql

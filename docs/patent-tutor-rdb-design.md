@@ -6,7 +6,7 @@
 
 ## 1. 设计结论
 
-系统使用单一 MySQL 业务库，初始结构共 **17 张物理表**：16 张业务表和 1 张运行支撑表。它替代此前约 30 张表的实现；**不提供旧结构的数据迁移**。
+系统使用单一 MySQL 业务库，当前结构共 **18 张物理表**：17 张业务表和 1 张运行支撑表。它替代此前约 30 张表的实现；**不提供旧结构的数据迁移**。
 
 完整 Markdown 过程产物继续保存在 `artifacts/sessions/{session_id}/`，MySQL 仅保存其路径、哈希、归属和引用关系。知识 DAG、混淆对仍由 `backend/app/curriculum/data/` 的运行时 JSON 维护，Milvus 继续承担向量检索。
 
@@ -14,7 +14,7 @@
 |---|---|
 | 运行支撑 | `memory_items` |
 | 学员与画像 | `students`、`student_profiles`、`profile_history`、`student_node_mastery` |
-| 会话与课程过程 | `sessions`、`session_states`、`rounds`、`learner_learning_plans`、`learner_learning_plan_nodes` |
+| 会话与课程过程 | `sessions`、`session_states`、`rounds`、`learner_learning_plans`、`learner_learning_plan_nodes`、`learner_learning_plan_decisions` |
 | 学习闭环 | `onboarding_responses`、`questions`、`attempts`、`mastery_events` |
 | 产物与引用 | `artifacts`、`legal_citations`、`artifact_citations` |
 
@@ -64,7 +64,8 @@ erDiagram
 | `student_profiles` / `profile_history` | 前者是当前完整画像 JSON，后者只追加保存版本化画像和 mastery 快照；弱点属于画像 JSON，不维护双写投影表。 |
 | `student_node_mastery` / `mastery_events` | 前者为 Planner 当前 BKT 依据；后者记录每个节点的直接观测或 DAG 推断。`(attempt_id,node_id,event_kind)` 防止重复事件。 |
 | `sessions` / `session_states` | 前者保存生命周期，后者保存最新完整 StateDict、追加事件、路径与活动窗口。当前内存 checkpointer 不支持断点恢复，因此没有空置 checkpoint 表。 |
-| `learner_learning_plans` / `_nodes` | 活动计划、完整节点序列和权威游标；事务锁定学员行以维持每学员最多一条 `active` 计划。单次会话采用的活动窗口留在状态快照，不另建路径/指令表。 |
+| `learner_learning_plans` / `_nodes` | 活动计划、完整节点序列和权威游标；事务锁定学员行以维持每学员最多一条 `active` 计划。 |
+| `learner_learning_plan_decisions` | Planner 与进度的追加式审计历史；保存 keep/replace、版本关系、决策原因、路线决策和本节教学上下文快照。 |
 | `questions` / `attempts` | 课程生成题和固定 CAT 诊断题共用题目、服务端判题和幂等作答链。诊断题发出时以 `origin='diagnostic_catalog'` 保存题目快照。`(student_id,idempotency_key)` 唯一。 |
 | `onboarding_responses` | 原始问卷提交的审计记录。 |
 | `artifacts` / `legal_citations` / `artifact_citations` | Markdown 安全索引、法条来源和多对多引用；正文不入库。 |
@@ -183,6 +184,10 @@ erDiagram
 | `replan_reason` | 重规划或替换计划的原因。 |
 | `last_progress_decision` | 最近一次由后端作出的进度推进决策快照。 |
 | `created_at` / `updated_at` / `completed_at` | 创建、更新和完成时间。 |
+
+### `learner_learning_plan_decisions`
+
+该表为不可变追加记录。每条记录关联学员、可选会话、采用计划和被替换计划，保存 `initial`、`keep`、`replace` 或 `progress` 决策、版本与游标前后状态、理由、路线决策及小型教学上下文快照。`decision_key` 在同一学员内唯一，用于工作流重试时避免重复审计事件；按学员、计划和会话时间线提供索引查询。
 
 ### `learner_learning_plan_nodes`
 

@@ -7,9 +7,8 @@ import threading
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
 from pathlib import Path
-from typing import TypeGuard
+from typing import Any, TypeGuard
 
 from langgraph.runtime import Runtime
 
@@ -281,6 +280,12 @@ def learner_memory_snapshot(
     active_learning_plan = (
         active_plan_reader(learner_id) if callable(active_plan_reader) else None
     )
+    decisions_reader = getattr(store, "list_learning_plan_decisions", None)
+    planning_history = (
+        decisions_reader(learner_id, limit=limit)
+        if callable(decisions_reader)
+        else []
+    )
     return {
         "learner_id": learner_id,
         "latest_profile": profiles[0] if profiles else None,
@@ -289,6 +294,7 @@ def learner_memory_snapshot(
         "history": history,
         "mastery": mastery,
         "active_learning_plan": active_learning_plan,
+        "planning_history": planning_history,
     }
 
 

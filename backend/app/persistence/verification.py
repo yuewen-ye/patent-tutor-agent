@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import hashlib
-from pathlib import Path, PurePosixPath
-from typing import Any, Mapping, TypedDict
 import uuid
+from collections.abc import Mapping
+from pathlib import Path, PurePosixPath
+from typing import Any, TypedDict
 
 from backend.app.persistence.db import MySQLDatabase
 from backend.app.persistence.repositories import MySQLLearnerStore
@@ -23,6 +24,7 @@ REQUIRED_TABLES = {
     "attempts",
     "legal_citations",
     "learner_learning_plan_nodes",
+    "learner_learning_plan_decisions",
     "learner_learning_plans",
     "mastery_events",
     "memory_items",
@@ -46,6 +48,10 @@ REQUIRED_FOREIGN_KEYS = {
     "fk_attempts_student",
     "fk_artifacts_round",
     "fk_artifacts_session",
+    "fk_learning_plan_decisions_plan",
+    "fk_learning_plan_decisions_previous_plan",
+    "fk_learning_plan_decisions_session",
+    "fk_learning_plan_decisions_student",
     "fk_learner_plan_nodes_plan",
     "fk_learner_plans_last_session",
     "fk_learner_plans_source_session",
@@ -362,6 +368,21 @@ def run_write_smoke_test(database: MySQLDatabase) -> list[VerificationCheck]:
             decision={"advanced": True},
         )
         active_plan = store.active_learning_plan(learner_id)
+        planning_decision = store.record_learning_plan_decision(
+            learner_id=learner_id,
+            session_id=course_session_id,
+            plan_id=str(learning_plan["plan_id"]),
+            decision_kind="keep",
+            outcome="kept",
+            reason_code="verification",
+            to_plan_version=int(learning_plan["plan_version"]),
+            to_current_node_id="verification-next",
+            progress_after=dict(updated_plan.get("progress") or {}),
+            path_decision={"plan_action": "keep"},
+            teaching_context={"current_topic": {"node_id": "verification-next"}},
+            decision_key=f"{course_session_id}:verification:keep",
+        )
+        planning_history = store.list_learning_plan_decisions(learner_id, limit=5)
         checks.append(
             _check(
                 "active_learning_plan_round_trip",
@@ -372,6 +393,19 @@ def run_write_smoke_test(database: MySQLDatabase) -> list[VerificationCheck]:
                     and active_plan.get("plan_version") == 1
                 ),
                 "learner plan and node cursor persisted",
+            )
+        )
+        checks.append(
+            _check(
+                "learning_plan_decision_history_round_trip",
+                bool(
+                    planning_decision
+                    and any(
+                        item.get("decision_id") == planning_decision.get("decision_id")
+                        for item in planning_history
+                    )
+                ),
+                "append-only planner decision persisted and reloaded",
             )
         )
         results = store.record_attempts(

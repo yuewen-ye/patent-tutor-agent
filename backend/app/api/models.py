@@ -62,6 +62,7 @@ class LearnerMemoryResponse(FrozenApiModel):
     history: list[dict[str, Any]]
     mastery: dict[str, float] = Field(default_factory=dict)
     active_learning_plan: dict[str, Any] | None = None
+    planning_history: list[dict[str, Any]] = Field(default_factory=list)
     sessions: list[dict[str, Any]] = Field(default_factory=list)
 
 

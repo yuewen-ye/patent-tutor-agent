@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import json
-
 from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
 
-from backend.app.core.agent_runtime_config import agent_temperature
 from backend.app.agents.common import (
     Node,
+    _slim_draft_for_review,
     constrain_expert_draft_to_current_lesson,
     extract_planning_directive,
     extract_teaching_context,
@@ -19,16 +18,16 @@ from backend.app.agents.common import (
     messages_from_prompt,
     normalize_cross_review_payload,
     normalize_expert_draft_payload,
-    _slim_draft_for_review,
 )
 from backend.app.agents.rag_tools import collect_expert_retrieval_context
+from backend.app.core.agent_runtime_config import agent_temperature
 from backend.app.core.llm import LLMClient, LLMMessage
-from backend.app.schemas.state import CrossReview, ExpertDraft, StateDict, completed_event
+from backend.app.curriculum.block_content_spec import format_block_content_directive
 from backend.app.curriculum.learning_path import (
     compute_default_block_plan,
     format_default_block_plan_directive,
 )
-from backend.app.curriculum.block_content_spec import format_block_content_directive
+from backend.app.schemas.state import CrossReview, ExpertDraft, StateDict, completed_event
 
 _DRAFT_SYSTEM_PROMPT = load_prompt(__file__, "draft_system.md")
 _CROSS_REVIEW_SYSTEM_PROMPT = load_prompt(__file__, "cross_review_system.md")
@@ -115,12 +114,7 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
                 "events": [completed_event("expert_b", "revised expert B draft")],
             }
 
-        path_decision = state.get("path_decision", {}) or {}
-        _cur = str(path_decision.get("current_node_id") or "")
-        if not _cur:
-            _lp = state.get("learning_path", []) or []
-            if _lp and isinstance(_lp[0], dict):
-                _cur = str(_lp[0].get("node_id") or "")
+        _cur = str(extract_teaching_context(state).get("current_node_id") or "")
         _profile = state.get("learner_profile", {}) or {}
         _bp_dir = ""
         _bc_dir = ""

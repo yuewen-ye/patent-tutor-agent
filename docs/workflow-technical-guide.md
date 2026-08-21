@@ -84,20 +84,19 @@ LLM 输出合同均不含知识掌握度：诊断阶段由后端用 CAT/BKT 快�
 
 - 知识轴来自 `backend/app/curriculum/data/knowledge-dag.json`。
 - 混淆对定义来自 `backend/app/curriculum/data/confusion-pairs.json`，运行时不改写静态定义。
-- `planner` 读取数据库中该学员的最新画像和 BKT 掌握度，将完整知识 DAG、完整易混淆图
-  及本地 A* 完整候选路线交给 LLM，要求它以 `PlannerAgentResult` 严格 Schema 给出路径提案；
-  提案不可用时由 `backend/app/curriculum/learning_path.py` 确定性降级。
-  降级原因写入 `path_decision.fallback_reason` 并记录 warning，不能静默吞掉。难度上限、
-  双轴快照和最终状态写入仍由后端负责。Planner 同时接收本地 A* 候选路线，Agent 可结合
-  画像删减或局部调整，但不得因单节课长度截断完整路线；节点真实性、重复项和先修顺序由后端校验。
-- 首次规划的完整路线会以学员级计划写入 `learner_learning_plans` 和
-  `learner_learning_plan_nodes`。后续 teach 会话若学习目标和知识 DAG 版本未变化，
-  Planner 节点直接恢复该计划，`path_decision.algorithm=persisted_plan`，不再调用 Planner
-  模型。只有首次学习、学习目标变化、知识 DAG 版本变化或计划损坏时才重新规划并新增
-  `plan_version`；旧计划保留为 `superseded` 审计记录。
-- 后端以 `five_dimensions.progress` 维护权威课程游标。完整 `learning_path` 用于导航；
-  `teaching_context` 只向 Expert A/B 暴露一个主教学节点、少量复习节点和至多一个前探节点。
-  两位专家每次协作生成一节单节点课程，不一次性讲完整条路线。
+- `planner` 在每个 teach 会话读取最新画像、BKT 掌握度、完整静态知识 DAG、完整静态易混淆图和
+  当前活动计划，并以 `PlannerAgentResult` 严格 Schema 作出 `keep` 或 `replace` 决策。没有
+  确定性 A* 路线降级：主模型失败后 Router 请求一次 fallback 模型；fallback 失败后才开始下一轮
+  主模型请求，直到主模型 `retry_times` 耗尽。全部模型尝试失败时 Planner 失败，课程会话不写入伪造路线。
+  节点真实性、规范名称、重复项、先修顺序、难度上限、游标与活动窗口仍由后端校验和组装。
+- 首次 `replace` 和后续替换以学员级计划写入 `learner_learning_plans`、
+  `learner_learning_plan_nodes` 并新增 `plan_version`；旧活动计划标记为 `superseded`。`keep`
+  保持原计划版本，但仍记录本次模型决策。所有 `initial`、`keep`、`replace` 和进度变更追加写入
+  `learner_learning_plan_decisions`，可按学员、计划或会话读取历史。
+- 后端以 `five_dimensions.progress` 维护权威课程游标。完整 `learning_path` 仅用于导航、会话冻结
+  和反馈进度；`teaching_context` 只向 Expert A/B 暴露当前规范知识点名称、少量复习节点、至多一个
+  前探节点、该节点的静态易混淆对和 Planner 本节建议。两位专家每次协作生成一节单节点课程，不一次性
+  讲完整路线。
 - 活动窗口中的复习节点由后端风险调度器选择，数量为 0 到 2，不按路径顺序机械回退。
   候选先综合 BKT 掌握度、有效观测数、画像薄弱点、与当前节点的直接先修关系和概念混淆风险；
   存在有风险的直接先修时，至多为其预留一个席位，其余席位仍由全体候选按综合风险竞争，避免

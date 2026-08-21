@@ -7,9 +7,9 @@ from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
 
-from backend.app.core.agent_runtime_config import agent_temperature
 from backend.app.agents.common import (
     Node,
+    _slim_draft_for_review,
     constrain_expert_draft_to_current_lesson,
     extract_planning_directive,
     extract_teaching_context,
@@ -18,18 +18,18 @@ from backend.app.agents.common import (
     messages_from_prompt,
     normalize_cross_review_payload,
     normalize_expert_draft_payload,
-    _slim_draft_for_review,
 )
 from backend.app.agents.rag_tools import collect_expert_retrieval_context
+from backend.app.core.agent_runtime_config import agent_temperature
 from backend.app.core.llm import LLMClient, LLMMessage
+from backend.app.curriculum.block_content_spec import (
+    format_block_content_directive,
+    validate_block_payloads,
+)
 from backend.app.curriculum.learning_path import (
     compute_default_block_plan,
     format_default_block_plan_directive,
     reconcile_block_plan,
-)
-from backend.app.curriculum.block_content_spec import (
-    format_block_content_directive,
-    validate_block_payloads,
 )
 from backend.app.schemas.state import CrossReview, ExpertDraft, StateDict, completed_event
 
@@ -167,12 +167,8 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                 )
 
             # C：锁定 planner 权威当前节点（不让 LLM 自由跳节点）
-            path_decision = state.get("path_decision", {}) or {}
-            current_node_id = str(path_decision.get("current_node_id") or "")
-            if not current_node_id:
-                lp = state.get("learning_path", []) or []
-                if lp and isinstance(lp[0], dict):
-                    current_node_id = str(lp[0].get("node_id") or "")
+            teaching_context = extract_teaching_context(state)
+            current_node_id = str(teaching_context.get("current_node_id") or "")
 
             # A/B：按 spec 规则确定性算出应含板块集合，渲染为整合硬约束
             profile = state.get("learner_profile", {}) or {}
@@ -284,12 +280,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
             }
 
         # 双专家初稿也按确定性块大纲写作（与 integration 一致的硬约束）
-        path_decision = state.get("path_decision", {}) or {}
-        _cur = str(path_decision.get("current_node_id") or "")
-        if not _cur:
-            _lp = state.get("learning_path", []) or []
-            if _lp and isinstance(_lp[0], dict):
-                _cur = str(_lp[0].get("node_id") or "")
+        _cur = str(extract_teaching_context(state).get("current_node_id") or "")
         _profile = state.get("learner_profile", {}) or {}
         _bp_dir = ""
         _bc_dir = ""

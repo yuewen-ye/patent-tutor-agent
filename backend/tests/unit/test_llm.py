@@ -713,6 +713,39 @@ def test_fallback_exhausts_rounds_then_raises(monkeypatch) -> None:
     assert len(calls) == 4  # 2 rounds x (primary + fallback)
 
 
+def test_semantic_validation_failure_uses_fallback_then_returns_to_primary(monkeypatch) -> None:
+    _patch_retry_times(monkeypatch, 2)
+    calls = _patch_call_llm_json(
+        monkeypatch,
+        {
+            ("deepseek", "deepseek-v4-pro"): [{"valid": False}, {"valid": True}],
+            ("gpt", "gpt-5.6-terra"): [{"valid": False}],
+        },
+    )
+
+    def validator(raw: object) -> dict[str, bool]:
+        assert isinstance(raw, dict)
+        if raw.get("valid") is not True:
+            raise ValueError("semantic route failure")
+        return {"valid": True}
+
+    result = _fallback_router().generate_structured_validated_json(
+        [LLMMessage(role="user", content="hi")],
+        0.5,
+        schema_name="PlannerAgentResult",
+        json_schema={"type": "object"},
+        validator=validator,
+        agent="expert_b",
+    )
+
+    assert result == {"valid": True}
+    assert [(call["provider"], call["model_name"]) for call in calls] == [
+        ("deepseek", "deepseek-v4-pro"),
+        ("gpt", "gpt-5.6-terra"),
+        ("deepseek", "deepseek-v4-pro"),
+    ]
+
+
 def test_our_side_error_also_triggers_fallback(monkeypatch) -> None:
     _patch_retry_times(monkeypatch, 3)
     calls = _patch_call_llm_json(

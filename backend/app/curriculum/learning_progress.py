@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 DEFAULT_MASTERY_THRESHOLD = 0.80
 DEFAULT_MIN_OBSERVATIONS = 2
@@ -430,6 +431,8 @@ def build_teaching_context(
     learning_path: list[dict[str, Any]],
     progress: dict[str, Any],
     question_scope: dict[str, list[dict[str, Any]]],
+    static_confusion_pairs: list[dict[str, Any]] | None = None,
+    planner_guidance: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the small, explicit context consumed by both teaching Experts."""
 
@@ -450,9 +453,18 @@ def build_teaching_context(
                 result.append({**path_by_id[node_id], "question_scope": dict(scope)})
         return result
 
+    current_node = path_by_id.get(current_id)
     return {
         "current_node_id": current_id or None,
-        "current_node": path_by_id.get(current_id),
+        "current_topic": {
+            "node_id": current_id or None,
+            "node_name": (current_node or {}).get("node_name") if current_node else None,
+        },
+        "current_node": current_node,
+        "current_static_confusion_pairs": [
+            dict(pair) for pair in (static_confusion_pairs or []) if isinstance(pair, dict)
+        ],
+        "planner_guidance": dict(planner_guidance or {}),
         "backward_review_nodes": scoped_nodes("backward_review"),
         "forward_probe_nodes": scoped_nodes("forward_probe"),
         "weakness_probe_nodes": scoped_nodes("weakness_probe"),

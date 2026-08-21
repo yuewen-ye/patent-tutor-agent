@@ -181,6 +181,7 @@ def generate_validated_json(
     output_model: type[ContractT],
     normalize: Callable[[object], object] | None = None,
     schema_name: str | None = None,
+    semantic_validate: Callable[[ContractT], None] | None = None,
 ) -> ContractT:
     """Generate an Agent result with provider-side schema constraints and local validation.
 
@@ -227,6 +228,22 @@ def generate_validated_json(
     else:
         current_messages.insert(0, schema_instruction)
 
+    validated_generate = getattr(llm_client, "generate_structured_validated_json", None)
+    if semantic_validate is not None and callable(validated_generate):
+        def validate_provider_response(raw: object) -> ContractT:
+            result = output_model.model_validate(normalize(raw) if normalize is not None else raw)
+            semantic_validate(result)
+            return result
+
+        return validated_generate(
+            current_messages,
+            temperature,
+            schema_name=contract_name,
+            json_schema=json_schema,
+            validator=validate_provider_response,
+            agent=agent,
+        )
+
     for attempt in range(attempts):
         if use_structured_output:
             assert callable(structured_generate)
@@ -265,7 +282,10 @@ def generate_validated_json(
 
         normalized = normalize(raw) if normalize is not None else raw
         try:
-            return output_model.model_validate(normalized)
+            result = output_model.model_validate(normalized)
+            if semantic_validate is not None:
+                semantic_validate(result)
+            return result
         except ValidationError as exc:
             _LOGGER.warning(
                 "Structured JSON validation failed for agent=%s contract=%s "
@@ -754,29 +774,7 @@ def extract_teaching_context(state: Mapping[str, Any]) -> dict[str, Any]:
     context = state.get("teaching_context")
     if isinstance(context, dict) and context.get("current_node_id"):
         return dict(context)
-    path = state.get("learning_path")
-    path_items = [dict(item) for item in path if isinstance(item, dict)] if isinstance(path, list) else []
-    decision = state.get("path_decision")
-    decision_values = dict(decision) if isinstance(decision, dict) else {}
-    current_id = str(decision_values.get("current_node_id") or "")
-    current = next(
-        (item for item in path_items if str(item.get("node_id") or "") == current_id),
-        path_items[0] if path_items else None,
-    )
-    if not current_id and current:
-        current_id = str(current.get("node_id") or "")
-    return {
-        "current_node_id": current_id or None,
-        "current_node": current,
-        "backward_review_nodes": [],
-        "forward_probe_nodes": [],
-        "weakness_probe_nodes": [],
-        "lesson_policy": {
-            "primary_teaching_nodes": [current_id] if current_id else [],
-            "review_nodes_are_not_new_teaching_targets": True,
-            "forward_probe_does_not_complete_next_node": True,
-        },
-    }
+    raise ValueError("Planner teaching_context is required before teaching nodes run")
 
 
 def constrain_expert_draft_to_current_lesson(
@@ -791,8 +789,11 @@ def constrain_expert_draft_to_current_lesson(
     if not current_id:
         return constrained
     current = context.get("current_node")
+    topic = context.get("current_topic")
     current_name = (
-        str(current.get("node_name") or current_id)
+        str(topic.get("node_name") or current_id)
+        if isinstance(topic, dict)
+        else str(current.get("node_name") or current_id)
         if isinstance(current, dict)
         else current_id
     )

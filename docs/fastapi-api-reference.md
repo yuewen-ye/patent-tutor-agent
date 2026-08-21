@@ -356,7 +356,7 @@ PPTX 生成失败不会使课程会话失败；客户端应读取会话 state �
 
 用途：一次性读取学员当前画像、学习历史、BKT 掌握度和活动学习计划，适合学员主页或继续学习入口。
 
-返回：`learner_id`、`latest_profile`、`latest_history`、`profiles`、`history`、`mastery` 和 `active_learning_plan`。
+返回：`learner_id`、`latest_profile`、`latest_history`、`profiles`、`history`、`mastery`、`active_learning_plan` 和 `planning_history`。`planning_history` 按时间倒序返回 Planner 的 `keep`/`replace` 决策、计划版本、游标变化、进度快照和受限教学上下文。
 
 ### `GET /learners/{learner_id}/profiles`
 

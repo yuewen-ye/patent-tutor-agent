@@ -5,7 +5,7 @@ from __future__ import annotations
 import operator
 from typing import Annotated, Any, Literal, NotRequired, TypedDict
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 AgentNode = Literal[
     "diagnosis_feedback",
@@ -229,12 +229,32 @@ class IterationDirective(ContractModel):
     action: str
 
 
-class PlannerAgentResult(ContractModel):
-    """Validated planner proposal; deterministic code still owns the final path decision."""
+class PlannerGuidance(ContractModel):
+    """Planner advice scoped to the current teaching window."""
 
-    nodes: list[PlannerPathNode] = Field(min_length=1)
+    lesson_focus: list[str] = Field(min_length=1)
+    priority_weaknesses: list[str] = Field(default_factory=list)
+    teaching_strategy: str
+    confusion_guidance: str
+
+
+class PlannerAgentResult(ContractModel):
+    """LLM decision to keep or replace a learner's long-term plan."""
+
+    plan_action: Literal["keep", "replace"]
+    decision_reason: str
+    nodes: list[PlannerPathNode] | None = None
     question_scope: QuestionScope
     iteration_directive: IterationDirective
+    teaching_guidance: PlannerGuidance
+
+    @model_validator(mode="after")
+    def _validate_plan_action(self) -> PlannerAgentResult:
+        if self.plan_action == "keep" and self.nodes is not None:
+            raise ValueError("keep decisions must not include nodes")
+        if self.plan_action == "replace" and not self.nodes:
+            raise ValueError("replace decisions require a non-empty node list")
+        return self
 
 
 class RetrievalMetadata(ContractModel):

@@ -163,10 +163,10 @@ def build_<name>_node(llm_client: LLMClient) -> Node:
 - Every final Agent JSON result uses strict JSON Schema output through
   `generate_validated_json()`, followed by Pydantic validation and one repair attempt.
 - Expert A/B use `generate_with_tools()` when deciding whether to call RAG, then validate final JSON.
-- Planner receives the complete runtime knowledge/confusion graphs and an A* candidate, then uses
-  a strict `PlannerAgentResult` proposal;
-  deterministic fallback must preserve and log `path_decision.fallback_reason`;
-  `retrieve_context` does not call an LLM.
+- Planner receives the complete runtime knowledge/confusion graphs and active plan, then makes a
+  strict `PlannerAgentResult` keep/replace decision on every teach session. Model failure follows
+  configured primary-to-fallback rounds and fails the node when exhausted; no deterministic route
+  fallback exists. `retrieve_context` does not call an LLM.
 - Multi-phase prompts live beside the node as `<phase>_system.md`; do not inline phase prompts.
 - Normalize provider-specific aliases before Pydantic validation.
 - Every LLM output must pass a `ContractModel` with `extra="forbid"` before entering state.
@@ -241,11 +241,10 @@ Planner reads these backend runtime assets directly:
 - `backend/app/curriculum/data/confusion-pairs.json`
 
 The knowledge axis is static. Runtime confusion risk is derived from the latest learner profile and
-BKT mastery. Planner LLM proposes a complete route only when no reusable learner plan matches the
-normalized learning goal and knowledge-graph version. A matching active plan restores its complete
-node list and cursor without another Planner LLM call. Every teach session still recomputes the
-session activity window from the latest cursor, BKT evidence, weak points and current-node confusion
-risk.
+BKT mastery. Planner LLM runs on every teach session and decides whether to keep the matching active
+plan or replace it with a complete new route. A keep decision restores the active node list and
+cursor; a replace decision creates a new plan version. Every teach session recomputes the session
+activity window from the latest cursor, BKT evidence, weak points and current-node confusion risk.
 
 The backend owns the final topological validation, cursor and activity window. Historical review is
 zero to two completed nodes selected by deterministic risk; at-risk direct prerequisites can reserve

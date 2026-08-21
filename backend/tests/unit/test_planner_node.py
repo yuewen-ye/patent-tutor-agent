@@ -11,42 +11,26 @@ from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinitio
 from backend.app.curriculum.learning_path import load_knowledge_dag
 from backend.app.curriculum.learning_plan import learning_goal_hash
 from backend.app.schemas.context import WorkflowContext
-from backend.app.schemas.state import PlannerAgentResult, StateDict
+from backend.app.schemas.state import PlannerAgentResult
 
 pytestmark = pytest.mark.unit
 
 
 class PlannerLLMClient:
-    def __init__(self) -> None:
+    def __init__(self, action: str = "replace") -> None:
+        self.action = action
         self.calls: list[list[LLMMessage]] = []
         self.agents: list[str | None] = []
-        self.temperatures: list[float] = []
 
     def generate_json(
         self, messages: list[LLMMessage], temperature: float, agent: str | None = None
     ) -> object:
         self.calls.append(messages)
         self.agents.append(agent)
-        self.temperatures.append(temperature)
-        return {
-            "nodes": [
-                {
-                    "node_id": "patent-law-foundation",
-                    "node_name": "专利法律制度基础",
-                    "duration_min": 20,
-                    "strategy": "先学概念+法条拆解",
-                    "prerequisites": [],
-                    "difficulty_cap": "L2",
-                },
-                {
-                    "node_id": "patent-system-overview",
-                    "node_name": "专利制度概论",
-                    "duration_min": 30,
-                    "strategy": "要件框架+易混淆辨析",
-                    "prerequisites": ["patent-law-foundation"],
-                    "difficulty_cap": "L3",
-                },
-            ],
+        result: dict[str, object] = {
+            "plan_action": self.action,
+            "decision_reason": "根据最新掌握度调整本轮路线",
+            "nodes": None,
             "question_scope": {
                 "backward_review": [
                     {"node_id": "patent-law-foundation", "difficulty": "L2", "goal": "验证巩固"}
@@ -58,42 +42,51 @@ class PlannerLLMClient:
                     {"node_id": "novelty", "difficulty": "L3", "goal": "薄弱点挑战"}
                 ],
             },
-            "iteration_directive": {
-                "type": "降维",
-                "trigger": "当前节点 L1 答对率 < 60%",
-                "action": "降低抽象度",
+            "iteration_directive": {"type": "降维", "trigger": "L1 正确率不足", "action": "拆分要件"},
+            "teaching_guidance": {
+                "lesson_focus": ["先修概念", "要件辨析"],
+                "priority_weaknesses": ["新颖性"],
+                "teaching_strategy": "先规则后案例",
+                "confusion_guidance": "比较相邻易混淆概念的判断标准",
             },
         }
+        if self.action == "replace":
+            result["nodes"] = [
+                {
+                    "node_id": "patent-law-foundation",
+                    "node_name": "错误名称会被覆盖",
+                    "duration_min": 20,
+                    "strategy": "先学概念+法条拆解",
+                    "prerequisites": [],
+                    "difficulty_cap": "L2",
+                },
+                {
+                    "node_id": "patent-system-overview",
+                    "node_name": "错误名称会被覆盖",
+                    "duration_min": 30,
+                    "strategy": "要件框架+易混淆辨析",
+                    "prerequisites": ["patent-law-foundation"],
+                    "difficulty_cap": "L3",
+                },
+            ]
+        return result
 
     def generate_with_tools(
-        self,
-        messages: list[LLMMessage],
-        tools: list[ToolDefinition],
-        temperature: float,
+        self, messages: list[LLMMessage], tools: list[ToolDefinition], temperature: float,
         agent: str | None = None,
     ) -> LLMResponseWithTools:
         return LLMResponseWithTools(content=None, tool_calls=[])
 
 
 class FailingPlannerLLMClient:
-    def generate_json(
-        self, messages: list[LLMMessage], temperature: float, agent: str | None = None
-    ) -> object:
+    def generate_json(self, messages: list[LLMMessage], temperature: float, agent: str | None = None) -> object:
         raise RuntimeError("LLM unavailable")
-
-    def generate_with_tools(
-        self,
-        messages: list[LLMMessage],
-        tools: list[ToolDefinition],
-        temperature: float,
-        agent: str | None = None,
-    ) -> LLMResponseWithTools:
-        return LLMResponseWithTools(content=None, tool_calls=[])
 
 
 class PersistedPlanStore:
     def __init__(self, plan: dict[str, object]) -> None:
         self.plan = plan
+        self.decisions: list[dict[str, object]] = []
 
     def active_learning_plan(self, learner_id: str) -> dict[str, object]:
         return self.plan
@@ -107,271 +100,79 @@ class PersistedPlanStore:
     def save_profile(self, **kwargs: object) -> None:
         return None
 
+    def record_learning_plan_decision(self, **kwargs: object) -> dict[str, object]:
+        self.decisions.append(dict(kwargs))
+        return {"decision_id": "history-1"}
 
-def test_current_mastery_overrides_stale_profile_snapshot() -> None:
-    profile = {
-        "five_dimensions": {"knowledge": {"novelty": {"pl": 0.2}}},
-        "mastery": {"novelty": 0.85, "inventive-step": 0.4},
+
+def _scope() -> dict[str, object]:
+    return {"backward_review": [], "forward_probe": [], "weakness_probe": []}
+
+
+def _guidance() -> dict[str, object]:
+    return {
+        "lesson_focus": ["概念"], "priority_weaknesses": [],
+        "teaching_strategy": "案例", "confusion_guidance": "辨析",
     }
 
-    mastery = _knowledge_pl_map(profile)
 
+def test_current_mastery_overrides_stale_profile_snapshot() -> None:
+    mastery = _knowledge_pl_map({"five_dimensions": {"knowledge": {"novelty": {"pl": 0.2}}}, "mastery": {"novelty": 0.85}})
     assert mastery["novelty"]["pl"] == 0.85
-    assert mastery["inventive-step"]["pl"] == 0.4
 
 
 def test_confusion_review_risk_only_uses_pairs_connected_to_current_node() -> None:
-    risks = _confusion_review_risk(
-        {
-            "confusion_axis": [
-                {
-                    "node_a": "novelty",
-                    "node_b": "inventive-step",
-                    "related_nodes": ["three-step-method"],
-                    "is_active": True,
-                    "learner_risk": 0.82,
-                },
-                {
-                    "node_a": "priority",
-                    "node_b": "filing-date",
-                    "related_nodes": [],
-                    "is_active": True,
-                    "learner_risk": 0.95,
-                },
-            ]
-        },
-        "novelty",
-    )
-
-    assert risks == {
-        "inventive-step": pytest.approx(0.82),
-        "three-step-method": pytest.approx(0.82),
-    }
+    risks = _confusion_review_risk({"confusion_axis": [{"node_a": "novelty", "node_b": "inventive-step", "related_nodes": ["three-step-method"], "is_active": True, "learner_risk": 0.82}]}, "novelty")
+    assert risks == {"inventive-step": pytest.approx(0.82), "three-step-method": pytest.approx(0.82)}
 
 
-def test_planner_semantic_guard_rejects_unknown_or_topologically_invalid_nodes() -> None:
-    base = {
-        "nodes": [
-            {
-                "node_id": "novelty",
-                "node_name": "新颖性",
-                "duration_min": 20,
-                "strategy": "法条与案例",
-                "prerequisites": [],
-                "difficulty_cap": "L2",
-            }
-        ],
-        "question_scope": {
-            "backward_review": [],
-            "forward_probe": [],
-            "weakness_probe": [],
-        },
-        "iteration_directive": {
-            "type": "无",
-            "trigger": "首轮",
-            "action": "等待回灌",
-        },
-    }
+def test_planner_contract_enforces_keep_replace_shape() -> None:
+    common = {"decision_reason": "理由", "question_scope": _scope(), "iteration_directive": {"type": "无", "trigger": "无", "action": "保持"}, "teaching_guidance": _guidance()}
+    with pytest.raises(ValueError, match="keep decisions"):
+        PlannerAgentResult.model_validate({**common, "plan_action": "keep", "nodes": []})
+    with pytest.raises(ValueError, match="replace decisions"):
+        PlannerAgentResult.model_validate({**common, "plan_action": "replace", "nodes": None})
 
-    canonical_names = {"novelty": "新颖性", "patentability": "授权条件"}
-    parsed = _parse_planner_plan(
-        base,
-        known_node_ids={"novelty", "patentability"},
-        canonical_names=canonical_names,
-    )
-    assert parsed["learning_path"][0].node_id == "novelty"
+
+def test_planner_semantic_guard_canonicalizes_names_and_rejects_invalid_nodes() -> None:
+    base = {"plan_action": "replace", "nodes": [{"node_id": "novelty", "node_name": "wrong", "duration_min": 20, "strategy": "案例", "prerequisites": [], "difficulty_cap": "L2"}], "question_scope": _scope(), "iteration_directive": {}, "teaching_guidance": _guidance(), "decision_reason": "初始"}
+    parsed = _parse_planner_plan(base, known_node_ids={"novelty", "patentability"}, canonical_names={"novelty": "新颖性", "patentability": "授权条件"})
     assert parsed["learning_path"][0].node_name == "新颖性"
-
-    unknown = {**base, "nodes": [{**base["nodes"][0], "node_id": "invented-node"}]}
     with pytest.raises(ValueError, match="unknown node_id"):
-        _parse_planner_plan(
-            unknown, known_node_ids={"novelty"}, canonical_names=canonical_names
-        )
-
-    invalid_topology = {
-        **base,
-        "nodes": [{**base["nodes"][0], "prerequisites": ["patentability"]}],
-    }
-    with pytest.raises(ValueError, match="do not appear earlier"):
-        _parse_planner_plan(
-            invalid_topology,
-            known_node_ids={"novelty", "patentability"},
-            canonical_names=canonical_names,
-        )
+        _parse_planner_plan({**base, "nodes": [{**base["nodes"][0], "node_id": "invented-node"}]}, known_node_ids={"novelty"}, canonical_names={"novelty": "新颖性"})
 
 
-def test_planner_contract_accepts_complete_route_longer_than_sixteen_nodes() -> None:
-    result = PlannerAgentResult.model_validate(
-        {
-            "nodes": [
-                {
-                    "node_id": f"node-{index}",
-                    "node_name": f"节点 {index}",
-                    "duration_min": 20,
-                    "strategy": "按路线学习",
-                    "prerequisites": [],
-                    "difficulty_cap": "L2",
-                }
-                for index in range(17)
-            ],
-            "question_scope": {
-                "backward_review": [],
-                "forward_probe": [],
-                "weakness_probe": [],
-            },
-            "iteration_directive": {
-                "type": "无",
-                "trigger": "首轮",
-                "action": "等待反馈",
-            },
-        }
-    )
-
-    assert len(result.nodes) == 17
-
-
-def test_planner_uses_llm_with_prompt() -> None:
+def test_planner_always_calls_llm_and_builds_enriched_context() -> None:
     client = PlannerLLMClient()
-    node = build_planner_node(client)
-    state: StateDict = {
-        "session_id": "debug",
-        "user_input": "学习新颖性和创造性",
-        "events": [],
-    }
-
-    result = node(state)
-
-    # planner must now call the LLM (not the deterministic shortcut)
+    result = build_planner_node(client)({"session_id": "debug", "user_input": "学习新颖性", "events": []})
     assert len(client.calls) == 1
     assert client.agents == ["planner"]
-    assert "路径规划" in client.calls[0][0].content
-    planner_input = client.calls[0][-1].content
-    assert '"description"' in planner_input
-    assert '"tags"' in planner_input
-    assert '"typical_mistake"' in planner_input
-    assert '"distinction"' in planner_input
-
-    # learning_path built from the LLM nodes, carrying difficulty_cap
-    assert result["learning_path"]
-    assert result["learning_path"][0]["node_id"] == "patent-law-foundation"
-    assert result["learning_path"][0]["difficulty_cap"] == "L2"
-    assert result["path_decision"]["current_node_id"] == "patent-law-foundation"
-    assert result["path_decision"]["algorithm"] == "llm_astar"
-    assert result["path_decision"]["question_scope"]["backward_review"]
-    assert result["path_decision"]["iteration_directive"]["type"] == "降维"
+    assert result["path_decision"]["plan_action"] == "replace"
+    assert result["path_decision"]["algorithm"] == "llm_planner"
+    context = result["teaching_context"]
+    assert context["current_topic"]["node_name"] == "专利法律制度基础"
+    assert context["planner_guidance"]["teaching_strategy"] == "先规则后案例"
+    assert "learning_path" not in context
 
 
-def test_planner_uses_persisted_progress_as_the_single_lesson_cursor() -> None:
-    client = PlannerLLMClient()
-    node = build_planner_node(client)
-    state: StateDict = {
-        "session_id": "continued-course",
-        "user_input": "继续学习专利制度",
-        "events": [],
-        "learner_profile": {
-            "learning_goal": "学习专利制度",
-            "five_dimensions": {
-                "knowledge": {},
-                "progress": {
-                    "completed_nodes": ["patent-law-foundation"],
-                    "current_node": "patent-system-overview",
-                    "pending_nodes": [],
-                    "overall_completion_ratio": 0.5,
-                },
-            },
-        },
-    }
-
-    result = node(state)
-
-    assert result["path_decision"]["current_node_id"] == "patent-system-overview"
-    assert result["teaching_context"]["current_node"]["node_id"] == "patent-system-overview"
-    assert result["path_decision"]["completed_node_ids"] == ["patent-law-foundation"]
-    assert result["learner_profile"]["five_dimensions"]["progress"]["current_node"] == (
-        "patent-system-overview"
-    )
-
-
-def test_planner_falls_back_to_deterministic_on_llm_failure() -> None:
-    client = FailingPlannerLLMClient()
-    node = build_planner_node(client)
-    state: StateDict = {
-        "session_id": "debug",
-        "user_input": "学习新颖性",
-        "events": [],
-    }
-
-    result = node(state)
-
-    assert result["learning_path"]
-    assert result["path_decision"]["algorithm"] == "deterministic_astar"
-    assert result["path_decision"]["fallback_reason"] == "RuntimeError: LLM unavailable"
-    # deterministic 兜底同样补全 question_scope 与 difficulty_cap（P1 修复：保证 artifact 始终带资源难度匹配曲线）
-    qs = result["path_decision"]["question_scope"]
-    assert qs.get("backward_review") or qs.get("forward_probe") or qs.get("weakness_probe")
-    assert all(it.get("difficulty_cap") for it in result["learning_path"])
-
-
-def test_planner_reuses_persisted_active_plan_without_calling_llm() -> None:
+def test_planner_keep_calls_llm_and_preserves_plan_version() -> None:
     learning_goal = "学习专利制度"
     nodes = [
-        {
-            "node_id": "patent-law-foundation",
-            "node_name": "专利法律制度基础",
-            "duration_min": 20,
-            "strategy": "概念讲解",
-            "prerequisites": [],
-            "difficulty_cap": "L1",
-        },
-        {
-            "node_id": "patent-system-overview",
-            "node_name": "专利制度概论",
-            "duration_min": 30,
-            "strategy": "框架讲解",
-            "prerequisites": ["patent-law-foundation"],
-            "difficulty_cap": "L2",
-        },
+        {"node_id": "patent-law-foundation", "node_name": "专利法律制度基础", "duration_min": 20, "strategy": "概念", "prerequisites": [], "difficulty_cap": "L1"},
+        {"node_id": "patent-system-overview", "node_name": "专利制度概论", "duration_min": 30, "strategy": "框架", "prerequisites": ["patent-law-foundation"], "difficulty_cap": "L2"},
     ]
-    graph_version = str(load_knowledge_dag().get("version") or "unknown")
-    plan: dict[str, object] = {
-        "plan_id": "persisted-plan-1",
-        "plan_version": 1,
-        "status": "active",
-        "learning_goal_hash": learning_goal_hash(learning_goal),
-        "knowledge_graph_version": graph_version,
-        "nodes": nodes,
-        "progress": {
-            "completed_nodes": ["patent-law-foundation"],
-            "current_node": "patent-system-overview",
-            "pending_nodes": [],
-            "overall_completion_ratio": 0.5,
-        },
-    }
+    plan: dict[str, object] = {"plan_id": "persisted-plan-1", "plan_version": 1, "status": "active", "learning_goal_hash": learning_goal_hash(learning_goal), "knowledge_graph_version": str(load_knowledge_dag().get("version")), "nodes": nodes, "progress": {"completed_nodes": ["patent-law-foundation"], "current_node": "patent-system-overview", "pending_nodes": [], "overall_completion_ratio": 0.5}}
     store = PersistedPlanStore(plan)
-    runtime = Runtime(
-        context=WorkflowContext(learner_id="learner-persisted"),
-        store=store,  # type: ignore[arg-type]
-    )
-    node = build_planner_node(FailingPlannerLLMClient())
-    state: StateDict = {
-        "session_id": "course-2",
-        "user_input": "继续学习",
-        "events": [],
-        "learner_profile": {
-            "learning_goal": learning_goal,
-            "five_dimensions": {"knowledge": {}},
-        },
-    }
-
-    result = node(state, runtime)
-
-    assert result["path_decision"]["algorithm"] == "persisted_plan"
-    assert result["path_decision"]["plan_reused"] is True
+    runtime = Runtime(context=WorkflowContext(learner_id="learner-persisted"), store=store)  # type: ignore[arg-type]
+    client = PlannerLLMClient("keep")
+    result = build_planner_node(client)({"session_id": "course-2", "user_input": "继续学习", "events": [], "learner_profile": {"learning_goal": learning_goal, "five_dimensions": {"knowledge": {}}}}, runtime)
+    assert len(client.calls) == 1
     assert result["path_decision"]["plan_id"] == "persisted-plan-1"
-    assert result["path_decision"]["current_node_id"] == "patent-system-overview"
-    assert result["path_decision"]["lesson_scope"]["review_node_ids"] == [
-        "patent-law-foundation"
-    ]
-    assert result["teaching_context"]["current_node"]["node_id"] == (
-        "patent-system-overview"
-    )
+    assert result["path_decision"]["plan_version"] == 1
+    assert result["path_decision"]["planning_history_id"] == "history-1"
+    assert store.decisions[0]["decision_kind"] == "keep"
+
+
+def test_planner_failure_does_not_fallback_to_deterministic_path() -> None:
+    with pytest.raises(RuntimeError, match="LLM unavailable"):
+        build_planner_node(FailingPlannerLLMClient())({"session_id": "debug", "user_input": "学习新颖性", "events": []})

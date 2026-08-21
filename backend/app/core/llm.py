@@ -1239,6 +1239,42 @@ class AgentLLMRouter:
 
         return self._with_fallback(agent, invoke)
 
+    def generate_structured_validated_json(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        *,
+        schema_name: str,
+        json_schema: dict[str, object],
+        validator: Callable[[object], _T],
+        agent: AgentName | None = None,
+    ) -> _T:
+        """Validate each provider response inside the primary/fallback attempt loop."""
+
+        def invoke(
+            provider: str | None, model_name: str | None, base_url: str | None, attempts: int | None
+        ) -> _T:
+            raw = call_llm_json(
+                provider=provider,
+                messages=messages,
+                temperature=temperature,
+                model_name=model_name,
+                schema_name=schema_name,
+                json_schema=json_schema,
+                base_url_override=base_url,
+                max_attempts=attempts,
+            )
+            try:
+                return validator(raw)
+            except Exception as exc:
+                raise LLMProviderError(
+                    f"model output failed {schema_name} validation: {exc}",
+                    provider=provider,
+                    retryable=True,
+                ) from exc
+
+        return self._with_fallback(agent, invoke)
+
     def generate_with_tools(
         self,
         messages: list[LLMMessage],

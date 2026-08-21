@@ -8,7 +8,7 @@
 |---|---|---|
 | `route` | 严格 JSON Schema | `IntentResult` → `intent` |
 | `diagnosis_feedback` | 严格 JSON Schema + Store | LLM：`DiagnosisAgentResult` / `FeedbackAgentResult`；后端：`LearnerProfile` / `FeedbackResult` |
-| `planner` | 完整双图输入 + 严格 JSON Schema + 确定性校正/降级 + Store | `PlannerAgentResult` 提案、`LearningPathItem[]`、双轴快照、路径决策；降级时包含 `fallback_reason` |
+| `planner` | 完整双图与活动计划输入 + 严格 JSON Schema + Store | 每次 teach 的 `PlannerAgentResult` keep/replace 决策、`LearningPathItem[]`、双轴快照、路径决策与教学上下文 |
 | `expert_a` | 严格 JSON Schema / `generate_with_tools` | 草稿、互评、修订、整合课程包 |
 | `expert_b` | 严格 JSON Schema / `generate_with_tools` | 草稿、互评、修订 |
 | `judge` | 严格 JSON Schema | `JudgeReport` |
@@ -99,14 +99,14 @@ Judge 的 `decision` 是图分支条件。`accept` 和 `accept_with_minor_revisi
 `LearnerProfile`。`progress` 同样由后端生成：初始诊断使用空课程进度，反馈阶段沿用后端历史
 进度，模型不得生成或覆盖。教育背景同样以诊断会话记录为准。
 
-Planner 生成完整 `learning_path` 后，后端把首个尚未掌握的拓扑节点写入
-`five_dimensions.progress.current_node`，其余未完成节点写入 `pending_nodes`；CAT/BKT 已有
-充分观测且 `P(L) >= 0.8` 的节点进入 `completed_nodes`。`path_decision.current_node_id`
-必须与画像游标一致。Expert A/B 不消费整条详细路线，只消费后端生成的
-`teaching_context`：一个主教学节点、少量向后复习节点和至多一个 L1 向前探测节点。
-完整路线同时保存为学员级活动计划。`path_decision` 返回 `plan_id`、`plan_version`、
-`plan_reused` 和 `knowledge_graph_version`。目标和图版本相同时，后续 teach 会话读取活动
-计划并跳过 Planner LLM；本次运行采用的路径和活动窗口随 `StateDict` 保存为会话状态快照。
+Planner 每次进入 teach 路径都调用 LLM 作出 `keep` 或 `replace` 决策。后端把完整路线的首个
+尚未掌握拓扑节点写入 `five_dimensions.progress.current_node`，其余未完成节点写入 `pending_nodes`；
+CAT/BKT 已有充分观测且 `P(L) >= 0.8` 的节点进入 `completed_nodes`。`path_decision.current_node_id`
+必须与画像游标一致。Expert A/B 不消费完整长期路线，只消费后端生成的 `teaching_context`：规范的
+当前知识点名称、该节点涉及的静态易混淆对、Planner 本节建议、少量向后复习节点和至多一个 L1
+向前探测节点。完整路线保存为学员级活动计划；`keep` 保留该版本，`replace` 创建新 `plan_version`
+并保留旧版本为 `superseded`。每次模型决策及其活动窗口追加保存到
+`learner_learning_plan_decisions`，同时在会话 `StateDict` 中保留本次路线快照。
 `teaching_context.backward_review_nodes` 为后端确定的 0 到 2 个风险复习节点：当存在有风险的
 直接先修节点时，两个复习席位中至多预留一个给最高风险先修节点，其余节点按 BKT、观测可信度、
 薄弱点和当前概念混淆风险综合竞争。顺序不单独触发复习；综合风险相同才优先更早完成的节点，
@@ -142,8 +142,9 @@ Planner 必须：
 1. 优先读取 Store 中该学员的最新画像。
 2. 在 Store 支持 `mastery(learner_id)` 时读取 BKT 掌握度。
 3. 用静态知识 DAG 与静态混淆对生成双轴快照。
-4. 校验 Planner 的完整路线提案；提案失败时使用确定性 A* 路线，并由后端确定当前课程游标。
-5. 优先复用目标和知识 DAG 版本均匹配的学员级活动计划；复用时不得调用 LLM。
+4. 在每个 teach 会话请求 Planner LLM，并校验其 keep/replace 决策和 replace 路线；模型调用链耗尽时让 Planner 节点失败，绝不使用确定性 A* 路线替代。
+5. 对 keep 恢复并使用活动计划，对 replace 创建新版本；无论动作如何都追加记录规划决策历史。
+6. 始终由后端确定课程游标、静态规范名称、活动窗口和题目范围。
 
 ## 5. Agent 输出校验
 
