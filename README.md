@@ -47,6 +47,8 @@ uv sync
 
 `uv sync` 会自动安装所有依赖，包括 `langgraph-cli`（LangGraph Studio 命令行工具）。
 
+> **PPTX 预览图额外依赖**：`generate_pptx` 节点生成 `.pptx` 后会调用 LibreOffice 把每页转成 PNG 预览图。Windows/macOS/Linux 都需要单独安装 LibreOffice（`soffice` 在 PATH 或常见安装路径即可）。未安装时 PPTX 仍可正常生成，只是 `pptx_result.preview_images` 会报告 `enabled: false`。
+
 ### 3. 配置 API Key
 
 **macOS / Linux：**
