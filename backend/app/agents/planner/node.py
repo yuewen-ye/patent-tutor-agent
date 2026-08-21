@@ -284,7 +284,10 @@ def build_planner_node(llm_client: LLMClient) -> Node:
             **plan_metadata,
         }
         recorder = getattr(store, "record_learning_plan_decision", None)
-        if learner_id and callable(recorder):
+        if learner_id and callable(recorder) and not (
+            plan["plan_action"] == "replace"
+            and callable(getattr(store, "create_learning_plan", None))
+        ):
             history = recorder(
                 learner_id=learner_id,
                 session_id=state["session_id"],

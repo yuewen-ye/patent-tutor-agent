@@ -604,6 +604,18 @@ class MySQLLearnerStore:
             version_row = cursor.fetchone()
             plan_version = int(version_row["max_version"]) + 1
             cursor.execute(
+                "SELECT plan_id, plan_version, current_node_id, progress_json "
+                "FROM learner_learning_plans WHERE student_id=%s AND status='active' FOR UPDATE",
+                (learner_id,),
+            )
+            previous_row = cursor.fetchone()
+            previous_plan_id = previous_row.get("plan_id") if previous_row else None
+            previous_version = int(previous_row["plan_version"]) if previous_row else None
+            previous_node = previous_row.get("current_node_id") if previous_row else None
+            previous_progress = (
+                _json_load(previous_row.get("progress_json"), None) if previous_row else None
+            )
+            cursor.execute(
                 "UPDATE learner_learning_plans SET status='superseded', updated_at=%s "
                 "WHERE student_id=%s AND status='active'",
                 (now, learner_id),
@@ -671,6 +683,35 @@ class MySQLLearnerStore:
                         now,
                     ),
                 )
+            cursor.execute(
+                "INSERT INTO learner_learning_plan_decisions("
+                "decision_id, decision_key, student_id, session_id, plan_id, previous_plan_id, "
+                "decision_kind, outcome, reason_code, learning_goal_hash, knowledge_graph_version, "
+                "from_plan_version, to_plan_version, from_current_node_id, to_current_node_id, "
+                "progress_before_json, progress_after_json, path_decision_json, created_at"
+                ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                (
+                    uuid.uuid4().hex,
+                    f"{source_session_id}:plan:{plan_id}",
+                    learner_id,
+                    source_session_ref,
+                    plan_id,
+                    previous_plan_id,
+                    "initial" if previous_plan_id is None else "replace",
+                    "created",
+                    replan_reason,
+                    learning_goal_hash,
+                    knowledge_graph_version,
+                    previous_version,
+                    plan_version,
+                    previous_node,
+                    current_node,
+                    _json_dump(previous_progress) if previous_progress is not None else None,
+                    _json_dump(progress),
+                    _json_dump({"plan_action": "replace"}),
+                    now,
+                ),
+            )
             cursor.execute(
                 "SELECT * FROM learner_learning_plans WHERE plan_id=%s",
                 (plan_id,),
@@ -748,6 +789,35 @@ class MySQLLearnerStore:
                         node_id,
                     ),
                 )
+            previous_version = int(row["plan_version"])
+            previous_node = row.get("current_node_id")
+            previous_progress = _json_load(row.get("progress_json"), None)
+            outcome = "completed" if status == "completed" else ("advanced" if decision.get("advanced") else "no_change")
+            cursor.execute(
+                "INSERT INTO learner_learning_plan_decisions("
+                "decision_id, decision_key, student_id, session_id, plan_id, decision_kind, outcome, "
+                "reason_code, from_plan_version, to_plan_version, from_current_node_id, to_current_node_id, "
+                "progress_before_json, progress_after_json, path_decision_json, created_at"
+                ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                (
+                    uuid.uuid4().hex,
+                    f"{source_session_id}:progress:{plan_id}:{now.isoformat()}",
+                    learner_id,
+                    session_ref,
+                    plan_id,
+                    "progress",
+                    outcome,
+                    str(decision.get("reason") or "feedback_progress"),
+                    previous_version,
+                    previous_version,
+                    previous_node,
+                    current_node,
+                    _json_dump(previous_progress) if previous_progress is not None else None,
+                    _json_dump(progress),
+                    _json_dump(decision),
+                    now,
+                ),
+            )
             cursor.execute(
                 "SELECT * FROM learner_learning_plans WHERE plan_id=%s",
                 (plan_id,),
