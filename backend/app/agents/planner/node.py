@@ -326,14 +326,29 @@ def build_planner_node(llm_client: LLMClient) -> Node:
         dimensions["progress"] = progress
         updated_profile["five_dimensions"] = dimensions
         save_profile_snapshot(runtime, state, updated_profile, source="planner")
+        roadmap_ids = [item["node_id"] for item in serialized_path]
+        roadmap_id_set = set(roadmap_ids)
+        roadmap_targets = [
+            node_id
+            for node_id in roadmap_ids
+            if not any(node_id in item.prerequisites for item in path if item.node_id in roadmap_id_set)
+        ]
         decision = {
             "current_node_id": selected,
+            "path_start_node_id": roadmap_ids[0] if roadmap_ids else None,
+            "path_target_node_ids": roadmap_targets,
+            "path_target_nodes": [
+                {"node_id": item.node_id, "node_name": item.node_name}
+                for item in path
+                if item.node_id in roadmap_targets
+            ],
+            "roadmap_node_count": len(roadmap_ids),
             "algorithm": "llm_planner",
             "question_scope": scope,
             "iteration_directive": plan["iteration_directive"],
             "completed_node_ids": progress.get("completed_nodes", []),
             "pending_node_ids": progress.get("pending_nodes", []),
-            "roadmap_node_ids": [item["node_id"] for item in serialized_path],
+            "roadmap_node_ids": roadmap_ids,
             "knowledge_graph_version": graph_version,
             "lesson_scope": {
                 "primary_teaching_node_id": selected,

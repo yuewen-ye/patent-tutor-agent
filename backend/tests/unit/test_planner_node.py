@@ -200,6 +200,9 @@ def test_planner_always_calls_llm_and_builds_enriched_context() -> None:
     assert client.agents == ["planner"]
     assert result["path_decision"]["plan_action"] == "replace"
     assert result["path_decision"]["algorithm"] == "llm_planner"
+    assert result["path_decision"]["path_start_node_id"] == "patent-law-foundation"
+    assert result["path_decision"]["path_target_node_ids"] == ["patent-system-overview"]
+    assert result["path_decision"]["roadmap_node_count"] == 2
     context = result["teaching_context"]
     assert context["current_topic"]["node_name"] == "专利法律制度基础"
     assert context["planner_guidance"]["teaching_strategy"] == "先规则后案例"

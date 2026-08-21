@@ -99,8 +99,7 @@ Judge 的 `decision` 是图分支条件。`accept` 和 `accept_with_minor_revisi
 `LearnerProfile`。`progress` 同样由后端生成：初始诊断使用空课程进度，反馈阶段沿用后端历史
 进度，模型不得生成或覆盖。教育背景同样以诊断会话记录为准。
 
-Planner 每次进入 teach 路径都调用 LLM 作出 `keep` 或 `replace` 决策。后端把完整路线的首个
-尚未掌握拓扑节点写入 `five_dimensions.progress.current_node`，其余未完成节点写入 `pending_nodes`；
+Planner 每次进入 teach 路径都调用 LLM 作出 `keep` 或 `replace` 决策。这里的完整路线是从当前学习起点到目标知识点的完整目标导向子路径，不要求覆盖整个静态 DAG；路线必须包含目标所需的静态先修节点并满足拓扑顺序。后端把该路线的首个尚未掌握拓扑节点写入 `five_dimensions.progress.current_node`，其余未完成节点写入 `pending_nodes`；
 CAT/BKT 已有充分观测且 `P(L) >= 0.8` 的节点进入 `completed_nodes`。`path_decision.current_node_id`
 必须与画像游标一致。Expert A/B 不消费完整长期路线，只消费后端生成的 `teaching_context`：规范的
 当前知识点名称、该节点涉及的静态易混淆对、Planner 本节建议、受限出题范围和迭代指令、少量向后复习节点和至多一个 L1

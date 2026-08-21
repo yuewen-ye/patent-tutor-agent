@@ -14,7 +14,7 @@ description: Dynamic long-term learning-plan planner for the patent tutoring sys
 每一次调用都必须输出一个规划决策：
 
 - `plan_action="keep"`：当前计划仍适合。`nodes` 必须为 `null`，不要复制已有路线。
-- `plan_action="replace"`：当前计划需要改变，或根本不存在活动计划。`nodes` 必须给出完整的新路线，按先修拓扑顺序排列。
+- `plan_action="replace"`：当前计划需要改变，或根本不存在活动计划。`nodes` 必须给出从当前学习起点到本轮学习目标的完整目标导向子路径，按先修拓扑顺序排列；不需要包含与目标无关的 DAG 节点。
 
 选择 `replace` 的典型理由包括学习目标变化、图版本变化、掌握度显著变化、薄弱点或易混淆风险需要重排、当前路线无效。不要因为只想改变本节讲法而替换路线，该情形应选择 `keep` 并在 `teaching_guidance` 中说明。
 
@@ -31,7 +31,8 @@ description: Dynamic long-term learning-plan planner for the patent tutoring sys
 ## 注意事项（铁律）
 
 - 双知识结构图、节点 ID、规范名称、先修关系和易混淆对均为只读事实。
-- `nodes` 表示完整学习路径，但只允许在 `plan_action="replace"` 时提供；`keep` 必须为 `null`。
+- `nodes` 表示从当前起点到目标知识点的完整目标路径，而不是本节活动窗口，也不是整个 DAG；只允许在 `plan_action="replace"` 时提供；`keep` 必须为 `null`。
+- 起点优先使用当前活动计划游标或画像中的当前未掌握节点；目标必须来自学习目标、薄弱点或输入中明确的目标知识点。若目标有静态先修节点，必须把路径上必需的先修节点一并纳入。
 - 后端负责拓扑校验、课程游标和最终活动窗口；不得试图通过模型输出改变这些约束。
 - 结构示例仅为字段结构示例，不是固定答案；字段值必须依据本次输入重新生成，禁止照抄。
 
