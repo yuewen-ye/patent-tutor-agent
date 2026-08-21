@@ -241,6 +241,15 @@ def build_planner_node(llm_client: LLMClient) -> Node:
             for node in knowledge.get("nodes", [])
             if isinstance(node, dict) and node.get("node_id")
         }
+        node_knowledge_points = {
+            str(node["node_id"]): [
+                str(item.get("point") or "")
+                for item in node.get("knowledge_points", [])
+                if isinstance(item, dict) and item.get("point")
+            ]
+            for node in knowledge.get("nodes", [])
+            if isinstance(node, dict) and node.get("node_id")
+        }
 
         def validate_planner_semantics(result: PlannerAgentResult) -> None:
             _parse_planner_plan(
@@ -278,7 +287,15 @@ def build_planner_node(llm_client: LLMClient) -> Node:
         pl_map = _knowledge_pl_map(profile)
         weak_texts = [str(value) for value in profile.get("weak_points") or []]
         weak_ids = {item.node_id for item in path if any(value in item.node_id or value in item.node_name for value in weak_texts)}
-        path = [item.model_copy(update={"difficulty_cap": _difficulty_cap_for(item.node_id, pl_map, weak_ids)}) for item in path]
+        path = [
+            item.model_copy(
+                update={
+                    "difficulty_cap": _difficulty_cap_for(item.node_id, pl_map, weak_ids),
+                    "knowledge_points": node_knowledge_points.get(item.node_id, []),
+                }
+            )
+            for item in path
+        ]
         serialized_path = [item.model_dump() for item in path]
         if progress is None:
             dimensions = profile.get("five_dimensions") or {}

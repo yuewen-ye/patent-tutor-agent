@@ -77,6 +77,40 @@ def test_current_node_advances_only_with_threshold_and_evidence() -> None:
     assert progress["pending_nodes"] == []
 
 
+def test_teaching_context_includes_current_node_knowledge_points() -> None:
+    progress = {
+        "completed_nodes": ["foundation"],
+        "current_node": "novelty",
+        "pending_nodes": ["inventive-step"],
+    }
+    learning_path = [
+        {
+            "node_id": "foundation",
+            "node_name": "基础",
+            "difficulty_cap": "L1",
+            "knowledge_points": ["基础点1", "基础点2"],
+        },
+        {
+            "node_id": "novelty",
+            "node_name": "新颖性",
+            "difficulty_cap": "L2",
+            "knowledge_points": ["新颖性点1", "新颖性点2", "新颖性点3"],
+        },
+        {
+            "node_id": "inventive-step",
+            "node_name": "创造性",
+            "difficulty_cap": "L3",
+            "knowledge_points": ["创造性点1"],
+        },
+    ]
+    context = build_teaching_context(
+        learning_path=learning_path,
+        progress=progress,
+        question_scope={"backward_review": [], "forward_probe": [], "weakness_probe": []},
+    )
+    assert context["knowledge_points"] == ["新颖性点1", "新颖性点2", "新颖性点3"]
+
+
 def test_teaching_context_and_draft_are_limited_to_active_window() -> None:
     progress = {
         "completed_nodes": ["foundation"],

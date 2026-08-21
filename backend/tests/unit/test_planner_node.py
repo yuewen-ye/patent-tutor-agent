@@ -207,6 +207,13 @@ def test_planner_always_calls_llm_and_builds_enriched_context() -> None:
     assert context["current_topic"]["node_name"] == "专利法律制度基础"
     assert context["planner_guidance"]["teaching_strategy"] == "先规则后案例"
     assert "learning_path" not in context
+    # knowledge_points from static knowledge-dag propagate into path and teaching_context
+    first_path_node = result["learning_path"][0]
+    assert first_path_node["node_id"] == "patent-law-foundation"
+    assert isinstance(first_path_node.get("knowledge_points"), list)
+    assert len(first_path_node["knowledge_points"]) > 0
+    assert any("专利制度" in point for point in first_path_node["knowledge_points"])
+    assert context["knowledge_points"] == first_path_node["knowledge_points"]
 
 
 def test_planner_keep_calls_llm_and_preserves_plan_version() -> None:

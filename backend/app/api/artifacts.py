@@ -17,6 +17,7 @@ _MEDIA_TYPES = {
     ".wav": "audio/wav",
     ".ogg": "audio/ogg",
     ".m4a": "audio/mp4",
+    ".png": "image/png",
     ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 }
 
@@ -56,14 +57,15 @@ def create_artifacts_router(session_service: SessionService) -> APIRouter:
         },
         description=(
             "Read a session artifact with path traversal protection. Markdown/text files "
-            "are returned as UTF-8 text; audio files (mp3/wav/ogg/m4a) as raw bytes."
+            "are returned as UTF-8 text; audio files (mp3/wav/ogg/m4a) and images (png) "
+            "as raw bytes."
         ),
     )
     def get_artifact(session_id: str, artifact_path: str) -> Response:
         suffix = artifact_path.rsplit(".", 1)[-1].lower() if "." in artifact_path else ""
         media_type = _MEDIA_TYPES.get(f".{suffix}", "application/octet-stream")
         try:
-            if media_type.startswith("audio/") or suffix == "pptx":
+            if media_type.startswith("audio/") or suffix in {"pptx", "png"}:
                 content: str | bytes = session_service.read_artifact_bytes(
                     session_id, artifact_path
                 )

@@ -198,6 +198,7 @@ class LearningPathItem(ContractModel):
     target_ability: str | None = None
     assessment: str | None = None
     markdown_artifact: MarkdownArtifact | None = None
+    knowledge_points: list[str] = Field(default_factory=list)
 
 
 class PlannerPathNode(ContractModel):
@@ -816,6 +817,8 @@ class TeachingContext(ContractModel):
     weakness_probe_nodes: list[dict[str, Any]] = Field(default_factory=list)
     progress: dict[str, Any] = Field(default_factory=dict)
     lesson_policy: dict[str, Any] = Field(default_factory=dict)
+    # 当前教学节点必须覆盖的细粒度知识点（来自静态知识图）
+    knowledge_points: list[str] = Field(default_factory=list)
 
 
 class StateDict(TypedDict):

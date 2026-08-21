@@ -462,6 +462,7 @@ def build_teaching_context(
             "node_name": (current_node or {}).get("node_name") if current_node else None,
         },
         "current_node": current_node,
+        "knowledge_points": (current_node or {}).get("knowledge_points") or [],
         "current_static_confusion_pairs": [
             dict(pair) for pair in (static_confusion_pairs or []) if isinstance(pair, dict)
         ],

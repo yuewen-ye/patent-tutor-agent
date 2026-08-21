@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from zipfile import ZipFile
 
 import pytest
@@ -98,6 +99,11 @@ def test_llm_presentation_writes_valid_pptx_with_notes(tmp_path) -> None:
     with ZipFile(path) as pptx:
         assert "ppt/presentation.xml" in pptx.namelist()
         assert "ppt/notesSlides/notesSlide1.xml" in pptx.namelist()
+    # Preview manifest is always present; on hosts without LibreOffice it reports disabled.
+    assert "preview_images" in result
+    manifest_path = tmp_path / "sessions/session-1/presentation/pptx_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["preview_images"]["enabled"] == result["preview_images"]["enabled"]
 
 
 def test_rejects_llm_design_that_changes_source_slide_order(tmp_path) -> None:

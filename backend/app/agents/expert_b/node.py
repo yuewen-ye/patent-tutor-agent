@@ -13,7 +13,7 @@ from backend.app.agents.common import (
     constrain_expert_draft_to_current_lesson,
     extract_planning_directive,
     extract_teaching_context,
-    generate_validated_json,
+    generate_validated_json_stream,
     load_prompt,
     messages_from_prompt,
     normalize_cross_review_payload,
@@ -62,7 +62,7 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
         phase = state.get("expert_phase", "draft")
         if phase == "cross_review":
             teaching_context = extract_teaching_context(state)
-            review = generate_validated_json(
+            review = generate_validated_json_stream(
                 llm_client,
                 messages=[
                     LLMMessage(
@@ -91,7 +91,7 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
             }
         if phase == "revision":
             teaching_context = extract_teaching_context(state)
-            draft = generate_validated_json(
+            draft = generate_validated_json_stream(
                 llm_client,
                 messages=[
                     LLMMessage(
@@ -157,7 +157,7 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
             agent="expert_b",
         )
         retrieval_context = list(state.get("retrieval_context", []) or []) + retrieved_context
-        draft = generate_validated_json(
+        draft = generate_validated_json_stream(
             llm_client,
             messages=messages_from_prompt(
                 prompt,

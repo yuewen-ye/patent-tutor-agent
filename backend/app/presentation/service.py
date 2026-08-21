@@ -21,11 +21,13 @@ from backend.app.presentation.contracts import (
     PresentationArtifact,
     PresentationCoursePackage,
     PresentationDesign,
+    PresentationPreviewManifest,
     PresentationResult,
     PresentationSlide,
     PresentationSource,
 )
 from backend.app.presentation.pptx_renderer import render_pptx
+from backend.app.presentation.preview import generate_slide_previews
 
 PPTX_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
 _PRESENTATION_SYSTEM = load_prompt(__file__)
@@ -148,6 +150,12 @@ def generate_presentation_artifact(
         tmp.write(content)
         temp_path = Path(tmp.name)
     temp_path.replace(target)
+
+    preview_dir = target_dir / "previews"
+    preview_result = generate_slide_previews(
+        target, preview_dir, artifact_root=artifact_root
+    )
+
     artifact = PresentationArtifact(
         artifact_id=f"{safe_session}-course-deck",
         path=f"artifacts/sessions/{safe_session}/presentation/course_deck.pptx",
@@ -163,6 +171,7 @@ def generate_presentation_artifact(
                 "artifact": artifact.model_dump(),
                 "source_slide_count": len(source.slides),
                 "design_theme": design.theme,
+                "preview_images": preview_result,
             },
             ensure_ascii=False,
             indent=2,
@@ -175,4 +184,5 @@ def generate_presentation_artifact(
         source_slide_count=len(source.slides),
         speaker_notes_status="written",
         artifact=artifact,
+        preview_images=PresentationPreviewManifest.model_validate(preview_result),
     ).model_dump()

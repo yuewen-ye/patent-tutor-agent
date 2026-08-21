@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$BaseUrl = "http://127.0.0.1:8000",
-    [string]$LearnerId = "yueye005",
+    [string]$LearnerId = "yueye007",
     [ValidateSet("correct", "incorrect")]
     [string]$AnswerMode = "correct",
     [ValidateRange(1, 20)]

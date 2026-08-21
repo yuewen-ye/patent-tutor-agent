@@ -13,7 +13,7 @@ from backend.app.agents.common import (
     constrain_expert_draft_to_current_lesson,
     extract_planning_directive,
     extract_teaching_context,
-    generate_validated_json,
+    generate_validated_json_stream,
     load_prompt,
     messages_from_prompt,
     normalize_cross_review_payload,
@@ -71,7 +71,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
         phase = state.get("expert_phase", "draft")
         if phase == "cross_review":
             teaching_context = extract_teaching_context(state)
-            review = generate_validated_json(
+            review = generate_validated_json_stream(
                 llm_client,
                 messages=[
                     LLMMessage(
@@ -100,7 +100,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
             }
         if phase == "revision":
             teaching_context = extract_teaching_context(state)
-            draft = generate_validated_json(
+            draft = generate_validated_json_stream(
                 llm_client,
                 messages=[
                     LLMMessage(
@@ -222,7 +222,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                 agent="expert_a",
             )
             retrieval_context = list(state.get("retrieval_context", []) or []) + retrieved_context
-            draft = generate_validated_json(
+            draft = generate_validated_json_stream(
                 llm_client,
                 messages=[
                     LLMMessage(
@@ -238,9 +238,9 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                             f"本节单节点教学上下文：{json.dumps(extract_teaching_context(state), ensure_ascii=False)}\n"
                             + (f"\n{block_plan_directive}\n\n" if block_plan_directive else "")
                             + f"专家A草稿：{json.dumps(state.get('expert_a_draft', {}), ensure_ascii=False)}\n"
-                            f"专家B草稿：{json.dumps(state.get('expert_b_draft', {}), ensure_ascii=False)}\n"
-                            f"裁判报告：{json.dumps(state.get('judge_report', {}), ensure_ascii=False)}\n"
-                            f"裁判打回意见（revision_requests，你必须逐条回应每条 required_change 并在整合稿中实际修正对应内容）：{json.dumps(revision_requests, ensure_ascii=False)}\n"
+                            + f"专家B草稿：{json.dumps(state.get('expert_b_draft', {}), ensure_ascii=False)}\n"
+                            + f"裁判报告：{json.dumps(state.get('judge_report', {}), ensure_ascii=False)}\n"
+                            + f"裁判打回意见（revision_requests，你必须逐条回应每条 required_change 并在整合稿中实际修正对应内容）：{json.dumps(revision_requests, ensure_ascii=False)}\n"
                             + (_revision_directive if _revision_directive else "")
                             + f"检索上下文：{json.dumps(retrieval_context, ensure_ascii=False)}\n"
                             + (f"\n{block_content_directive}\n\n" if block_content_directive else "")
@@ -323,7 +323,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
             agent="expert_a",
         )
         retrieval_context = list(state.get("retrieval_context", []) or []) + retrieved_context
-        draft = generate_validated_json(
+        draft = generate_validated_json_stream(
             llm_client,
             messages=messages_from_prompt(
                 prompt,

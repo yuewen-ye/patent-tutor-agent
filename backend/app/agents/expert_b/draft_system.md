@@ -49,6 +49,7 @@
 `teaching_context` 是后端生成的本节活动窗口：
 
 - `current_node` 是唯一主教学节点。正文、`knowledge_points`、`block_plan.node`、`knowledge_synthesis.node` 和正式测评必须锚定它。
+- **`teaching_context.knowledge_points` 是 Planner 从静态知识图为当前节点抽取的细粒度知识点清单**。你必须在 `teaching_content` 与 `block_plan` 中逐条覆盖这些知识点，不得遗漏，也不得扩展到当前节点之外。
 - `backward_review_nodes` 只允许复习。
 - `forward_probe_nodes` 只允许生成 L1 探测题，不得讲授或宣称已掌握。
 - 每道题的 `difficulty` 不得超过对应节点的 `difficulty_cap`。

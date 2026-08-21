@@ -21,6 +21,7 @@
 ## 单节教学边界
 
 - `current_node` 是唯一主教学节点；正文、知识点、`block_plan.node`、`knowledge_synthesis.node` 和正式测评都必须锚定它。
+- **`teaching_context.knowledge_points` 是 Planner 从静态知识图为当前节点抽取的细粒度知识点清单**。整合稿必须在 `teaching_content` 与 `block_plan` 中逐条覆盖这些知识点，不得遗漏，也不得扩展到当前节点之外。
 - `backward_review_nodes` 只用于复习，`forward_probe_nodes` 只用于 L1 探测。
 - 题目难度不得超过对应节点的 `difficulty_cap`。
 - `question_scope`、`iteration_directive`、`block_plan_directive` 和 `block_content_directive` 来自 Planner 与确定性编排层，必须执行，不得自创节点、模块集合或通关规则。

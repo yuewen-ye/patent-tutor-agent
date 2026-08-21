@@ -15,7 +15,7 @@
 | `_experts_barrier` | 确定性汇合节点 | 等待 A/B 同阶段完成并推进专家阶段 |
 | `retrieve_context` | 检索服务 | `RetrievalChunk[]` |
 | `chat_answer` | 严格 JSON Schema | `ChatAnswer` |
-| `generate_pptx` | LLM 版式设计 + 确定性 OOXML 渲染 | `.pptx` artifact 与 `pptx_result`；输入为 `course_package` + `course_slides` |
+| `generate_pptx` | LLM 版式设计 + 确定性 OOXML 渲染 | `.pptx` artifact 与 `pptx_result`；输入为 `course_package` + `course_slides`；`pptx_result.preview_images` 包含每页 PNG 预览（LibreOffice 可用时）|
 
 Provider 只能经 `AgentLLMRouter` 注入。`generate_pptx` 与其他 Agent 一样使用
 `agents.generate_pptx.provider` / `model_name` / `temperature` / `fallback_*`，并可由
@@ -110,6 +110,10 @@ CAT/BKT 已有充分观测且 `P(L) >= 0.8` 的节点进入 `completed_nodes`。
 直接先修节点时，两个复习席位中至多预留一个给最高风险先修节点，其余节点按 BKT、观测可信度、
 薄弱点和当前概念混淆风险综合竞争。顺序不单独触发复习；综合风险相同才优先更早完成的节点，
 LLM 不能把窗口外节点加入复习范围。
+
+`teaching_context.knowledge_points` 是 Planner 从静态知识图 `knowledge-dag.json`
+为当前主教学节点抽取的细粒度知识点清单。Expert A/B 在生成 `teaching_content` 与 `block_plan`
+时必须逐条覆盖这些知识点，不得遗漏，也不得扩展到当前节点之外。
 
 兼容问卷入口中，原始 `input_payload.questionnaire_responses` 保留用于审计；服务层根据版本化问卷
 定义生成 `input_payload.questionnaire_context`，为每条回答补充题目正文、选项和已选选项正文。

@@ -128,10 +128,28 @@ class PresentationArtifact(PresentationContract):
     created_at: str
 
 
+class PresentationPreviewSlide(PresentationContract):
+    page: int = Field(ge=1)
+    filename: str
+    path: str
+    size_bytes: int = Field(ge=0)
+
+
+class PresentationPreviewManifest(PresentationContract):
+    enabled: bool = False
+    reason: str | None = None
+    dpi: int | None = Field(default=None, ge=72)
+    count: int = Field(default=0, ge=0)
+    slides: list[PresentationPreviewSlide] = Field(default_factory=list)
+
+
 class PresentationResult(PresentationContract):
     status: Literal["generated", "skipped", "degraded"]
     provider: str
     source_slide_count: int = Field(ge=0)
     speaker_notes_status: Literal["written", "unsupported", "unknown"]
     artifact: PresentationArtifact | None = None
+    preview_images: PresentationPreviewManifest = Field(
+        default_factory=PresentationPreviewManifest
+    )
     error_summary: str | None = None

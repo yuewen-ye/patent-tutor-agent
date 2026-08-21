@@ -19,6 +19,8 @@ from backend.app.core.llm import (
     LLMProviderError,
     LLMRole,
     _mark_strict_schema_rejected,
+    _salvage_first_json_value,
+    _strip_json_fence,
 )
 
 Node = Callable[..., dict[str, Any]]
@@ -315,6 +317,132 @@ def generate_validated_json(
             ]
 
     raise RuntimeError("structured output validation loop exited unexpectedly")
+
+
+def _parse_streamed_json(text: str) -> object:
+    """Parse a JSON object from accumulated streaming chunks.
+
+    Mirrors the post-processing in ``call_llm_json``: strips Markdown fences,
+    tries ``json.loads``, then salvages the first complete JSON value if the
+    strict parse fails. Raises ``LLMProviderError`` when no JSON value can be
+    decoded.
+    """
+    cleaned = _strip_json_fence(text)
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError as exc:
+        salvaged, value = _salvage_first_json_value(cleaned)
+        if salvaged:
+            return value
+        raise LLMProviderError(
+            f"streamed output is not valid JSON: {text[:500]}",
+            provider=None,
+            retryable=True,
+        ) from exc
+
+
+def generate_validated_json_stream(
+    llm_client: LLMClient,
+    *,
+    messages: list[LLMMessage],
+    temperature: float,
+    agent: AgentName,
+    output_model: type[ContractT],
+    normalize: Callable[[object], object] | None = None,
+    schema_name: str | None = None,
+    semantic_validate: Callable[[ContractT], None] | None = None,
+) -> ContractT:
+    """Generate an Agent result using a streaming JSON chat completion.
+
+    This is the streaming counterpart to ``generate_validated_json``. It always
+    uses ``LLMClient.generate_json_stream`` instead of provider-side structured
+    output, so the full response is accumulated from chunks and then validated
+    locally by Pydantic. The repair loop (2 attempts by default) sends the prior
+    raw output and validation errors back to the model; repair attempts are also
+    streamed.
+
+    The caller must ensure ``llm_client`` implements ``generate_json_stream`` or
+    relies on the Protocol default that falls back to ``generate_json`` and
+    yields the complete response as a single chunk.
+    """
+    attempts = 2
+    current_messages = list(messages)
+    contract_name = schema_name or output_model.__name__
+    json_schema = cast(
+        dict[str, object],
+        _normalize_schema_for_strict(output_model.model_json_schema(mode="validation")),
+    )
+    schema_instruction = LLMMessage(
+        role="system",
+        content=(
+            f"以下是 {contract_name} 的完整 JSON Schema。即使上游兼容接口没有强制执行"
+            " response_format，你也必须逐字段遵守；required 中的字段不得省略，"
+            "enum/const 只能使用列出的值，additionalProperties=false 的对象不得增加字段。"
+            "只返回 JSON："
+            f"{json.dumps(json_schema, ensure_ascii=False, separators=(',', ':'))}"
+        ),
+    )
+    if current_messages and current_messages[0].role == "system":
+        current_messages.insert(1, schema_instruction)
+    else:
+        current_messages.insert(0, schema_instruction)
+
+    for attempt in range(attempts):
+        stream_generate = getattr(llm_client, "generate_json_stream", None)
+        if stream_generate is None:
+            # Legacy/test clients may only implement generate_json; fall back
+            # non-streaming so the Protocol contract degrades gracefully.
+            raw = llm_client.generate_json(
+                messages=current_messages,
+                temperature=temperature,
+                agent=agent,
+            )
+        else:
+            chunks: list[str] = list(
+                stream_generate(
+                    messages=current_messages,
+                    temperature=temperature,
+                    agent=agent,
+                )
+            )
+            raw_text = "".join(chunks)
+            raw = _parse_streamed_json(raw_text)
+
+        normalized = normalize(raw) if normalize is not None else raw
+        try:
+            result = output_model.model_validate(normalized)
+            if semantic_validate is not None:
+                semantic_validate(result)
+            return result
+        except ValidationError as exc:
+            _LOGGER.warning(
+                "Streamed JSON validation failed for agent=%s contract=%s "
+                "attempt=%s/%s errors=%s",
+                agent,
+                contract_name,
+                attempt + 1,
+                attempts,
+                json.dumps(exc.errors(include_url=False), ensure_ascii=False),
+            )
+            if attempt + 1 >= attempts:
+                raise
+            current_messages = [
+                *current_messages,
+                LLMMessage(
+                    role="assistant",
+                    content=json.dumps(raw, ensure_ascii=False, default=str),
+                ),
+                LLMMessage(
+                    role="user",
+                    content=(
+                        f"上一份 JSON 未通过 {contract_name} 校验。"
+                        "请修复后返回完整 JSON，不要解释，也不要省略必填字段。"
+                        f"校验错误：{json.dumps(exc.errors(include_url=False), ensure_ascii=False)}"
+                    ),
+                ),
+            ]
+
+    raise RuntimeError("streamed output validation loop exited unexpectedly")
 
 
 def normalize_key_aliases(raw: object, aliases: dict[str, str]) -> object:

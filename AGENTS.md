@@ -133,7 +133,7 @@ later, which creates a separate feedback session. The graph has no interrupt-bas
 | `expert_b` | LLM + tool calling | draft, review A, revise | B draft/review/revision |
 | `judge` | LLM | evaluate integrated course without rewriting it | `judge_report` |
 | `chat_answer` | LLM | answer chat requests from retrieved context | `chat_answer` |
-| `generate_pptx` | LLM + deterministic renderer | choose visual direction/templates and render an editable PPTX from `course_package` + `course_slides` | `pptx_result`, session-scoped PPTX artifact |
+| `generate_pptx` | LLM + deterministic renderer | choose visual direction/templates and render an editable PPTX plus per-slide PNG previews from `course_package` + `course_slides` | `pptx_result`, session-scoped PPTX artifact and `slide_*.png` previews |
 
 Do not reintroduce removed `tool_agent`, `finalize`, or debate-round counters,
 `final_learning_markdown`, `exercise_answer_key`, or `quality_gate_failed` nodes/fields.
@@ -162,6 +162,9 @@ def build_<name>_node(llm_client: LLMClient) -> Node:
 - Agent factories receive `LLMClient`; never import provider state inside a node.
 - Every final Agent JSON result uses strict JSON Schema output through
   `generate_validated_json()`, followed by Pydantic validation and one repair attempt.
+- Expert A/B JSON generation uses `generate_validated_json_stream()` to consume the streaming chat
+  completion; chunks are accumulated, re-assembled into valid JSON, and validated before entering
+  state. Tool calls remain non-streaming.
 - Expert A/B use `generate_with_tools()` when deciding whether to call RAG, then validate final JSON.
 - Planner receives the complete runtime knowledge/confusion graphs and active plan, then makes a
   strict `PlannerAgentResult` keep/replace decision on every teach session. Model failure follows
@@ -214,6 +217,8 @@ append-only reducer fields. Important phase fields are:
 - `diagnosis_feedback_phase`: `diagnosis | feedback`
 - `expert_phase`: `draft | cross_review | revision | integration`
 - `teach_phase`: only selects Expert A's debate/integration prompt behavior
+- `LearningPathItem.knowledge_points`: fine-grained points from the static DAG
+- `TeachingContext.knowledge_points`: current-node points Experts must cover
 
 Schema changes must update, in order:
 
@@ -239,6 +244,11 @@ Planner reads these backend runtime assets directly:
 
 - `backend/app/curriculum/data/knowledge-dag.json`
 - `backend/app/curriculum/data/confusion-pairs.json`
+
+`knowledge-dag.json` nodes carry a `knowledge_points` list of fine-grained learning objectives.
+Planner enriches every `LearningPathItem` with these points and surfaces the current node's list in
+`teaching_context.knowledge_points`; Experts must cover each point in `teaching_content` and
+`block_plan` without expanding outside the current node.
 
 The knowledge axis is static. Runtime confusion risk is derived from the latest learner profile and
 BKT mastery. Planner LLM runs on every teach session and decides whether to keep the matching active
@@ -298,6 +308,9 @@ artifacts/sessions/{session_id}/
   presentation/
     course_deck.pptx
     pptx_manifest.json
+    slide_01.png          # per-slide PNG preview for frontend thumbnails
+    slide_02.png
+    ...
   feedback/{feedback_report,learner_profile_update,grading_report}.md
 ```
 

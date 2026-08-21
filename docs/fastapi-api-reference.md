@@ -192,6 +192,26 @@ GET /sessions/{session_id}/artifacts/presentation/course_deck.pptx
 响应为 `application/vnd.openxmlformats-officedocument.presentationml.presentation`，并带附件下载头。
 PPTX 生成失败不会使课程会话失败；客户端应读取会话 state 的 `pptx_result` 判断生成或降级状态。
 
+### PPT 预览图
+
+`generate_pptx` 在生成 `.pptx` 后会尝试为每页生成 PNG 预览图（需要部署环境安装 LibreOffice）。
+预览文件写入：
+
+```text
+presentation/previews/slide_001.png
+presentation/previews/slide_002.png
+...
+```
+
+通过 artifact 端点逐页读取：
+
+```text
+GET /sessions/{session_id}/artifacts/presentation/previews/slide_001.png
+```
+
+响应为 `image/png`。可用的预览列表、生成状态和文件路径记录在 `pptx_result.preview_images`
+以及 `presentation/pptx_manifest.json` 中。
+
 ### `GET /sessions/{session_id}`
 
 用途：查询单个会话的完整状态，用于判断后台任务是否结束、读取错误信息，以及在需要时获取 `state` 中的课程或反馈数据。

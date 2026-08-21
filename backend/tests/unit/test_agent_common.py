@@ -1,3 +1,6 @@
+import json
+from collections.abc import Iterator
+
 import pytest
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel
@@ -6,6 +9,7 @@ from backend.app.agents.common import (
     _normalize_schema_for_strict,
     _schema_has_free_form_object,
     generate_validated_json,
+    generate_validated_json_stream,
     messages_from_prompt,
     normalize_expert_draft_payload,
 )
@@ -433,3 +437,100 @@ def test_expert_draft_budget_is_closed_to_four_keys() -> None:
 def test_expert_draft_schema_is_fully_closed_for_strict_mode() -> None:
     schema = _normalize_schema_for_strict(ExpertDraft.model_json_schema(mode="validation"))
     assert _schema_has_free_form_object(schema) is False
+
+
+class StreamingJsonClient:
+    """Yields JSON in chunks to exercise generate_validated_json_stream."""
+
+    def __init__(self, payload: object) -> None:
+        self.calls: list[list[LLMMessage]] = []
+        text = json.dumps(payload, ensure_ascii=False)
+        # Split into arbitrary chunks to verify accumulation
+        self.chunks = [text[i : i + 8] for i in range(0, len(text), 8)]
+
+    def generate_json_stream(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        agent: str | None = None,
+    ) -> Iterator[str]:
+        self.calls.append(messages)
+        yield from self.chunks
+
+    def generate_with_tools(
+        self,
+        messages: list[LLMMessage],
+        tools: list[ToolDefinition],
+        temperature: float,
+        agent: str | None = None,
+    ) -> LLMResponseWithTools:
+        raise AssertionError("tool calling is not used by this test")
+
+
+class StreamingRepairClient:
+    """First chunk stream is invalid; second streamed attempt repairs it."""
+
+    def __init__(self) -> None:
+        self.calls: list[list[LLMMessage]] = []
+        self.responses = iter(
+            [
+                '{"intent": "teach", "confidence": 0.9}',
+                '{"intent": "teach", "confidence": 0.9, "reason": "已修复"}',
+            ]
+        )
+
+    def generate_json_stream(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        agent: str | None = None,
+    ) -> Iterator[str]:
+        self.calls.append(messages)
+        text = next(self.responses)
+        # Yield one char at a time to stress chunk concatenation
+        yield from (text[i : i + 1] for i in range(len(text)))
+
+    def generate_with_tools(
+        self,
+        messages: list[LLMMessage],
+        tools: list[ToolDefinition],
+        temperature: float,
+        agent: str | None = None,
+    ) -> LLMResponseWithTools:
+        raise AssertionError("tool calling is not used by this test")
+
+
+def test_generate_validated_json_stream_accumulates_chunks_and_validates() -> None:
+    client = StreamingJsonClient(
+        {"intent": "teach", "confidence": 0.9, "reason": "用户希望系统学习"}
+    )
+
+    result = generate_validated_json_stream(
+        client,
+        messages=[LLMMessage(role="user", content="请分类")],
+        temperature=0.0,
+        agent="route",
+        output_model=IntentResult,
+    )
+
+    assert result.intent == "teach"
+    assert result.confidence == 0.9
+    assert result.reason == "用户希望系统学习"
+    assert len(client.calls) == 1
+
+
+def test_generate_validated_json_stream_repairs_invalid_stream_once() -> None:
+    client = StreamingRepairClient()
+
+    result = generate_validated_json_stream(
+        client,
+        messages=[LLMMessage(role="user", content="请分类")],
+        temperature=0.0,
+        agent="route",
+        output_model=IntentResult,
+    )
+
+    assert result.reason == "已修复"
+    assert len(client.calls) == 2
+    assert "完整 JSON Schema" in client.calls[0][0].content
+    assert "校验错误" in client.calls[1][-1].content
