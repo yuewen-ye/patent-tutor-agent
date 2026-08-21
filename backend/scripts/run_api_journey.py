@@ -20,6 +20,23 @@ import httpx
 
 TERMINAL_STATUSES = {"completed", "failed", "canceled"}
 PROGRESS_HEARTBEAT_SECONDS = 30.0
+
+
+def _repair_utf8_gbk_mojibake(text: str) -> str:
+    """Repair strings where UTF-8 bytes were mis-decoded as GBK.
+
+    On Windows, PowerShell/argument passing may decode UTF-8 bytes using the
+    system GBK code page, turning e.g. '其他' into '鍏朵粬'. Re-encode as GBK
+    and decode as UTF-8 to recover the original text. Correct strings usually
+    fail this round-trip and are returned unchanged.
+    """
+    try:
+        repaired = text.encode("gbk").decode("utf-8")
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return text
+    return repaired
+
+
 DEFAULT_QUESTIONNAIRE_RESPONSES: list[dict[str, Any]] = [
     {"question_id": "Q1", "answer": "B"},
     {"question_id": "Q2", "answer": "C"},
@@ -1115,7 +1132,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         config = JourneyConfig(
             learner_id=learner_id,
-            learning_goal=args.learning_goal,
+            learning_goal=_repair_utf8_gbk_mojibake(args.learning_goal),
             questionnaire_responses=_load_questionnaire_responses(
                 args.questionnaire_responses
             ),
@@ -1123,7 +1140,7 @@ def main(argv: list[str] | None = None) -> int:
             poll_interval=args.poll_interval,
             max_exercises=args.max_exercises,
             answer_mode=args.answer_mode,
-            education_background=args.education_background,
+            education_background=_repair_utf8_gbk_mojibake(args.education_background),
             cat_mode=args.cat_mode,
             cat_max_answers=args.cat_max_answers,
             require_pptx=not args.allow_missing_pptx,

@@ -706,11 +706,8 @@ def _parse_sse_chunks(response: httpx.Response) -> Iterator[str]:
                     chunk = json.loads(data)
                 except json.JSONDecodeError:
                     continue
-                choice = (
-                    chunk.get("choices", [{}])[0]
-                    if isinstance(chunk, dict)
-                    else {}
-                )
+                choices = chunk.get("choices") if isinstance(chunk, dict) else None
+                choice = choices[0] if isinstance(choices, list) and choices else {}
                 delta = choice.get("delta", {}) if isinstance(choice, dict) else {}
                 content = delta.get("content")
                 if isinstance(content, str) and content:

@@ -20,6 +20,10 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 $env:PYTHONUTF8 = "1"
+# Force UTF-8 for PowerShell -> external program argument/output passing on Windows
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
     throw "uv command was not found. Install uv and run 'uv sync' first."
