@@ -1,3 +1,5 @@
+from collections.abc import Iterator
+
 import pytest
 from langgraph.runtime import Runtime
 
@@ -8,7 +10,7 @@ from backend.app.agents.planner.node import (
     build_planner_node,
 )
 from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinition
-from backend.app.curriculum.learning_path import load_knowledge_dag
+from backend.app.curriculum.learning_path import load_knowledge_dag, recommend_target_nodes_for_goal
 from backend.app.curriculum.learning_plan import learning_goal_hash
 from backend.app.schemas.context import WorkflowContext
 from backend.app.schemas.state import PlannerAgentResult
@@ -71,6 +73,13 @@ class PlannerLLMClient:
             ]
         return result
 
+    def generate_json_stream(
+        self, messages: list[LLMMessage], temperature: float, agent: str | None = None
+    ) -> Iterator[str]:
+        raw = self.generate_json(messages, temperature, agent)
+        import json as _json
+        yield _json.dumps(raw, ensure_ascii=False, default=str)
+
     def generate_with_tools(
         self, messages: list[LLMMessage], tools: list[ToolDefinition], temperature: float,
         agent: str | None = None,
@@ -80,6 +89,17 @@ class PlannerLLMClient:
 
 class FailingPlannerLLMClient:
     def generate_json(self, messages: list[LLMMessage], temperature: float, agent: str | None = None) -> object:
+        raise RuntimeError("LLM unavailable")
+
+    def generate_json_stream(
+        self, messages: list[LLMMessage], temperature: float, agent: str | None = None
+    ) -> Iterator[str]:
+        raise RuntimeError("LLM unavailable")
+
+    def generate_with_tools(
+        self, messages: list[LLMMessage], tools: list[ToolDefinition], temperature: float,
+        agent: str | None = None,
+    ) -> LLMResponseWithTools:
         raise RuntimeError("LLM unavailable")
 
 
@@ -237,3 +257,89 @@ def test_planner_keep_calls_llm_and_preserves_plan_version() -> None:
 def test_planner_failure_does_not_fallback_to_deterministic_path() -> None:
     with pytest.raises(RuntimeError, match="LLM unavailable"):
         build_planner_node(FailingPlannerLLMClient())({"session_id": "debug", "user_input": "学习新颖性", "events": []})
+
+
+class SingleCompositePlannerLLMClient:
+    """Fake planner that returns only one composite node to test expansion fallback."""
+
+    def __init__(self) -> None:
+        self.calls: list[list[LLMMessage]] = []
+        self.agents: list[str | None] = []
+
+    def generate_json(
+        self, messages: list[LLMMessage], temperature: float, agent: str | None = None
+    ) -> object:
+        self.calls.append(messages)
+        self.agents.append(agent)
+        return {
+            "plan_action": "replace",
+            "decision_reason": "目标范围较广，从基础开始",
+            "nodes": [
+                {
+                    "node_id": "patent-law-foundation",
+                    "node_name": "专利法律制度基础",
+                    "duration_min": 30,
+                    "strategy": "基础概念",
+                    "prerequisites": [],
+                    "difficulty_cap": "L2",
+                }
+            ],
+            "question_scope": {
+                "backward_review": [],
+                "forward_probe": [],
+                "weakness_probe": [],
+            },
+            "iteration_directive": {"type": "无", "trigger": "", "action": ""},
+            "teaching_guidance": {
+                "lesson_focus": ["基础概念"],
+                "priority_weaknesses": [],
+                "teaching_strategy": "概念讲解",
+                "confusion_guidance": "无",
+            },
+        }
+
+    def generate_json_stream(
+        self, messages: list[LLMMessage], temperature: float, agent: str | None = None
+    ) -> Iterator[str]:
+        raw = self.generate_json(messages, temperature, agent)
+        import json as _json
+        yield _json.dumps(raw, ensure_ascii=False, default=str)
+
+    def generate_with_tools(
+        self, messages: list[LLMMessage], tools: list[ToolDefinition], temperature: float,
+        agent: str | None = None,
+    ) -> LLMResponseWithTools:
+        return LLMResponseWithTools(content=None, tool_calls=[])
+
+
+def test_planner_expands_single_composite_node_path() -> None:
+    client = SingleCompositePlannerLLMClient()
+    result = build_planner_node(client)(
+        {"session_id": "debug", "user_input": "系统学习专利基础", "events": []}
+    )
+    node_ids = [item["node_id"] for item in result["learning_path"]]
+    assert "patent-law-foundation" in node_ids
+    assert any(
+        nid in node_ids
+        for nid in ["patent-system-overview", "patent-law-framework", "patent-rights-nature"]
+    )
+    assert len(node_ids) >= 3
+    # All prerequisites must be satisfied within the expanded path
+    node_by_id = {n["node_id"]: n for n in load_knowledge_dag()["nodes"]}
+    for nid in node_ids:
+        for prereq in node_by_id.get(nid, {}).get("predecessors", []):
+            assert prereq in node_ids, f"missing prerequisite {prereq} for {nid}"
+
+
+def test_recommend_target_nodes_prefers_atomic_nodes() -> None:
+    knowledge = load_knowledge_dag()
+    goal = (
+        "在商标与著作权经验基础上，系统理解专利申请流程、保护范围、创造性与权利要求判断"
+    )
+    targets = recommend_target_nodes_for_goal(goal, knowledge, top_k=8)
+    assert len(targets) >= 3
+    node_by_id = {n["node_id"]: n for n in knowledge["nodes"]}
+    # All returned targets should be atomic (no sub_nodes)
+    assert all(not node_by_id[nid].get("knowledge_sub_nodes") for nid in targets)
+    # Should contain nodes related to the goal keywords
+    assert any("application" in nid or "申请" in node_by_id[nid].get("node_name", "") for nid in targets)

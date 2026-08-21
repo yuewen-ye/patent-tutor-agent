@@ -164,7 +164,8 @@ def build_<name>_node(llm_client: LLMClient) -> Node:
   `generate_validated_json()`, followed by Pydantic validation and one repair attempt.
 - Expert A/B JSON generation uses `generate_validated_json_stream()` to consume the streaming chat
   completion; chunks are accumulated, re-assembled into valid JSON, and validated before entering
-  state. Tool calls remain non-streaming.
+  state. Tool calls remain non-streaming. Wrappers such as `CancelAwareLLMClient` must proxy
+  `generate_json_stream()` to the inner client so that streaming is not silently downgraded.
 - Expert A/B use `generate_with_tools()` when deciding whether to call RAG, then validate final JSON.
 - Planner receives the complete runtime knowledge/confusion graphs and active plan, then makes a
   strict `PlannerAgentResult` keep/replace decision on every teach session. Model failure follows
@@ -217,8 +218,9 @@ append-only reducer fields. Important phase fields are:
 - `diagnosis_feedback_phase`: `diagnosis | feedback`
 - `expert_phase`: `draft | cross_review | revision | integration`
 - `teach_phase`: only selects Expert A's debate/integration prompt behavior
-- `LearningPathItem.knowledge_points`: fine-grained points from the static DAG
-- `TeachingContext.knowledge_points`: current-node points Experts must cover
+- `LearningPathItem.knowledge_points`: fine-grained points extracted from the static DAG
+  (`knowledge_points[].point` strings)
+- `TeachingContext.knowledge_points`: current-node point strings Experts must cover
 
 Schema changes must update, in order:
 
@@ -245,8 +247,9 @@ Planner reads these backend runtime assets directly:
 - `backend/app/curriculum/data/knowledge-dag.json`
 - `backend/app/curriculum/data/confusion-pairs.json`
 
-`knowledge-dag.json` nodes carry a `knowledge_points` list of fine-grained learning objectives.
-Planner enriches every `LearningPathItem` with these points and surfaces the current node's list in
+`knowledge-dag.json` nodes carry a `knowledge_points` list of fine-grained learning objectives;
+each item is an object with a `point` string. Planner extracts the `point` text and enriches every
+`LearningPathItem` with these strings, then surfaces the current node's list in
 `teaching_context.knowledge_points`; Experts must cover each point in `teaching_content` and
 `block_plan` without expanding outside the current node.
 
@@ -255,6 +258,13 @@ BKT mastery. Planner LLM runs on every teach session and decides whether to keep
 plan or replace it with a complete new route. A keep decision restores the active node list and
 cursor; a replace decision creates a new plan version. Every teach session recomputes the session
 activity window from the latest cursor, BKT evidence, weak points and current-node confusion risk.
+
+Planner also uses a deterministic goal-to-node recommender (`recommend_target_nodes_for_goal`) to
+suggest relevant atomic nodes based on the learning-goal text; these candidates are injected into
+the Planner prompt as a strong hint. As a safety net, if the LLM proposes a `replace` path with only
+one composite node, the Planner expands that node to include its `knowledge_sub_nodes` (plus any
+necessary recommended targets) and topologically sorts the result, preventing single-node routes
+when the goal clearly spans multiple topics.
 
 The backend owns the final topological validation, cursor and activity window. Historical review is
 zero to two completed nodes selected by deterministic risk; at-risk direct prerequisites can reserve
@@ -313,6 +323,9 @@ artifacts/sessions/{session_id}/
     ...
   feedback/{feedback_report,learner_profile_update,grading_report}.md
 ```
+
+`path/learning_path.md` renders the planned route as a table and lists the per-node fine-grained
+`knowledge_points` extracted from the static DAG, so the artifact is directly inspectable.
 
 The graph side-effect wrapper owns file I/O. Agent nodes must not write files directly. Artifact paths
 are session-scoped and path traversal must remain rejected. Markdown artifacts remain the audit/read

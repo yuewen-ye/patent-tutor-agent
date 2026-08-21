@@ -339,6 +339,24 @@ def _learning_path_markdown(title: str, value: list[Any]) -> str:
         )
     lines.append("")
     lines.extend([
+        "## 各节点细粒度知识点",
+        "",
+    ])
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        node_id = item.get("node_id", "")
+        node_name = item.get("node_name", "")
+        knowledge_points = item.get("knowledge_points") or []
+        lines.append(f"### {node_name} (`{node_id}`)")
+        lines.append("")
+        if knowledge_points:
+            for point in knowledge_points:
+                lines.append(f"- {point}")
+        else:
+            lines.append("- （未配置细粒度知识点）")
+        lines.append("")
+    lines.extend([
         "## 习题难度上限（分阶结论）",
         "",
         "| 节点 | 难度上限 |",

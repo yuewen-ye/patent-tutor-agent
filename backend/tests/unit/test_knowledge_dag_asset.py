@@ -23,7 +23,9 @@ def test_runtime_knowledge_dag_has_chapters_subsections_and_knowledge_points() -
     assert all(node["knowledge_sub_nodes"] for node in chapter_nodes)
     assert all(node["knowledge_points"] for node in subsection_nodes)
     assert all(
-        isinstance(point, str) and point.strip()
+        isinstance(point, dict)
+        and isinstance(point.get("point"), str)
+        and point["point"].strip()
         for node in subsection_nodes
         for point in node["knowledge_points"]
     )

@@ -15,6 +15,7 @@ from backend.app.curriculum.learning_path import (
     build_dual_axis_snapshot,
     load_confusion_pairs,
     load_knowledge_dag,
+    recommend_target_nodes_for_goal,
 )
 from backend.app.curriculum.learning_plan import learning_goal_hash
 from backend.app.curriculum.learning_progress import (
@@ -111,6 +112,64 @@ def _static_pairs_for_node(confusion: dict[str, Any], node_id: str | None) -> li
         if current and current in ids:
             result.append(dict(pair))
     return result
+
+
+def _expand_short_path(
+    selected_ids: list[str],
+    knowledge: dict[str, Any],
+    static_prerequisites: dict[str, list[str]],
+    recommended: list[str],
+    min_nodes: int = 3,
+) -> list[str]:
+    """若 Planner 返回的 replace 路径过短，尝试展开复合节点并补齐推荐目标节点。
+
+    展开规则：
+    1. 把当前选中节点中的复合节点（有 knowledge_sub_nodes）展开为其子节点；
+    2. 若仍不足 min_nodes，按推荐列表顺序补充原子节点；
+    3. 用静态先修关系对扩展后的集合做拓扑排序，保证先修节点在前。
+    """
+    node_by_id = {
+        str(n["node_id"]): n
+        for n in knowledge.get("nodes", [])
+        if isinstance(n, dict) and n.get("node_id")
+    }
+
+    expanded = set(selected_ids)
+    for nid in list(expanded):
+        node = node_by_id.get(nid)
+        if node:
+            for sub in node.get("knowledge_sub_nodes") or []:
+                sub_id = str(sub)
+                if sub_id in node_by_id:
+                    expanded.add(sub_id)
+
+    # 若仍不足最小节点数，依次加入推荐节点
+    for nid in recommended:
+        if nid in node_by_id:
+            expanded.add(nid)
+        if len(expanded) >= min_nodes:
+            break
+
+    # 拓扑排序：优先保持原选中节点的相对顺序
+    original_index = {nid: idx for idx, nid in enumerate(selected_ids)}
+    remaining = set(expanded)
+    emitted: list[str] = []
+    safety = 0
+    while remaining and safety < 100:
+        safety += 1
+        ready = [
+            nid
+            for nid in remaining
+            if set(static_prerequisites.get(nid, [])).issubset(emitted)
+        ]
+        if not ready:
+            break
+        ready.sort(key=lambda nid: (original_index.get(nid, 9999), nid))
+        for nid in ready:
+            emitted.append(nid)
+            remaining.remove(nid)
+
+    return emitted if len(emitted) >= len(selected_ids) else selected_ids
 
 
 def _parse_planner_plan(
@@ -219,11 +278,14 @@ def build_planner_node(llm_client: LLMClient) -> Node:
         learner_id = _runtime_learner_id(runtime)
         reader = getattr(store, "active_learning_plan", None)
         active_plan = reader(learner_id) if learner_id and callable(reader) else None
+        recommended_targets = recommend_target_nodes_for_goal(learning_goal, knowledge, top_k=8)
         user_text = (
             "# 静态知识 DAG\n" + json.dumps(knowledge, ensure_ascii=False, separators=(",", ":"))
             + "\n# 静态易混淆对\n" + json.dumps(confusion, ensure_ascii=False, separators=(",", ":"))
             + "\n# 学习者画像与掌握度\n" + json.dumps(profile, ensure_ascii=False, separators=(",", ":"))
             + "\n# 当前活动计划（可为空）\n" + json.dumps(active_plan, ensure_ascii=False, separators=(",", ":"), default=str)
+            + "\n# 基于学习目标推荐的目标原子节点（供参考，请优先在路径中纳入）\n"
+            + json.dumps(recommended_targets, ensure_ascii=False)
             + f"\n# 学习目标\n{learning_goal}"
         )
         known_ids = {
@@ -276,6 +338,30 @@ def build_planner_node(llm_client: LLMClient) -> Node:
             canonical_names=canonical_names,
             static_prerequisites=static_prerequisites,
         )
+        if plan["plan_action"] == "replace" and len(plan["learning_path"]) == 1:
+            expanded_ids = _expand_short_path(
+                [item.node_id for item in plan["learning_path"]],
+                knowledge,
+                static_prerequisites,
+                recommended_targets,
+                min_nodes=3,
+            )
+            existing = {item.node_id: item for item in plan["learning_path"]}
+            expanded_path: list[LearningPathItem] = []
+            for nid in expanded_ids:
+                if nid in existing:
+                    expanded_path.append(existing[nid])
+                else:
+                    expanded_path.append(
+                        LearningPathItem(
+                            node_id=nid,
+                            node_name=canonical_names.get(nid, nid),
+                            duration_min=30,
+                            strategy="根据学习目标补充的原子知识点，作为后续教学基础",
+                            prerequisites=static_prerequisites.get(nid, []),
+                        )
+                    )
+            plan["learning_path"] = expanded_path
         if plan["plan_action"] == "keep":
             if not isinstance(active_plan, dict) or not active_plan.get("nodes"):
                 raise ValueError("Planner cannot keep a missing active plan")

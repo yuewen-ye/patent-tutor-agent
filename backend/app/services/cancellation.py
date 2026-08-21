@@ -1,9 +1,15 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import Any
 
-from backend.app.core.llm import AgentName, LLMClient, LLMMessage, LLMResponseWithTools, ToolDefinition
+from backend.app.core.llm import (
+    AgentName,
+    LLMClient,
+    LLMMessage,
+    LLMResponseWithTools,
+    ToolDefinition,
+)
 
 
 class SessionCancelled(RuntimeError):
@@ -44,6 +50,20 @@ class CancelAwareLLMClient:
                 agent=agent,
             )
         return self._inner.generate_json(messages, temperature, agent)
+
+    def generate_json_stream(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        agent: AgentName | None = None,
+    ) -> Iterator[str]:
+        self._raise_if_cancelled()
+        stream_generate = getattr(self._inner, "generate_json_stream", None)
+        if stream_generate is None:
+            raise NotImplementedError(
+                f"{type(self._inner).__name__} does not support generate_json_stream"
+            )
+        return stream_generate(messages, temperature, agent)
 
     def generate_with_tools(
         self,

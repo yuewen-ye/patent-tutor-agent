@@ -354,8 +354,11 @@ def _route_after_experts_barrier(
 
 
 def _is_pptx_enabled() -> bool:
+    """读取环境变量控制是否启用 generate_pptx 节点；默认为开启。"""
     raw = os.environ.get("PATENT_TUTOR_PPTX_ENABLED", "").strip()
-    return raw.lower() in {"1", "true", "on", "yes"}
+    if not raw:
+        return True
+    return raw.lower() not in {"false", "0", "off", "no"}
 
 
 def _generate_pptx_node(

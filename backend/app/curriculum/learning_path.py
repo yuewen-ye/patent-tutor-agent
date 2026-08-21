@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import heapq
 import json
+import re
 from copy import deepcopy
 from functools import lru_cache
 from pathlib import Path
@@ -130,6 +131,91 @@ def _resolve_weak_nodes(
                 if nm and nm in w:
                     resolved.add(nid)
     return resolved
+
+
+def _extract_goal_terms(goal: str) -> set[str]:
+    """从学习目标中提取候选关键词（长度>=2 的非停用词片段）。"""
+    if not goal:
+        return set()
+    # 按常见标点/空白切分，再保留>=2字符的片段
+    parts = re.split(r"[，。、；：！？\"\'\s\n\r，,;.!?:]+", goal)
+    terms: set[str] = set()
+    for part in parts:
+        part = part.strip()
+        if len(part) >= 2:
+            terms.add(part)
+        # 对较长片段再按 2-4 字窗口切分，提高命中
+        if len(part) >= 4:
+            for length in (4, 3, 2):
+                for i in range(len(part) - length + 1):
+                    terms.add(part[i : i + length])
+    return terms
+
+
+def recommend_target_nodes_for_goal(
+    learning_goal: str,
+    knowledge: dict[str, Any],
+    top_k: int = 8,
+) -> list[str]:
+    """根据学习目标文本，推荐最相关的原子/叶子目标节点 id 列表。
+
+    匹配信号：
+    - 节点名在目标文本中完整出现（权重最高）；
+    - 节点标签在目标文本中出现；
+    - 节点知识点/描述中的词与目标文本有重叠。
+
+    一级复合节点（有 knowledge_sub_nodes）的分数会均分给其子节点，
+    因此返回结果优先是二级及以下原子节点，便于 Planner 直接组成教学路径。
+    """
+    nodes = [n for n in knowledge.get("nodes", []) if isinstance(n, dict) and n.get("node_id")]
+    node_by_id = {str(n["node_id"]): n for n in nodes}
+    goal = str(learning_goal or "")
+    goal_terms = _extract_goal_terms(goal)
+
+    def _node_search_text(node: dict[str, Any]) -> str:
+        parts: list[str] = [str(node.get("node_name") or "")]
+        parts.extend(str(t) for t in (node.get("tags") or []) if t)
+        parts.append(str(node.get("description") or ""))
+        for kp in node.get("knowledge_points") or []:
+            if isinstance(kp, dict):
+                parts.append(str(kp.get("point") or ""))
+            elif isinstance(kp, str):
+                parts.append(kp)
+        return " ".join(parts)
+
+    def _score(node: dict[str, Any]) -> float:
+        text = _node_search_text(node)
+        score = 0.0
+        node_name = str(node.get("node_name") or "")
+        if node_name and node_name in goal:
+            score += 10.0
+        for tag in node.get("tags") or []:
+            tag = str(tag)
+            if tag and tag in goal:
+                score += 3.0
+        for term in goal_terms:
+            if term and term in text:
+                score += 0.5
+        return score
+
+    scores: dict[str, float] = {}
+    for node in nodes:
+        nid = str(node["node_id"])
+        score = _score(node)
+        sub_nodes = [str(s) for s in node.get("knowledge_sub_nodes") or [] if s and str(s) in node_by_id]
+        if sub_nodes:
+            per_child = score / len(sub_nodes)
+            for child in sub_nodes:
+                scores[child] = scores.get(child, 0.0) + per_child
+        else:
+            scores[nid] = scores.get(nid, 0.0) + score
+
+    atomic_nodes = [n for n in nodes if not n.get("knowledge_sub_nodes")]
+    ranked = sorted(
+        [n for n in atomic_nodes if scores.get(str(n["node_id"]), 0.0) > 0.0],
+        key=lambda n: (-scores[str(n["node_id"])], n.get("level", 99), str(n.get("node_id"))),
+    )
+    return [str(n["node_id"]) for n in ranked[:top_k]]
 
 
 def _pair_weak_match(
@@ -732,8 +818,10 @@ def format_default_block_plan_directive(default_plan: dict[str, Any]) -> str:
     """把确定性 default_plan 渲染为注入 integration 提示词的硬约束文本。"""
     lines = [
         f"# 确定性板块编排约束（当前节点 {default_plan['node']}，spec §3.3/§3.4 规则算得，硬约束）",
-        "你产出的 block_plan.blocks 必须且只能包含以下板块，block_plan.node 必须等于上述节点，"
-        "每块 trigger 使用给定值，不得自创或张冠李戴：",
+        (
+            "你产出的 block_plan.blocks 必须且只能包含以下板块，block_plan.node 必须等于上述节点，"
+            "每块 trigger 使用给定值，不得自创或张冠李戴："
+        ),
         "",
         "| block_type | 类型 | trigger（规则命中理由） |",
         "|---|---|---|",
