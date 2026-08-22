@@ -9,14 +9,17 @@ from datetime import UTC, datetime
 from io import BytesIO
 from itertools import pairwise
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, cast, get_args
 from zipfile import BadZipFile, ZipFile
 
 from pptx import Presentation
 
-from backend.app.agents.common import generate_validated_json, load_prompt
+from backend.app.agents.common import (
+    generate_validated_json_stream,
+    load_prompt,
+)
 from backend.app.core.agent_runtime_config import agent_temperature
-from backend.app.core.llm import LLMClient, LLMMessage
+from backend.app.core.llm import LLMClient, LLMMessage, LLMProviderError
 from backend.app.presentation.contracts import (
     PresentationArtifact,
     PresentationCoursePackage,
@@ -25,11 +28,14 @@ from backend.app.presentation.contracts import (
     PresentationResult,
     PresentationSlide,
     PresentationSource,
+    PresentationTemplate,
 )
 from backend.app.presentation.pptx_renderer import render_pptx
 from backend.app.presentation.preview import generate_slide_previews
 
-PPTX_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+PPTX_MIME: Literal["application/vnd.openxmlformats-officedocument.presentationml.presentation"] = (
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+)
 _PRESENTATION_SYSTEM = load_prompt(__file__)
 
 
@@ -58,12 +64,7 @@ def _normalize_presentation_design(raw: object) -> object:
         if composition == "timeline":
             normalized["composition"] = "timeline_with_callout"
 
-        allowed_templates = {
-            "cover_minimal", "cover_split", "content_rule_card", "content_bullet_grid",
-            "irac_flow", "legal_citation_focus", "case_analysis_split", "comparison_matrix",
-            "timeline_process", "exam_checklist", "summary_roadmap", "hero_statement",
-            "evidence_stack", "decision_tree", "concept_map",
-        }
+        allowed_templates = set(get_args(PresentationTemplate))
         template_id = normalized.get("template_id")
         if template_id is not None and str(template_id) not in allowed_templates:
             normalized["template_id"] = None
@@ -102,7 +103,9 @@ def build_presentation_source(
                 order=int(item.get("order") or len(slides) + 1),
                 type=str(item.get("type") or "bullet"),
                 title=str(item.get("title") or ""),
-                content=item.get("content") if isinstance(item.get("content"), dict) else {},
+                content=cast(dict[str, object], item.get("content"))
+                if isinstance(item.get("content"), dict)
+                else {},
                 narration=str(narration.get("text") or ""),
                 source_block_id=str(mapping[slide_id]) if mapping.get(slide_id) else None,
             )
@@ -116,7 +119,11 @@ def build_presentation_source(
             if course_package.get("teaching_content")
             else None
         ),
-        legal_basis=(course_package.get("legal_basis") if isinstance(course_package.get("legal_basis"), list) else []),
+        legal_basis=(
+            cast(list[object], course_package.get("legal_basis"))
+            if isinstance(course_package.get("legal_basis"), list)
+            else []
+        ),
         block_plan=(course_package.get("block_plan") if isinstance(course_package.get("block_plan"), dict) else None),
         assessment=(course_package.get("assessment") if isinstance(course_package.get("assessment"), dict) else None),
     )
@@ -181,15 +188,18 @@ def generate_presentation_artifact(
             + json.dumps(source.model_dump(), ensure_ascii=False, separators=(",", ":")),
         ),
     ]
-    design = generate_validated_json(
-        llm_client,
-        messages=messages,
-        temperature=agent_temperature("generate_pptx", 0.2),
-        agent="generate_pptx",
-        output_model=PresentationDesign,
-        schema_name="PresentationDesign",
-        normalize=_normalize_presentation_design,
-    )
+    try:
+        design = generate_validated_json_stream(
+            llm_client,
+            messages=messages,
+            temperature=agent_temperature("generate_pptx", 0.2),
+            agent="generate_pptx",
+            output_model=PresentationDesign,
+            schema_name="PresentationDesign",
+            normalize=_normalize_presentation_design,
+        )
+    except LLMProviderError as exc:
+        raise ValueError(f"Failed to generate presentation design: {exc}") from exc
     _validate_design(design, source)
     content = render_pptx(design)
     _validate_pptx(content, design)

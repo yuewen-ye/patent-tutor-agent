@@ -28,6 +28,22 @@ ContractT = TypeVar("ContractT", bound=BaseModel)
 _LOGGER = logging.getLogger(__name__)
 
 
+class LLMOutputValidationError(LLMProviderError):
+    """Raised when an LLM response parses but fails local Pydantic/semantic validation.
+
+    Subclassing ``LLMProviderError`` keeps the primary/fallback failover loop in
+    ``AgentLLMRouter`` able to catch it, while callers can distinguish content
+    contract violations from provider/transport outages by type.
+    """
+
+
+def _format_validation_errors(exc: BaseException) -> list[dict[str, Any]]:
+    """Return a JSON-serializable error description for repair prompts and logs."""
+    if isinstance(exc, ValidationError):
+        return cast(list[dict[str, Any]], exc.errors(include_url=False))
+    return [{"msg": str(exc)}]
+
+
 # ── 题型口径归一化（spec 规范枚举，兼容 LLM 偶发中文/旧值）──
 # category：布鲁姆六级（规范英文）
 _CATEGORY_MAP: dict[str, str] = {
@@ -221,7 +237,8 @@ def generate_validated_json(
             f"以下是 {contract_name} 的完整 JSON Schema。即使上游兼容接口没有强制执行"
             " response_format，你也必须逐字段遵守；required 中的字段不得省略，"
             "enum/const 只能使用列出的值，additionalProperties=false 的对象不得增加字段。"
-            "只返回 JSON："
+            "你必须只输出符合该 Schema 的 JSON 对象，不要输出 Markdown 代码块、"
+            "不要输出思考过程、不要输出任何解释或自然语言，只返回 JSON："
             f"{json.dumps(json_schema, ensure_ascii=False, separators=(',', ':'))}"
         ),
     )
@@ -286,9 +303,22 @@ def generate_validated_json(
         try:
             result = output_model.model_validate(normalized)
             if semantic_validate is not None:
-                semantic_validate(result)
+                try:
+                    semantic_validate(result)
+                except Exception as sem_exc:
+                    raise LLMOutputValidationError(
+                        f"agent={agent} contract={contract_name} semantic validation "
+                        f"failed: {sem_exc}",
+                        provider=None,
+                        retryable=True,
+                    ) from sem_exc
             return result
-        except ValidationError as exc:
+        except (ValidationError, LLMProviderError) as exc:
+            if isinstance(exc, LLMProviderError) and exc.provider is not None:
+                # Genuine provider/transport error (e.g. network, rate limit); do not treat
+                # it as a validation repair opportunity.
+                raise
+            errors = _format_validation_errors(exc)
             _LOGGER.warning(
                 "Structured JSON validation failed for agent=%s contract=%s "
                 "attempt=%s/%s errors=%s",
@@ -296,22 +326,30 @@ def generate_validated_json(
                 contract_name,
                 attempt + 1,
                 attempts,
-                json.dumps(exc.errors(include_url=False), ensure_ascii=False),
+                json.dumps(errors, ensure_ascii=False),
             )
             if attempt + 1 >= attempts:
-                raise
+                raise LLMOutputValidationError(
+                    f"agent={agent} contract={contract_name} validation failed after "
+                    f"{attempts} attempts: "
+                    + json.dumps(errors, ensure_ascii=False),
+                    provider=None,
+                    retryable=True,
+                ) from exc
             current_messages = [
                 *current_messages,
                 LLMMessage(
                     role="assistant",
-                    content=json.dumps(raw, ensure_ascii=False, default=str),
+                    content=raw if isinstance(raw, str) else json.dumps(raw, ensure_ascii=False, default=str),
                 ),
                 LLMMessage(
                     role="user",
                     content=(
-                        f"上一份 JSON 未通过 {contract_name} 校验。"
-                        "请修复后返回完整 JSON，不要解释，也不要省略必填字段。"
-                        f"校验错误：{json.dumps(exc.errors(include_url=False), ensure_ascii=False)}"
+                        f"上一份输出未通过 {contract_name} 校验。"
+                        "请修复后返回完整 JSON，不要输出 Markdown 代码块、"
+                        "不要输出思考过程、不要输出任何解释或自然语言，"
+                        "也不要省略必填字段。"
+                        f"校验错误：{json.dumps(errors, ensure_ascii=False)}"
                     ),
                 ),
             ]
@@ -378,7 +416,8 @@ def generate_validated_json_stream(
             f"以下是 {contract_name} 的完整 JSON Schema。即使上游兼容接口没有强制执行"
             " response_format，你也必须逐字段遵守；required 中的字段不得省略，"
             "enum/const 只能使用列出的值，additionalProperties=false 的对象不得增加字段。"
-            "只返回 JSON："
+            "你必须只输出符合该 Schema 的 JSON 对象，不要输出 Markdown 代码块、"
+            "不要输出思考过程、不要输出任何解释或自然语言，只返回 JSON："
             f"{json.dumps(json_schema, ensure_ascii=False, separators=(',', ':'))}"
         ),
     )
@@ -388,33 +427,50 @@ def generate_validated_json_stream(
         current_messages.insert(0, schema_instruction)
 
     for attempt in range(attempts):
-        stream_generate = getattr(llm_client, "generate_json_stream", None)
-        if stream_generate is None:
-            # Legacy/test clients may only implement generate_json; fall back
-            # non-streaming so the Protocol contract degrades gracefully.
-            raw = llm_client.generate_json(
-                messages=current_messages,
-                temperature=temperature,
-                agent=agent,
-            )
-        else:
-            chunks: list[str] = list(
-                stream_generate(
+        raw: object = ""
+        raw_text = ""
+        try:
+            stream_generate = getattr(llm_client, "generate_json_stream", None)
+            if stream_generate is None:
+                # Legacy/test clients may only implement generate_json; fall back
+                # non-streaming so the Protocol contract degrades gracefully.
+                raw = llm_client.generate_json(
                     messages=current_messages,
                     temperature=temperature,
                     agent=agent,
                 )
-            )
-            raw_text = "".join(chunks)
-            raw = _parse_streamed_json(raw_text)
+            else:
+                chunks: list[str] = list(
+                    stream_generate(
+                        messages=current_messages,
+                        temperature=temperature,
+                        agent=agent,
+                        schema_name=contract_name,
+                        json_schema=json_schema,
+                    )
+                )
+                raw_text = "".join(chunks)
+                raw = _parse_streamed_json(raw_text)
 
-        normalized = normalize(raw) if normalize is not None else raw
-        try:
+            normalized = normalize(raw) if normalize is not None else raw
             result = output_model.model_validate(normalized)
             if semantic_validate is not None:
-                semantic_validate(result)
+                try:
+                    semantic_validate(result)
+                except Exception as sem_exc:
+                    raise LLMOutputValidationError(
+                        f"agent={agent} contract={contract_name} semantic validation "
+                        f"failed: {sem_exc}",
+                        provider=None,
+                        retryable=True,
+                    ) from sem_exc
             return result
-        except ValidationError as exc:
+        except (ValidationError, LLMProviderError) as exc:
+            if isinstance(exc, LLMProviderError) and exc.provider is not None:
+                # Genuine provider/transport error (e.g. network, rate limit); do not treat
+                # it as a validation repair opportunity.
+                raise
+            errors = _format_validation_errors(exc)
             _LOGGER.warning(
                 "Streamed JSON validation failed for agent=%s contract=%s "
                 "attempt=%s/%s errors=%s",
@@ -422,26 +478,34 @@ def generate_validated_json_stream(
                 contract_name,
                 attempt + 1,
                 attempts,
-                json.dumps(exc.errors(include_url=False), ensure_ascii=False),
+                json.dumps(errors, ensure_ascii=False),
             )
             if attempt + 1 >= attempts:
-                raise
+                raise LLMOutputValidationError(
+                    f"agent={agent} contract={contract_name} streamed validation failed "
+                    f"after {attempts} attempts: "
+                    + json.dumps(errors, ensure_ascii=False),
+                    provider=None,
+                    retryable=True,
+                ) from exc
+            assistant_content = raw if isinstance(raw, str) and raw else raw_text
             current_messages = [
                 *current_messages,
                 LLMMessage(
                     role="assistant",
-                    content=json.dumps(raw, ensure_ascii=False, default=str),
+                    content=assistant_content,
                 ),
                 LLMMessage(
                     role="user",
                     content=(
-                        f"上一份 JSON 未通过 {contract_name} 校验。"
-                        "请修复后返回完整 JSON，不要解释，也不要省略必填字段。"
-                        f"校验错误：{json.dumps(exc.errors(include_url=False), ensure_ascii=False)}"
+                        f"上一份输出未通过 {contract_name} 校验。"
+                        "请修复后返回完整 JSON，不要输出 Markdown 代码块、"
+                        "不要输出思考过程、不要输出任何解释或自然语言，"
+                        "也不要省略必填字段。"
+                        f"校验错误：{json.dumps(errors, ensure_ascii=False)}"
                     ),
                 ),
             ]
-
     raise RuntimeError("streamed output validation loop exited unexpectedly")
 
 
@@ -874,6 +938,29 @@ def normalize_expert_draft_payload(raw: object) -> object:
             else item
             for item in exercises
         ]
+    # markdown_artifact: LLM 在 integration/fusion 语境下可能自造 created_by 值
+    #（如 expert_a_b_fusion），而 MarkdownArtifact.created_by 是封闭 Literal。
+    # 按 expert 字段归一到实际产出 agent；同时丢弃 Schema 外字段避免 extra="forbid"。
+    ma = normalized.get("markdown_artifact")
+    if isinstance(ma, dict):
+        _ALLOWED_MARKDOWN_ARTIFACT_KEYS = {
+            "artifact_id",
+            "kind",
+            "path",
+            "created_by",
+            "title",
+            "mime_type",
+            "sha256",
+            "created_at",
+        }
+        ma = {k: v for k, v in ma.items() if k in _ALLOWED_MARKDOWN_ARTIFACT_KEYS}
+        exp = normalized.get("expert")
+        if exp == "expert_b":
+            ma["created_by"] = "expert_b"
+        else:
+            # expert_a、A+B融合 或任何其它值都归到 expert_a（integration 由 expert_a 节点产出）
+            ma["created_by"] = "expert_a"
+        normalized["markdown_artifact"] = ma
     return normalized
 
 

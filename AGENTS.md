@@ -100,8 +100,8 @@ START -> _init -> route
                -> expert_a[revision] || expert_b[revision]
                -> _experts_barrier
                -> expert_a[integration] -> judge
-                    accept/minor -> slide_deck（可用 PATENT_TUTOR_SLIDE_DECK_ENABLED 关闭）
-                                  -> generate_pptx（可用 PATENT_TUTOR_PPTX_ENABLED 关闭）-> END
+                    accept/minor -> slide_deck（默认启用，设 PATENT_TUTOR_SLIDE_DECK_ENABLED=false 关闭）
+                                  -> generate_pptx（默认启用，设 PATENT_TUTOR_PPTX_ENABLED=false 关闭）-> END
                     revise       -> expert_a[integration] -> judge（循环，上限
                                     agents.judge.max_revisions 次，缺省 3；达上限后带当前
                                     course_package 继续收尾）
@@ -334,9 +334,10 @@ surface, while the optional `generate_pptx` node writes an editable PPTX under t
 source slide count and selected theme. PPTX generation uses the configured `generate_pptx` LLM only for
 strict `PresentationDesign` JSON; the backend deterministically renders the visual director decision,
 theme/template selection, decorative layer, semantic patent-course components and speaker notes. The
-LLM does not return binary PPTX, XML, SVG or arbitrary external resources. PPTX is controlled by
-`PATENT_TUTOR_PPTX_ENABLED` and degrades only that artifact on failure; the course and other artifacts
-continue. There is no final Markdown file; `course_package.md` is the integrated course process artifact.
+LLM does not return binary PPTX, XML, SVG or arbitrary external resources. PPTX is enabled by default
+and can be disabled by setting `PATENT_TUTOR_PPTX_ENABLED=false`; on failure it degrades only that
+artifact and the course and other artifacts continue. There is no final Markdown file;
+`course_package.md` is the integrated course process artifact.
 
 ## FastAPI Surface
 

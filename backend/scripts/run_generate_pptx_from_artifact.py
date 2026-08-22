@@ -34,10 +34,14 @@ def _extract_json_block(text: str, heading: str) -> Any:
     return json.loads(match.group(1))
 
 
+def _parse_title(text: str) -> str:
+    match = re.search(r"^#\s+(.+)$", text, re.MULTILINE)
+    return match.group(1).strip() if match else "专利课程"
+
+
 def _parse_course_slides(md_path: Path) -> dict[str, Any]:
     text = md_path.read_text(encoding="utf-8")
     slides: list[dict[str, Any]] = []
-    slide_to_block_id: dict[str, str] = {}
 
     # Split by slide headers
     parts = re.split(r"\n## Slide \d+", text)
@@ -70,16 +74,16 @@ def _parse_course_slides(md_path: Path) -> dict[str, Any]:
                 "narration": {"text": narration_text},
             }
         )
-        # Map each slide to the current node id if we later need it
-        slide_to_block_id[slide_id] = "patentability-substantive"
 
-    return {"slides": slides, "slide_to_block_id": slide_to_block_id}
+    # The runner is invoked after the workflow has already produced course_slides.md;
+    # slide-to-block mapping is not recoverable from the Markdown alone, so we leave it empty.
+    return {"slides": slides, "slide_to_block_id": {}}
 
 
 def _parse_course_package(md_path: Path) -> dict[str, Any]:
     text = md_path.read_text(encoding="utf-8")
 
-    title = "专利授权实质条件"
+    title = _parse_title(text)
 
     # teaching_content: body between 教学正文 and next top-level section
     teaching_match = re.search(
@@ -89,22 +93,7 @@ def _parse_course_package(md_path: Path) -> dict[str, Any]:
 
     legal_basis = _extract_json_block(text, "legal_basis") or []
     interactive_questions = _extract_json_block(text, "interactive_questions") or []
-
-    # Build a simple block_plan from the module table
-    block_plan = {
-        "current_node_id": "patentability-substantive",
-        "blocks": [
-            {"block_id": "anchor_scenario", "block_type": "anchor_scenario", "trigger": "perception=sensing / cold_start"},
-            {"block_id": "legal_anchor", "block_type": "legal_anchor", "trigger": "mandatory"},
-            {"block_id": "worked_example", "block_type": "worked_example", "trigger": "cold_start"},
-            {"block_id": "decision_flow", "block_type": "decision_flow", "trigger": "input=visual"},
-            {"block_id": "common_pitfall", "block_type": "common_pitfall", "trigger": "graph.confusable_pair"},
-            {"block_id": "predict_activate", "block_type": "predict_activate", "trigger": "processing=active"},
-            {"block_id": "assessment", "block_type": "assessment", "trigger": "mandatory"},
-            {"block_id": "knowledge_synthesis", "block_type": "knowledge_synthesis", "trigger": "mandatory"},
-            {"block_id": "summary_card", "block_type": "summary_card", "trigger": "len(knowledge_sub_nodes)>=3"},
-        ],
-    }
+    block_plan = _extract_json_block(text, "block_plan") or {"current_node_id": "", "blocks": []}
 
     assessment = {
         "items": interactive_questions,
@@ -160,31 +149,6 @@ def main() -> None:
     )
 
     llm_client = AgentLLMRouter.from_env()
-
-    # Patch strict design validation so we can still inspect rendered output
-    # when the real model reuses adjacent templates.
-    from backend.app.presentation import service as pptx_service
-    from backend.app.presentation.contracts import PresentationDesign, PresentationSource
-    from itertools import pairwise
-
-    _orig_validate_design = pptx_service._validate_design
-
-    def _lenient_validate_design(
-        design: PresentationDesign, source: PresentationSource
-    ) -> PresentationDesign:
-        expected = [(slide.id, slide.order) for slide in source.slides]
-        actual = [(slide.id, slide.order) for slide in design.slides]
-        if actual != expected:
-            raise ValueError("PresentationDesign must preserve every source slide id and order")
-        templates = [slide.template_id or slide.layout for slide in design.slides]
-        if len(design.slides) >= 4 and len(set(templates)) < 3:
-            print(f"WARNING: only {len(set(templates))} templates used; continuing anyway")
-        for left, right in pairwise(templates):
-            if left == right:
-                print(f"WARNING: adjacent slides reuse template '{left}'; continuing anyway")
-        return design
-
-    pptx_service._validate_design = _lenient_validate_design
 
     result = generate_presentation_artifact(
         artifact_root=args.artifact_root.resolve(),
