@@ -309,7 +309,18 @@ export interface ExerciseResponseItem {
   selected_option?: string | null;
   observed_correct?: boolean | null;
   skill_id?: string | null;
+  kc_node_id?: string | null;
   is_subjective?: boolean;
+  question_text?: string;
+  options?: (string | { key: string; value: string; label?: string })[];
+  correct_answer?: string | string[] | Record<string, unknown> | unknown;
+  difficulty?: string | number | null;
+  category?: string | null;
+  skills?: string[];
+  idempotency_key?: string;
+  response_ms?: number;
+  time_spent_ms?: number;
+  time_spent?: number;
 }
 
 export interface ExerciseSubmission {

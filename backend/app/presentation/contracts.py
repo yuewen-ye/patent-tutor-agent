@@ -107,6 +107,12 @@ class PresentationVisualSlide(PresentationContract):
     conclusion: str | None = None
     warning: str | None = None
     speaker_notes: str
+    # Premium 深色主题扩展字段
+    tabs: list[str] = Field(default_factory=list)
+    current_tab: str | None = None
+    section_number: str | None = None
+    stats: list[dict[str, str]] = Field(default_factory=list, max_length=4)
+    certificates: list[str] = Field(default_factory=list, max_length=6)
 
 
 class PresentationDesign(PresentationContract):

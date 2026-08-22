@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+import logging
 import os
 import sys
 import time
@@ -380,14 +381,27 @@ def _generate_pptx_node(
         }
     if artifact_root is None:
         raise RuntimeError("generate_pptx requires an artifact root")
-    result = generate_presentation_artifact(
-        artifact_root=artifact_root,
-        session_id=state["session_id"],
-        course_package=course_package,
-        course_slides=course_slides,
-        llm_client=llm_client,
-    )
-    message = "generated complete PPTX" if result["status"] == "generated" else "PPTX generation degraded"
+    # PPTX 失败只降级该 artifact，不废掉整个课程会话（AGENTS.md 约束）
+    source_slide_count = len((course_slides.get("slides") or []) if isinstance(course_slides, dict) else [])
+    try:
+        result = generate_presentation_artifact(
+            artifact_root=artifact_root,
+            session_id=state["session_id"],
+            course_package=course_package,
+            course_slides=course_slides,
+            llm_client=llm_client,
+        )
+        message = "generated complete PPTX" if result["status"] == "generated" else "PPTX generation degraded"
+    except Exception as exc:  # PPTX 降级不得废掉课程会话
+        logging.getLogger(__name__).exception("generate_pptx degraded")
+        result = {
+            "status": "degraded",
+            "provider": "configured_llm",
+            "source_slide_count": source_slide_count,
+            "speaker_notes_status": "unknown",
+            "error_summary": f"{type(exc).__name__}: {exc}",
+        }
+        message = "PPTX generation degraded (validation/render failure)"
     updates: dict[str, Any] = {
         "pptx_result": result,
         "workflow_status": "completed",
@@ -493,8 +507,21 @@ def build_workflow(
             update_sink, event_sink, node_label=node_label or name,
         ))
 
+    # 轻量包装：用于纯确定性/路由/阶段切换节点（内部无 LLM、无 artifact 产出），
+    # 只保证 state 更新（expert_phase / workflow_status 等）走 update_sink 推到前端，
+    # 不触发 started/completed 日志（避免干扰已有 agent 节点语义）。
+    def _wrap_light(node_fn: Any, node_label: str) -> Any:
+        def wrapped(
+            state: StateDict, runtime: Runtime[WorkflowContext] | None = None,
+        ) -> dict[str, Any]:
+            updates = _call_node(node_fn, state, runtime)
+            if update_sink is not None:
+                update_sink(updates)
+            return updates
+        return wrapped
+
     # ── All nodes ──
-    builder.add_node("_init", _ensure_session_id)
+    builder.add_node("_init", _wrap_light(_ensure_session_id, "_init"))
     builder.add_node("route", _wrap("route"))
     builder.add_node("diagnosis_feedback", _wrap("diagnosis_feedback"))
     builder.add_node("planner", _wrap("planner"))
@@ -505,7 +532,7 @@ def build_workflow(
     builder.add_node("chat_answer", _wrap("chat_answer"))
     builder.add_node("expert_a", _wrap("expert_a"))
     builder.add_node("expert_b", _wrap("expert_b"))
-    builder.add_node("_experts_barrier", _advance_expert_phase)
+    builder.add_node("_experts_barrier", _wrap_light(_advance_expert_phase, "_experts_barrier"))
     builder.add_node("expert_a_integration", _wrap("expert_a", node_label="expert_a"))
     builder.add_node("judge", _wrap("judge"))
     if slide_deck_enabled:

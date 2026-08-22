@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import logging
+import os
+import traceback
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
@@ -12,6 +15,9 @@ from backend.app.learner_memory.bkt.contracts import (
 )
 from backend.app.onboarding.questionnaire import onboarding_questionnaire
 from backend.app.services.session_service import SessionService
+
+logger = logging.getLogger(__name__)
+_DEV_MODE = os.getenv("PATENT_TUTOR_ENV", "dev").lower() != "production"
 
 
 class QuestionnaireResponseItem(BaseModel):
@@ -339,26 +345,72 @@ def create_learning_flow_router(session_service: SessionService) -> APIRouter:
             403: {"description": "The learner does not own the course session."},
             404: {"description": "Course session not found."},
             409: {"description": "Course session is not completed yet."},
+            500: {"description": "Unexpected server error while processing exercise submission."},
         },
     )
     def submit_exercises(
-        course_session_id: str, request: ExerciseSubmission
+        course_session_id: str,
+        submission: ExerciseSubmission,
     ) -> SessionCreatedResponse:
         try:
             record = session_service.create_feedback_session(
-                learner_id=request.learner_id,
+                learner_id=submission.learner_id,
                 course_session_id=course_session_id,
-                responses=[item.model_dump() for item in request.responses],
+                responses=[item.model_dump() for item in submission.responses],
             )
         except KeyError as exc:
+            logger.info(
+                "submit_exercises session not found course_session_id=%s learner_id=%s",
+                course_session_id,
+                submission.learner_id,
+            )
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course session not found.") from exc
         except PermissionError as exc:
+            logger.warning(
+                "submit_exercises permission_denied course_session_id=%s learner_id=%s reason=%s",
+                course_session_id,
+                submission.learner_id,
+                str(exc),
+            )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Learner does not own the course session.",
+                detail={"error": "permission_denied", "reason": str(exc)},
             ) from exc
         except RuntimeError as exc:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+            logger.exception(
+                "submit_exercises conflict course_session_id=%s learner_id=%s responses=%s",
+                course_session_id,
+                submission.learner_id,
+                len(submission.responses),
+            )
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={"error": "exercise_submit_conflict", "reason": str(exc)},
+            ) from exc
+        except Exception as exc:  # pragma: no cover - 兜底所有未知错误，避免裸500
+            tb_text = traceback.format_exc()
+            logger.error(
+                "submit_exercises unexpected_error course_session_id=%s learner_id=%s responses=%s\n%s",
+                course_session_id,
+                submission.learner_id,
+                len(submission.responses),
+                tb_text,
+            )
+            body: dict[str, Any] = {
+                "error": "exercise_submit_internal_error",
+                "reason": f"{type(exc).__name__}: {exc}",
+            }
+            if _DEV_MODE:
+                # 非生产环境返回堆栈，方便立即定位；生产自动省略
+                body["traceback"] = tb_text.splitlines()
+                body["request_responses_sample"] = [
+                    r.model_dump(exclude={"answer": False})
+                    for r in submission.responses[:3]
+                ]
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=body,
+            ) from exc
         return SessionCreatedResponse(session_id=record.session_id, status=record.status)
 
     @router.post(

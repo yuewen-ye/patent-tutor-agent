@@ -34,7 +34,36 @@ THEMES: dict[str, Theme] = {
     "practice_workshop": Theme("practice_workshop", "FFF8F0", "FFFFFF", "6B2D16", "C55A2A", "0F8B8D", "C0392B", "2D8A57", "3D241B", "806F65", "F0D8C4", cover_style="split", card_style="rounded"),
     "patent_blue": Theme("patent_blue", "F6F8FC", "FFFFFF", "123B66", "2F80B7", "20A4A8", "D97706", "198754", "172B4D", "60758A", "DDE7F0"),
     "professional_green": Theme("professional_green", "F4F8F5", "FFFFFF", "14532D", "25855A", "0F766E", "B45309", "198754", "19352A", "607568", "D8E8DE"),
-    "warm_orange": Theme("warm_orange", "FFF9F3", "FFFFFF", "7C2D12", "C2410C", "D97706", "B91C1C", "2D8A57", "3B2115", "806B5D", "F2DED0"),
+    "warm_orange": Theme(
+        "warm_orange",
+        background="FFF7ED",  # 前端渐变底色奶油
+        surface="FFFFFF",
+        primary="5C3A26",  # 前端主文字深咖棕
+        secondary="8B5A3C",  # 前端副标题中棕
+        accent="D9773E",  # 前端主橙渐变起点
+        warning="B91C1C",
+        success="2D8A57",
+        text="5C3A26",  # 同 primary，保证正文一致
+        muted="9A4A1C",  # 前端 muted 暖深棕
+        grid="FFE8D0",  # 前端浅杏底（卡片/分组背景）
+        cover_style="split",
+        card_style="rounded",
+    ),
+    "warm_orange_premium": Theme(
+        "warm_orange_premium",
+        background="7B3F00",  # 深橙棕全幅底
+        surface="8B4513",  # 稍浅卡片底
+        primary="FFFFFF",  # 白字
+        secondary="F5DEB3",  # 小麦色副文字
+        accent="FFD700",  # 金色强调
+        warning="FF6B6B",
+        success="4ADE80",
+        text="FFFFFF",
+        muted="D2B48C",  # 米色小字
+        grid="A0522D",  # 棕褐网格底纹
+        cover_style="tabbed",
+        card_style="rounded",
+    ),
 }
 
 

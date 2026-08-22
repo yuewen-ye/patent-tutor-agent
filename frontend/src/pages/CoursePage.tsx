@@ -53,6 +53,7 @@ export function CoursePage() {
                 sessionId={sessionId!}
                 coursePackage={state?.course_package}
                 artifacts={state?.artifacts || []}
+                sessionStatus={session?.status}
               />
             </div>
 

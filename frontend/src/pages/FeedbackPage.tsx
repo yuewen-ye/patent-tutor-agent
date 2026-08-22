@@ -1,16 +1,21 @@
-import { useParams, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { sessionsApi } from "@/api/sessions";
+import { getAuth } from "@/api/auth";
 import { ArtifactViewer } from "@/components/ArtifactViewer";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ArrowLeft, Target, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, ArrowLeft, Target, AlertCircle, CheckCircle2, RefreshCw, ArrowUpRight } from "lucide-react";
 import { PixelMascot } from "@/components/auth/PixelMascot";
 
 export function FeedbackPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const learnerId = getAuth()?.learner_id ?? "";
 
   const { data: session, isLoading } = useQuery({
     queryKey: ["session", sessionId],
@@ -24,9 +29,29 @@ export function FeedbackPage() {
 
   const state = session?.state;
   const feedback = state?.feedback_result;
+  const parentSessionId = state?.parent_session_id as string | undefined;
 
   const feedbackArtifact = state?.artifacts?.find((a) => a.kind === "feedback_report");
   const gradingArtifact = state?.artifacts?.find((a) => a.kind === "grading_report");
+
+  const [reteachSessionId, setReteachSessionId] = useState<string | null>(null);
+  const [reteachError, setReteachError] = useState<string>("");
+
+  const reteachMutation = useMutation({
+    mutationFn: () => {
+      if (!parentSessionId) throw new Error("缺少课程会话ID");
+      return sessionsApi.reteach(parentSessionId, learnerId);
+    },
+    onSuccess: (data) => {
+      setReteachSessionId(data.session_id);
+      setReteachError("");
+      queryClient.invalidateQueries({ queryKey: ["sessions", learnerId] });
+      queryClient.invalidateQueries({ queryKey: ["learner", learnerId] });
+    },
+    onError: (err) => {
+      setReteachError(err instanceof Error ? err.message : "生成新课程失败，请重试");
+    },
+  });
 
   return (
     <div className="container py-8 md:py-10">
@@ -110,6 +135,50 @@ export function FeedbackPage() {
               </Card>
             )}
           </>
+        )}
+
+        {/* 生成新课程 / 查看新课程 按钮区 */}
+        {session?.status === "completed" && parentSessionId && (
+          <Card className="border-white/70 bg-white/90 shadow-soft">
+            <CardContent className="pt-4 pb-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-[#8B5A3C]">
+                  反馈已完成，可基于最新画像生成新课程：
+                </span>
+                <div className="ml-auto flex items-center gap-2">
+                  {reteachSessionId ? (
+                    <Button
+                      size="sm"
+                      className="h-8 text-sm bg-[#D9773E] hover:bg-[#C15B27] text-white"
+                      onClick={() => navigate(`/session/${reteachSessionId}`)}
+                    >
+                      <RefreshCw className="h-3.5 w-3.5 mr-1" />查看新课程
+                      <ArrowUpRight className="h-3 w-3 ml-1" />
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      className="h-8 text-sm bg-[#D9773E] hover:bg-[#C15B27] text-white"
+                      disabled={reteachMutation.isPending || !learnerId}
+                      onClick={() => reteachMutation.mutate()}
+                    >
+                      {reteachMutation.isPending ? (
+                        <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />生成中</>
+                      ) : (
+                        <><RefreshCw className="h-3.5 w-3.5 mr-1" />生成新课程</>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </div>
+              {reteachError && (
+                <div className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  {reteachError}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         {feedbackArtifact && (
