@@ -94,8 +94,11 @@ agents:
     temperature: 0.0
     fallback_provider: jiji-gpt
     fallback_model_name: gpt-5.4-mini
-  # 完整 PPT 节点：走和其他 Agent 相同的 provider/model/key/fallback 配置链。
-  # Provider 对应的 api_key_env 在 providers.* 中声明，密钥仅写入 .env。
+  slide_deck:
+    provider: jiji-grok
+    temperature: 0.3
+    fallback_provider: jiji-deepseek
+    fallback_model_name: deepseek-v4-flash
   generate_pptx:
     provider: ooio-gpt2
     temperature: 0.2
