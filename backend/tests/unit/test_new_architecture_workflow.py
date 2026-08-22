@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import threading
+from collections.abc import Iterator
 from pathlib import Path
 from typing import cast
 
@@ -16,11 +17,29 @@ from backend.app.schemas.state import StateDict
 pytestmark = pytest.mark.unit
 
 
+@pytest.fixture(autouse=True)
+def disable_pptx(monkeypatch: pytest.MonkeyPatch) -> None:
+    """PPTX generation is tested separately; these workflow tests focus on graph topology."""
+    monkeypatch.setenv("PATENT_TUTOR_PPTX_ENABLED", "false")
+
+
 class PhaseLLMClient:
     def generate_json(
         self, messages: list[LLMMessage], temperature: float, agent: str | None = None
     ) -> object:
         raise AssertionError("not used")
+
+    def generate_json_stream(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        agent: str | None = None,
+        *,
+        schema_name: str | None = None,
+        json_schema: dict[str, object] | None = None,
+    ) -> Iterator[str]:
+        # Streaming callers accumulate the full text then parse it as JSON.
+        yield json.dumps(self.generate_json(messages, temperature, agent), ensure_ascii=False)
 
     def generate_with_tools(
         self,
@@ -168,6 +187,20 @@ class WorkflowLLMClient:
             self.agents.append(agent)
         return self.queues[agent].pop(0)
 
+    def generate_json_stream(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        agent: str | None = None,
+        *,
+        schema_name: str | None = None,
+        json_schema: dict[str, object] | None = None,
+    ) -> Iterator[str]:
+        assert agent is not None
+        with self._agents_lock:
+            self.agents.append(agent)
+        return iter([json.dumps(self.queues[agent].pop(0), ensure_ascii=False)])
+
     def generate_with_tools(
         self,
         messages: list[LLMMessage],
@@ -185,16 +218,31 @@ class ParallelPhaseLLMClient(WorkflowLLMClient):
         self._phase_lock = threading.Lock()
         self._phase_barriers = [threading.Barrier(2) for _ in range(3)]
 
-    def generate_json(
-        self, messages: list[LLMMessage], temperature: float, agent: str | None = None
-    ) -> object:
+    def _track_phase(self, agent: str | None) -> None:
         if agent in self._phase_calls:
             with self._phase_lock:
                 phase_index = self._phase_calls[agent]
                 self._phase_calls[agent] += 1
             if phase_index < len(self._phase_barriers):
                 self._phase_barriers[phase_index].wait(timeout=2)
+
+    def generate_json(
+        self, messages: list[LLMMessage], temperature: float, agent: str | None = None
+    ) -> object:
+        self._track_phase(agent)
         return super().generate_json(messages, temperature, agent)
+
+    def generate_json_stream(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        agent: str | None = None,
+        *,
+        schema_name: str | None = None,
+        json_schema: dict[str, object] | None = None,
+    ) -> Iterator[str]:
+        self._track_phase(agent)
+        return iter([json.dumps(super().generate_json(messages, temperature, agent), ensure_ascii=False)])
 
 
 def test_graph_registers_diagnosis_feedback_agent_name() -> None:
@@ -511,6 +559,18 @@ def test_feedback_mode_reuses_diagnosis_feedback_and_skips_course_agents(
                 "five_dimensions": {"knowledge": {"novelty": {"pl": 0.3, "ci_low": 0.15, "ci_high": 0.5, "observations": 3, "low_confidence": False}}, "cognition": {"remember": 0.8, "understand": 0.6, "apply": 0.4, "analyze": 0.3, "evaluate": 0.2, "create": 0.1}, "style": {"perception": {"chosen": "sensing", "strength": 0.7}, "input": {"chosen": "visual", "strength": 0.6}, "processing": {"chosen": "active", "strength": 0.55}, "understanding": {"chosen": "sequential", "strength": 0.65}}, "progress": {"completed_nodes": ["patent-law-basic"], "current_node": "novelty-basic", "pending_nodes": ["inventiveness"], "avg_time_per_node_min": 22, "overall_completion_ratio": 0.3}, "affect": {"primary_state": "interested", "confidence": 0.6, "signals": ["主动提问"]}},
             }
 
+        def generate_json_stream(
+            self,
+            messages: list[LLMMessage],
+            temperature: float,
+            agent: str | None = None,
+            *,
+            schema_name: str | None = None,
+            json_schema: dict[str, object] | None = None,
+        ) -> Iterator[str]:
+            # Delegates to generate_json for the payload; tracking happens there.
+            yield json.dumps(self.generate_json(messages, temperature, agent), ensure_ascii=False)
+
         def generate_with_tools(
             self,
             messages: list[LLMMessage],
@@ -573,6 +633,19 @@ def test_rejected_judge_reintegrates_until_accepts(
 ) -> None:
     """judge 判 revise 时应打回 expert_a 重新整合（最终稿被修正），复审 accept 后完成，judge 至多 3 轮。"""
     monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
+    # 默认 max_revisions=0 会跳过修订循环；本测试专门验证循环机制，显式启用上限。
+    from backend.app.core.agent_runtime_config import AgentRuntimeSettings
+    from backend.app.graph import workflow as workflow_module
+
+    original_settings = workflow_module.agent_runtime_settings
+
+    def settings_with_revision_cap(agent: str) -> AgentRuntimeSettings:
+        settings = original_settings(agent)
+        if agent == "judge":
+            return settings.model_copy(update={"max_revisions": 3})
+        return settings
+
+    monkeypatch.setattr(workflow_module, "agent_runtime_settings", settings_with_revision_cap)
     llm = WorkflowLLMClient()
     rejected = {
         "decision": "revise",
@@ -599,7 +672,7 @@ def test_rejected_judge_reintegrates_until_accepts(
     }
     llm.queues["judge"] = [rejected, rejected, accepted]
     # 重新整合需要 expert_a 多一次 integration 响应（基于原整合稿修正）
-    integrated_revised = dict(llm.queues["expert_a"][3])
+    integrated_revised = dict(cast(dict[str, object], llm.queues["expert_a"][3]))
     integrated_revised["teaching_content"] = "修正后的课程正文（已补充法条与案例依据）"
     llm.queues["expert_a"].append(integrated_revised)
     llm.queues["expert_a"].append(dict(integrated_revised))

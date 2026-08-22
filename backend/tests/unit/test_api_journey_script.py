@@ -107,7 +107,7 @@ def test_workflow_progress_reports_parallel_expert_stage_and_missing_expert() ->
 
 
 def test_planner_progress_exposes_llm_decision() -> None:
-    snapshot = {
+    snapshot: dict[str, Any] = {
         "status": "running",
         "state": {
             "workflow_mode": "teach",
@@ -139,7 +139,7 @@ def test_workflow_progress_advances_through_review_revision_integration_and_judg
         {"node": "expert_b", "message": "generated expert B draft with LLM"},
         {"node": "expert_a", "message": "reviewed expert B draft"},
     ]
-    snapshot = {
+    snapshot: dict[str, Any] = {
         "status": "running",
         "state": {"workflow_mode": "teach", "events": events},
     }
@@ -170,7 +170,9 @@ def test_workflow_progress_advances_through_review_revision_integration_and_judg
     assert _workflow_progress(snapshot).current_stage == "课程结果持久化"
 
 
-def test_workflow_progress_handles_judge_revision_loop() -> None:
+def test_workflow_progress_after_judge_does_not_show_reintegration() -> None:
+    # max_revisions 默认配置为 0，judge 返回 revise 时也会直接收尾，
+    # 进度文案统一为“课程结果持久化”，不再提示“重新整合”。
     events = [
         {
             "node": "expert_a",
@@ -187,14 +189,8 @@ def test_workflow_progress_handles_judge_revision_loop() -> None:
         },
     }
 
-    assert _workflow_progress(snapshot).current_stage == (
-        "Expert A 按 Judge 意见重新整合"
-    )
-
-    events.append(
-        {"node": "expert_a", "message": "integrated expert debate result with LLM"}
-    )
-    assert _workflow_progress(snapshot).current_stage == "Judge 课程审核"
+    assert _workflow_progress(snapshot).current_stage == "课程结果持久化"
+    assert "重新整合" not in _workflow_progress(snapshot).current_stage
 
 
 def test_exercise_builder_uses_answer_key_without_client_grading() -> None:

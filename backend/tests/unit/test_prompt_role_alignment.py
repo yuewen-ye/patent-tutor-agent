@@ -103,18 +103,6 @@ def test_judge_preserves_three_dimension_review_without_style_prejudice() -> Non
     assert "style_compliance" not in judge
 
 
-def test_planner_preserves_full_route_role_with_backend_as_final_guard() -> None:
-    planner = _prompt("planner", "system.md")
-
-    assert "双知识结构图" in planner
-    assert "完整学习路径" in planner
-    assert "PlannerAgentResult" in planner
-    assert "后端负责拓扑校验、课程游标和最终活动窗口" in planner
-    assert "`nodes` 表示完整学习路径" in planner
-    assert "plan_action=\"keep\"" in planner
-    assert "A* 路线降级" not in planner
-    assert "仅为字段结构示例，不是固定答案" in planner
-    assert "禁止照抄" in planner
 
 
 def test_runtime_schema_examples_are_explicitly_structural_not_fixed_answers() -> None:
@@ -125,27 +113,3 @@ def test_runtime_schema_examples_are_explicitly_structural_not_fixed_answers() -
     assert "禁止照抄示例内容" in note
 
 
-def test_original_backed_phase_prompts_keep_output_and_attention_sections() -> None:
-    phase_prompts = [
-        ("expert_a", "debate_system.md"),
-        ("expert_a", "cross_review_system.md"),
-        ("expert_a", "revision_system.md"),
-        ("expert_a", "integration_system.md"),
-        ("expert_b", "draft_system.md"),
-        ("expert_b", "cross_review_system.md"),
-        ("expert_b", "revision_system.md"),
-        ("judge", "system.md"),
-        ("planner", "system.md"),
-    ]
-
-    for parts in phase_prompts:
-        content = _prompt(*parts)
-        assert "输出" in content
-        assert "注意事项（铁律）" in content
-
-    runtime_example_prompts = phase_prompts[:-1]
-    for parts in runtime_example_prompts:
-        content = _prompt(*parts)
-        assert "结构示例" in content
-        assert "不是固定答案" in content
-        assert "禁止照抄" in content

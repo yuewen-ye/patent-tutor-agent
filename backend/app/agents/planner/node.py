@@ -8,7 +8,7 @@ from typing import Any, cast
 
 from langgraph.runtime import Runtime
 
-from backend.app.agents.common import Node, generate_validated_json, load_prompt
+from backend.app.agents.common import Node, generate_validated_json_stream, load_prompt
 from backend.app.core.agent_runtime_config import agent_temperature
 from backend.app.core.llm import LLMClient, LLMMessage
 from backend.app.curriculum.learning_path import (
@@ -321,7 +321,7 @@ def build_planner_node(llm_client: LLMClient) -> Node:
                 static_prerequisites=static_prerequisites,
             )
 
-        proposal = generate_validated_json(
+        proposal = generate_validated_json_stream(
             llm_client,
             messages=[
                 LLMMessage(role="system", content=_PLANNER_SYSTEM_PROMPT),
@@ -331,6 +331,7 @@ def build_planner_node(llm_client: LLMClient) -> Node:
             agent="planner",
             output_model=PlannerAgentResult,
             semantic_validate=validate_planner_semantics,
+            schema_name="PlannerAgentResult",
         )
         plan = _parse_planner_plan(
             proposal.model_dump(),

@@ -161,11 +161,12 @@ def build_<name>_node(llm_client: LLMClient) -> Node:
 
 - Agent factories receive `LLMClient`; never import provider state inside a node.
 - Every final Agent JSON result uses strict JSON Schema output through
-  `generate_validated_json()`, followed by Pydantic validation and one repair attempt.
-- Expert A/B JSON generation uses `generate_validated_json_stream()` to consume the streaming chat
-  completion; chunks are accumulated, re-assembled into valid JSON, and validated before entering
-  state. Tool calls remain non-streaming. Wrappers such as `CancelAwareLLMClient` must proxy
-  `generate_json_stream()` to the inner client so that streaming is not silently downgraded.
+  `generate_validated_json_stream()`, followed by Pydantic validation and one repair attempt.
+  Non-streaming `generate_validated_json()` remains available for callers that require provider-side
+  structured output, but all current Agent nodes consume streaming chat completions; chunks are
+  accumulated, re-assembled into valid JSON, and validated before entering state. Tool calls remain
+  non-streaming. Wrappers such as `CancelAwareLLMClient` must proxy `generate_json_stream()` to the
+  inner client so that streaming is not silently downgraded.
 - Expert A/B use `generate_with_tools()` when deciding whether to call RAG, then validate final JSON.
 - Planner receives the complete runtime knowledge/confusion graphs and active plan, then makes a
   strict `PlannerAgentResult` keep/replace decision on every teach session. Model failure follows

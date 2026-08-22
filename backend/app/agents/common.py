@@ -450,6 +450,15 @@ def generate_validated_json_stream(
                     )
                 )
                 raw_text = "".join(chunks)
+                if not raw_text.strip():
+                    # Empty streaming output is a provider-side failure, not a JSON schema
+                    # violation. Re-raise so upstream primary/fallback failover can retry.
+                    raise LLMProviderError(
+                        f"agent={agent} contract={contract_name} streaming returned "
+                        "empty content",
+                        provider=None,
+                        retryable=True,
+                    )
                 raw = _parse_streamed_json(raw_text)
 
             normalized = normalize(raw) if normalize is not None else raw
@@ -466,8 +475,10 @@ def generate_validated_json_stream(
                     ) from sem_exc
             return result
         except (ValidationError, LLMProviderError) as exc:
-            if isinstance(exc, LLMProviderError) and exc.provider is not None:
-                # Genuine provider/transport error (e.g. network, rate limit); do not treat
+            if isinstance(exc, LLMProviderError) and (
+                exc.provider is not None or "streaming returned empty content" in str(exc)
+            ):
+                # Genuine provider/transport error or empty streaming output; do not treat
                 # it as a validation repair opportunity.
                 raise
             errors = _format_validation_errors(exc)
@@ -488,7 +499,14 @@ def generate_validated_json_stream(
                     provider=None,
                     retryable=True,
                 ) from exc
-            assistant_content = raw if isinstance(raw, str) and raw else raw_text
+            if isinstance(raw, str) and raw:
+                assistant_content = raw
+            elif raw_text:
+                assistant_content = raw_text
+            else:
+                # Legacy/test clients that only implement generate_json return a parsed
+                # object; serialize it back so the repair prompt can see the prior output.
+                assistant_content = json.dumps(raw, ensure_ascii=False, default=str)
             current_messages = [
                 *current_messages,
                 LLMMessage(

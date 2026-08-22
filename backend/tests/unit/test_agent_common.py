@@ -1,5 +1,6 @@
 import json
 from collections.abc import Iterator
+from typing import cast
 
 import pytest
 from langchain_core.prompts import ChatPromptTemplate
@@ -443,7 +444,7 @@ class StreamingJsonClient:
     """Yields JSON in chunks to exercise generate_validated_json_stream."""
 
     def __init__(self, payload: object) -> None:
-        self.calls: list[list[LLMMessage]] = []
+        self.calls: list[dict[str, object]] = []
         text = json.dumps(payload, ensure_ascii=False)
         # Split into arbitrary chunks to verify accumulation
         self.chunks = [text[i : i + 8] for i in range(0, len(text), 8)]
@@ -453,8 +454,9 @@ class StreamingJsonClient:
         messages: list[LLMMessage],
         temperature: float,
         agent: str | None = None,
+        **kwargs: object,
     ) -> Iterator[str]:
-        self.calls.append(messages)
+        self.calls.append({"messages": messages, "kwargs": kwargs})
         yield from self.chunks
 
     def generate_with_tools(
@@ -484,6 +486,7 @@ class StreamingRepairClient:
         messages: list[LLMMessage],
         temperature: float,
         agent: str | None = None,
+        **kwargs: object,
     ) -> Iterator[str]:
         self.calls.append(messages)
         text = next(self.responses)
@@ -517,6 +520,10 @@ def test_generate_validated_json_stream_accumulates_chunks_and_validates() -> No
     assert result.confidence == 0.9
     assert result.reason == "用户希望系统学习"
     assert len(client.calls) == 1
+    call_kwargs = client.calls[0]["kwargs"]
+    assert isinstance(call_kwargs, dict)
+    assert call_kwargs.get("schema_name") == "IntentResult"
+    assert isinstance(call_kwargs.get("json_schema"), dict)
 
 
 def test_generate_validated_json_stream_repairs_invalid_stream_once() -> None:
@@ -534,3 +541,232 @@ def test_generate_validated_json_stream_repairs_invalid_stream_once() -> None:
     assert len(client.calls) == 2
     assert "完整 JSON Schema" in client.calls[0][0].content
     assert "校验错误" in client.calls[1][-1].content
+
+
+def test_generate_validated_json_stream_schema_instruction_forbids_prose() -> None:
+    """Regression: schema instruction must explicitly forbid reasoning/prose/Markdown.
+
+    DeepSeek-style models sometimes stream chain-of-thought prose in ``delta.content``
+    instead of JSON. The schema system message must tell the model not to do that.
+    """
+    client = StreamingJsonClient({"intent": "teach", "confidence": 0.9, "reason": "ok"})
+
+    generate_validated_json_stream(
+        client,
+        messages=[LLMMessage(role="user", content="请分类")],
+        temperature=0.0,
+        agent="route",
+        output_model=IntentResult,
+    )
+
+    call_messages = cast(list[LLMMessage], client.calls[0]["messages"])
+    schema_messages = [m for m in call_messages if m.role == "system"]
+    assert len(schema_messages) == 1
+    schema_message = schema_messages[0]
+    assert "不要输出思考过程" in schema_message.content
+    assert "不要输出 Markdown 代码块" in schema_message.content
+    assert "不要输出任何解释或自然语言" in schema_message.content
+
+
+class StreamingProseThenJsonClient:
+    """First stream is prose explanation; second stream returns valid JSON."""
+
+    def __init__(self) -> None:
+        self.calls: list[list[LLMMessage]] = []
+        self.responses = iter(
+            [
+                "我们被要求生成 ExpertDraft，作为专家 B（accessible 风格）……",
+                '{"intent": "teach", "confidence": 0.9, "reason": "fixed"}',
+            ]
+        )
+
+    def generate_json_stream(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        agent: str | None = None,
+        **kwargs: object,
+    ) -> Iterator[str]:
+        self.calls.append(messages)
+        text = next(self.responses)
+        yield from (text[i : i + 1] for i in range(len(text)))
+
+    def generate_with_tools(
+        self,
+        messages: list[LLMMessage],
+        tools: list[ToolDefinition],
+        temperature: float,
+        agent: str | None = None,
+    ) -> LLMResponseWithTools:
+        raise AssertionError("tool calling is not used by this test")
+
+
+def test_generate_validated_json_stream_repairs_prose_with_explicit_instruction() -> None:
+    """Regression: when prose is streamed, the repair prompt must explicitly forbid it.
+
+    This guards against models that output chain-of-thought prose instead of JSON.
+    """
+    client = StreamingProseThenJsonClient()
+
+    result = generate_validated_json_stream(
+        client,
+        messages=[LLMMessage(role="user", content="请分类")],
+        temperature=0.0,
+        agent="route",
+        output_model=IntentResult,
+    )
+
+    assert result.intent == "teach"
+    assert len(client.calls) == 2
+    repair_prompt = client.calls[1][-1].content
+    assert "不要输出思考过程" in repair_prompt
+    assert "不要输出 Markdown 代码块" in repair_prompt
+    assert "不要输出任何解释或自然语言" in repair_prompt
+
+
+class AlwaysInvalidStreamClient:
+    """Always yields JSON that fails Pydantic validation."""
+
+    def __init__(self) -> None:
+        self.calls: list[list[LLMMessage]] = []
+
+    def generate_json_stream(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        agent: str | None = None,
+        **kwargs: object,
+    ) -> Iterator[str]:
+        self.calls.append(messages)
+        yield from json.dumps({"intent": "teach"}, ensure_ascii=False)
+
+    def generate_with_tools(
+        self,
+        messages: list[LLMMessage],
+        tools: list[ToolDefinition],
+        temperature: float,
+        agent: str | None = None,
+    ) -> LLMResponseWithTools:
+        raise AssertionError("tool calling is not used by this test")
+
+
+class AlwaysInvalidLegacyClient:
+    """Always returns a dict that fails Pydantic validation."""
+
+    def __init__(self) -> None:
+        self.calls: list[list[LLMMessage]] = []
+
+    def generate_json(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        agent: str | None = None,
+    ) -> object:
+        self.calls.append(messages)
+        return {"intent": "teach"}
+
+    def generate_with_tools(
+        self,
+        messages: list[LLMMessage],
+        tools: list[ToolDefinition],
+        temperature: float,
+        agent: str | None = None,
+    ) -> LLMResponseWithTools:
+        raise AssertionError("tool calling is not used by this test")
+
+
+def test_generate_validated_json_stream_falls_back_after_failed_repairs() -> None:
+    """Regression: final validation failure must surface as retryable LLMProviderError.
+
+    ``AgentLLMRouter.generate_json_stream`` only catches ``LLMProviderError``; a bare
+    ``ValidationError`` would bypass the primary/fallback model failover loop. After
+    exhausting the internal repair attempts, the helper must convert the validation
+    failure into a retryable provider error so upstream failover can run.
+    """
+    client = AlwaysInvalidStreamClient()
+
+    with pytest.raises(LLMProviderError, match="streamed validation failed") as excinfo:
+        generate_validated_json_stream(
+            client,
+            messages=[LLMMessage(role="user", content="请分类")],
+            temperature=0.0,
+            agent="route",
+            output_model=IntentResult,
+        )
+
+    assert excinfo.value.retryable
+    assert len(client.calls) == 2  # initial attempt + one repair attempt
+
+
+def test_generate_validated_json_falls_back_after_failed_repairs() -> None:
+    """Non-streaming validation failure must also become a retryable LLMProviderError."""
+    client = AlwaysInvalidLegacyClient()
+
+    with pytest.raises(LLMProviderError, match="validation failed after") as excinfo:
+        generate_validated_json(
+            client,
+            messages=[LLMMessage(role="user", content="请分类")],
+            temperature=0.0,
+            agent="route",
+            output_model=IntentResult,
+        )
+
+    assert excinfo.value.retryable
+    assert len(client.calls) == 2  # initial attempt + one repair attempt
+
+
+class EmptyStreamClient:
+    """Yields nothing to simulate a provider that returns empty streaming content."""
+
+    def __init__(self) -> None:
+        self.calls: list[list[LLMMessage]] = []
+
+    def generate_json_stream(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        agent: str | None = None,
+        **kwargs: object,
+    ) -> Iterator[str]:
+        self.calls.append(messages)
+        return iter([])
+
+    def generate_json(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        agent: str | None = None,
+    ) -> object:
+        raise AssertionError("empty-stream test expects streaming path")
+
+    def generate_with_tools(
+        self,
+        messages: list[LLMMessage],
+        tools: list[ToolDefinition],
+        temperature: float,
+        agent: str | None = None,
+    ) -> LLMResponseWithTools:
+        raise AssertionError("tool calling is not used by this test")
+
+
+def test_generate_validated_json_stream_empty_content_is_provider_error() -> None:
+    """Regression: empty streaming output must be a retryable provider error.
+
+    Previously it was treated as a JSON validation error, triggering a useless repair
+    attempt on empty text and ultimately surfacing as LLMOutputValidationError. That
+    bypassed upstream primary/fallback failover and produced the cryptic message
+    ``streamed output is not valid JSON: ``.
+    """
+    client = EmptyStreamClient()
+
+    with pytest.raises(LLMProviderError, match="streaming returned empty content") as excinfo:
+        generate_validated_json_stream(
+            client,
+            messages=[LLMMessage(role="user", content="请分类")],
+            temperature=0.0,
+            agent="route",
+            output_model=IntentResult,
+        )
+
+    assert excinfo.value.retryable
+    assert len(client.calls) == 1  # no repair attempt on empty output

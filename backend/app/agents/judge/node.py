@@ -12,7 +12,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from backend.app.agents.common import (
     Node,
-    generate_validated_json,
+    generate_validated_json_stream,
     load_prompt,
     messages_from_prompt,
     schema_note,
@@ -292,7 +292,7 @@ def build_judge_node(llm_client: LLMClient) -> Node:
             list(state.get("retrieval_context", [])) + judge_retrieved
         )
 
-        report = generate_validated_json(
+        report = generate_validated_json_stream(
             llm_client,
             messages=messages_from_prompt(
                 prompt,
@@ -308,6 +308,7 @@ def build_judge_node(llm_client: LLMClient) -> Node:
             agent="judge",
             output_model=JudgeReport,
             normalize=_normalize_judge_report,
+            schema_name="JudgeReport",
         )
         # adaptation_rate 由代码根据已校验的 adaptation_score 确定性计算，
         # 覆盖 LLM 可能算错/漏填的值，保证 rate == round(score/5.0, 2)。

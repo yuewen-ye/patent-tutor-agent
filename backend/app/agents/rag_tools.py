@@ -88,3 +88,56 @@ def collect_judge_retrieval_context(
     return collect_expert_retrieval_context(
         llm_client, messages=messages, temperature=temperature, agent=agent
     )
+
+
+_MAX_RETRIEVAL_CHUNKS: Final = 25
+_MAX_RETRIEVAL_CHARS: Final = 18000
+
+
+def cap_retrieval_context(
+    chunks: list[dict[str, object]],
+    *,
+    max_chunks: int = _MAX_RETRIEVAL_CHUNKS,
+    max_chars: int = _MAX_RETRIEVAL_CHARS,
+) -> list[dict[str, object]]:
+    """限制检索上下文规模，防止逐轮累积导致 LLM 输入超限被截断。
+
+    先按 ``chunk_id`` 去重（逐轮检索会重复召回同一片段，重复条目白白占用
+    字符预算），再按 ``rerank_score`` 降序排列，优先保留与当前问题最相关的
+    chunk；超字符预算时从相关性最低的一侧丢弃。这保证最早检索到的核心法条
+    （通常相关性最高）不会被当作"最旧"的误删。
+    """
+    # 1) 按 chunk_id 去重，保留第一次出现的顺序（旧的在前）
+    seen: set[str] = set()
+    deduped: list[dict[str, object]] = []
+    for chunk in chunks:
+        cid = str(chunk.get("chunk_id") or "")
+        if cid and cid in seen:
+            continue
+        if cid:
+            seen.add(cid)
+        deduped.append(chunk)
+
+    # 2) 按相关性降序：rerank_score 缺失时回退到 score，再缺失排最后
+    def _relevance(chunk: dict[str, object]) -> float:
+        for key in ("rerank_score", "score"):
+            value = chunk.get(key)
+            if isinstance(value, (int, float, str)):
+                try:
+                    return float(value or 0)
+                except (TypeError, ValueError):
+                    continue
+        return 0.0
+
+    ranked = sorted(deduped, key=_relevance, reverse=True)
+
+    # 3) 字符预算内从最相关开始保留
+    kept: list[dict[str, object]] = []
+    total_chars = 0
+    for chunk in ranked:
+        text = str(chunk.get("text") or "")
+        if kept and total_chars + len(text) > max_chars:
+            break
+        kept.append(chunk)
+        total_chars += len(text)
+    return kept[:max_chunks]

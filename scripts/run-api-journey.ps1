@@ -7,7 +7,7 @@ param(
     [ValidateRange(1, 20)]
     [int]$MaxExercises = 3,
     [ValidateSet("interactive", "off")]
-    [string]$CatMode = "interactive",
+    [string]$CatMode = "off",
     [string]$EducationBackground = "其他",
     [ValidateRange(0, 40)]
     [int]$CatMaxAnswers = 5,

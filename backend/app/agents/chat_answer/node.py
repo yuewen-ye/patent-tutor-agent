@@ -3,8 +3,8 @@ from __future__ import annotations
 import json as _json
 from typing import Any
 
+from backend.app.agents.common import Node, generate_validated_json_stream, load_prompt
 from backend.app.core.agent_runtime_config import agent_temperature
-from backend.app.agents.common import Node, generate_validated_json, load_prompt
 from backend.app.core.llm import LLMClient, LLMMessage
 from backend.app.schemas.state import ChatAnswer, completed_event
 
@@ -26,12 +26,13 @@ def build_chat_answer_node(llm_client: LLMClient) -> Node:
                 ),
             ),
         ]
-        validated = generate_validated_json(
+        validated = generate_validated_json_stream(
             llm_client,
             messages=messages,
             temperature=agent_temperature("chat_answer", 0.3),
             agent="chat_answer",
             output_model=ChatAnswer,
+            schema_name="ChatAnswer",
         )
 
         return {

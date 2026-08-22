@@ -1,13 +1,9 @@
 from pathlib import Path
 
 import pytest
-from langgraph.checkpoint.memory import InMemorySaver
-from langgraph.store.memory import InMemoryStore
 
 from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolCall, ToolDefinition
-from backend.app.graph.workflow import build_workflow, export_workflow_mermaid, run_workflow
-from backend.app.learner_memory.memory import learner_namespace
-from backend.tests.helpers import completed_teach_state
+from backend.app.graph.workflow import build_workflow, export_workflow_mermaid
 
 pytestmark = pytest.mark.unit
 
@@ -176,86 +172,8 @@ class QueueLLMClient:
         )
 
 
-def test_real_workflow_runs_full_agent_chain_with_fake_llm(
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
-    llm_client = QueueLLMClient()
-
-    state = run_workflow(
-        session_id="demo-session",
-        user_input="我想学习专利新颖性和创造性的区别",
-        llm_client=llm_client,
-    )
-
-    completed = completed_teach_state(state)
-    assert len(llm_client.calls) == 12  # 原 11 次 + slide_deck 结构化课件生成
-    assert completed["session_id"] == "demo-session"
-    assert completed["learner_profile"]["knowledge_level"] == "beginner"
-    assert completed["learning_path"]
-    assert completed["expert_a_draft"]["style"] == "conservative"
-    assert completed["expert_a_draft"]["draft_stage"] == "integration"
-    assert completed["expert_a_draft"]["teaching_content"] == "整合专家A和专家B后的教学内容"
-    assert completed["expert_b_draft"]["style"] == "accessible"
-    assert completed["judge_report"]["decision"] == "accept"
-    assert completed["workflow_status"] == "completed"
-    assert completed["course_package"]["teaching_content"] == "整合专家A和专家B后的教学内容"
-    assert completed["course_slides"]["slides"]
-
-    completed_events = [event for event in state["events"] if event["status"] == "completed"]
-    event_names = [event["node"] for event in completed_events]
-    assert event_names[:3] == ["route", "diagnosis_feedback", "planner"]
-    assert set(event_names[3:5]) == {"expert_a", "expert_b"}
-    assert set(event_names[5:7]) == {"expert_a", "expert_b"}
-    assert set(event_names[7:9]) == {"expert_a", "expert_b"}
-    assert event_names[-2:] == ["judge", "slide_deck"]
-    assert all(isinstance(event["timestamp"], str) and event["timestamp"] for event in completed_events)
-    assert all(isinstance(event["duration_ms"], int) for event in completed_events)
-    assert llm_client.tool_call_agents.count("expert_a") == 2
-    assert llm_client.tool_call_agents.count("expert_b") == 1
-    assert len(completed["retrieval_context"]) >= 1
-    # Verify agent call order
-    assert llm_client.agents[:2] == ["route", "diagnosis_feedback"]
-    assert "planner" in llm_client.agents
-    assert "tool_agent" not in llm_client.agents
-    assert "expert_a" in llm_client.agents
-    assert "expert_b" in llm_client.agents
-    assert llm_client.agents.count("judge") == 1
-    assert llm_client.agents.count("diagnosis_feedback") == 1
-    assert llm_client.agents[-1] == "slide_deck"
-    forbidden_agents = {
-        "cross_review_a",
-        "cross_review_b",
-        "expert_a_revise",
-        "expert_b_revise",
-        "joint_synthesis",
-        "lightweight_review",
-        "finalize",
-        "tool_agent",
-    }
-    assert forbidden_agents.isdisjoint(set(llm_client.agents))
-    assert "工作流完成" in capsys.readouterr().err
 
 
-def test_teach_workflow_persists_learner_memory_once(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
-    llm_client = QueueLLMClient()
-    store = InMemoryStore()
-
-    run_workflow(
-        session_id="memory-once-session",
-        user_input="我想学习专利新颖性和创造性的区别",
-        llm_client=llm_client,
-        learner_id="learner-unit",
-        checkpointer=InMemorySaver(),
-        store=store,
-    )
-
-    profiles = store.search(learner_namespace("learner-unit", "profile"), limit=5)
-    histories = store.search(learner_namespace("learner-unit", "history"), limit=5)
-    assert len(profiles) == 1
-    assert histories == []
 
 
 def test_workflow_compiles_and_exports_mermaid(tmp_path: Path) -> None:

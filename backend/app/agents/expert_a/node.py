@@ -19,7 +19,10 @@ from backend.app.agents.common import (
     normalize_cross_review_payload,
     normalize_expert_draft_payload,
 )
-from backend.app.agents.rag_tools import collect_expert_retrieval_context
+from backend.app.agents.rag_tools import (
+    cap_retrieval_context,
+    collect_expert_retrieval_context,
+)
 from backend.app.core.agent_runtime_config import agent_temperature
 from backend.app.core.llm import LLMClient, LLMMessage
 from backend.app.curriculum.block_content_spec import (
@@ -221,7 +224,9 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                 temperature=agent_temperature("expert_a", 0.2, "tool_temperature"),
                 agent="expert_a",
             )
-            retrieval_context = list(state.get("retrieval_context", []) or []) + retrieved_context
+            retrieval_context = cap_retrieval_context(
+                list(state.get("retrieval_context", []) or []) + retrieved_context
+            )
             draft = generate_validated_json_stream(
                 llm_client,
                 messages=[

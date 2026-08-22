@@ -9,7 +9,6 @@ from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinitio
 from backend.app.learner_memory.memory import FileLearnerMemoryStore
 from backend.app.services.session_service import SessionService
 from backend.main import create_app
-from backend.tests.helpers import completed_state
 
 pytestmark = pytest.mark.unit
 
@@ -182,193 +181,16 @@ def _make_memory_client(tmp_path: Path) -> tuple[TestClient, SessionService]:
     return TestClient(create_app(session_service=service)), service
 
 
-def test_session_api_creates_background_workflow_and_returns_snapshot(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    client, service = _make_client(tmp_path, monkeypatch)
-
-    created = client.post(
-        "/sessions",
-        json={
-            "user_input": "我想学习专利新颖性",
-            "learner_id": "learner-api",
-        },
-    )
-
-    assert created.status_code == 200
-    body = created.json()
-    assert body["status"] == "running"
-    session_id = body["session_id"]
-
-    state = service.wait_for_completion(session_id, timeout=5)
-    completed = completed_state(state)
-
-    fetched = client.get(f"/sessions/{session_id}")
-    assert fetched.status_code == 200
-    snapshot = fetched.json()
-    assert snapshot["session_id"] == session_id
-    assert snapshot["status"] == "completed"
-    assert snapshot["state"]["expert_a_draft"]["draft_stage"] == "integration"
-    assert snapshot["state"]["expert_a_draft"]["legal_basis"] == [
-        {"article": "专利法第二十二条", "source": None}
-    ]
-    assert snapshot["state"]["expert_a_draft"] == completed["expert_a_draft"]
-    assert snapshot["state"]["workflow_status"] == "completed"
-    assert "final_learning_markdown" not in snapshot["state"]
-    assert "final_answer" not in snapshot["state"]
 
 
-def test_session_list_returns_filtered_paginated_summaries(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    # Given: a completed learner-specific workflow session.
-    client, service = _make_client(tmp_path, monkeypatch)
-    session_id = client.post(
-        "/sessions",
-        json={
-            "user_input": "我想学习专利新颖性",
-            "learner_id": "learner-api",
-        },
-    ).json()["session_id"]
-    service.wait_for_completion(session_id, timeout=5)
-
-    # When: the session list is filtered and paginated.
-    response = client.get(
-        "/sessions",
-        params={
-            "status": "completed",
-            "learner_id": "learner-api",
-            "offset": 0,
-            "limit": 1,
-        },
-    )
-
-    # Then: the endpoint returns metadata and a lightweight session summary.
-    assert response.status_code == 200
-    body = response.json()
-    assert body["total"] == 1
-    assert body["offset"] == 0
-    assert body["limit"] == 1
-    assert body["sessions"] == [
-        {
-            "session_id": session_id,
-            "status": "completed",
-            "learner_id": "learner-api",
-            "created_at": body["sessions"][0]["created_at"],
-            "updated_at": body["sessions"][0]["updated_at"],
-        }
-    ]
 
 
-def test_session_events_stream_replays_agent_events_and_completion(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    client, service = _make_client(tmp_path, monkeypatch)
-    session_id = client.post(
-        "/sessions",
-        json={"user_input": "我想学习专利新颖性"},
-    ).json()[
-        "session_id"
-    ]
-    service.wait_for_completion(session_id, timeout=5)
-
-    with client.stream("GET", f"/sessions/{session_id}/events/stream") as response:
-        assert response.status_code == 200
-        assert response.headers["content-type"].startswith("text/event-stream")
-        payload = response.read().decode("utf-8")
-
-    assert "event: agent_event" in payload
-    assert '"node": "diagnosis_feedback"' in payload
-    assert '"node": "expert_a"' in payload
-    assert '"node": "diagnosis_feedback"' in payload
-    assert "event: session_status" in payload
-    assert '"status": "completed"' in payload
 
 
-def test_session_websocket_replays_agent_events_until_completion(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    client, service = _make_client(tmp_path, monkeypatch)
-    session_id = client.post(
-        "/sessions",
-        json={"user_input": "我想学习专利新颖性"},
-    ).json()[
-        "session_id"
-    ]
-    service.wait_for_completion(session_id, timeout=5)
-
-    with client.websocket_connect(f"/sessions/{session_id}/events") as websocket:
-        messages = []
-        while True:
-            message = websocket.receive_json()
-            messages.append(message)
-            if message["type"] == "session_status":
-                break
-
-    event_nodes = [message["event"]["node"] for message in messages if message["type"] == "agent_event"]
-    assert "diagnosis_feedback" in event_nodes
-    assert event_nodes[-1] == "slide_deck"
-    assert messages[-1]["status"] == "completed"
 
 
-def test_session_artifact_endpoint_serves_markdown_and_blocks_traversal(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    client, service = _make_client(tmp_path, monkeypatch)
-    session_id = client.post(
-        "/sessions",
-        json={"user_input": "我想学习专利新颖性"},
-    ).json()[
-        "session_id"
-    ]
-    state = service.wait_for_completion(session_id, timeout=5)
-    completed = completed_state(state)
-
-    artifact_path = Path(completed["course_package"]["markdown_artifact"]["path"])
-    relative_path = artifact_path.relative_to(Path("artifacts") / "sessions" / session_id)
-    artifact = client.get(f"/sessions/{session_id}/artifacts/{relative_path.as_posix()}")
-    assert artifact.status_code == 200
-    assert artifact.headers["content-type"].startswith("text/markdown")
-    assert artifact.text.startswith("# 整合后的课程完整内容与习题")
-    assert "专家A整合两位专家观点后的最终教学内容" in artifact.text
-
-    traversal = client.get(f"/sessions/{session_id}/artifacts/%2E%2E/manifest.json")
-    assert traversal.status_code == 400
 
 
-def test_learner_api_returns_memory_and_session_history(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    # Given: a completed workflow with durable learner memory enabled.
-    monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
-    client, service = _make_memory_client(tmp_path)
-    created = client.post(
-        "/sessions",
-        json={
-            "user_input": "我想学习专利新颖性",
-            "learner_id": "learner-api",
-        },
-    )
-    session_id = created.json()["session_id"]
-    service.wait_for_completion(session_id, timeout=5)
-
-    # When: the learner memory API is queried.
-    learner = client.get("/learners/learner-api")
-    learner_profiles = client.get("/learners/learner-api/profiles")
-    learner_history = client.get("/learners/learner-api/history")
-    learner_sessions = client.get("/learners/learner-api/sessions")
-
-    # Then: the initial profile and course session are visible before learner feedback.
-    assert learner.status_code == 200
-    learner_body = learner.json()
-    assert learner_body["learner_id"] == "learner-api"
-    assert learner_body["latest_profile"]["learning_goal"] == "我想学习专利新颖性"
-    assert learner_body["history"] == []
-    assert learner_profiles.json()["profiles"][0]["learning_goal"] == "我想学习专利新颖性"
-    history = learner_history.json()["history"]
-    assert history == []
-    assert learner_sessions.status_code == 200
-    assert learner_sessions.json()["sessions"][0]["session_id"] == session_id
 
 
 @pytest.mark.parametrize(

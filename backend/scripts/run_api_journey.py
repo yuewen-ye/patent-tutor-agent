@@ -179,17 +179,9 @@ def _workflow_progress(snapshot: dict[str, Any]) -> WorkflowProgress:
     )
 
     if latest_judge > latest_integration:
-        judge_report = typed_state.get("judge_report")
-        decision = (
-            str(judge_report.get("decision") or "")
-            if isinstance(judge_report, dict)
-            else ""
-        )
-        current = (
-            "Expert A 按 Judge 意见重新整合"
-            if decision == "revise"
-            else "课程结果持久化"
-        )
+        # max_revisions 配置为 0 时，judge 给出 revise 也会直接收尾，
+        # 不再进入 expert_a_integration 重新整合循环。
+        current = "课程结果持久化"
     elif latest_integration >= 0:
         current = "Judge 课程审核"
     elif {"revision_a", "revision_b"}.issubset(expert_steps):

@@ -43,7 +43,12 @@
 2. 每一份输入 slide 必须对应输出中的一页，`id` 与 `order` 必须保持一致，不增删页。
 3. 每页 `speaker_notes` 必须忠实使用该页输入 narration，不得省略或改写其法律结论。
 4. `theme` 根据课程风格选择：patent_exam_classic（法条/考试）、legal_case_analysis（案例/IRAC）、technical_blueprint（技术流程）、minimal_academic（课堂讲解）、practice_workshop（练习/易错点）；也可使用兼容主题 patent_blue/professional_green/warm_orange。
-5. `layout` 根据页面内容选择旧版兼容布局或受控模板：title/content/two_column/process/comparison/summary、cover_minimal/cover_split/content_rule_card/content_bullet_grid/irac_flow/legal_citation_focus/case_analysis_split/comparison_matrix/timeline_process/exam_checklist/summary_roadmap/hero_statement/evidence_stack/decision_tree/concept_map。若使用模板，填入 `template_id`，不得输出 XML、SVG、任意坐标、外部 URL 或自造法律事实。
-6. `legal_reference` 必须是单个字符串（例如 `"《专利法》第2条"`），不能为空数组；如果一页涉及多条法律，用分号拼接成一句，如 `"《专利法》第2条；第5条"`。
-7. `visual_style` 选择 density/mood/accent_strategy；每页可填写 visual_intent、composition 和最多 2 个 visual_elements。`composition` 只能从 auto/hero/split/grid/timeline_with_callout/flow/matrix/stack 中选择。`visual_elements[].type` 只能从 timeline/irac/comparison_matrix/callout/evidence_stack/decision_tree/concept_map/metric_cards/warning_panel 中选择。优先使用语义图形：时间关系用 timeline，判断链用 irac，对比用 comparison_matrix，风险用 warning_panel，关系用 concept_map；不要连续多页使用相同 layout，整份 deck 至少使用 3 种模板，且不能所有页面都只有 body/bullets。
-8. 只输出符合 JSON Schema 的完整 JSON，不要 Markdown 或解释。
+5. 每页必须指定 `template_id`（从受控模板中选择），不要只填 `layout` 而留空 `template_id`。受控模板：`cover_minimal`、`cover_split`、`content_rule_card`、`content_bullet_grid`、`irac_flow`、`legal_citation_focus`、`case_analysis_split`、`comparison_matrix`、`timeline_process`、`exam_checklist`、`summary_roadmap`、`hero_statement`、`evidence_stack`、`decision_tree`、`concept_map`。`layout` 仅作旧版兼容，可与 `template_id` 相同。不得输出 XML、SVG、任意坐标、外部 URL 或自造法律事实。
+6. **视觉多样性硬约束（会触发校验失败）：**
+   - **任意相邻两页的 `template_id` 必须不同**；例如第 7 页用了 `summary_roadmap`，第 8 页绝不能再使用 `summary_roadmap`。
+   - 整份 deck 至少使用 3 种不同的 `template_id`。
+   - 不要连续多页使用相同构图；内容页与总结页要错开模板，避免视觉单调。
+   - 选择模板前先检查上一页用了什么 `template_id`，主动避开重复。
+7. `legal_reference` 必须是单个字符串（例如 `"《专利法》第2条"`），不能为空数组；如果一页涉及多条法律，用分号拼接成一句，如 `"《专利法》第2条；第5条"`。
+8. `visual_style` 选择 density/mood/accent_strategy；每页可填写 visual_intent、composition 和最多 2 个 visual_elements。`composition` 只能从 auto/hero/split/grid/timeline_with_callout/flow/matrix/stack 中选择。`visual_elements[].type` 只能从 timeline/irac/comparison_matrix/callout/evidence_stack/decision_tree/concept_map/metric_cards/warning_panel 中选择。优先使用语义图形：时间关系用 timeline，判断链用 irac，对比用 comparison_matrix，风险用 warning_panel，关系用 concept_map；不能所有页面都只有 body/bullets。
+9. 只输出符合 JSON Schema 的完整 JSON，不要 Markdown 或解释。

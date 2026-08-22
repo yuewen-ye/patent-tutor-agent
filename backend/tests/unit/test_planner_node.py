@@ -74,7 +74,11 @@ class PlannerLLMClient:
         return result
 
     def generate_json_stream(
-        self, messages: list[LLMMessage], temperature: float, agent: str | None = None
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        agent: str | None = None,
+        **kwargs: object,
     ) -> Iterator[str]:
         raw = self.generate_json(messages, temperature, agent)
         import json as _json
@@ -92,7 +96,11 @@ class FailingPlannerLLMClient:
         raise RuntimeError("LLM unavailable")
 
     def generate_json_stream(
-        self, messages: list[LLMMessage], temperature: float, agent: str | None = None
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        agent: str | None = None,
+        **kwargs: object,
     ) -> Iterator[str]:
         raise RuntimeError("LLM unavailable")
 
@@ -299,7 +307,11 @@ class SingleCompositePlannerLLMClient:
         }
 
     def generate_json_stream(
-        self, messages: list[LLMMessage], temperature: float, agent: str | None = None
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        agent: str | None = None,
+        **kwargs: object,
     ) -> Iterator[str]:
         raw = self.generate_json(messages, temperature, agent)
         import json as _json
