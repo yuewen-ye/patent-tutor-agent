@@ -53,7 +53,22 @@ export function SessionPage() {
 
   const state = session?.state;
   const status = liveStatus || session?.status;
-  const currentNode = events.length > 0 ? events[events.length - 1].node : undefined;
+  // 从后往前找最后一个"已 started 但尚未 completed/failed/canceled"的节点，
+  // 这才是"正在运行"的节点；并行场景下避免把已完成的专家当成活跃节点。
+  // 若所有 started 都已结束（瞬时空窗或已完结），回退到最后一个事件对应的节点。
+  const currentNode = (() => {
+    if (events.length === 0) return undefined;
+    const finished = new Set<string>();
+    for (let i = events.length - 1; i >= 0; i--) {
+      const evt = events[i];
+      if (evt.status === "completed" || evt.status === "failed" || evt.status === "canceled") {
+        finished.add(evt.node);
+      } else if (evt.status === "started" && !finished.has(evt.node)) {
+        return evt.node;
+      }
+    }
+    return events[events.length - 1].node;
+  })();
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
 
   const isFinished = status && ["completed", "failed", "canceled"].includes(status);

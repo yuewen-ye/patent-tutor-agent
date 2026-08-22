@@ -55,6 +55,19 @@ export const artifactsApi = {
     api.head(
       `/sessions/${encodeURIComponent(sessionId)}/artifacts/presentation/audio/course_deck.mp3`
     ),
+
+  // 每页预览图（LibreOffice 转换为 PNG，通过 artifacts 静态服务）
+  getSlidePreviewUrl: (sessionId: string, slideNumber: number): string => {
+    const filename = `slide_${String(slideNumber).padStart(3, "0")}.png`;
+    return artifactsApi.buildArtifactUrl(sessionId, `presentation/previews/${filename}`);
+  },
+
+  headSlidePreview: (sessionId: string, slideNumber: number) => {
+    const filename = `slide_${String(slideNumber).padStart(3, "0")}.png`;
+    return api.head(
+      `/sessions/${encodeURIComponent(sessionId)}/artifacts/${encodeURIComponent(`presentation/previews/${filename}`)}`
+    );
+  },
 };
 
 // Re-export helper so other modules can build URLs through a single API module

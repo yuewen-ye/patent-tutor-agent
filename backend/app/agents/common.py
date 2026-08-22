@@ -705,6 +705,23 @@ def _normalize_block_payload(payload: object) -> object:
 
 
 def normalize_expert_draft_payload(raw: object) -> object:
+    # LLM 在 revision 阶段偶发"只吐出了一个列表（KP 数组 / blocks 数组），
+    # 忘了包一层 ExpertDraft 外壳 dict"的情况 → 按数组内容特征兜底包装，
+    # 防止后续 strict JSON validation 直接爆 model_type。
+    if isinstance(raw, list):
+        _kp_like = (
+            all(isinstance(i, dict) and ("node_id" in i or "kc_name" in i) for i in raw)
+            or all(isinstance(i, str) for i in raw)
+        )
+        _block_like = (
+            all(isinstance(i, dict) and "block_type" in i for i in raw)
+        )
+        if _kp_like:
+            raw = {"knowledge_points": raw}
+        elif _block_like:
+            raw = {"block_plan": {"blocks": raw}}
+        else:
+            raw = {"teaching_content": "\n\n".join(str(x) for x in raw if isinstance(x, str))}
     normalized = normalize_key_aliases(
         raw,
         {
@@ -979,6 +996,15 @@ def normalize_expert_draft_payload(raw: object) -> object:
             # expert_a、A+B融合 或任何其它值都归到 expert_a（integration 由 expert_a 节点产出）
             ma["created_by"] = "expert_a"
         normalized["markdown_artifact"] = ma
+    # 最后一道防线：如果无论如何 normalized 仍是 list（极端 LLM 输出），
+    # 强行包一层 teaching_content，避免 Pydantic model_type 校验直接把会话搞崩。
+    if isinstance(normalized, list):
+        normalized = {
+            "teaching_content": "\n\n".join(
+                json.dumps(x, ensure_ascii=False) if isinstance(x, (dict, list)) else str(x)
+                for x in normalized
+            ),
+        }
     return normalized
 
 

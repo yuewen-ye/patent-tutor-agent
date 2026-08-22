@@ -354,6 +354,81 @@ class SessionService:
         course_session_id: str,
         responses: list[dict[str, Any]],
     ) -> SessionRecord:
+        # 跟踪富化阶段创建但工作流尚未启动的反馈会话；若后续富化步骤抛错，
+        # 这些会话会被标记为 failed，避免永久卡在 "running" 状态。
+        created_session_ids: list[str] = []
+        try:
+            return self._create_feedback_session_inner(
+                learner_id=learner_id,
+                course_session_id=course_session_id,
+                responses=responses,
+                created_session_ids=created_session_ids,
+            )
+        except (KeyError, PermissionError, RuntimeError):
+            # 已知语义错误直接上抛，API层映射到404/403/409。
+            # 若已创建反馈会话（如 RuntimeError 来自 create_session 之后的富化步骤），
+            # 需将其标记为 failed，防止卡死。
+            self._mark_orphaned_feedback_sessions_failed(created_session_ids)
+            raise
+        except Exception as exc:  # pragma: no cover - 兜底未知异常，转成可读409原因
+            logger.exception(
+                "create_feedback_session unexpected_error learner_id=%s course_session_id=%s responses=%s",
+                learner_id,
+                course_session_id,
+                len(responses),
+            )
+            self._mark_orphaned_feedback_sessions_failed(created_session_ids)
+            raise RuntimeError(
+                f"处理练习提交时发生未知错误({type(exc).__name__}): {exc}"
+            ) from exc
+
+    def _mark_orphaned_feedback_sessions_failed(self, session_ids: list[str]) -> None:
+        """将富化阶段创建但工作流未启动的反馈会话标记为 failed。
+
+        create_session(start_immediately=False) 会先把会话写入内存与 MySQL
+        （状态为 running），随后富化步骤（BKT 判分、学习计划进度更新等）才执行。
+        若富化抛错，thread.start() 永远不会执行，会话将永久停留在 running，
+        前端会一直转圈且 wait_for_completion 会挂起。此方法兜底清理这类孤儿会话。
+        """
+        for session_id in session_ids:
+            try:
+                with self._lock:
+                    record = self._sessions.get(session_id)
+                if record is None:
+                    continue
+                if record.status in _TERMINAL_STATUSES:
+                    continue
+                with self._lock:
+                    record.status = "failed"
+                    record.error = record.error or "Feedback session enrichment failed before workflow start."
+                    record.updated_at = utc_now()
+                    record.state["workflow_status"] = "failed"
+                    record.state.setdefault("error", record.error)
+                    record.done.set()
+                write_manifest(
+                    artifact_root=self.artifact_root,
+                    state=record.state,
+                    status="failed",
+                )
+                self._persist_state(
+                    session_id,
+                    record.state,
+                    status="failed",
+                    error=record.error,
+                )
+            except Exception:  # 清理不得掩盖原始错误
+                logger.exception(
+                    "Failed to mark orphaned feedback session %s as failed", session_id
+                )
+
+    def _create_feedback_session_inner(
+        self,
+        *,
+        learner_id: str,
+        course_session_id: str,
+        responses: list[dict[str, Any]],
+        created_session_ids: list[str] | None = None,
+    ) -> SessionRecord:
         course_record = self.require_session(course_session_id)
         if course_record.learner_id != learner_id:
             raise PermissionError("Learner does not own the course session.")
@@ -437,6 +512,8 @@ class SessionService:
             parent_session_id=course_session_id,
             start_immediately=False,
         )
+        if created_session_ids is not None:
+            created_session_ids.append(record.session_id)
         register_questions = getattr(self._store, "register_questions_from_state", None)
         if callable(register_questions):
             register_questions(

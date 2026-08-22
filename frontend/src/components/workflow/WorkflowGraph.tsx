@@ -164,22 +164,27 @@ export function WorkflowGraph({
   // 是否已结束
   const isFinished = Boolean(status && ["completed", "failed", "canceled"].includes(status));
 
-  // 并行阶段判断：draft/cross_review/revision 中专家 A/B 同时运行
+  // 并行阶段判断：draft/cross_review/revision 中专家 A/B 同时运行。
+  // 兜底：当 expert_phase 缺失（旧会话 / state 没推到前端），但 currentNode 是 expert_a 或 expert_b，
+  //      则按图结构视为"draft 并行阶段"（planner→expert_a/b→barrier），避免只高亮一个节点。
+  const effectiveExpertPhase: string = expertPhase
+    || ((!isFinished && (currentNode === "expert_a" || currentNode === "expert_b")) ? "draft" : "");
+
   const isExpertParallel =
     !isFinished &&
     (currentNode === "expert_a" || currentNode === "expert_b") &&
-    Boolean(expertPhase && PARALLEL_PHASES.includes(expertPhase));
+    Boolean(effectiveExpertPhase && PARALLEL_PHASES.includes(effectiveExpertPhase));
 
   // integration 阶段判断：currentNode 是 expert_a（node_label 映射），但实际节点是 expert_a_integration
   const isIntegration =
     !isFinished &&
     currentNode === "expert_a" &&
-    expertPhase === "integration";
+    (expertPhase === "integration" || effectiveExpertPhase === "integration");
 
   // 已完成节点集合
   const completedSet = useMemo(
-    () => buildCompletedSet(currentNode, expertPhase, status),
-    [currentNode, expertPhase, status]
+    () => buildCompletedSet(currentNode, effectiveExpertPhase as ExpertPhase | undefined, status),
+    [currentNode, effectiveExpertPhase, status]
   );
 
   const isActive = useCallback(
