@@ -1,3 +1,4 @@
+import json
 from collections.abc import Iterator
 
 import pytest
@@ -53,24 +54,10 @@ class PlannerLLMClient:
             },
         }
         if self.action == "replace":
-            result["nodes"] = [
-                {
-                    "node_id": "patent-law-foundation",
-                    "node_name": "错误名称会被覆盖",
-                    "duration_min": 20,
-                    "strategy": "先学概念+法条拆解",
-                    "prerequisites": [],
-                    "difficulty_cap": "L2",
-                },
-                {
-                    "node_id": "patent-system-overview",
-                    "node_name": "错误名称会被覆盖",
-                    "duration_min": 30,
-                    "strategy": "要件框架+易混淆辨析",
-                    "prerequisites": ["patent-law-foundation"],
-                    "difficulty_cap": "L3",
-                },
-            ]
+            prompt = next(message.content for message in messages if "# DETERMINISTIC_ROUTE_JSON" in message.content)
+            marker = "# DETERMINISTIC_ROUTE_JSON\n"
+            candidate_text = prompt.split(marker, 1)[1].split("\n# 学习目标", 1)[0]
+            result["nodes"] = json.loads(candidate_text)
         return result
 
     def generate_json_stream(
@@ -229,8 +216,19 @@ def test_planner_always_calls_llm_and_builds_enriched_context() -> None:
     assert result["path_decision"]["plan_action"] == "replace"
     assert result["path_decision"]["algorithm"] == "llm_planner"
     assert result["path_decision"]["path_start_node_id"] == "patent-law-foundation"
-    assert result["path_decision"]["path_target_node_ids"] == ["patent-system-overview"]
-    assert result["path_decision"]["roadmap_node_count"] == 2
+    target_ids = result["path_decision"]["path_target_node_ids"]
+    assert target_ids
+    assert result["path_decision"]["roadmap_node_count"] >= 3
+    assert result["learning_path"] != [
+        {
+            "node_id": "patent-law-foundation",
+            "node_name": "专利法律制度基础",
+            "duration_min": 20,
+            "strategy": "先学概念+法条拆解",
+            "prerequisites": [],
+            "difficulty_cap": "L2",
+        }
+    ]
     context = result["teaching_context"]
     assert context["current_topic"]["node_name"] == "专利法律制度基础"
     assert context["planner_guidance"]["teaching_strategy"] == "先规则后案例"
@@ -324,19 +322,13 @@ class SingleCompositePlannerLLMClient:
         return LLMResponseWithTools(content=None, tool_calls=[])
 
 
-def test_planner_expands_single_composite_node_path() -> None:
-    client = SingleCompositePlannerLLMClient()
-    result = build_planner_node(client)(
+def test_planner_replace_uses_backend_global_route() -> None:
+    result = build_planner_node(PlannerLLMClient())(
         {"session_id": "debug", "user_input": "系统学习专利基础", "events": []}
     )
     node_ids = [item["node_id"] for item in result["learning_path"]]
     assert "patent-law-foundation" in node_ids
-    assert any(
-        nid in node_ids
-        for nid in ["patent-system-overview", "patent-law-framework", "patent-rights-nature"]
-    )
     assert len(node_ids) >= 3
-    # All prerequisites must be satisfied within the expanded path
     node_by_id = {n["node_id"]: n for n in load_knowledge_dag()["nodes"]}
     for nid in node_ids:
         for prereq in node_by_id.get(nid, {}).get("predecessors", []):

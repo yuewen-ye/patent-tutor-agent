@@ -58,7 +58,7 @@ def test_confusion_axis_uses_bkt_mastery_from_learner_profile() -> None:
 
 
 @pytest.mark.unit
-def test_astar_path_is_deterministic_and_respects_prerequisites() -> None:
+def test_global_path_is_deterministic_and_respects_prerequisites() -> None:
     profile = {
         "knowledge_level": "beginner",
         "weak_points": ["新颖性", "现有技术"],
@@ -128,6 +128,20 @@ def test_dual_axis_snapshot_activates_on_english_id_weak_point() -> None:
 
 
 @pytest.mark.unit
+def test_compute_learning_path_keeps_direct_goal_target_and_global_prerequisites() -> None:
+    profile = {"weak_points": [], "mastery": {}}
+    path = compute_learning_path(profile=profile, learning_goal="学习新颖性")
+    node_ids = [item["node_id"] for item in path]
+    assert "novelty" in node_ids
+    assert len(node_ids) >= 3
+    positions = {node_id: index for index, node_id in enumerate(node_ids)}
+    assert all(
+        prerequisite in positions and positions[prerequisite] < positions[item["node_id"]]
+        for item in path
+        for prerequisite in item["prerequisites"]
+    )
+
+
 def test_compute_learning_path_includes_confusion_companion() -> None:
     # 学员仅点名混淆对一端（新颖性），规划应把另一端（创造性）及相关节点也排进路径，
     # 确保「辨析模块」两端齐备、common_pitfall 块能真正触发（命中一端即排两端）。
