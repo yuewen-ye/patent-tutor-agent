@@ -257,13 +257,12 @@ def build_planner_node(llm_client: LLMClient) -> Node:
         }
 
         def validate_planner_semantics(result: PlannerAgentResult) -> None:
-            if result.plan_action == "keep":
-                _parse_planner_plan(
-                    result.model_dump(),
-                    known_node_ids=known_ids,
-                    canonical_names=canonical_names,
-                    static_prerequisites=static_prerequisites,
-                )
+            _parse_planner_plan(
+                result.model_dump(),
+                known_node_ids=known_ids,
+                canonical_names=canonical_names,
+                static_prerequisites=static_prerequisites,
+            )
 
         proposal = generate_validated_json_stream(
             llm_client,
@@ -375,7 +374,7 @@ def build_planner_node(llm_client: LLMClient) -> Node:
                 if item.node_id in roadmap_targets
             ],
             "roadmap_node_count": len(roadmap_ids),
-            "algorithm": "llm_planner",
+            "algorithm": "active_plan" if plan["plan_action"] == "keep" else "deterministic_global_route",
             "question_scope": scope,
             "iteration_directive": plan["iteration_directive"],
             "completed_node_ids": progress.get("completed_nodes", []),

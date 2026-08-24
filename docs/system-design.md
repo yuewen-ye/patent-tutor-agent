@@ -181,9 +181,11 @@ JSONL 日志（started/completed/error）、Markdown artifact 落盘与 `manifes
   - `question_scope` 生成三类出题范围（向后复习/向前探测/薄弱点探测），`build_teaching_context()`
     输出专家只能消费的**单节课窗口**，专家不得添加窗口外节点。
 
-**Planner 节点流程**：确定性 A* 候选路线 + 完整双图注入 → LLM 提案（`PlannerAgentResult`）→
-确定性校验（节点必须存在于 DAG、拓扑合法、无重复）→ 失败则降级为确定性路线并在
-`path_decision.fallback_reason` 记录原因。难度上限按 P(L) 分阶（L1/L2/L3），薄弱点强制 L3。
+**Planner 节点流程**：完整双图、活动计划和目标原子节点推荐注入 → LLM 作出严格的
+`keep`/`replace` 决策并提供教学元数据 → `keep` 恢复活动计划，`replace` 由后端按静态 DAG、
+学习目标、BKT 和混淆风险确定性生成路线。可选的 LLM 路线节点只作节点存在性、去重和拓扑语义
+校验；模型调用链耗尽时 Planner 失败，不以确定性路线替代失败的模型决策。难度上限按 P(L) 分阶
+（L1/L2/L3），薄弱点强制 L3。
 
 ### 4.2 学员记忆与 BKT（`backend/app/learner_memory/`）
 

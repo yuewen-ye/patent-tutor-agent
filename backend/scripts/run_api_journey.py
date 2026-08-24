@@ -502,9 +502,9 @@ class ApiJourney:
             reteach = self._wait_for_session(reteach_session_id)
             reteach_state = self._required_mapping(reteach, "state")
             reteach_path_decision = self._required_mapping(reteach_state, "path_decision")
-            if reteach_path_decision.get("algorithm") != "llm_planner":
+            if reteach_path_decision.get("algorithm") not in {"active_plan", "deterministic_global_route"}:
                 raise JourneyError(
-                    "复教会话未使用 LLM Planner："
+                    "复教会话未记录有效的 Planner 路线来源："
                     f"algorithm={reteach_path_decision.get('algorithm')!r}"
                 )
             if reteach_path_decision.get("plan_action") not in {"keep", "replace"}:

@@ -27,9 +27,10 @@ Provider 只能经 `AgentLLMRouter` 注入。`generate_pptx` 与其他 Agent 一
 `legal_citation_focus`、`comparison_matrix`、`timeline_process`、`exam_checklist`、
 `summary_roadmap`、`hero_statement`、`evidence_stack`、`decision_tree`、`concept_map` 等模板。PresentationDesign 还包含由 LLM 自动决定的 `visual_style`、`composition` 和语义 `visual_elements`，后端用装饰层与语义图形层防止整份 deck 退化为纯文字页。专利法条卡、IRAC 流程、审查时间线、对比矩阵和练习题卡均由
 确定性后端组件绘制；模型不得直接输出 XML、任意坐标或网络资源。Planner 使用默认 Provider，并接收完整知识 DAG、
-完整易混淆图及本地 A* 完整候选路线；其 LLM 提案表示完整学习路线，不再用 16 个节点截断，
-但必须通过真实节点、去重和先修顺序校验。校验失败时回退到确定性路径算法，
-`path_decision.fallback_reason` 保存降级原因，最终路径仍由后端校正并负责。
+完整易混淆图及目标原子节点推荐；其 LLM 提案只决定 `keep` 或 `replace` 并提供教学元数据，
+可选节点仅作静态图语义校验。模型成功确认 `replace` 后，后端以静态 DAG、学习目标、BKT 和
+混淆风险确定性生成完整路线；`keep` 恢复活动计划。模型调用链耗尽时 Planner 失败，绝不以确定性
+路线替代失败的模型决策。后端负责最终路径、游标和活动窗口。
 
 CAT/BKT 诊断引擎也不是 LLM Agent 或 LangGraph 节点。它位于 FastAPI 服务层，负责多轮选题、
 服务端判分、掌握度更新、知识 DAG 传播与诊断会话持久化；诊断完成后把确定性快照注入新的

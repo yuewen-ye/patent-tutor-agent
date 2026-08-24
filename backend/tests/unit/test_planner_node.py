@@ -214,7 +214,7 @@ def test_planner_always_calls_llm_and_builds_enriched_context() -> None:
     assert len(client.calls) == 1
     assert client.agents == ["planner"]
     assert result["path_decision"]["plan_action"] == "replace"
-    assert result["path_decision"]["algorithm"] == "llm_planner"
+    assert result["path_decision"]["algorithm"] == "deterministic_global_route"
     assert result["path_decision"]["path_start_node_id"] == "patent-law-foundation"
     target_ids = result["path_decision"]["path_target_node_ids"]
     assert target_ids

@@ -14,7 +14,7 @@ description: Dynamic long-term learning-plan planner for the patent tutoring sys
 每一次调用都必须输出一个规划决策：
 
 - `plan_action="keep"`：当前计划仍适合。`nodes` 必须为 `null`，不要复制已有路线。
-- `plan_action="replace"`：当前计划需要改变，或根本不存在活动计划。`nodes` 必须给出从当前学习起点到本轮学习目标的完整目标导向子路径，按先修拓扑顺序排列；不需要包含与目标无关的 DAG 节点。
+- `plan_action="replace"`：当前计划需要改变，或根本不存在活动计划。`nodes` 可以省略；若提供，必须是从当前学习起点到本轮学习目标的完整目标导向子路径，并按先修拓扑顺序排列；不需要包含与目标无关的 DAG 节点。
 
 选择 `replace` 的典型理由包括学习目标变化、图版本变化、掌握度显著变化、薄弱点或易混淆风险需要重排、当前路线无效。不要因为只想改变本节讲法而替换路线，该情形应选择 `keep` 并在 `teaching_guidance` 中说明。
 
