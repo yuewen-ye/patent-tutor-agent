@@ -14,11 +14,24 @@ from backend.scripts.run_api_journey import (
     _artifact_api_path,
     _build_exercise_responses,
     _completed_event_summary,
+    _debate_enabled_from_env,
     _validate_questionnaire_responses,
     _workflow_progress,
 )
 
 pytestmark = pytest.mark.unit
+
+
+def test_api_journey_debate_flag_reads_strict_environment_values(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("PATENT_TUTOR_DEBATE_ENABLED", raising=False)
+    assert _debate_enabled_from_env() is True
+    monkeypatch.setenv("PATENT_TUTOR_DEBATE_ENABLED", "false")
+    assert _debate_enabled_from_env() is False
+    monkeypatch.setenv("PATENT_TUTOR_DEBATE_ENABLED", "True")
+    with pytest.raises(JourneyError, match="PATENT_TUTOR_DEBATE_ENABLED"):
+        _debate_enabled_from_env()
 
 
 def test_default_questionnaire_answers_match_requested_profile() -> None:
@@ -62,6 +75,25 @@ def test_artifact_api_path_removes_storage_prefix() -> None:
     assert _artifact_api_path("feedback/feedback_report.md", "feedback-1") == (
         "feedback/feedback_report.md"
     )
+
+
+def test_single_agent_workflow_progress_goes_from_draft_to_judge() -> None:
+    snapshot = {
+        "status": "running",
+        "state": {
+            "workflow_mode": "teach",
+            "teach_phase": "single_agent",
+            "events": [
+                {"node": "planner", "message": "planned learning path"},
+                {"node": "expert_a", "message": "generated expert A draft with LLM"},
+            ],
+        },
+    }
+
+    progress = _workflow_progress(snapshot)
+
+    assert progress.current_stage == "Judge 课程审核"
+    assert len(progress.completed_events) == 2
 
 
 def test_workflow_progress_reports_parallel_expert_stage_and_missing_expert() -> None:

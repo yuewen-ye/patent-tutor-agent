@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import sys
 import time
@@ -78,6 +79,17 @@ DEFAULT_QUESTIONNAIRE_RESPONSES: list[dict[str, Any]] = [
 ]
 
 
+def _debate_enabled_from_env() -> bool:
+    raw = os.environ.get("PATENT_TUTOR_DEBATE_ENABLED")
+    if raw is None:
+        return True
+    if raw == "true":
+        return True
+    if raw == "false":
+        return False
+    raise JourneyError("PATENT_TUTOR_DEBATE_ENABLED must be exactly true or false")
+
+
 class JourneyError(RuntimeError):
     """Raised when an API step cannot complete the business journey."""
 
@@ -145,6 +157,7 @@ def _workflow_progress(snapshot: dict[str, Any]) -> WorkflowProgress:
     }
     workflow_mode = str(typed_state.get("workflow_mode") or "")
     diagnosis_phase = str(typed_state.get("diagnosis_feedback_phase") or "")
+    single_agent = typed_state.get("teach_phase") == "single_agent"
 
     if workflow_mode == "feedback" or diagnosis_phase == "feedback":
         current = (
@@ -177,6 +190,15 @@ def _workflow_progress(snapshot: dict[str, Any]) -> WorkflowProgress:
         ),
         default=-1,
     )
+
+    if single_agent and latest_judge < 0:
+        if "draft_a" in expert_steps:
+            current = "Judge 课程审核"
+        elif "planner" in nodes:
+            current = "Expert A 初稿"
+        else:
+            current = "意图路由"
+        return WorkflowProgress(current_stage=current, completed_events=events)
 
     if latest_judge > latest_integration:
         # max_revisions 配置为 0 时，judge 给出 revise 也会直接收尾，
@@ -489,7 +511,12 @@ class ApiJourney:
 
         reteach_session_id: str | None = None
         reteach_path_decision: dict[str, Any] | None = None
-        if self.config.verify_reteach_planning:
+        debate_enabled = _debate_enabled_from_env()
+        if (
+            self.config.verify_reteach_planning
+            and debate_enabled
+            and course_state.get("teach_phase") != "single_agent"
+        ):
             self._step("11", "创建复教会话，验证 Planner 再次调用与计划决策")
             reteach_created = self._request_json(
                 "POST",
@@ -530,7 +557,7 @@ class ApiJourney:
             "GET", f"/learners/{learner_path}/sessions"
         )
         planning_history = learner.get("planning_history")
-        if self.config.verify_reteach_planning:
+        if self.config.verify_reteach_planning and reteach_session_id is not None:
             if not isinstance(planning_history, list) or len(planning_history) < 2:
                 raise JourneyError(
                     "复教后 planning_history 应至少包含首次与复教两条 Planner 生命周期记录。"
