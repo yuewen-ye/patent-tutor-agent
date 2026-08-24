@@ -66,6 +66,18 @@ def _auto_fit_font_size(size: float, text: str, w: float, h: float) -> float:
     return max(9.0, min(size, new_size))
 
 
+def _apply_cross_platform_font(font, theme: Theme) -> None:
+    """Declare Latin and East-Asian typefaces in PPTX OOXML.
+
+    ``python-pptx`` maps ``Font.name`` to the Latin typeface only. Chinese text
+    therefore relied on the renderer's fallback font in headless LibreOffice.
+    Set ``ea`` explicitly so LibreOffice can resolve the requested CJK font via
+    fontconfig on Linux, while PowerPoint uses Microsoft YaHei on Windows.
+    """
+    font.name = theme.font
+    font._element.set("ea", theme.cjk_font)
+
+
 def text_box(
     slide,
     canvas: Canvas,
@@ -101,7 +113,7 @@ def text_box(
     paragraph.alignment = align
     run = paragraph.add_run()
     run.text = safe_text
-    run.font.name = theme.font
+    _apply_cross_platform_font(run.font, theme)
     run.font.size = Pt(fitted_size)
     run.font.bold = bold
     run.font.color.rgb = color(fill or theme.text)
@@ -135,7 +147,7 @@ def bullets(
         p = tf.paragraphs[0] if index == 0 else tf.add_paragraph()
         p.text = f"• {item}"
         p.space_after = Pt(max(3, int(8 * (size / 18.0))))
-        p.font.name = theme.font
+        _apply_cross_platform_font(p.font, theme)
         p.font.size = Pt(size)
         p.font.color.rgb = color(theme.text)
     if fit_text and items:
