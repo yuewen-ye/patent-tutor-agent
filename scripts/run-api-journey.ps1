@@ -31,6 +31,22 @@ if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
 
 $safeLearnerId = $LearnerId -replace '[^A-Za-z0-9_-]', '-'
 $outputPath = Join-Path $repoRoot "artifacts\api-journey-$safeLearnerId.json"
+$debateEnvValue = $env:PATENT_TUTOR_DEBATE_ENABLED
+$envPath = Join-Path $repoRoot ".env"
+if (Test-Path $envPath) {
+    $debateLine = Get-Content $envPath | Where-Object { $_ -match '^PATENT_TUTOR_DEBATE_ENABLED=' } | Select-Object -Last 1
+    if ($debateLine) {
+        $debateEnvValue = $debateLine.Substring('PATENT_TUTOR_DEBATE_ENABLED='.Length)
+    }
+}
+if ([string]::IsNullOrEmpty($debateEnvValue)) {
+    $debateEnvValue = "true"
+}
+if ($debateEnvValue -cne "true" -and $debateEnvValue -cne "false") {
+    throw "PATENT_TUTOR_DEBATE_ENABLED must be exactly true or false."
+}
+$env:PATENT_TUTOR_DEBATE_ENABLED = $debateEnvValue
+
 $journeyArgs = @(
     "run",
     "python",
@@ -53,6 +69,7 @@ Write-Host "[api-journey] FastAPI: $BaseUrl"
 Write-Host "[api-journey] learner_id: $LearnerId"
 Write-Host "[api-journey] answer_mode: $AnswerMode"
 Write-Host "[api-journey] cat_mode: $CatMode"
+Write-Host "[api-journey] debate_enabled: $debateEnvValue"
 Write-Host "[api-journey] require_pptx: $(-not $AllowMissingPptx)"
 
 & uv @journeyArgs
