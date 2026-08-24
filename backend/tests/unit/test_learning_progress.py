@@ -65,20 +65,14 @@ def test_forward_probe_never_advances_current_node() -> None:
         },
         learning_path=_path(),
         current_node_id="novelty",
-        mastery_snapshot={
-            "novelty": {"pl": 0.85, "observations": 3},
-            "inventive-step": {"pl": 0.91, "observations": 2},
-        },
-        bkt_updates=[{"skill_id": "inventive-step", "posterior_pl": 0.91}],
     )
 
     assert decision["advanced"] is False
-    assert decision["direct_evidence"] is False
     assert progress["current_node"] == "novelty"
     assert "novelty" not in progress["completed_nodes"]
 
 
-def test_current_node_advances_only_with_threshold_and_evidence() -> None:
+def test_current_node_advances_after_verified_course_feedback() -> None:
     progress, decision = advance_learning_progress(
         existing_progress={
             "completed_nodes": ["foundation"],
@@ -88,9 +82,7 @@ def test_current_node_advances_only_with_threshold_and_evidence() -> None:
         },
         learning_path=_path(),
         current_node_id="novelty",
-        mastery_snapshot={"novelty": {"pl": 0.86, "observations": 2}},
-        bkt_updates=[{"skill_id": "novelty", "posterior_pl": 0.86}],
-        completion_session_id="feedback-novelty",
+        verified_completion_session_id="feedback-novelty",
     )
 
     assert decision["advanced"] is True
@@ -102,6 +94,32 @@ def test_current_node_advances_only_with_threshold_and_evidence() -> None:
     }
     assert progress["current_node"] == "inventive-step"
     assert progress["pending_nodes"] == []
+
+
+def test_progress_does_not_advance_without_verified_feedback_provenance() -> None:
+    progress, decision = advance_learning_progress(
+        existing_progress={"current_node": "novelty"},
+        learning_path=_path(),
+        current_node_id="novelty",
+    )
+
+    assert decision["advanced"] is False
+    assert decision["completed_node_id"] is None
+    assert progress["current_node"] == "novelty"
+    assert progress["completed_nodes"] == []
+
+
+def test_path_external_current_node_does_not_advance() -> None:
+    progress, decision = advance_learning_progress(
+        existing_progress={},
+        learning_path=_path(),
+        current_node_id="outside-path",
+        verified_completion_session_id="feedback-session",
+    )
+
+    assert decision["advanced"] is False
+    assert decision["completed_node_id"] is None
+    assert progress["current_node"] == "foundation"
 
 
 def test_teaching_context_includes_current_node_knowledge_points() -> None:

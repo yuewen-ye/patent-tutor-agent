@@ -231,13 +231,14 @@ def advance_learning_progress(
     existing_progress: object,
     learning_path: list[dict[str, Any]],
     current_node_id: str | None,
-    mastery_snapshot: dict[str, dict[str, Any]],
-    bkt_updates: list[dict[str, Any]],
-    completion_session_id: str | None = None,
-    mastery_threshold: float = DEFAULT_MASTERY_THRESHOLD,
-    minimum_observations: int = DEFAULT_MIN_OBSERVATIONS,
+    verified_completion_session_id: str | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Advance one roadmap cursor only when this lesson supplies mastery evidence."""
+    """Advance one roadmap cursor only from a service-verified feedback event.
+
+    The service validates the generated course, its current node, submitted answers,
+    and feedback session before supplying ``verified_completion_session_id``. BKT is
+    intentionally outside this teaching-progress transition.
+    """
 
     previous = dict(existing_progress) if isinstance(existing_progress, dict) else {}
     roadmap = _node_ids(learning_path)
@@ -252,35 +253,14 @@ def advance_learning_progress(
         if node_id in completion_sessions
     ]
     current_before = str(current_node_id or previous.get("current_node") or "") or None
-    probability: float | None = None
-    observations = 0
-    direct_evidence = False
-
-    if current_before:
-        probability, observations = _mastery_value(mastery_snapshot, current_before)
-        direct_evidence = any(
-            isinstance(update, dict) and str(update.get("skill_id") or "") == current_before
-            for update in bkt_updates
-        )
-
-    mastered = bool(
-        current_before
-        and direct_evidence
-        and probability is not None
-        and probability >= mastery_threshold
-        and observations >= minimum_observations
-    )
-    if (
-        mastered
-        and current_before is not None
-        and current_before not in completed
-        and completion_session_id
-    ):
+    current_is_in_path = current_before in roadmap if current_before else False
+    completion_granted = bool(current_is_in_path and verified_completion_session_id)
+    if completion_granted and current_before is not None and current_before not in completed:
         completed.append(current_before)
-        completion_sessions[current_before] = completion_session_id
+        completion_sessions[current_before] = verified_completion_session_id
 
     unresolved = [node_id for node_id in roadmap if node_id not in completed]
-    if mastered:
+    if completion_granted:
         current_after = unresolved[0] if unresolved else None
     else:
         current_after = current_before if current_before in unresolved else (
@@ -292,24 +272,14 @@ def advance_learning_progress(
 
     if not current_before:
         reason = "course session has no authoritative current node"
-    elif not direct_evidence:
-        reason = "no BKT update was recorded for the current teaching node"
-    elif probability is None:
-        reason = "current teaching node has no mastery probability"
-    elif probability < mastery_threshold:
-        reason = (
-            f"current node mastery {probability:.4f} is below threshold "
-            f"{mastery_threshold:.2f}"
-        )
-    elif observations < minimum_observations:
-        reason = (
-            f"current node has {observations} observation(s), below minimum "
-            f"{minimum_observations}"
-        )
+    elif not current_is_in_path:
+        reason = "course session current node is not in its learning path"
+    elif not verified_completion_session_id:
+        reason = "service-verified course-feedback provenance is missing"
     elif current_after:
-        reason = f"current node mastered; advance to {current_after}"
+        reason = f"current teaching node completed; advance to {current_after}"
     else:
-        reason = "current node mastered; roadmap completed"
+        reason = "current teaching node completed; roadmap completed"
 
     progress = {
         "completed_nodes": completed,
@@ -326,14 +296,9 @@ def advance_learning_progress(
     decision = {
         "current_node_before": current_before,
         "current_node_after": current_after,
-        "completed_node_id": current_before if mastered else None,
-        "advanced": mastered,
-        "path_completed": bool(mastered and not current_after),
-        "mastery_probability": probability,
-        "observations": observations,
-        "mastery_threshold": mastery_threshold,
-        "minimum_observations": minimum_observations,
-        "direct_evidence": direct_evidence,
+        "completed_node_id": current_before if completion_granted else None,
+        "advanced": completion_granted,
+        "path_completed": bool(completion_granted and not current_after),
         "reason": reason,
     }
     return progress, decision

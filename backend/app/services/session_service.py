@@ -686,9 +686,7 @@ class SessionService:
                 dict(item) for item in course_path if isinstance(item, dict)
             ],
             current_node_id=course_decision.get("current_node_id"),
-            mastery_snapshot=mastery_snapshot,
-            bkt_updates=bkt_updates,
-            completion_session_id=completion_session_id,
+            verified_completion_session_id=completion_session_id,
         )
         plan_id = course_decision.get("plan_id")
         plan_version = course_decision.get("plan_version")
