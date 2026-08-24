@@ -1,0 +1,58 @@
+{
+  "name": "planner-global-route-implementation",
+  "id": "planner-global-route-implementation",
+  "description": "实施并验证 Planner 的确定性全局路径规划，仅修改规划机制，保持 fallback_model 和 retry 调用链不变。",
+  "captainSessionId": "session-cea40876-5ce6-4bda-a86b-d279fcec8bf0",
+  "createdAt": 1787526855025,
+  "members": [
+    {
+      "id": "658a288b-6528-4eff-937b-140c7e175a97",
+      "name": "route-correctness",
+      "role": "engineer",
+      "provider": "sh",
+      "model": "gpt-5.6-terra",
+      "joinedAt": 1787526862952,
+      "status": "removed"
+    },
+    {
+      "id": "0b8d0666-636b-437c-9954-5da29fdea156",
+      "name": "planner-regression",
+      "role": "tester",
+      "provider": "sh",
+      "model": "gpt-5.6-terra",
+      "joinedAt": 1787526863002,
+      "status": "removed"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "t1",
+      "subject": "修复全局目标候选选择",
+      "description": "检查现有 compute_learning_path 改动中推荐目标过宽、直接名称匹配丢失问题。只修改 backend/app/curriculum/learning_path.py，使单一精确目标保留对应节点且广义目标形成合理全局路线；运行 test_dual_axis_path.py。不得改 LLM 路由或 retry/fallback。",
+      "status": "completed",
+      "assignee": "captain",
+      "dependencies": [],
+      "attempt": 2,
+      "createdAt": 1787526863084,
+      "updatedAt": 1787527882805,
+      "reassigning": false,
+      "attemptId": "cc9c410f-f963-4d5c-baeb-e0878dfa7edd",
+      "output": "已完成直接目标优先和全局路径候选算法修正；focused path tests passed."
+    },
+    {
+      "id": "t2",
+      "subject": "更新 Planner 回归测试",
+      "description": "检查 Planner replace 路由的新合同和失败测试。仅修改相关测试（可修改 test_planner_node.py）以验证 replace 使用确定性全局路径、keep 保持计划、LLM 仍调用一次；不得修改生产代码。运行聚焦测试并报告。",
+      "status": "completed",
+      "assignee": "captain",
+      "dependencies": [],
+      "attempt": 2,
+      "createdAt": 1787526863133,
+      "updatedAt": 1787527916286,
+      "reassigning": false,
+      "attemptId": "1ad749ba-ff32-4045-b28c-6dd6d4907568",
+      "output": "Planner regression tests updated for deterministic replace route, keep preservation, and single LLM call; focused tests pass."
+    }
+  ],
+  "taskSeq": 2
+}
