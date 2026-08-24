@@ -129,9 +129,9 @@ def _parse_planner_plan(
     parsed: list[LearningPathItem] = []
     if action == "keep" and nodes is not None:
         raise ValueError("Planner keep proposal must not include path nodes")
-    if action == "replace":
+    if action == "replace" and nodes is not None:
         if not isinstance(nodes, list) or not nodes:
-            raise ValueError("Planner replace proposal has no path nodes")
+            raise ValueError("Planner replace nodes must be omitted or non-empty")
         selected: dict[str, dict[str, Any]] = {}
         original_order: dict[str, int] = {}
         for index, raw_node in enumerate(nodes):
@@ -222,22 +222,6 @@ def build_planner_node(llm_client: LLMClient) -> Node:
         reader = getattr(store, "active_learning_plan", None)
         active_plan = reader(learner_id) if learner_id and callable(reader) else None
         recommended_targets = recommend_target_nodes_for_goal(learning_goal, knowledge, top_k=8)
-        algorithm_candidates = compute_learning_path(
-            profile=profile,
-            learning_goal=learning_goal,
-            mastery_snapshot=_knowledge_pl_map(profile),
-        )
-        planner_candidates = [
-            {
-                "node_id": item["node_id"],
-                "node_name": item["node_name"],
-                "duration_min": min(240, int(item["duration_min"])),
-                "strategy": item["strategy"],
-                "prerequisites": item["prerequisites"],
-                "difficulty_cap": "L2",
-            }
-            for item in algorithm_candidates
-        ]
         user_text = (
             "# 静态知识 DAG\n" + json.dumps(knowledge, ensure_ascii=False, separators=(",", ":"))
             + "\n# 静态易混淆对\n" + json.dumps(confusion, ensure_ascii=False, separators=(",", ":"))
@@ -245,8 +229,6 @@ def build_planner_node(llm_client: LLMClient) -> Node:
             + "\n# 当前活动计划（可为空）\n" + json.dumps(active_plan, ensure_ascii=False, separators=(",", ":"), default=str)
             + "\n# 基于学习目标推荐的目标原子节点（供参考，请优先在路径中纳入）\n"
             + json.dumps(recommended_targets, ensure_ascii=False)
-            + "\n# DETERMINISTIC_ROUTE_JSON\n"
-            + json.dumps(planner_candidates, ensure_ascii=False, separators=(",", ":"))
             + f"\n# 学习目标\n{learning_goal}"
         )
         known_ids = {
@@ -275,12 +257,13 @@ def build_planner_node(llm_client: LLMClient) -> Node:
         }
 
         def validate_planner_semantics(result: PlannerAgentResult) -> None:
-            _parse_planner_plan(
-                result.model_dump(),
-                known_node_ids=known_ids,
-                canonical_names=canonical_names,
-                static_prerequisites=static_prerequisites,
-            )
+            if result.plan_action == "keep":
+                _parse_planner_plan(
+                    result.model_dump(),
+                    known_node_ids=known_ids,
+                    canonical_names=canonical_names,
+                    static_prerequisites=static_prerequisites,
+                )
 
         proposal = generate_validated_json_stream(
             llm_client,
@@ -301,11 +284,17 @@ def build_planner_node(llm_client: LLMClient) -> Node:
             static_prerequisites=static_prerequisites,
         )
         if plan["plan_action"] == "keep":
+
             if not isinstance(active_plan, dict) or not active_plan.get("nodes"):
                 raise ValueError("Planner cannot keep a missing active plan")
             path = [LearningPathItem.model_validate(item) for item in active_plan["nodes"] if isinstance(item, dict)]
             progress = dict(active_plan.get("progress") or {})
         else:
+            algorithm_candidates = compute_learning_path(
+                profile=profile,
+                learning_goal=learning_goal,
+                mastery_snapshot=_knowledge_pl_map(profile),
+            )
             path = [LearningPathItem.model_validate(item) for item in algorithm_candidates]
             progress = None
             if not path:

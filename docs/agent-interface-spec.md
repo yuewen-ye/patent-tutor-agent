@@ -145,7 +145,7 @@ Planner 必须：
 1. 优先读取 Store 中该学员的最新画像。
 2. 在 Store 支持 `mastery(learner_id)` 时读取 BKT 掌握度。
 3. 用静态知识 DAG 与静态混淆对生成双轴快照。
-4. 在每个 teach 会话请求 Planner LLM，并校验其 keep/replace 决策和 replace 路线；模型调用链耗尽时让 Planner 节点失败，绝不使用确定性 A* 路线替代。
+4. 在每个 teach 会话请求 Planner LLM，并校验其 keep/replace 决策及可选的 replace 节点；模型调用链耗尽时让 Planner 节点失败，绝不使用确定性路线替代模型决策。模型确认 replace 后，后端以静态 DAG、目标、BKT 和混淆风险确定性生成最终路线。
 5. 对 keep 恢复并使用活动计划，对 replace 创建新版本；无论动作如何都追加记录规划决策历史。
 6. 始终由后端确定课程游标、静态规范名称、活动窗口和题目范围。
 
