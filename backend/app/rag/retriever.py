@@ -26,6 +26,13 @@ RERANKER_MODEL_PATH_ENV: Final = "RAG_RERANKER_MODEL_PATH"
 RERANK_ENABLED_ENV: Final = "RAG_RERANK_ENABLED"
 RERANK_CANDIDATE_MULTIPLIER: Final = 3
 MILVUS_DB_PATH_ENV: Final = "MILVUS_DB_PATH"
+LAW_SOURCES_ENV: Final = "RAG_LAW_SOURCES"
+LAW_MIN_CHUNKS_ENV: Final = "RAG_LAW_MIN_CHUNKS"
+DEFAULT_LAW_SOURCES: Final = (
+    "中华人民共和国专利法.txt",
+    "中华人民共和国专利法实施细则.txt",
+    "专利代理条例.txt",
+)
 
 _milvus_client = None
 _embedding_model = None
@@ -198,6 +205,93 @@ def get_milvus_client() -> Any:
     return _milvus_client
 
 
+def _law_source_set() -> frozenset[str]:
+    raw = os.getenv(LAW_SOURCES_ENV, "").strip()
+    if not raw:
+        return frozenset(DEFAULT_LAW_SOURCES)
+    return frozenset(part.strip() for part in raw.split(",") if part.strip())
+
+
+def _law_min_chunks() -> int:
+    raw = os.getenv(LAW_MIN_CHUNKS_ENV, "2").strip().lower()
+    if raw in ("", "0", "false", "no", "off"):
+        return 0
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return 2
+
+
+def _search_law_fallback(
+    query_vector: list[float], law_sources: frozenset[str], limit: int
+) -> list[RetrievalChunk]:
+    if limit <= 0 or not law_sources:
+        return []
+    client = get_milvus_client()
+    quoted = ", ".join(f'"{source}"' for source in sorted(law_sources))
+    milvus_error = _load_exception_class(
+        "pymilvus.exceptions", "MilvusException", "milvus_import"
+    )
+    try:
+        results = client.search(
+            collection_name=COLLECTION_NAME,
+            data=[query_vector],
+            limit=limit,
+            filter=f"source in [{quoted}]",
+            output_fields=["text", "source"],
+        )
+    except (RAGRetrievalError, RuntimeError):
+        return []
+    except milvus_error:
+        return []
+    chunks: list[RetrievalChunk] = []
+    for res in results[0]:
+        entity = res["entity"]
+        source_file = entity.get("source", "")
+        text = entity.get("text", "")
+        chunks.append(
+            RetrievalChunk(
+                chunk_id=str(res["id"]),
+                source=source_file,
+                citation=f"{source_file}: {text[:30]}...",
+                text=text,
+                score=res["distance"],
+                metadata=RetrievalMetadata(
+                    doc_type="law",
+                    retrieval_method="vector",
+                ),
+            )
+        )
+    return chunks
+
+
+def _apply_law_fallback(
+    chunks: list[RetrievalChunk], query_vector: list[float], top_k: int
+) -> list[RetrievalChunk]:
+    selected = chunks[:top_k]
+    law_sources = _law_source_set()
+    min_law = min(_law_min_chunks(), top_k)
+    if min_law <= 0 or not law_sources or not selected:
+        return selected
+    law_count = sum(1 for chunk in selected if chunk.source in law_sources)
+    need = min_law - law_count
+    if need <= 0:
+        return selected
+    additions = [chunk for chunk in chunks[top_k:] if chunk.source in law_sources][:need]
+    if len(additions) < need:
+        extras = _search_law_fallback(query_vector, law_sources, need - len(additions) + 2)
+        seen = {chunk.chunk_id for chunk in chunks}
+        additions.extend(extra for extra in extras if extra.chunk_id not in seen)
+    replaced = 0
+    for index in range(len(selected) - 1, -1, -1):
+        if replaced >= need or not additions:
+            break
+        if selected[index].source not in law_sources:
+            selected[index] = additions.pop(0)
+            replaced += 1
+    return selected
+
+
 def rag_retrieve(query: str = "", top_k: int = 5) -> list[RetrievalChunk]:
     if not query:
         return []
@@ -280,4 +374,4 @@ def rag_retrieve(query: str = "", top_k: int = 5) -> list[RetrievalChunk]:
                 "Rerank failed, returning vector results unsorted: %s", exc
             )
 
-    return chunks[:top_k]
+    return _apply_law_fallback(chunks, query_vector, top_k)

@@ -14,6 +14,7 @@ from backend.app.presentation.renderer.components import (
     patent_timeline,
 )
 from backend.app.presentation.renderer.decor import apply_decor
+from backend.app.presentation.renderer.effects import maybe_render_visual_effects
 from backend.app.presentation.renderer.semantic import render_element
 from backend.app.presentation.renderer.shapes import bullets, line, rect, text_box
 from backend.app.presentation.renderer.theme import Theme
@@ -352,6 +353,8 @@ def render_slide(slide, canvas: Canvas, item: PresentationVisualSlide, theme: Th
         if handler:
             handler(slide, canvas, item, theme, page)
             return
+    if maybe_render_visual_effects(slide, canvas, item, theme, page, template):
+        return
     handlers = {
         "title": cover, "cover_minimal": cover, "cover_split": cover,
         "content": content, "content_bullet_grid": content,

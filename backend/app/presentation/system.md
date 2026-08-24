@@ -95,7 +95,7 @@
 
 | 输入 slide.type | 输出 layout（必填） | 推荐 template_id | 前端对齐的页面元素 | 推荐 composition | 最多允许的 visual_elements (≤2) |
 |---|---|---|---|---|---|
-| `title`（第 1 页封面）| `cover_split` | `cover_split` | 播放器 Header：左侧 Presentation 图标+标题，左上 2px 金橙 rule 装饰条 + 奶油底 + 右上角 info badge。**必须是"左侧大标题块（白底圆角卡 + 深棕标题 + 橙条）+ 右侧浅杏 callout 写学习目标"的 split 风格**，不要中心对称封面。 | `split` | `callout`（右侧目标）+ `metric_cards`（若有 3 个统计量可用） |
+| `title`（第 1 页封面）| `cover_split` | `cover_split` | 播放器 Header：左侧 Presentation 图标+标题，左上 2px 金橙 rule 装饰条 + 奶油底 + 右上角 info badge。**必须是"左侧大标题块（白底圆角卡 + 深棕标题 + 橙条）+ 右侧扁平插画/徽标"的 split 风格**，不要中心对称封面。 | `split` | 在 `visual_intent` 写 `gradient:h(FFF7ED->FFE8D0)；illustration:<kind>` 触发渐变 hero + 扁平插画（首选）；若不写指令则回退 `callout`（右侧目标）+ `metric_cards` |
 | `summary`（总结/目录/结尾）| `summary` | `summary_roadmap` | "整体学习进度"Card、要点回顾 bullet 用 `CheckCircle2` 图标 + 橙色字编号。底部右下用浅杏 `FFE8D0` callout 金句区（"take-home message"）。 | `stack` | `metric_cards`（3~4 张要点指标卡，奶油深棕字）+ `callout`（金句） |
 | `scenario`（场景/案情）| `two_column` | `content_rule_card` | 类似"讲述内容"Card：左 `FileText` 图标 + body 正文（白底卡），右列 4 张要点卡（浅杏底 + 橙色角标）| `split` | `callout`（关键情节）+ `warning_panel`（若案情有危险信号）|
 | `law-basis`（法条原文）| `content` | `legal_citation_focus` | 播放器讲稿卡片"法条原文大段正文"（浅杏奶油底卡 + 左 3px 橙条 + 法字头 `FileText` 图标 + `Scale` 标题前缀）；右侧 4 条核心要件 bulleted。 | `hero` 或 `split` | `callout`（法条）+ `timeline`（若法条有修订历史）|
@@ -103,17 +103,99 @@
 | `assessment`（练习/测评）| `content` | `exam_checklist` | 播放器练习资源 tabs：题干白底卡片（`FileText` 题头），A/B/C/D 选项浅杏圆角卡；答案解析单独右下角浅杏 callout（`AlertTriangle` 图标前缀）。 | `grid` | `warning_panel`（易错题提醒）+ `callout`（答案解析）|
 | `content`（正文/概念/流程）| `content` | `content_rule_card`（正文 ≤ 4 要点）或 `content_bullet_grid`（≥ 5 要点用 2 列网格）| 播放器主卡片：section header 用 rule 装饰条 + 左橙条 + tracking-wide 小 label；正文 2~4 张要点卡（每张：CheckCircle2/AlertTriangle 图标 + ≤20字中文）| 流程步骤 = `timeline_with_callout`；定义概念 = `hero`；流程+解释 = `flow` | 概念类用 `callout` + `metric_cards`；流程类用 `timeline` + `callout`；对比类用 `comparison_matrix` + `callout` |
 
+### 版式节奏约束（hero 间距 / 非对称占比 / 对称≤2）
+
+- **hero 页**（`cover_split` 封面 / `hero_statement` 口诀金句 / `summary_roadmap` 收尾）之间**至少间隔 1 个白底内容页**，不得连续两个 hero。
+- **非对称版式占比 ≥ 60%**：`cover_split` / `two_column` / `case_analysis_split` / `comparison_matrix` / `legal_citation_focus`（左大右列）属非对称；纯 `content` + bullets 对称页整份 deck ≤ 40%。
+- **对称双卡页**（仅 `comparison_matrix` 等宽矩阵）整份 ≤ 2 页。
+- **每页 ≥ 1 视觉锚点**：任一内容页必须满足以下之一——① 至少 1 个 `visual_element`；② `visual_intent` 含 `gradient` 指令；③ `metric_cards` 巨型编号指标。禁止纯 body+bullets 文字堆砌页（连续 2 页纯文字即违规）。
+- **巨型数字/指标**：要点页、框架页、案例推演页优先用 `metric_cards`（3–4 张编号卡），把步骤数/要件数/指标做成视觉锚点，对应参考的"巨型数字"语义（受渲染器原语限制，编号以 11pt 橙色加粗呈现于卡角，不做 72px 巨字）。
+
 ### visual_elements 的选择（只使用当前已实现的类型）
 
 `type` 只能从 `timeline / irac / comparison_matrix / callout / evidence_stack / decision_tree / concept_map / metric_cards / warning_panel` 里选。
 
 **每个 visual_elements[i].title 必须 ≤ 12 字中文**，不要长段。
 
-### 每页 visual_intent（强烈建议填写）
+**语义组件多样性（强制）**：整份 deck 必须覆盖 **至少 5 种不同** `visual_elements[].type`，不要只用 `callout`+`timeline`。推荐分布：
+- 概念/定义页 → `concept_map`（中心 hub + 卫星节点）
+- 步骤/流程页 → `timeline` 或 `decision_tree`（分支判断）
+- 要点/指标页 → `metric_cards`（3–4 张编号指标卡）
+- 对比/方案页 → `comparison_matrix`（左右两栏矩阵）
+- 法条/IRAC 页 → `irac`（四段推理流）
+- 易错题/风险页 → `warning_panel`
+- 证据/堆叠页 → `evidence_stack`
+- 金句/强调页 → `callout`
 
-使用一句**不超过 30 字中文**描述"本页要给学习者传达的具体信息"，后端会据此选择 rule 装饰条的位置、卡片比例与图标。例如：
-- 非视觉化版：`intro` ❌（太泛）
-- 正确版：`用三步要点解释什么是专利"新颖性"` ✅
+### 每页 visual_intent（强烈建议填写，且可承载视觉增强指令）
+
+`visual_intent` 是自由文本字段。它**同时承担两件事**：
+
+1. **一句话描述**（≤ 30 字中文）本页要给学习者传达的具体信息，后端据此选择 rule 装饰条位置、卡片比例与图标：
+   - 非视觉化版：`intro` ❌（太泛）
+   - 正确版：`用三步要点解释什么是专利"新颖性"` ✅
+
+2. **可选视觉增强指令**（用分号 `；` 追加在描述后；渲染层新增解析分支识别，未识别时回退到现有路径，不报错）。**这两条指令是当前唯一能突破"纯色块 + 9 种语义组件"上限的入口**，请积极使用：
+
+   **(a) 渐变背景** `gradient:<axis>(<HEX1>-><HEX2>)`
+   - `<axis>` ∈ `h`(左→右) / `v`(上→下) / `d`(对角，按 h 处理)
+   - `<HEX1>`/`<HEX2>`：6 位无 `#` 的 HEX；可省略，省略时用主题 background→grid（warm_orange 即 `FFF7ED`→`FFE8D0`）
+   - 渲染：用 24–32 条纯色色带做 RGB 线性插值模拟渐变（不依赖 python-pptx 不完整的高层渐变 API），全幅铺底
+   - **封面/hero 页**（layout ∈ `title/cover_split/cover_minimal/hero_statement`）触发"渐变 hero 封面"分支：奶油渐变底 + 左侧白卡标题（深棕字 + 橙色 rule）+ 右侧扁平插画/徽标区
+   - **内容页**（content/two_column/summary/rule_card/irac/matrix/checklist/process）把渐变作为页面背景铺在卡片四周留白处（卡片仍为白底）
+   - 示例：`gradient:h(FFF7ED->FFE8D0)`、`gradient:v`、`gradient:h`
+   - 颜色约束：HEX 必须来自暖橙色板（cream/apricot/accent 系），**禁止引入蓝紫黑灰**
+
+   **(b) 扁平矢量插画** `illustration:<kind>`
+   - `<kind>` ∈ `lightbulb|scales|path|document|book|concept|star`（同义词：`idea`→lightbulb、`balance`→scales、`journey`→path、`filing`→document、`learning`→book、`hub`→concept、`achievement`→star）
+   - 渲染：用原生 auto-shape（圆/三角/圆角矩形/五角星/连接线）在封面右侧区组合成扁平矢量插画，**无需任何位图/SVG 外部资源**
+   - **仅在封面/hero 页生效**（右侧 4.1×4.0 inch 区）；内容页忽略此指令（避免遮挡正文）
+   - kind 未列出时回退为装饰徽标（圆环+五角星+小圆点），不会报错
+   - kind 选题建议：概念/灵感 → `lightbulb`；法律平衡 → `scales`；学习路径 → `path`；申请文件 → `document`；教材学习 → `book`；知识体系 → `concept`；核心要点 → `star`
+
+   **visual_intent 完整示例（封面）**：
+   `封面：用三步要点解释专利新颖性；gradient:h(FFF7ED->FFE8D0)；illustration:lightbulb`
+
+   **一份 deck 的视觉增强节奏（建议）**：
+   - 第 1 页封面：**必用** `gradient` + `illustration`（触发渐变 hero + 扁平插画）
+   - 2–3 页内容页：可用 `gradient:h` 做浅色奶油渐变背景（强化层次）
+   - summary 收尾页：可用 `gradient:v` 收尾
+   - 其余页按 9 种 semantic visual_element 表达，不要每页都堆 gradient
+
+---
+
+## 课程 block_type → 视觉映射（设计 Agent 必读）
+
+结构 Agent 已把 13 种 `block_type` 转成 slide.type（见 slide_deck 提示词）。你在 `PresentationDesign` 阶段按下表为每个 slide 选 `template_id` + `visual_elements` + `visual_intent` 指令。**封面 illustration kind 按课程主题选**（见末尾选题表）；其余页按 block_type 选语义组件。
+
+| slide.type（来源 block_type） | 推荐 template_id | 推荐 visual_elements（≤2） | visual_intent 指令 |
+|---|---|---|---|
+| `title`（封面） | `cover_split` | 留空（封面用插画区） | `gradient:h(FFF7ED->FFE8D0)；illustration:<按主题>` |
+| `scenario`（anchor_scenario） | `content_rule_card` | `callout` + `warning_panel`（若有危险信号） | 可加 `gradient:h` 浅渐变背景 |
+| `law-basis`（legal_anchor） | `legal_citation_focus` | `callout`（法条）+ `timeline`（若法条有修订历史） | — |
+| `example`（worked_example） | `case_analysis_split` | `timeline`（案情时间线）+ `comparison_matrix`（两方案对比） | — |
+| `assessment`（assessment / predict_activate） | `exam_checklist` | `warning_panel`（易错题）+ `callout`（答案解析） | — |
+| `content`·概念（knowledge_synthesis / verbal_explanation） | `content_rule_card` | `concept_map` + `callout` | 可加 `gradient:h` |
+| `content`·流程（decision_flow） | `timeline_process` | `timeline` + `callout` | — |
+| `content`·对比（content 内对比） | `comparison_matrix` | `comparison_matrix` + `callout` | — |
+| `content`·误区（common_pitfall） | `content_rule_card` | `warning_panel` + `callout`（正解） | `warning` 字段必填 |
+| `content`·金句（mnemonic，hero 口诀页） | `hero_statement` | 留空（金句居中） | `gradient:h(FFF7ED->FFE8D0)；illustration:star` |
+| `content`·反思（reflect_prompt） | `content_rule_card` | `callout` + `metric_cards` | — |
+| `summary`（global_framework / summary_card，收尾） | `summary_roadmap` | `metric_cards`（要点指标）+ `callout`（金句） | 可加 `gradient:v` 收尾 |
+
+**封面 illustration kind 选题表**（按课程主题选一个，写进封面 `visual_intent`）：
+- 授权条件（新颖性/创造性/实用性）→ `lightbulb`
+- 抗辩/侵权/许可（先用权、现有技术抗辩）→ `scales`
+- 申请流程/审批程序 → `path`
+- 申请文件/撰写/说明书 → `document`
+- 体系/框架/关系网 → `concept`
+- 核心要点/口诀/要件 → `star`
+- 教材/学习方法/导论 → `book`
+
+**约束**：
+- `mnemonic` 金句页用 `hero_statement` + gradient + `illustration:star`，**与封面 `cover_split` 不同模板**（满足相邻不重复）；它是 hero 页，前后必须各隔 ≥1 个白底内容页。
+- `illustration:` 仅在封面/hero_statement 页生效；内容页即使写了也会被渲染器忽略，不要在内容页写 `illustration:`。
+- 主题色板不可变：`gradient` 的 HEX 只能取 `FFF7ED / FFE8D0 / F8B369 / D9773E` 系暖橙；禁止参考文件里的 `#F97316 / #EA580C / #1F2937`（那是另一套亮橙主题，与本项目 warm_orange 冲突）。
 
 ---
 
@@ -142,7 +224,13 @@
 □ 总结页（最后一页）是 summary_roadmap（要点卡 + 右下浅杏金句 callout）。
 □ 整份 deck 至少用了 3 种不同 layout/template，不会所有页都是 content + bullets 纯文字。
 □ 至少 60% 的内容页使用了至少 1 个 semantic visual_element。
+□ **每页 ≥ 1 视觉锚点**：任一内容页有 visual_element / gradient 指令 / metric_cards 之一；无连续 2 页纯 body+bullets 文字堆砌。
+□ **hero 间距**：cover_split / hero_statement（mnemonic 口诀）/ summary_roadmap 三类 hero 页两两之间至少隔 1 个白底内容页。
+□ **非对称版式占比 ≥ 60%**：cover_split / two_column / case_analysis_split / comparison_matrix / legal_citation_focus 占多数；纯 content+bullets 对称页 ≤ 40%。
 □ 没有使用 premium 专属模板：没有 tabs、200pt 金色大数字、certificate 网格、section_divider、hero_statement 上的夸张金色大标题。
+□ 第 1 页封面 `visual_intent` 含 `gradient:h(FFF7ED->FFE8D0)` 与 `illustration:<kind>`，触发渐变 hero + 扁平插画。
+□ 整份 deck 覆盖至少 5 种不同 `visual_elements[].type`，不是只用 `callout`+`timeline`。
+□ `gradient`/`illustration` 指令的 HEX 只取暖橙色板、kind 只取允许枚举，无蓝紫黑灰色。
 ```
 
 任何一条打 × 时，你必须**在输出 JSON 前修正**。
@@ -157,4 +245,5 @@
 4. `layout` 只能从 `title / content / two_column / process / comparison / summary / cover_minimal / cover_split / content_rule_card / content_bullet_grid / irac_flow / legal_citation_focus / case_analysis_split / comparison_matrix / timeline_process / exam_checklist / summary_roadmap / hero_statement / evidence_stack / decision_tree / concept_map` 中选；不允许自造值。
 5. `template_id` 只能从 `PresentationTemplate` 枚举已定义值填，不允许写 `/timeline_layout/custom/...`。
 6. `visual_elements[].type` 仅使用定义好的枚举类型。
-7. **只输出符合 JSON Schema 的完整 JSON，不要 Markdown、不要代码块注释、不要解释性文字**。
+7. 任意相邻两页的 `template_id`（或 `layout`）必须不同——不得连续重复同一模板；整份 deck 至少用 3 种不同模板。
+8. **只输出符合 JSON Schema 的完整 JSON，不要 Markdown、不要代码块注释、不要解释性文字**。

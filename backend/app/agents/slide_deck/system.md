@@ -76,6 +76,28 @@
 - 若页面是**决策树/分支判断**：`type` 填 `example`；对应前端 `decision_tree`。
 - 若页面是**概念关系图**：`type` 填 `content`；对应前端 `concept_map`。
 
+### 课程 block_type → slide.type 映射（结构 Agent 必读）
+
+输入 `course_package.block_plan.blocks` 里每个 block 有 `block_type`（共 13 种，其中 `legal_anchor` / `knowledge_synthesis` / `assessment` 为必选三块）。你**必须按 block 在 block_plan 里的出现顺序逐个转成 slide**，并按下表选 `type` 与组织 `content`。一页可承载 1 个 block；信息量大的 block（worked_example / decision_flow）可拆两页，但页序仍对应 block 顺序。
+
+| block_type | slide.type | content 组织要点 | 备注 |
+|---|---|---|---|
+| `anchor_scenario` | `scenario` | `body`=场景叙述（≤5行，保留「甲/乙公司」匿名化），`takeaways`=冲突/问题/先想 3 条 | 场景导入页 |
+| `legal_anchor` | `law-basis` | `body`=法条原文，`takeaways`=核心要件（≥1 条）；标注《专利法》第几条 | 法条锚定，必选 |
+| `knowledge_synthesis` | `content` | `body`=框架总起句，`takeaways`=子概念+一句话解释（≥3 条覆盖 knowledge_sub_nodes） | 知识综合，必选 |
+| `assessment` | `assessment` | `body`=题干，`bullets`=A/B/C/D 选项（≤4），`takeaways`=答案+解析 | 随堂测评，必选 |
+| `worked_example` | `example` | `body`=案情叙述，`takeaways`=裁判要旨/分步推演（≤4 条） | 案例演示 |
+| `common_pitfall` | `content` | `body`=误区描述，`takeaways`=正解+判据（≤3 条）；`content` 可加 `warning` 字段标易错点 | 常见误区 |
+| `mnemonic` | `content` | `body`=口诀金句（≤2 行，短而押韵），`takeaways` 留空或仅 1 条注解；**这是 hero 金句页**，narration 朗读口诀 | 记忆口诀 |
+| `reflect_prompt` | `content` | `body`=反思问题，`takeaways`=关注要点（≤4 条） | 反思提示 |
+| `global_framework` | `summary` | `takeaways`=框架要点（≤6 条），`bullets`=补充（≤4） | 全局框架/导览 |
+| `decision_flow` | `content` | `bullets`=步骤，每项加 `①②③` 编号（≤6）；映射 `timeline_process` | 决策流/流程 |
+| `verbal_explanation` | `content` | `body`=概念定义/总起句，`takeaways`=要点拆解（≤4） | 概念口释 |
+| `predict_activate` | `assessment` | `body`=预测题干，`bullets`=选项，`takeaways`=答案线索 | 预测激活 |
+| `summary_card` | `summary` | `takeaways`=本节必记结论（≤5 条），`bullets`=金句（≤2） | 小结卡 |
+
+**首尾约束**：第 1 页固定 `title`（封面），最后 1 页固定 `summary`（收尾）。中间页严格按 block_plan 顺序映射上表。`mnemonic` 块若出现，其页是 hero 金句页（设计阶段会走渐变 hero）。
+
 ---
 
 ## 输出要求

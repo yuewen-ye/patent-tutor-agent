@@ -80,14 +80,14 @@ agents:
     temperature: 0.4
     tool_temperature: 0.2
     integration_temperature: 0.3
-    top_k: 5
+    top_k: 8
     fallback_provider: shkg-deepseek
     fallback_model_name: deepseek-v4-flash
   expert_b:
     provider: shkg-grok 
     temperature: 0.7
     tool_temperature: 0.3
-    top_k: 5
+    top_k: 8
     fallback_provider: shkg-gpt2
     fallback_model_name: gpt-5.4
   judge:
