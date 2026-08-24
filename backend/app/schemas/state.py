@@ -243,7 +243,7 @@ class PlannerAgentResult(ContractModel):
     """LLM decision to keep or replace a learner's long-term plan."""
 
     plan_action: Literal["keep", "replace"]
-    decision_reason: str
+    decision_reason: str = Field(min_length=1)
     nodes: list[PlannerPathNode] | None = None
     question_scope: QuestionScope
     iteration_directive: IterationDirective

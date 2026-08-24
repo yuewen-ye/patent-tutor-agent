@@ -29,7 +29,10 @@ def test_planner_markdown_distinguishes_target_path_from_lesson_window(tmp_path:
     decision = {
         "plan_action": "replace",
         "decision_reason": "学习目标需要从制度基础推进到制度概论",
-        "algorithm": "llm_planner",
+        "algorithm": "llm_adjusted_route_replace",
+        "route_source": "llm_adjusted_route_replace",
+        "route_fingerprint": "a" * 64,
+        "route_changed": True,
         "knowledge_graph_version": "1.0.0",
         "path_start_node_id": "patent-law-foundation",
         "path_target_node_ids": ["patent-system-overview"],
@@ -70,6 +73,10 @@ def test_planner_markdown_distinguishes_target_path_from_lesson_window(tmp_path:
     assert "规划决策" in decision_markdown
     assert "`replace`" in decision_markdown
     assert "学习目标需要从制度基础推进到制度概论" in decision_markdown
+    assert "路线来源：`llm_adjusted_route_replace`" in decision_markdown
+    assert f"路线指纹：`{'a' * 64}`" in decision_markdown
+    assert "路线是否实质变化：`是`" in decision_markdown
+    assert "计划版本动作：`创建新版本`" in decision_markdown
     assert "路径起点：`patent-law-foundation`" in decision_markdown
     assert "目标节点：`patent-system-overview`" in decision_markdown
     assert "本节课程游标" in decision_markdown

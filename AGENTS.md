@@ -285,8 +285,11 @@ selected by fixed competition/foundation/remediation branches and does not force
 it expands only as needed for goal coverage, prerequisite completeness and the configured route
 budget. The recommender (`recommend_target_nodes_for_goal`) supplies goal-related atomic candidates.
 `keep` requires `nodes=null`; `replace.nodes` is a complete LLM-adjusted route and is semantically
-validated against candidate target coverage. The LLM must still successfully decide `replace`; exhausted
-primary/fallback/retry calls fail Planner rather than activating a deterministic failure fallback.
+validated against candidate target coverage. The LLM must return a non-empty `decision_reason`, which is
+persisted in `path_decision`, the plan-decision audit row, and the rendered `artifacts/.../path/path_decision.md`.
+The rendered Planner artifacts expose the route source, fingerprint, material-change flag, and whether the
+active plan was reused or a new version was created. The LLM must still successfully decide `replace`;
+exhausted primary/fallback/retry calls fail Planner rather than activating a deterministic failure fallback.
 
 The backend owns the final topological validation, cursor and activity window. Historical review is
 zero to two completed nodes selected by deterministic risk; at-risk direct prerequisites can reserve
