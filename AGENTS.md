@@ -127,7 +127,7 @@ later, which creates a separate feedback session. The graph has no interrupt-bas
 |---|---|---|---|
 | `route` | LLM | classify `teach/chat/diagnose` | `intent` |
 | `diagnosis_feedback` | LLM + Store | diagnosis or feedback selected by phase | `learner_profile`, `feedback_result` |
-| `planner` | LLM proposal + deterministic guard + Store | read profile/BKT and compute dual-axis path | `dual_axis_snapshot`, `learning_path`, `path_decision` |
+| `planner` | LLM decision + deterministic route builder + Store | decide `keep`/`replace`; restore an active plan or build a goal-directed DAG route | `dual_axis_snapshot`, `learning_path`, `path_decision`, `teaching_context` |
 | `retrieve_context` | deterministic retrieval | fixed chat-path RAG call | `retrieval_context` |
 | `expert_a` | LLM + tool calling | draft, review B, revise, integrate course | A draft/review/revision, `course_package` |
 | `expert_b` | LLM + tool calling | draft, review A, revise | B draft/review/revision |
@@ -168,10 +168,13 @@ def build_<name>_node(llm_client: LLMClient) -> Node:
   non-streaming. Wrappers such as `CancelAwareLLMClient` must proxy `generate_json_stream()` to the
   inner client so that streaming is not silently downgraded.
 - Expert A/B use `generate_with_tools()` when deciding whether to call RAG, then validate final JSON.
-- Planner receives the complete runtime knowledge/confusion graphs and active plan, then makes a
-  strict `PlannerAgentResult` keep/replace decision on every teach session. Model failure follows
-  configured primary-to-fallback rounds and fails the node when exhausted; no deterministic route
-  fallback exists. `retrieve_context` does not call an LLM.
+- Planner receives the complete runtime knowledge/confusion graphs, learner profile/BKT snapshot and
+  active plan, then makes a strict `PlannerAgentResult` keep/replace decision on every teach session.
+  `keep` restores the active plan without running route selection. After a successful `replace`
+  decision, the backend deterministically selects the final DAG route; optional LLM `nodes` are only
+  semantic-checked during the normal repair loop. Model failure follows configured primary-to-fallback
+  rounds and fails the node when exhausted; deterministic routing never substitutes for an exhausted
+  model decision. `retrieve_context` does not call an LLM.
 - Multi-phase prompts live beside the node as `<phase>_system.md`; do not inline phase prompts.
 - Normalize provider-specific aliases before Pydantic validation.
 - Every LLM output must pass a `ContractModel` with `extra="forbid"` before entering state.
@@ -260,12 +263,15 @@ plan or replace it with a complete new route. A keep decision restores the activ
 cursor; a replace decision creates a new plan version. Every teach session recomputes the session
 activity window from the latest cursor, BKT evidence, weak points and current-node confusion risk.
 
-Planner also uses a deterministic goal-to-node recommender (`recommend_target_nodes_for_goal`) to
-suggest relevant atomic nodes based on the learning-goal text; these candidates are injected into
-the Planner prompt as a strong hint. As a safety net, if the LLM proposes a `replace` path with only
-one composite node, the Planner expands that node to include its `knowledge_sub_nodes` (plus any
-necessary recommended targets) and topologically sorts the result, preventing single-node routes
-when the goal clearly spans multiple topics.
+For `replace`, Planner uses `compute_learning_path()` as the final deterministic route builder. It
+combines atomic goal matches, relevant weak/confusion signals, BKT mastery evidence and the static
+prerequisite closure, then emits a stable Kahn topological order. The route is not selected by fixed
+competition/foundation/remediation branches and does not force every weak point; it expands only as
+needed for goal coverage, prerequisite completeness and the configured route budget. The recommender
+(`recommend_target_nodes_for_goal`) supplies goal-related atomic candidates. The LLM `replace.nodes`
+field is optional and is semantic-checked when present, but its route is not authoritative. The LLM
+must still successfully decide `replace`; exhausted primary/fallback/retry calls fail Planner rather
+than activating a deterministic failure fallback.
 
 The backend owns the final topological validation, cursor and activity window. Historical review is
 zero to two completed nodes selected by deterministic risk; at-risk direct prerequisites can reserve
