@@ -112,7 +112,7 @@ def test_planner_progress_exposes_llm_decision() -> None:
         "state": {
             "workflow_mode": "teach",
             "path_decision": {
-                "algorithm": "llm_planner",
+                "algorithm": "candidate_route_keep",
                 "plan_action": "keep",
             },
             "events": [
@@ -126,7 +126,7 @@ def test_planner_progress_exposes_llm_decision() -> None:
     }
 
     assert _completed_event_summary(snapshot["state"]["events"][0], snapshot) == (
-        "Planner 学习路径规划完成（耗时 12秒）；LLM 决策=keep；算法=llm_planner"
+        "Planner 学习路径规划完成（耗时 12秒）；LLM 决策=keep；算法=candidate_route_keep"
     )
 
 
@@ -461,7 +461,7 @@ def test_api_journey_calls_complete_rest_flow() -> None:
                     "status": "completed",
                     "state": {
                         "path_decision": {
-                            "algorithm": "llm_planner",
+                            "algorithm": "candidate_route_keep",
                             "plan_action": "keep",
                             "plan_id": "plan-1",
                             "plan_version": 1,

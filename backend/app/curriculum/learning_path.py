@@ -341,8 +341,9 @@ def compute_learning_path(
     learning_goal: str,
     max_nodes: int = 8,
     mastery_snapshot: object | None = None,
+    current_route: object | None = None,
 ) -> list[dict[str, Any]]:
-    """Build a deterministic, globally scoped route for a replace decision.
+    """Build one deterministic candidate route from goal, learner state, and active route.
 
     ``max_nodes`` is a soft expansion budget, not a hard route length.  Required
     prerequisites and the global-coverage floor may legitimately make the route
@@ -361,6 +362,11 @@ def compute_learning_path(
         if mastery_snapshot is not None
         else (profile.get("five_dimensions") or {}).get("knowledge", {})
     )
+    active_route_ids = {
+        str(item.get("node_id"))
+        for item in current_route
+        if isinstance(item, dict) and item.get("node_id") in nodes
+    } if isinstance(current_route, list) else set()
     confusion = load_confusion_pairs()
     confusion_companions: set[str] = set()
     for pair in confusion["confusion_pairs"]:
@@ -407,6 +413,8 @@ def compute_learning_path(
         risk = 1.0 - (pl if pl is not None else 0.5)
         value = (4.0 if matched else 0.0) + (4.0 if weak else 0.0)
         value += 2.0 * risk + exam + (0.5 if observations == 0 else 0.0)
+        if node_id in active_route_ids:
+            value += 0.35
         return value, node_id
 
     # Keep one high-value atomic target per distinct goal category, then add

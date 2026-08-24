@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from copy import deepcopy
 from typing import Any, cast
@@ -129,9 +130,9 @@ def _parse_planner_plan(
     parsed: list[LearningPathItem] = []
     if action == "keep" and nodes is not None:
         raise ValueError("Planner keep proposal must not include path nodes")
-    if action == "replace" and nodes is not None:
+    if action == "replace":
         if not isinstance(nodes, list) or not nodes:
-            raise ValueError("Planner replace nodes must be omitted or non-empty")
+            raise ValueError("Planner replace proposal must include non-empty path nodes")
         selected: dict[str, dict[str, Any]] = {}
         original_order: dict[str, int] = {}
         for index, raw_node in enumerate(nodes):
@@ -210,6 +211,73 @@ def _parse_planner_plan(
     }
 
 
+def _route_fingerprint(path: list[dict[str, Any]]) -> str:
+    payload = [
+        {
+            key: item.get(key)
+            for key in (
+                "node_id", "node_name", "duration_min", "strategy", "prerequisites", "difficulty_cap"
+            )
+        }
+        for item in path
+    ]
+    encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def _planner_path_payload(candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "node_id": str(item["node_id"]),
+            "node_name": str(item["node_name"]),
+            "duration_min": min(240, max(1, int(item.get("duration_min") or 1))),
+            "strategy": str(item.get("strategy") or "按知识依赖学习"),
+            "prerequisites": [str(value) for value in item.get("prerequisites") or []],
+            "difficulty_cap": str(item.get("difficulty_cap") or "L2"),
+        }
+        for item in candidates
+    ]
+
+
+def _candidate_target_ids(path: list[LearningPathItem]) -> set[str]:
+    route_ids = {item.node_id for item in path}
+    return {
+        item.node_id
+        for item in path
+        if not any(item.node_id in candidate.prerequisites for candidate in path if candidate.node_id in route_ids)
+    }
+
+
+def _required_goal_target_ids(
+    recommended_targets: list[str],
+    candidate_path: list[LearningPathItem],
+) -> set[str]:
+    candidate_ids = {item.node_id for item in candidate_path}
+    recommended_ids = {str(target) for target in recommended_targets if str(target) in candidate_ids}
+    return recommended_ids or _candidate_target_ids(candidate_path)
+
+
+def _finalize_planner_route(
+    *,
+    plan_action: str,
+    candidate_path: list[LearningPathItem],
+    proposed_path: list[LearningPathItem],
+    required_target_ids: set[str] | None = None,
+) -> tuple[list[LearningPathItem], str]:
+    if plan_action == "keep":
+        return candidate_path, "candidate_route_keep"
+    if plan_action == "replace":
+        proposed_ids = {item.node_id for item in proposed_path}
+        missing_targets = (required_target_ids or _candidate_target_ids(candidate_path)) - proposed_ids
+        if missing_targets:
+            raise ValueError(
+                "Planner replace route must cover candidate targets: "
+                + ", ".join(sorted(missing_targets))
+            )
+        return proposed_path, "llm_adjusted_route_replace"
+    raise ValueError(f"unsupported Planner action: {plan_action}")
+
+
 def build_planner_node(llm_client: LLMClient) -> Node:
     def planner_node(state: StateDict, runtime: Runtime[WorkflowContext] | None = None) -> dict[str, Any]:
         profile = _build_profile(state, runtime)
@@ -222,11 +290,23 @@ def build_planner_node(llm_client: LLMClient) -> Node:
         reader = getattr(store, "active_learning_plan", None)
         active_plan = reader(learner_id) if learner_id and callable(reader) else None
         recommended_targets = recommend_target_nodes_for_goal(learning_goal, knowledge, top_k=8)
+        active_route = active_plan.get("nodes") if isinstance(active_plan, dict) else None
+        algorithm_candidates = compute_learning_path(
+            profile=profile,
+            learning_goal=learning_goal,
+            mastery_snapshot=_knowledge_pl_map(profile),
+            current_route=active_route,
+        )
+        if not algorithm_candidates:
+            raise ValueError("Planner deterministic candidate route is empty")
+        candidate_payload = _planner_path_payload(algorithm_candidates)
         user_text = (
             "# 静态知识 DAG\n" + json.dumps(knowledge, ensure_ascii=False, separators=(",", ":"))
             + "\n# 静态易混淆对\n" + json.dumps(confusion, ensure_ascii=False, separators=(",", ":"))
             + "\n# 学习者画像与掌握度\n" + json.dumps(profile, ensure_ascii=False, separators=(",", ":"))
             + "\n# 当前活动计划（可为空）\n" + json.dumps(active_plan, ensure_ascii=False, separators=(",", ":"), default=str)
+            + "\n# 算法候选路线（keep 接受此路线；replace 必须返回完整调整路线）\n"
+            + json.dumps(candidate_payload, ensure_ascii=False, separators=(",", ":"))
             + "\n# 基于学习目标推荐的目标原子节点（供参考，请优先在路径中纳入）\n"
             + json.dumps(recommended_targets, ensure_ascii=False)
             + f"\n# 学习目标\n{learning_goal}"
@@ -257,12 +337,26 @@ def build_planner_node(llm_client: LLMClient) -> Node:
         }
 
         def validate_planner_semantics(result: PlannerAgentResult) -> None:
-            _parse_planner_plan(
+            parsed = _parse_planner_plan(
                 result.model_dump(),
                 known_node_ids=known_ids,
                 canonical_names=canonical_names,
                 static_prerequisites=static_prerequisites,
             )
+            if parsed["plan_action"] == "replace":
+                candidate_path_for_validation = [
+                    LearningPathItem.model_validate(item) for item in candidate_payload
+                ]
+                required_target_ids = _required_goal_target_ids(
+                    recommended_targets,
+                    candidate_path_for_validation,
+                )
+                _finalize_planner_route(
+                    plan_action="replace",
+                    candidate_path=candidate_path_for_validation,
+                    proposed_path=parsed["learning_path"],
+                    required_target_ids=required_target_ids,
+                )
 
         proposal = generate_validated_json_stream(
             llm_client,
@@ -282,23 +376,39 @@ def build_planner_node(llm_client: LLMClient) -> Node:
             canonical_names=canonical_names,
             static_prerequisites=static_prerequisites,
         )
-        if plan["plan_action"] == "keep":
-
-            if not isinstance(active_plan, dict) or not active_plan.get("nodes"):
-                raise ValueError("Planner cannot keep a missing active plan")
-            path = [LearningPathItem.model_validate(item) for item in active_plan["nodes"] if isinstance(item, dict)]
-            progress = dict(active_plan.get("progress") or {})
-        else:
-            algorithm_candidates = compute_learning_path(
-                profile=profile,
-                learning_goal=learning_goal,
-                mastery_snapshot=_knowledge_pl_map(profile),
-            )
-            path = [LearningPathItem.model_validate(item) for item in algorithm_candidates]
-            progress = None
-            if not path:
-                raise ValueError("Planner deterministic route is empty")
+        candidate_path = [LearningPathItem.model_validate(item) for item in candidate_payload]
+        path, route_source = _finalize_planner_route(
+            plan_action=plan["plan_action"],
+            candidate_path=candidate_path,
+            proposed_path=plan["learning_path"],
+            required_target_ids=_required_goal_target_ids(recommended_targets, candidate_path),
+        )
+        progress = None
         pl_map = _knowledge_pl_map(profile)
+        profile_dimensions = profile.get("five_dimensions") or {}
+        inherited_progress = (
+            profile_dimensions.get("progress") if isinstance(profile_dimensions, dict) else None
+        )
+        historical_reader = getattr(store, "historical_completed_node_ids", None)
+        historical_completed = (
+            historical_reader(learner_id)
+            if learner_id and callable(historical_reader)
+            else []
+        )
+        if isinstance(active_plan, dict) and isinstance(active_plan.get("progress"), dict):
+            inherited_progress = dict(active_plan["progress"])
+        if not isinstance(inherited_progress, dict):
+            inherited_progress = {}
+        inherited_progress["completed_nodes"] = list(
+            dict.fromkeys(
+                [str(node_id) for node_id in inherited_progress.get("completed_nodes", [])]
+                + [
+                    str(node_id)
+                    for node_id in (profile_dimensions.get("progress") or {}).get("completed_nodes", [])
+                ]
+                + [str(node_id) for node_id in historical_completed]
+            )
+        )
         weak_texts = [str(value) for value in profile.get("weak_points") or []]
         weak_ids = {item.node_id for item in path if any(value in item.node_id or value in item.node_name for value in weak_texts)}
         path = [
@@ -311,10 +421,17 @@ def build_planner_node(llm_client: LLMClient) -> Node:
             for item in path
         ]
         serialized_path = [item.model_dump() for item in path]
+        route_fingerprint = _route_fingerprint(serialized_path)
+        active_fingerprint = str((active_plan or {}).get("route_fingerprint") or "")
+        if not active_fingerprint and isinstance(active_plan, dict):
+            active_fingerprint = _route_fingerprint(
+                [item for item in active_plan.get("nodes", []) if isinstance(item, dict)]
+            )
+        route_changed = not isinstance(active_plan, dict) or active_fingerprint != route_fingerprint
         if progress is None:
             dimensions = profile.get("five_dimensions") or {}
             progress = initialize_learning_progress(
-                existing_progress=dimensions.get("progress") if isinstance(dimensions, dict) else None,
+                existing_progress=inherited_progress,
                 learning_path=serialized_path,
                 mastery_snapshot=pl_map,
             )
@@ -337,9 +454,15 @@ def build_planner_node(llm_client: LLMClient) -> Node:
             planner_guidance=guidance,
             iteration_directive=plan["iteration_directive"],
         )
-        plan_metadata: dict[str, Any] = {"plan_action": plan["plan_action"], "decision_reason": plan["decision_reason"]}
-        if learner_id and callable(getattr(store, "create_learning_plan", None)) and plan["plan_action"] == "replace":
-            persisted = cast(dict[str, Any], store.create_learning_plan(
+        plan_metadata: dict[str, Any] = {
+            "plan_action": plan["plan_action"],
+            "decision_reason": plan["decision_reason"],
+            "route_fingerprint": route_fingerprint,
+            "route_changed": route_changed,
+        }
+        create_plan = getattr(store, "create_learning_plan", None)
+        if learner_id and route_changed and callable(create_plan):
+            persisted = cast(dict[str, Any], create_plan(
                 learner_id=learner_id,
                 source_session_id=state["session_id"],
                 learning_goal=learning_goal,
@@ -347,7 +470,10 @@ def build_planner_node(llm_client: LLMClient) -> Node:
                 knowledge_graph_version=graph_version,
                 nodes=serialized_path,
                 progress=progress,
-                replan_reason=plan["decision_reason"] or "planner_replace",
+                replan_reason=plan["decision_reason"] or f"planner_{plan['plan_action']}",
+                route_source=route_source,
+                route_fingerprint=route_fingerprint,
+                decision_kind=plan["plan_action"],
             ))
             plan_metadata.update({"plan_id": persisted["plan_id"], "plan_version": persisted["plan_version"]})
         elif isinstance(active_plan, dict):
@@ -374,7 +500,10 @@ def build_planner_node(llm_client: LLMClient) -> Node:
                 if item.node_id in roadmap_targets
             ],
             "roadmap_node_count": len(roadmap_ids),
-            "algorithm": "active_plan" if plan["plan_action"] == "keep" else "deterministic_global_route",
+            "algorithm": route_source,
+            "route_source": route_source,
+            "route_fingerprint": route_fingerprint,
+            "route_changed": route_changed,
             "question_scope": scope,
             "iteration_directive": plan["iteration_directive"],
             "completed_node_ids": progress.get("completed_nodes", []),
@@ -389,19 +518,18 @@ def build_planner_node(llm_client: LLMClient) -> Node:
             **plan_metadata,
         }
         recorder = getattr(store, "record_learning_plan_decision", None)
-        if learner_id and callable(recorder) and not (
-            plan["plan_action"] == "replace"
-            and callable(getattr(store, "create_learning_plan", None))
+        if learner_id and callable(recorder) and (
+            not route_changed or not callable(create_plan)
         ):
             history = recorder(
                 learner_id=learner_id,
                 session_id=state["session_id"],
                 plan_id=plan_metadata.get("plan_id"),
                 previous_plan_id=(active_plan or {}).get("plan_id")
-                if plan["plan_action"] == "replace" and isinstance(active_plan, dict)
+                if route_changed and isinstance(active_plan, dict)
                 else None,
-                decision_kind="replace" if plan["plan_action"] == "replace" else "keep",
-                outcome="created" if plan["plan_action"] == "replace" else "kept",
+                decision_kind="initial" if not isinstance(active_plan, dict) else plan["plan_action"],
+                outcome="created" if route_changed else "no_change",
                 reason_code=plan["decision_reason"] or f"planner_{plan['plan_action']}",
                 learning_goal_hash=learning_goal_hash(learning_goal),
                 knowledge_graph_version=graph_version,
@@ -419,7 +547,7 @@ def build_planner_node(llm_client: LLMClient) -> Node:
                 progress_after=progress,
                 path_decision=decision,
                 teaching_context=teaching_context,
-                decision_key=f"{state['session_id']}:planner:{plan['plan_action']}",
+                decision_key=f"{state['session_id']}:planner:{plan['plan_action']}:{route_fingerprint}",
             )
             decision["planning_history_id"] = history.get("decision_id")
         return {

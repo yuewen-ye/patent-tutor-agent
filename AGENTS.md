@@ -1,5 +1,15 @@
 # Repository Guidelines
 
+## Agent skills
+
+### Issue tracker
+
+Issues for this repo live in GitHub Issues and are managed with the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+This is a single-context repo. Use the root `CONTEXT.md` and `docs/adr/` when they exist; create them lazily when domain terms or durable decisions require them. See `docs/agents/domain.md`.
+
 ## Sources Of Truth
 
 Read [`docs/README.md`](docs/README.md) before changing architecture or contracts.
@@ -170,11 +180,12 @@ def build_<name>_node(llm_client: LLMClient) -> Node:
 - Expert A/B use `generate_with_tools()` when deciding whether to call RAG, then validate final JSON.
 - Planner receives the complete runtime knowledge/confusion graphs, learner profile/BKT snapshot and
   active plan, then makes a strict `PlannerAgentResult` keep/replace decision on every teach session.
-  `keep` restores the active plan without running route selection. After a successful `replace`
-  decision, the backend deterministically selects the final DAG route; optional LLM `nodes` are only
-  semantic-checked during the normal repair loop. Model failure follows configured primary-to-fallback
-  rounds and fails the node when exhausted; deterministic routing never substitutes for an exhausted
-  model decision. `retrieve_context` does not call an LLM.
+  `keep` accepts the deterministic candidate route and requires `nodes=null`; `replace` returns a
+  complete LLM-adjusted route that is semantically checked in the normal repair loop. The candidate
+  is computed once before the LLM and reused across fallback, retry, and repair. Model failure
+  follows configured primary-to-fallback rounds and fails the node when exhausted; deterministic
+  candidate generation never substitutes for an exhausted model decision. `retrieve_context` does
+  not call an LLM.
 - Multi-phase prompts live beside the node as `<phase>_system.md`; do not inline phase prompts.
 - Normalize provider-specific aliases before Pydantic validation.
 - Every LLM output must pass a `ContractModel` with `extra="forbid"` before entering state.
@@ -258,20 +269,24 @@ each item is an object with a `point` string. Planner extracts the `point` text 
 `block_plan` without expanding outside the current node.
 
 The knowledge axis is static. Runtime confusion risk is derived from the latest learner profile and
-BKT mastery. Planner LLM runs on every teach session and decides whether to keep the matching active
-plan or replace it with a complete new route. A keep decision restores the active node list and
-cursor; a replace decision creates a new plan version. Every teach session recomputes the session
-activity window from the latest cursor, BKT evidence, weak points and current-node confusion risk.
+BKT mastery. Planner LLM runs on every teach session and decides whether to keep the deterministic
+candidate route or replace it with a complete LLM-adjusted route. The candidate is computed once
+before the LLM from the active route and learner state. A final route only creates a new plan version
+when its persisted route fingerprint materially changes; an unchanged keep reuses the active version.
+Historical completion is carried forward for any node that reappears, and the backend recomputes the
+cursor as the first final-route node not completed or sufficiently mastered. Every teach session
+recomputes the activity window from the latest cursor, BKT evidence, weak points and current-node
+confusion risk.
 
-For `replace`, Planner uses `compute_learning_path()` as the final deterministic route builder. It
-combines atomic goal matches, relevant weak/confusion signals, BKT mastery evidence and the static
-prerequisite closure, then emits a stable Kahn topological order. The route is not selected by fixed
-competition/foundation/remediation branches and does not force every weak point; it expands only as
-needed for goal coverage, prerequisite completeness and the configured route budget. The recommender
-(`recommend_target_nodes_for_goal`) supplies goal-related atomic candidates. The LLM `replace.nodes`
-field is optional and is semantic-checked when present, but its route is not authoritative. The LLM
-must still successfully decide `replace`; exhausted primary/fallback/retry calls fail Planner rather
-than activating a deterministic failure fallback.
+The candidate route is produced by `compute_learning_path()` before the Planner LLM. It combines
+atomic goal matches, relevant weak/confusion signals, BKT mastery evidence, active-route continuity
+and the static prerequisite closure, then emits a stable Kahn topological order. The route is not
+selected by fixed competition/foundation/remediation branches and does not force every weak point;
+it expands only as needed for goal coverage, prerequisite completeness and the configured route
+budget. The recommender (`recommend_target_nodes_for_goal`) supplies goal-related atomic candidates.
+`keep` requires `nodes=null`; `replace.nodes` is a complete LLM-adjusted route and is semantically
+validated against candidate target coverage. The LLM must still successfully decide `replace`; exhausted
+primary/fallback/retry calls fail Planner rather than activating a deterministic failure fallback.
 
 The backend owns the final topological validation, cursor and activity window. Historical review is
 zero to two completed nodes selected by deterministic risk; at-risk direct prerequisites can reserve

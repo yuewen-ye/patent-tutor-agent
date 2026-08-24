@@ -253,8 +253,8 @@ class PlannerAgentResult(ContractModel):
     def _validate_plan_action(self) -> PlannerAgentResult:
         if self.plan_action == "keep" and self.nodes is not None:
             raise ValueError("keep decisions must not include nodes")
-        if self.plan_action == "replace" and self.nodes is not None and not self.nodes:
-            raise ValueError("replace nodes must be omitted or non-empty")
+        if self.plan_action == "replace" and not self.nodes:
+            raise ValueError("replace decisions must include non-empty nodes")
         return self
 
 

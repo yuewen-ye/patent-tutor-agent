@@ -570,6 +570,18 @@ class MySQLLearnerStore:
             "planning_history": decisions,
         }
 
+    def historical_completed_node_ids(self, learner_id: str) -> list[str]:
+        """Return every node completed on any plan version for this learner."""
+        with self.database.transaction() as connection:
+            cursor = connection.cursor()
+            cursor.execute(
+                "SELECT DISTINCT node_id FROM learner_learning_plan_nodes "
+                "WHERE plan_id IN (SELECT plan_id FROM learner_learning_plans WHERE student_id=%s) "
+                "AND node_status='completed' ORDER BY node_id",
+                (learner_id,),
+            )
+            return [str(row["node_id"]) for row in cursor.fetchall()]
+
     def active_learning_plan(self, learner_id: str) -> dict[str, Any] | None:
         with self.database.transaction() as connection:
             return self._active_learning_plan_on_connection(connection, learner_id)
@@ -585,6 +597,9 @@ class MySQLLearnerStore:
         nodes: list[dict[str, Any]],
         progress: dict[str, Any],
         replan_reason: str,
+        route_source: str = "legacy",
+        route_fingerprint: str = "",
+        decision_kind: str = "replace",
     ) -> dict[str, Any]:
         now = _db_now()
         plan_id = uuid.uuid4().hex
@@ -638,8 +653,9 @@ class MySQLLearnerStore:
                 "plan_id, student_id, source_session_id, last_session_id, learning_goal, "
                 "learning_goal_hash, knowledge_graph_version, plan_version, status, "
                 "current_node_id, current_order_idx, progress_json, replan_reason, "
-                "last_progress_decision, created_at, updated_at, completed_at"
-                ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                "route_source, route_fingerprint, last_progress_decision, created_at, updated_at, "
+                "completed_at"
+                ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                 (
                     plan_id,
                     learner_id,
@@ -654,6 +670,8 @@ class MySQLLearnerStore:
                     current_order_idx,
                     _json_dump(progress),
                     replan_reason,
+                    route_source,
+                    route_fingerprint,
                     None,
                     now,
                     now,
@@ -697,7 +715,7 @@ class MySQLLearnerStore:
                     source_session_ref,
                     plan_id,
                     previous_plan_id,
-                    "initial" if previous_plan_id is None else "replace",
+                    decision_kind,
                     "created",
                     replan_reason,
                     learning_goal_hash,
@@ -708,7 +726,13 @@ class MySQLLearnerStore:
                     current_node,
                     _json_dump(previous_progress) if previous_progress is not None else None,
                     _json_dump(progress),
-                    _json_dump({"plan_action": "replace"}),
+                    _json_dump(
+                        {
+                            "plan_action": decision_kind,
+                            "route_source": route_source,
+                            "route_fingerprint": route_fingerprint,
+                        }
+                    ),
                     now,
                 ),
             )
@@ -1832,6 +1856,8 @@ class MySQLLearnerStore:
             "current_order_idx": row.get("current_order_idx"),
             "progress": _json_load(row.get("progress_json"), {}) or {},
             "replan_reason": str(row.get("replan_reason") or ""),
+            "route_source": str(row.get("route_source") or "legacy"),
+            "route_fingerprint": str(row.get("route_fingerprint") or ""),
             "last_progress_decision": (
                 _json_load(row.get("last_progress_decision"), None)
             ),

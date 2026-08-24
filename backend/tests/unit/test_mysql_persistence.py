@@ -165,6 +165,7 @@ def test_fresh_schema_contains_unified_mastery_and_diagnostic_contract() -> None
         "001_initial",
         "002_mastery_events",
         "003_learning_plan_decisions",
+        "004_planner_route_provenance",
     ]
 
     migration = Path("backend/app/persistence/migrations/001_initial.sql").read_text(

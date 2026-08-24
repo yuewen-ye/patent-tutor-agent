@@ -1,3 +1,4 @@
+import json
 from collections.abc import Iterator
 
 import pytest
@@ -53,7 +54,13 @@ class PlannerLLMClient:
             },
         }
         if self.action == "replace":
-            result["nodes"] = None
+            user_text = next(
+                message.content
+                for message in messages
+                if "# 算法候选路线" in message.content
+            )
+            candidate_text = user_text.split("# 算法候选路线", 1)[1].split("\n# 基于学习目标", 1)[0]
+            result["nodes"] = json.loads(candidate_text.split("\n", 1)[1])
         return result
 
     def generate_json_stream(
@@ -146,7 +153,8 @@ def test_planner_contract_enforces_keep_replace_shape() -> None:
     common = {"decision_reason": "理由", "question_scope": _scope(), "iteration_directive": {"type": "无", "trigger": "无", "action": "保持"}, "teaching_guidance": _guidance()}
     with pytest.raises(ValueError, match="keep decisions"):
         PlannerAgentResult.model_validate({**common, "plan_action": "keep", "nodes": []})
-    PlannerAgentResult.model_validate({**common, "plan_action": "replace", "nodes": None})
+    with pytest.raises(ValueError, match="replace decisions"):
+        PlannerAgentResult.model_validate({**common, "plan_action": "replace", "nodes": None})
 
 
 def test_planner_semantic_guard_canonicalizes_names_and_rejects_invalid_nodes() -> None:
@@ -214,7 +222,7 @@ def test_planner_always_calls_llm_and_builds_enriched_context() -> None:
     assert len(client.calls) == 1
     assert client.agents == ["planner"]
     assert result["path_decision"]["plan_action"] == "replace"
-    assert result["path_decision"]["algorithm"] == "deterministic_global_route"
+    assert result["path_decision"]["algorithm"] == "llm_adjusted_route_replace"
     assert result["path_decision"]["path_start_node_id"] == "patent-law-foundation"
     target_ids = result["path_decision"]["path_target_node_ids"]
     assert target_ids
@@ -265,7 +273,7 @@ def test_planner_failure_does_not_fallback_to_deterministic_path() -> None:
         build_planner_node(FailingPlannerLLMClient())({"session_id": "debug", "user_input": "学习新颖性", "events": []})
 
 
-def test_planner_keep_does_not_compute_replace_route(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_planner_keep_uses_candidate_route(monkeypatch: pytest.MonkeyPatch) -> None:
     learning_goal = "学习专利制度"
     plan = {
         "plan_id": "persisted-plan-keep-only",
@@ -278,15 +286,25 @@ def test_planner_keep_does_not_compute_replace_route(monkeypatch: pytest.MonkeyP
     }
     store = PersistedPlanStore(plan)
     runtime = Runtime(context=WorkflowContext(learner_id="learner-keep-only"), store=store)  # type: ignore[arg-type]
+    candidate = [{
+        "node_id": "patent-law-foundation",
+        "node_name": "专利法律制度基础",
+        "duration_min": 20,
+        "strategy": "候选路线",
+        "prerequisites": [],
+        "difficulty_cap": "L2",
+    }]
     monkeypatch.setattr(
         "backend.app.agents.planner.node.compute_learning_path",
-        lambda **_: (_ for _ in ()).throw(AssertionError("replace algorithm must not run for keep")),
+        lambda **_: candidate,
     )
     result = build_planner_node(PlannerLLMClient("keep"))(
         {"session_id": "keep-only", "user_input": "继续学习", "events": [], "learner_profile": {"learning_goal": learning_goal, "five_dimensions": {"knowledge": {}}}},
         runtime,
     )
     assert result["path_decision"]["plan_id"] == "persisted-plan-keep-only"
+    assert result["path_decision"]["algorithm"] == "candidate_route_keep"
+    assert result["learning_path"][0]["strategy"] == "候选路线"
 
 
 class SingleCompositePlannerLLMClient:

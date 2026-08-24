@@ -199,7 +199,15 @@ class WorkflowLLMClient:
         assert agent is not None
         with self._agents_lock:
             self.agents.append(agent)
-        return iter([json.dumps(self.queues[agent].pop(0), ensure_ascii=False)])
+        payload = self.queues[agent].pop(0)
+        if agent == "planner" and payload.get("plan_action") == "replace":
+            user_text = messages[-1].content
+            marker = "# 算法候选路线"
+            if marker in user_text:
+                candidate_text = user_text.split(marker, 1)[1].split("\n# 基于学习目标", 1)[0]
+                payload = dict(payload)
+                payload["nodes"] = json.loads(candidate_text.split("\n", 1)[1])
+        return iter([json.dumps(payload, ensure_ascii=False)])
 
     def generate_with_tools(
         self,
@@ -242,7 +250,13 @@ class ParallelPhaseLLMClient(WorkflowLLMClient):
         json_schema: dict[str, object] | None = None,
     ) -> Iterator[str]:
         self._track_phase(agent)
-        return iter([json.dumps(super().generate_json(messages, temperature, agent), ensure_ascii=False)])
+        return super().generate_json_stream(
+            messages,
+            temperature,
+            agent,
+            schema_name=schema_name,
+            json_schema=json_schema,
+        )
 
 
 def test_graph_registers_diagnosis_feedback_agent_name() -> None:
