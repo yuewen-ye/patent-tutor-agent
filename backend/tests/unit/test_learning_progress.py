@@ -19,26 +19,47 @@ def _path() -> list[dict[str, object]]:
     ]
 
 
-def test_initial_progress_skips_nodes_mastered_by_cat_bkt() -> None:
+def test_initial_progress_does_not_complete_nodes_from_cat_bkt_alone() -> None:
     progress = initialize_learning_progress(
         existing_progress={},
         learning_path=_path(),
-        mastery_snapshot={
-            "foundation": {"pl": 0.92, "observations": 3},
-            "novelty": {"pl": 0.45, "observations": 2},
+    )
+
+    assert progress["completed_nodes"] == []
+    assert progress["current_node"] == "foundation"
+    assert progress["pending_nodes"] == ["novelty", "inventive-step"]
+    assert progress["overall_completion_ratio"] == pytest.approx(0, abs=1e-4)
+
+
+def test_initial_progress_preserves_feedback_completed_nodes() -> None:
+    progress = initialize_learning_progress(
+        existing_progress={
+            "completed_nodes": ["foundation"],
+            "completion_sessions": {"foundation": "feedback-session"},
         },
+        learning_path=_path(),
     )
 
     assert progress["completed_nodes"] == ["foundation"]
     assert progress["current_node"] == "novelty"
     assert progress["pending_nodes"] == ["inventive-step"]
-    assert progress["overall_completion_ratio"] == pytest.approx(1 / 3, abs=1e-4)
+
+
+def test_initial_progress_discards_legacy_completion_without_provenance() -> None:
+    progress = initialize_learning_progress(
+        existing_progress={"completed_nodes": ["foundation"]},
+        learning_path=_path(),
+    )
+
+    assert progress["completed_nodes"] == []
+    assert progress["current_node"] == "foundation"
 
 
 def test_forward_probe_never_advances_current_node() -> None:
     progress, decision = advance_learning_progress(
         existing_progress={
             "completed_nodes": ["foundation"],
+            "completion_sessions": {"foundation": "feedback-foundation"},
             "current_node": "novelty",
             "pending_nodes": ["inventive-step"],
         },
@@ -61,6 +82,7 @@ def test_current_node_advances_only_with_threshold_and_evidence() -> None:
     progress, decision = advance_learning_progress(
         existing_progress={
             "completed_nodes": ["foundation"],
+            "completion_sessions": {"foundation": "feedback-foundation"},
             "current_node": "novelty",
             "pending_nodes": ["inventive-step"],
         },
@@ -68,11 +90,16 @@ def test_current_node_advances_only_with_threshold_and_evidence() -> None:
         current_node_id="novelty",
         mastery_snapshot={"novelty": {"pl": 0.86, "observations": 2}},
         bkt_updates=[{"skill_id": "novelty", "posterior_pl": 0.86}],
+        completion_session_id="feedback-novelty",
     )
 
     assert decision["advanced"] is True
     assert decision["completed_node_id"] == "novelty"
     assert progress["completed_nodes"] == ["foundation", "novelty"]
+    assert progress["completion_sessions"] == {
+        "foundation": "feedback-foundation",
+        "novelty": "feedback-novelty",
+    }
     assert progress["current_node"] == "inventive-step"
     assert progress["pending_nodes"] == []
 

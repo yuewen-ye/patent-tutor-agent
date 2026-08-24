@@ -664,6 +664,22 @@ class SessionService:
             if isinstance(existing_dimensions, dict)
             else None
         )
+        course_package = course_state.get("course_package", {}) if isinstance(course_state, dict) else {}
+        has_generated_course = bool(
+            course_record.status == "completed"
+            and isinstance(course_package, dict)
+            and course_package.get("assessment")
+        )
+        current_node_id = str(course_decision.get("current_node_id") or "")
+        current_node_in_course = any(
+            isinstance(item, dict) and str(item.get("node_id") or "") == current_node_id
+            for item in course_path
+        )
+        if not has_generated_course or not current_node_in_course or not enriched_responses:
+            completion_session_id = None
+        else:
+            completion_session_id = record.session_id
+
         progress_update, progress_decision = advance_learning_progress(
             existing_progress=existing_progress,
             learning_path=[
@@ -672,6 +688,7 @@ class SessionService:
             current_node_id=course_decision.get("current_node_id"),
             mastery_snapshot=mastery_snapshot,
             bkt_updates=bkt_updates,
+            completion_session_id=completion_session_id,
         )
         plan_id = course_decision.get("plan_id")
         plan_version = course_decision.get("plan_version")

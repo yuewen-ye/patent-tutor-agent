@@ -38,21 +38,6 @@ def _mastery_value(
     return probability, max(0, observations)
 
 
-def _is_mastered(
-    mastery_snapshot: dict[str, dict[str, Any]],
-    node_id: str,
-    *,
-    mastery_threshold: float,
-    minimum_observations: int,
-) -> bool:
-    probability, observations = _mastery_value(mastery_snapshot, node_id)
-    return (
-        probability is not None
-        and probability >= mastery_threshold
-        and observations >= minimum_observations
-    )
-
-
 def _unique(values: Iterable[object]) -> list[str]:
     result: list[str] = []
     for value in values:
@@ -196,28 +181,31 @@ def initialize_learning_progress(
     *,
     existing_progress: object,
     learning_path: list[dict[str, Any]],
-    mastery_snapshot: dict[str, dict[str, Any]],
-    mastery_threshold: float = DEFAULT_MASTERY_THRESHOLD,
-    minimum_observations: int = DEFAULT_MIN_OBSERVATIONS,
 ) -> dict[str, Any]:
     """Initialize or reconcile the backend-owned cursor against a planned roadmap.
 
-    CAT/BKT nodes already supported by sufficient evidence are treated as completed.
+    ``completed_nodes`` is a teaching-progress ledger, not a mastery snapshot.  Only
+    nodes already recorded as completed by a course feedback submission are carried
+    forward here.  CAT/questionnaire/BKT evidence can influence planning and review
+    risk, but cannot complete a node before that node has been taught and assessed.
     The first unresolved topological path node becomes the only active teaching node.
     """
 
     previous = dict(existing_progress) if isinstance(existing_progress, dict) else {}
     roadmap = _node_ids(learning_path)
-    completed = _unique(previous.get("completed_nodes") or [])
-    for node_id in roadmap:
-        if _is_mastered(
-            mastery_snapshot,
-            node_id,
-            mastery_threshold=mastery_threshold,
-            minimum_observations=minimum_observations,
-        ) and node_id not in completed:
-            completed.append(node_id)
-
+    # Completion is carried only from the persisted teaching-progress ledger.
+    # Mastery evidence remains available to planning/review callers, but it is not
+    # sufficient to claim that a node has already been taught and assessed.
+    completion_sessions = {
+        str(node_id): str(session_id)
+        for node_id, session_id in (previous.get("completion_sessions") or {}).items()
+        if node_id and session_id
+    }
+    completed = [
+        node_id
+        for node_id in _unique(previous.get("completed_nodes") or [])
+        if node_id in completion_sessions
+    ]
     unresolved = [node_id for node_id in roadmap if node_id not in completed]
     current = unresolved[0] if unresolved else None
     pending = unresolved[1:] if unresolved else []
@@ -226,6 +214,11 @@ def initialize_learning_progress(
 
     return {
         "completed_nodes": completed,
+        "completion_sessions": {
+            node_id: completion_sessions[node_id]
+            for node_id in completed
+            if node_id in completion_sessions
+        },
         "current_node": current,
         "pending_nodes": pending,
         "avg_time_per_node_min": previous.get("avg_time_per_node_min"),
@@ -240,6 +233,7 @@ def advance_learning_progress(
     current_node_id: str | None,
     mastery_snapshot: dict[str, dict[str, Any]],
     bkt_updates: list[dict[str, Any]],
+    completion_session_id: str | None = None,
     mastery_threshold: float = DEFAULT_MASTERY_THRESHOLD,
     minimum_observations: int = DEFAULT_MIN_OBSERVATIONS,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -247,7 +241,16 @@ def advance_learning_progress(
 
     previous = dict(existing_progress) if isinstance(existing_progress, dict) else {}
     roadmap = _node_ids(learning_path)
-    completed = _unique(previous.get("completed_nodes") or [])
+    completion_sessions = {
+        str(node_id): str(session_id)
+        for node_id, session_id in (previous.get("completion_sessions") or {}).items()
+        if node_id and session_id
+    }
+    completed = [
+        node_id
+        for node_id in _unique(previous.get("completed_nodes") or [])
+        if node_id in completion_sessions
+    ]
     current_before = str(current_node_id or previous.get("current_node") or "") or None
     probability: float | None = None
     observations = 0
@@ -267,8 +270,14 @@ def advance_learning_progress(
         and probability >= mastery_threshold
         and observations >= minimum_observations
     )
-    if mastered and current_before is not None and current_before not in completed:
+    if (
+        mastered
+        and current_before is not None
+        and current_before not in completed
+        and completion_session_id
+    ):
         completed.append(current_before)
+        completion_sessions[current_before] = completion_session_id
 
     unresolved = [node_id for node_id in roadmap if node_id not in completed]
     if mastered:
@@ -304,6 +313,11 @@ def advance_learning_progress(
 
     progress = {
         "completed_nodes": completed,
+        "completion_sessions": {
+            node_id: completion_sessions[node_id]
+            for node_id in completed
+            if node_id in completion_sessions
+        },
         "current_node": current_after,
         "pending_nodes": pending,
         "avg_time_per_node_min": previous.get("avg_time_per_node_min"),

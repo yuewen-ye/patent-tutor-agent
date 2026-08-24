@@ -94,8 +94,11 @@ LLM 输出合同均不含知识掌握度：诊断阶段由后端用 CAT/BKT 快�
   `learner_learning_plan_nodes` 并新增 `plan_version`；旧活动计划标记为 `superseded`。`keep`
   保持原计划版本，但仍记录本次模型决策。所有 `initial`、`keep`、`replace` 和进度变更追加写入
   `learner_learning_plan_decisions`，可按学员、计划或会话读取历史。
-- 后端以 `five_dimensions.progress` 维护权威课程游标。完整 `learning_path` 仅用于导航、会话冻结
-  和反馈进度；`teaching_context` 只向 Expert A/B 暴露当前规范知识点名称、少量复习节点、至多一个
+- 后端以 `five_dimensions.progress` 维护权威课程游标。`completed_nodes` 是教学进度账本：只有节点
+  作为主教学节点生成过课程，并在该课程的练习提交中产生直接 BKT 证据且达到掌握阈值后，才会进入
+  `completed_nodes`。CAT、问卷和已有 BKT 掌握度只能影响路径规划、难度和复习风险，不能单独完成节点。
+  已完成节点仍可因掌握度下降、观测不足、薄弱点或混淆风险进入活动窗口的复习节点。完整
+  `learning_path` 仅用于导航、会话冻结和反馈进度；`teaching_context` 只向 Expert A/B 暴露当前规范知识点名称、少量复习节点、至多一个
   前探节点、该节点的静态易混淆对和 Planner 本节建议。两位专家每次协作生成一节单节点课程，不一次性
   讲完整路线。
 - 活动窗口中的复习节点由后端风险调度器选择，数量为 0 到 2，不按路径顺序机械回退。

@@ -385,30 +385,44 @@ def build_planner_node(llm_client: LLMClient) -> Node:
         )
         progress = None
         pl_map = _knowledge_pl_map(profile)
-        profile_dimensions = profile.get("five_dimensions") or {}
-        inherited_progress = (
-            profile_dimensions.get("progress") if isinstance(profile_dimensions, dict) else None
-        )
+        # ``completed_nodes`` is a teaching-progress ledger.  Do not import the
+        # diagnostic/profile progress projection here: CAT/questionnaire/BKT
+        # evidence can guide planning and review, but cannot complete a node.
         historical_reader = getattr(store, "historical_completed_node_ids", None)
         historical_completed = (
             historical_reader(learner_id)
             if learner_id and callable(historical_reader)
             else []
         )
-        if isinstance(active_plan, dict) and isinstance(active_plan.get("progress"), dict):
-            inherited_progress = dict(active_plan["progress"])
-        if not isinstance(inherited_progress, dict):
-            inherited_progress = {}
-        inherited_progress["completed_nodes"] = list(
-            dict.fromkeys(
-                [str(node_id) for node_id in inherited_progress.get("completed_nodes", [])]
-                + [
-                    str(node_id)
-                    for node_id in (profile_dimensions.get("progress") or {}).get("completed_nodes", [])
-                ]
-                + [str(node_id) for node_id in historical_completed]
-            )
+        historical_session_reader = getattr(store, "historical_completion_sessions", None)
+        historical_sessions = (
+            historical_session_reader(learner_id)
+            if learner_id and callable(historical_session_reader)
+            else {}
         )
+        inherited_progress = (
+            dict(active_plan["progress"])
+            if isinstance(active_plan, dict) and isinstance(active_plan.get("progress"), dict)
+            else {}
+        )
+        inherited_completed = [
+            str(node_id) for node_id in inherited_progress.get("completed_nodes", [])
+        ]
+        inherited_sessions = inherited_progress.get("completion_sessions", {})
+        if not isinstance(inherited_sessions, dict):
+            inherited_sessions = {}
+        inherited_progress["completion_sessions"] = {
+            str(node_id): str(session_id)
+            for node_id, session_id in inherited_sessions.items()
+            if node_id in inherited_completed and session_id
+        }
+        for node_id in historical_completed:
+            node_id = str(node_id)
+            session_id = historical_sessions.get(node_id)
+            if session_id and node_id not in inherited_completed:
+                inherited_completed.append(node_id)
+                inherited_progress["completion_sessions"][node_id] = str(session_id)
+        inherited_progress["completed_nodes"] = inherited_completed
         weak_texts = [str(value) for value in profile.get("weak_points") or []]
         weak_ids = {item.node_id for item in path if any(value in item.node_id or value in item.node_name for value in weak_texts)}
         path = [
@@ -433,7 +447,6 @@ def build_planner_node(llm_client: LLMClient) -> Node:
             progress = initialize_learning_progress(
                 existing_progress=inherited_progress,
                 learning_path=serialized_path,
-                mastery_snapshot=pl_map,
             )
         dual_axis = build_dual_axis_snapshot(profile=profile, session_id=state["session_id"])
         scope = normalize_question_scope(

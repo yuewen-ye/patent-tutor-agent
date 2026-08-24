@@ -166,6 +166,7 @@ def test_fresh_schema_contains_unified_mastery_and_diagnostic_contract() -> None
         "002_mastery_events",
         "003_learning_plan_decisions",
         "004_planner_route_provenance",
+        "005_completion_provenance",
     ]
 
     migration = Path("backend/app/persistence/migrations/001_initial.sql").read_text(
@@ -177,6 +178,11 @@ def test_fresh_schema_contains_unified_mastery_and_diagnostic_contract() -> None
     assert "CREATE TABLE IF NOT EXISTS diagnostic_sessions" not in migration
     assert "CREATE TABLE IF NOT EXISTS diagnostic_attempts" not in migration
     assert "CREATE TABLE IF NOT EXISTS diagnostic_mastery_events" not in migration
+    provenance = Path(
+        "backend/app/persistence/migrations/005_completion_provenance.sql"
+    ).read_text(encoding="utf-8")
+    assert "completion_session_id" in provenance
+    assert "fk_learner_plan_node_completion_session" in provenance
 
     source_migration = Path(
         "backend/app/persistence/migrations/002_mastery_events.sql"

@@ -273,8 +273,9 @@ BKT mastery. Planner LLM runs on every teach session and decides whether to keep
 candidate route or replace it with a complete LLM-adjusted route. The candidate is computed once
 before the LLM from the active route and learner state. A final route only creates a new plan version
 when its persisted route fingerprint materially changes; an unchanged keep reuses the active version.
-Historical completion is carried forward for any node that reappears, and the backend recomputes the
-cursor as the first final-route node not completed or sufficiently mastered. Every teach session
+Historical completion is carried forward only when backed by a completed course-feedback session for a
+node that reappears; BKT mastery affects routing and review risk, not the completion ledger. The backend
+recomputes the cursor as the first final-route node not completed. Every teach session
 recomputes the activity window from the latest cursor, BKT evidence, weak points and current-node
 confusion risk.
 
