@@ -231,8 +231,8 @@ append-only reducer fields. Important phase fields are:
 
 - `workflow_mode`: `auto | teach | chat | diagnose | feedback`
 - `diagnosis_feedback_phase`: `diagnosis | feedback`
-- `expert_phase`: `draft | cross_review | revision | integration`
-- `teach_phase`: only selects Expert A's debate/integration prompt behavior
+- `expert_phase`: `draft | cross_review | revision | integration`; disabled debate mode keeps this at `draft`
+- `teach_phase`: `debate | single_agent | integration`; `single_agent` means the deployment debate switch is disabled and the Expert A draft is also the course package
 - `LearningPathItem.knowledge_points`: fine-grained points extracted from the static DAG
   (`knowledge_points[].point` strings)
 - `TeachingContext.knowledge_points`: current-node point strings Experts must cover

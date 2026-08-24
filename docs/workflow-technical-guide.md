@@ -49,6 +49,7 @@
 ## 1. 当前工作流
 
 ```text
+默认 PATENT_TUTOR_DEBATE_ENABLED=true 时：
 START → _init → route ──┬── diagnose → diagnosis_feedback[diagnosis] → END
                          ├── chat → retrieve_context → chat_answer → END
                          └── teach → diagnosis_feedback[diagnosis]
@@ -73,7 +74,7 @@ POST /sessions/{course_session_id}/exercise-responses
   → _init → diagnosis_feedback[feedback] → END
 ```
 
-`diagnosis_feedback` 是一个多阶段 Agent 节点，通过 `diagnosis_feedback_phase` 在诊断和反馈阶段重入。专家 A、B 也各自只有一个 Agent，通过 `expert_phase` 在草稿、互评和修订阶段重入；三个阶段都并行执行，由 `_experts_barrier` 等待双方完成并推进阶段。整合阶段只运行专家 A。Judge 通过时课程会话结束，等待学员提交练习；Judge 不通过时回到 Expert A integration 重新整合并再次审核，直到通过。学员反馈只在提交练习后创建的独立 feedback 会话中生成。
+`diagnosis_feedback` 是一个多阶段 Agent 节点，通过 `diagnosis_feedback_phase` 在诊断和反馈阶段重入。`PATENT_TUTOR_DEBATE_ENABLED` 未设置或为严格真值时，专家 A、B 各自通过 `expert_phase` 在草稿、互评和修订阶段重入；三个阶段都并行执行，由 `_experts_barrier` 等待双方完成并推进阶段，整合阶段只运行专家 A。设为严格假值时，后端在建图时省略 Expert B、汇合、互评、修订与整合节点，路径为 `planner → expert_a[draft] → judge`；该唯一草稿同时写入 `course_package`，`teach_phase` 为 `single_agent`。单专家 Judge 不通过时保留当前课程并进入现有收尾路径，不重跑 Expert A。修改该环境变量后必须重启后端。学员反馈只在提交练习后创建的独立 feedback 会话中生成。
 
 推荐流程中，服务层把已完成 CAT/BKT 诊断的 69 节点快照注入课程会话。诊断和反馈 Agent 的
 LLM 输出合同均不含知识掌握度：诊断阶段由后端用 CAT/BKT 快照构造完整知识维度；反馈阶段先由
@@ -141,7 +142,7 @@ artifacts/sessions/{session_id}/
   feedback/grading_report.md
 ```
 
-`course_package.md` 是专家整合阶段的过程稿；`judge_report.md` 始终保留。Judge 不通过时，当前课程会话回到 Expert A integration 并持续复审；审核通过后，反馈文件只在学员提交练习后的独立会话中生成。系统不会生成 `final_learning.md` 或独立答案文件。
+`course_package.md` 在默认模式是专家整合阶段的过程稿；在单专家模式是 Expert A draft 的同一份课程输出。`judge_report.md` 始终保留。默认模式 Judge 不通过时回到 Expert A integration 并持续复审；单专家模式保留当前课程并直接收尾。系统不会生成 `final_learning.md` 或独立答案文件。单专家模式不会生成 Expert B、互评、修订或 integration Markdown 工件。
 
 每个 Markdown 都先由通过 Pydantic 校验的结构化数据渲染，使用固定标题、表格和 JSON 代码块。`manifest.json` 保存路径、类型、生成节点、SHA-256 与时间戳，状态只允许 `running/completed/failed/canceled`。
 

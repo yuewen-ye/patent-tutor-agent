@@ -838,7 +838,7 @@ class StateDict(TypedDict):
     revision_round: NotRequired[int]
     feedback_result: NotRequired[dict[str, Any]]
     intent: NotRequired[str]  # "teach" | "chat" | "diagnose"
-    teach_phase: NotRequired[Literal["debate", "integration"]]
+    teach_phase: NotRequired[Literal["debate", "single_agent", "integration"]]
     chat_answer: NotRequired[dict[str, Any]]
     workflow_mode: NotRequired[Literal["auto", "teach", "chat", "diagnose", "feedback"]]
     input_payload: NotRequired[dict[str, Any]]

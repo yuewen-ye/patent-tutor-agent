@@ -285,6 +285,80 @@ def test_graph_parallelizes_experts_and_branches_after_judge() -> None:
     assert "revise_integration" not in mermaid
 
 
+def test_debate_flag_defaults_on_and_rejects_invalid_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    from backend.app.graph.workflow import _is_debate_enabled
+
+    monkeypatch.delenv("PATENT_TUTOR_DEBATE_ENABLED", raising=False)
+    assert _is_debate_enabled() is True
+    monkeypatch.setenv("PATENT_TUTOR_DEBATE_ENABLED", "false")
+    assert _is_debate_enabled() is False
+    for invalid in ("fasle", "True", " false", "false "):
+        monkeypatch.setenv("PATENT_TUTOR_DEBATE_ENABLED", invalid)
+        with pytest.raises(ValueError, match="PATENT_TUTOR_DEBATE_ENABLED"):
+            _is_debate_enabled()
+
+
+def test_graph_omits_debate_nodes_when_disabled() -> None:
+    workflow = build_workflow(
+        llm_client=PhaseLLMClient(), slide_deck_enabled=True, debate_enabled=False
+    )
+    mermaid = export_workflow_mermaid(workflow)
+    edges = {(edge.source, edge.target) for edge in workflow.get_graph().edges}
+    nodes = set(workflow.get_graph().nodes)
+
+    assert ("planner", "expert_a") in edges
+    assert ("expert_a", "judge") in edges
+    assert ("judge", "slide_deck") in edges
+    assert "expert_b" not in nodes
+    assert "_experts_barrier" not in nodes
+    assert "expert_a_integration" not in nodes
+    assert "expert_b" not in mermaid
+    assert "cross_review" not in mermaid
+    assert "revision" not in mermaid
+
+
+def test_single_agent_teach_flow_writes_course_package_without_debate_artifacts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
+    artifact_root = tmp_path / "artifacts"
+    llm = WorkflowLLMClient()
+
+    state = run_workflow(
+        session_id="single-agent",
+        user_input="掌握专利新颖性",
+        llm_client=llm,
+        artifact_root=artifact_root,
+        learner_id="learner-1",
+        debate_enabled=False,
+    )
+
+    session_root = artifact_root / "sessions" / "single-agent"
+    assert state["workflow_status"] == "completed"
+    assert state["teach_phase"] == "single_agent"
+    assert state["expert_phase"] == "draft"
+    assert {
+        key: value
+        for key, value in state["course_package"].items()
+        if key != "markdown_artifact"
+    } == {
+        key: value
+        for key, value in state["expert_a_draft"].items()
+        if key != "markdown_artifact"
+    }
+    assert llm.agents.count("expert_a") == 1
+    assert "expert_b" not in llm.agents
+    assert "expert_b_draft" not in state
+    assert "expert_a_cross_review" not in state
+    assert "expert_b_cross_review" not in state
+    assert "expert_a_revision" not in state
+    assert "expert_b_revision" not in state
+    assert (session_root / "round-01/course_package.md").is_file()
+    assert not (session_root / "round-01/expert_b_draft.md").exists()
+    assert not (session_root / "round-01/expert_a_cross_review.md").exists()
+    assert not (session_root / "round-01/expert_a_revision.md").exists()
+
+
 def test_graph_skips_slide_deck_when_disabled() -> None:
     workflow = build_workflow(llm_client=PhaseLLMClient(), slide_deck_enabled=False)
     mermaid = export_workflow_mermaid(workflow)

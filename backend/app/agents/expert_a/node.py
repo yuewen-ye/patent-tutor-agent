@@ -349,10 +349,13 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
         )
         draft_dict = constrain_expert_draft_to_current_lesson(draft.model_dump(), state)
         draft_dict["draft_stage"] = "debate"
-        return {
+        updates: dict[str, Any] = {
             "expert_a_draft": draft_dict,
             **({"retrieval_context": retrieved_context} if retrieved_context else {}),
             "events": [completed_event("expert_a", "generated expert A draft with LLM")],
         }
+        if state.get("teach_phase") == "single_agent":
+            updates["course_package"] = draft_dict
+        return updates
 
     return expert_a_node

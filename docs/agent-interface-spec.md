@@ -60,7 +60,7 @@ CAT/BKT 诊断引擎也不是 LLM Agent 或 LangGraph 节点。它位于 FastAPI
 
 - `diagnosis_feedback_phase`: `diagnosis | feedback`
 - `expert_phase`: `draft | cross_review | revision | integration`
-- `teach_phase`: `debate | integration`，仅用于专家 A 选择整合提示词，不代表循环轮数
+- `teach_phase`: `debate | single_agent | integration`。`single_agent` 表示部署级辩论开关关闭；此时唯一的 Expert A draft 同时作为 `course_package`，不代表循环轮数。
 
 禁止重新引入 `debate_round`、`max_debate_rounds`、`revision_history`、`final_learning_markdown`、`exercise_answer_key` 或 `quality_gate_failed`。
 
@@ -71,15 +71,19 @@ _init → route | diagnosis_feedback(feedback)
 route(chat) → retrieve_context → chat_answer → END
 route(diagnose) → diagnosis_feedback(diagnosis) → END
 route(teach) → diagnosis_feedback(diagnosis) → planner
-planner → expert_a(draft) || expert_b(draft)
-expert_a + expert_b → _experts_barrier
-_experts_barrier → expert_a(cross_review) || expert_b(cross_review)
-expert_a + expert_b → _experts_barrier
-_experts_barrier → expert_a(revision) || expert_b(revision)
-expert_a + expert_b → _experts_barrier
-_experts_barrier → expert_a(integration) → judge
+PATENT_TUTOR_DEBATE_ENABLED=true（默认）：
+  planner → expert_a(draft) || expert_b(draft)
+  expert_a + expert_b → _experts_barrier
+  _experts_barrier → expert_a(cross_review) || expert_b(cross_review)
+  expert_a + expert_b → _experts_barrier
+  _experts_barrier → expert_a(revision) || expert_b(revision)
+  expert_a + expert_b → _experts_barrier
+  _experts_barrier → expert_a(integration) → judge
+  judge(revise) → expert_a(integration) → judge（循环，直到 accept 或 accept_with_minor_revision）
+PATENT_TUTOR_DEBATE_ENABLED=false：
+  planner → expert_a(draft, course_package) → judge
+  judge(revise) → 保留当前 course_package 并进入收尾路径
 judge(accept | accept_with_minor_revision) → slide_deck → generate_pptx（PATENT_TUTOR_PPTX_ENABLED=true 时）→ END
-judge(revise) → expert_a(integration) → judge（循环，直到 accept 或 accept_with_minor_revision）
 exercise-responses → 独立 feedback 会话 → diagnosis_feedback(feedback) → END
 ```
 

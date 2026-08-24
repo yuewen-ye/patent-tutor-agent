@@ -354,6 +354,18 @@ def _route_after_experts_barrier(
             assert_never(unreachable)
 
 
+def _is_debate_enabled() -> bool:
+    """Read the strict deployment flag for the optional expert debate workflow."""
+    raw = os.environ.get("PATENT_TUTOR_DEBATE_ENABLED")
+    if raw is None:
+        return True
+    if raw == "true":
+        return True
+    if raw == "false":
+        return False
+    raise ValueError("PATENT_TUTOR_DEBATE_ENABLED must be exactly true or false")
+
+
 def _is_pptx_enabled() -> bool:
     """读取环境变量控制是否启用 generate_pptx 节点；默认为开启。"""
     raw = os.environ.get("PATENT_TUTOR_PPTX_ENABLED", "").strip()
@@ -430,6 +442,7 @@ def _complete_node(state: StateDict) -> dict[str, Any]:
 
 def _make_route_after_judge(
     slide_deck_enabled: bool,
+    debate_enabled: bool = True,
 ) -> Callable[[StateDict], Literal["expert_a_integration", "slide_deck", "_complete"]]:
     def _route_after_judge(
         state: StateDict,
@@ -441,6 +454,12 @@ def _make_route_after_judge(
                 print("▸ [路由] judge 通过 → slide_deck 生成结构化课件", file=sys.stderr)
                 return "slide_deck"
             print("▸ [路由] judge 通过 → slide_deck 已关闭，直接完成", file=sys.stderr)
+            return "_complete"
+        if not debate_enabled:
+            if slide_deck_enabled:
+                print("▸ [路由] 单专家 judge 未通过 → 保留当前课程并生成结构化课件", file=sys.stderr)
+                return "slide_deck"
+            print("▸ [路由] 单专家 judge 未通过 → 保留当前课程并直接完成", file=sys.stderr)
             return "_complete"
         current_round = state.get("revision_round", 0) or 0
         configured_cap = agent_runtime_settings("judge").max_revisions
@@ -475,6 +494,7 @@ def build_workflow(
     use_default_checkpointing: bool = True,
     workflow_log_root: str | Path | None = None,
     slide_deck_enabled: bool | None = None,
+    debate_enabled: bool | None = None,
 ) -> Any:
     builder = StateGraph(StateDict, context_schema=WorkflowContext)
     active_llm_client = llm_client or AgentLLMRouter.from_env()
@@ -484,6 +504,7 @@ def build_workflow(
     slide_deck_enabled = (
         _is_slide_deck_enabled() if slide_deck_enabled is None else slide_deck_enabled
     )
+    debate_enabled = _is_debate_enabled() if debate_enabled is None else debate_enabled
     pptx_enabled = slide_deck_enabled and _is_pptx_enabled()
 
     def _ensure_session_id(state: StateDict) -> dict[str, Any]:
@@ -497,6 +518,7 @@ def build_workflow(
             "feedback" if mode == "feedback" else "diagnosis"
         )
         updates["expert_phase"] = "draft"
+        updates["teach_phase"] = "debate" if debate_enabled else "single_agent"
         updates["workflow_status"] = "running"
         updates["revision_round"] = 0
         return updates
@@ -531,9 +553,10 @@ def build_workflow(
     )))
     builder.add_node("chat_answer", _wrap("chat_answer"))
     builder.add_node("expert_a", _wrap("expert_a"))
-    builder.add_node("expert_b", _wrap("expert_b"))
-    builder.add_node("_experts_barrier", _wrap_light(_advance_expert_phase, "_experts_barrier"))
-    builder.add_node("expert_a_integration", _wrap("expert_a", node_label="expert_a"))
+    if debate_enabled:
+        builder.add_node("expert_b", _wrap("expert_b"))
+        builder.add_node("_experts_barrier", _wrap_light(_advance_expert_phase, "_experts_barrier"))
+        builder.add_node("expert_a_integration", _wrap("expert_a", node_label="expert_a"))
     builder.add_node("judge", _wrap("judge"))
     if slide_deck_enabled:
         builder.add_node("slide_deck", _wrap("slide_deck"))
@@ -592,30 +615,33 @@ def build_workflow(
     )
 
     builder.add_edge("planner", "expert_a")
-    builder.add_edge("planner", "expert_b")
     builder.add_conditional_edges(
         "retrieve_context",
         _route_after_retrieve_context,
         {"chat_answer": "chat_answer"},
     )
 
-    builder.add_edge(["expert_a", "expert_b"], "_experts_barrier")
-    builder.add_conditional_edges(
-        "_experts_barrier",
-        _route_after_experts_barrier,
-        {
-            "expert_a": "expert_a",
-            "expert_b": "expert_b",
-            "expert_a_integration": "expert_a_integration",
-        },
-    )
-    builder.add_edge("expert_a_integration", "judge")
+    if debate_enabled:
+        builder.add_edge("planner", "expert_b")
+        builder.add_edge(["expert_a", "expert_b"], "_experts_barrier")
+        builder.add_conditional_edges(
+            "_experts_barrier",
+            _route_after_experts_barrier,
+            {
+                "expert_a": "expert_a",
+                "expert_b": "expert_b",
+                "expert_a_integration": "expert_a_integration",
+            },
+        )
+        builder.add_edge("expert_a_integration", "judge")
+    else:
+        builder.add_edge("expert_a", "judge")
     if slide_deck_enabled:
         builder.add_conditional_edges(
             "judge",
-            _make_route_after_judge(True),
+            _make_route_after_judge(True, debate_enabled),
             {
-                "expert_a_integration": "expert_a_integration",
+                **({"expert_a_integration": "expert_a_integration"} if debate_enabled else {}),
                 "slide_deck": "slide_deck",
             },
         )
@@ -625,9 +651,9 @@ def build_workflow(
     else:
         builder.add_conditional_edges(
             "judge",
-            _make_route_after_judge(False),
+            _make_route_after_judge(False, debate_enabled),
             {
-                "expert_a_integration": "expert_a_integration",
+                **({"expert_a_integration": "expert_a_integration"} if debate_enabled else {}),
                 "_complete": "_complete",
             },
         )
@@ -657,6 +683,7 @@ def run_workflow(
     input_payload: dict[str, Any] | None = None,
     parent_session_id: str | None = None,
     slide_deck_enabled: bool | None = None,
+    debate_enabled: bool | None = None,
 ) -> StateDict:
     print(f"\n{'='*60}", file=sys.stderr)
     print(f"工作流启动  session={session_id}  learner={learner_id or 'N/A'}", file=sys.stderr)
@@ -669,6 +696,7 @@ def run_workflow(
         checkpointer=checkpointer,
         store=store,
         slide_deck_enabled=slide_deck_enabled,
+        debate_enabled=debate_enabled,
     )
     result = workflow.invoke(
         {
@@ -676,7 +704,7 @@ def run_workflow(
             "user_input": user_input,
             "events": [],
             "artifacts": [],
-            "teach_phase": "debate",
+            "teach_phase": "debate" if debate_enabled is not False else "single_agent",
             "workflow_mode": workflow_mode,
             "input_payload": input_payload or {},
             "parent_session_id": parent_session_id,
@@ -706,6 +734,7 @@ async def arun_workflow(
     input_payload: dict[str, Any] | None = None,
     parent_session_id: str | None = None,
     slide_deck_enabled: bool | None = None,
+    debate_enabled: bool | None = None,
 ) -> StateDict:
     workflow = build_workflow(
         llm_client=llm_client,
@@ -715,6 +744,7 @@ async def arun_workflow(
         update_sink=update_sink,
         event_sink=event_sink,
         slide_deck_enabled=slide_deck_enabled,
+        debate_enabled=debate_enabled,
     )
     result = await workflow.ainvoke(
         {
@@ -722,7 +752,7 @@ async def arun_workflow(
             "user_input": user_input,
             "events": [],
             "artifacts": [],
-            "teach_phase": "debate",
+            "teach_phase": "debate" if debate_enabled is not False else "single_agent",
             "workflow_mode": workflow_mode,
             "input_payload": input_payload or {},
             "parent_session_id": parent_session_id,
