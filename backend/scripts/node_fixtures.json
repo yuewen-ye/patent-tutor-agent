@@ -1,0 +1,294 @@
+{
+  "_README": "编辑 fixtures 中对应节点/阶段的 state；运行器只读取，不会回写。字段应遵循 backend/app/schemas/state.py 和当前节点输入合同。",
+  "fixtures": {
+    "route": {
+      "state": {
+        "session_id": "node-route",
+        "user_input": "我想系统学习专利新颖性",
+        "workflow_mode": "auto",
+        "events": []
+      }
+    },
+    "retrieve_context": {
+      "state": {
+        "session_id": "node-retrieve",
+        "user_input": "什么是专利法中的新颖性？",
+        "events": []
+      }
+    },
+    "chat_answer": {
+      "state": {
+        "session_id": "node-chat",
+        "user_input": "什么是抵触申请？",
+        "retrieval_context": [
+          {
+            "chunk_id": "patent-law-22",
+            "source": "patent_law",
+            "citation": "专利法第二十二条",
+            "text": "新颖性，是指该发明或者实用新型不属于现有技术。",
+            "score": 0.9
+          }
+        ],
+        "events": []
+      }
+    },
+    "diagnosis_feedback.diagnosis": {
+      "state": {
+        "session_id": "node-diagnosis",
+        "user_input": "我想学习专利新颖性",
+        "intent": "diagnose",
+        "diagnosis_feedback_phase": "diagnosis",
+        "input_payload": {
+          "questionnaire_context": [],
+          "diagnostic_snapshot": {
+            "education_background": "其他",
+            "knowledge": {
+              "novelty-basic": {"pl": 0.35, "ci_low": 0.2, "ci_high": 0.5, "observations": 2, "low_confidence": false, "inferred": false}
+            },
+            "answer_log": []
+          }
+        },
+        "events": []
+      }
+    },
+    "diagnosis_feedback.feedback": {
+      "state": {
+        "session_id": "node-feedback",
+        "user_input": "继续学习专利新颖性",
+        "diagnosis_feedback_phase": "feedback",
+        "learner_profile": {},
+        "judge_report": {},
+        "input_payload": {
+          "exercise_responses": [],
+          "bkt_updates": [],
+          "mastery_snapshot": {},
+          "learning_progress_update": {},
+          "learning_progress_decision": {}
+        },
+        "events": []
+      }
+    },
+    "planner": {
+      "state": {
+        "session_id": "node-planner",
+        "user_input": "我想学习专利新颖性",
+        "learner_profile": {
+          "education_background": "其他",
+          "knowledge_level": "beginner",
+          "learning_style": "sensing/sequential",
+          "weak_points": ["新颖性"],
+          "learning_goal": "学习专利新颖性",
+          "error_pattern": "concept_confusion",
+          "confidence": 0.5,
+          "five_dimensions": {
+            "knowledge": {},
+            "cognition": {"remember": 0.4, "understand": 0.3, "apply": 0.2, "analyze": 0.1, "evaluate": 0.1, "create": 0.05},
+            "style": {
+              "perception": {"chosen": "sensing", "strength": 0.5},
+              "input": {"chosen": "verbal", "strength": 0.5},
+              "processing": {"chosen": "active", "strength": 0.5},
+              "understanding": {"chosen": "sequential", "strength": 0.5}
+            },
+            "progress": {"completed_nodes": [], "current_node": null, "pending_nodes": []},
+            "affect": {"primary_state": "interested", "confidence": 0.5, "signals": []}
+          }
+        },
+        "events": []
+      }
+    },
+    "expert_a.draft": {
+      "state": {
+        "session_id": "node-expert-a",
+        "user_input": "学习专利新颖性",
+        "expert_phase": "draft",
+        "teach_phase": "single_agent",
+        "teaching_context": {
+          "current_node_id": "novelty-basic",
+          "current_topic": {"node_id": "novelty-basic", "node_name": "新颖性基础"},
+          "backward_review_nodes": [],
+          "forward_probe_nodes": [],
+          "weakness_probe_nodes": [],
+          "planner_guidance": {"lesson_focus": ["新颖性"]},
+          "planning_directive": {"question_scope": {}}
+        },
+        "learner_profile": {},
+        "events": []
+      }
+    },
+    "expert_b.draft": {
+      "state": {
+        "session_id": "node-expert-b",
+        "user_input": "学习专利新颖性",
+        "expert_phase": "draft",
+        "teach_phase": "debate",
+        "teaching_context": {
+          "current_node_id": "novelty-basic",
+          "current_topic": {"node_id": "novelty-basic", "node_name": "新颖性基础"},
+          "backward_review_nodes": [],
+          "forward_probe_nodes": [],
+          "weakness_probe_nodes": [],
+          "planner_guidance": {"lesson_focus": ["新颖性"]},
+          "planning_directive": {"question_scope": {}}
+        },
+        "learner_profile": {},
+        "events": []
+      }
+    },
+    "expert_a.cross_review": {
+      "state": {
+        "session_id": "node-expert-a-review",
+        "user_input": "学习专利新颖性",
+        "expert_phase": "cross_review",
+        "teaching_context": {"current_node_id": "novelty-basic", "current_topic": {"node_id": "novelty-basic", "node_name": "新颖性基础"}, "backward_review_nodes": [], "forward_probe_nodes": [], "weakness_probe_nodes": [], "planner_guidance": {}, "planning_directive": {}},
+        "expert_a_draft": {},
+        "expert_b_draft": {},
+        "events": []
+      }
+    },
+    "expert_a.revision": {
+      "state": {
+        "session_id": "node-expert-a-revision",
+        "user_input": "学习专利新颖性",
+        "expert_phase": "revision",
+        "teaching_context": {"current_node_id": "novelty-basic", "current_topic": {"node_id": "novelty-basic", "node_name": "新颖性基础"}, "backward_review_nodes": [], "forward_probe_nodes": [], "weakness_probe_nodes": [], "planner_guidance": {}, "planning_directive": {}},
+        "expert_a_draft": {},
+        "expert_b_draft": {},
+        "expert_a_cross_review": {},
+        "expert_b_cross_review": {},
+        "events": []
+      }
+    },
+    "expert_a.integration": {
+      "state": {
+        "session_id": "node-expert-a-integration",
+        "user_input": "学习专利新颖性",
+        "expert_phase": "integration",
+        "teach_phase": "debate",
+        "teaching_context": {"current_node_id": "novelty-basic", "current_topic": {"node_id": "novelty-basic", "node_name": "新颖性基础"}, "backward_review_nodes": [], "forward_probe_nodes": [], "weakness_probe_nodes": [], "planner_guidance": {}, "planning_directive": {}},
+        "expert_a_draft": {},
+        "expert_b_draft": {},
+        "expert_a_cross_review": {},
+        "expert_b_cross_review": {},
+        "events": []
+      }
+    },
+    "expert_b.cross_review": {
+      "state": {
+        "session_id": "node-expert-b-review",
+        "user_input": "学习专利新颖性",
+        "expert_phase": "cross_review",
+        "teaching_context": {"current_node_id": "novelty-basic", "current_topic": {"node_id": "novelty-basic", "node_name": "新颖性基础"}, "backward_review_nodes": [], "forward_probe_nodes": [], "weakness_probe_nodes": [], "planner_guidance": {}, "planning_directive": {}},
+        "expert_a_draft": {},
+        "expert_b_draft": {},
+        "events": []
+      }
+    },
+    "expert_b.revision": {
+      "state": {
+        "session_id": "node-expert-b-revision",
+        "user_input": "学习专利新颖性",
+        "expert_phase": "revision",
+        "teaching_context": {"current_node_id": "novelty-basic", "current_topic": {"node_id": "novelty-basic", "node_name": "新颖性基础"}, "backward_review_nodes": [], "forward_probe_nodes": [], "weakness_probe_nodes": [], "planner_guidance": {}, "planning_directive": {}},
+        "expert_b_draft": {},
+        "expert_a_cross_review": {},
+        "events": []
+      }
+    },
+    "judge": {
+      "state": {
+        "session_id": "node-judge",
+        "user_input": "学习专利新颖性",
+        "teach_phase": "single_agent",
+        "expert_a_draft": {"expert": "expert_a", "teaching_content": "请在此填入待审核的整合课程稿", "knowledge_points": [{"node_id": "novelty-basic", "kc_name": "新颖性"}], "legal_basis": [], "risks": []},
+        "retrieval_context": [],
+        "learner_profile": {},
+        "learning_path": [],
+        "events": []
+      }
+    },
+    "slide_deck": {
+      "source_session": "4356216d023f45caa6257802f924c8b9",
+      "source_artifacts": [
+        "artifacts/sessions/4356216d023f45caa6257802f924c8b9/round-01/course_package.md",
+        "artifacts/sessions/4356216d023f45caa6257802f924c8b9/course_slides.md"
+      ],
+      "state": {
+        "session_id": "node-slide-deck-real-session",
+        "user_input": "基于真实会话产物重新生成结构化课件",
+        "course_package": {
+          "expert": "A+B融合",
+          "style": "fused",
+          "knowledge_points": [
+            {"node_id": "patentability-substantive", "kc_name": "发明/实用新型授权实质条件：新颖性、创造性和实用性三性齐备（专利法第22条第1款）"},
+            {"node_id": "patentability-substantive", "kc_name": "外观设计授权条件：不属于现有设计、与现有设计组合相比有明显区别、不与在先合法权利冲突（第23条）"},
+            {"node_id": "patentability-substantive", "kc_name": "不授予专利权的主题（专利法第25条，详见子节点 non-patentable-subject）"},
+            {"node_id": "patentability-substantive", "kc_name": "三性判断顺序：创造性判断以具备新颖性为前提，实用性先于新颖性创造性审查"},
+            {"node_id": "patentability-substantive", "kc_name": "新颖性、创造性和实用性的各自定义与判断规则（第22条第2/3/4款，详见子节点 novelty、inventive-step、practical-applicability）"}
+          ],
+          "legal_basis": [
+            {"article": "《专利法》第22条", "source": "《中华人民共和国专利法》（2024修正）"},
+            {"article": "《专利法》第23条", "source": "《中华人民共和国专利法》（2024修正）"},
+            {"article": "《专利法》第25条", "source": "《中华人民共和国专利法》（2024修正）"}
+          ],
+          "teaching_content": "## I — 法律问题\n在已有商标与著作权经验基础上，如何系统理解专利授权的实质条件，包括发明和实用新型的授权条件、外观设计的授权条件，以及哪些主题不予授权？\n\n## R — 适用规则\n《专利法》第22条第1款：授予发明和实用新型专利的条件是新颖性、创造性和实用性。\n《专利法》第22条第2款：新颖性是指该发明或实用新型是申请日以前没有相同地公开的。\n《专利法》第22条第3款：创造性是指该发明或实用新型对所属技术领域的技术人员来说，是一种非显而易见的。\n《专利法》第22条第4款：实用性是指该发明或实用新型能够制造或者使用，并且能够产生积极效果。\n《专利法》第23条：授予外观设计专利的条件是该外观设计与现有设计相比具有明显区别，并不与在先的合法权利相冲突。\n《专利法》第25条：科学发现、智力活动的规则和方法、疾病的诊断和治疗方法、动物和植物品种等主题不授予专利权。\n\n## A — 规则适用\n专利授权实质条件的核心是三性齐备（发明/实用新型）或特定区别要求（外观设计）。首先判断保护客体，再审查实用性、新颖性和创造性；创造性以新颖性为前提。外观设计强调整体视觉效果对比，而非技术特征逐一对比。\n\n## C — 结论\n一项发明或实用新型必须同时具备新颖性、创造性和实用性才能获得授权；外观设计需满足不属于现有设计、与现有设计有明显区别且不与在先权利冲突；不符合上述条件的主题不予授权。",
+          "risks": [
+            {"risk": "新颖性、创造性与实用性三性混淆或顺序错误", "related_node_id": "patentability-substantive"},
+            {"risk": "发明/实用新型新颖性判断标准与外观设计新颖性判断标准的混淆", "related_node_id": "patentability-substantive"},
+            {"risk": "不授予专利权的主题范围界定不清", "related_node_id": "patentability-substantive"},
+            {"risk": "科学发现与发明创造的区分不清", "related_node_id": "patentability-substantive"}
+          ],
+          "draft_stage": "integration",
+          "irac": {"issue": "如何判断一项发明或实用新型或外观设计是否符合专利授权实质条件？", "rule": "《专利法》第22条、第23条和第25条规定专利授权条件及不授予专利权的主题。", "application": "三性判断顺序为新颖性先于创造性、实用性先于新颖性创造性审查；外观设计授权强调整体视觉效果对比。", "conclusion": "必须三性齐备或满足外观设计特定条件才能授权，否则不予授权。"},
+          "knowledge_synthesis": {"node": "patentability-substantive", "coverage": [{"node_id": "patentability-substantive"}], "confusable_pairs": [{"pair": "发明/实用新型新颖性判断 vs 外观设计新颖性判断"}, {"pair": "科学发现与发明创造的区分"}]}
+        },
+        "learner_profile": {},
+        "events": []
+      }
+    },
+    "generate_pptx": {
+      "source_session": "4356216d023f45caa6257802f924c8b9",
+      "source_artifacts": [
+        "artifacts/sessions/4356216d023f45caa6257802f924c8b9/round-01/course_package.md",
+        "artifacts/sessions/4356216d023f45caa6257802f924c8b9/course_slides.md",
+        "artifacts/sessions/4356216d023f45caa6257802f924c8b9/presentation/pptx_manifest.json"
+      ],
+      "state": {
+        "session_id": "node-generate-pptx-real-session",
+        "user_input": "基于真实会话产物重新生成 PowerPoint",
+        "course_package": {
+          "title": "专利授权实质条件：发明、实用新型与外观设计",
+          "expert": "A+B融合",
+          "style": "fused",
+          "knowledge_points": [
+            {"node_id": "patentability-substantive", "kc_name": "发明/实用新型授权实质条件：新颖性、创造性和实用性三性齐备（专利法第22条第1款）"},
+            {"node_id": "patentability-substantive", "kc_name": "外观设计授权条件：不属于现有设计、与现有设计组合相比有明显区别、不与在先合法权利冲突（第23条）"},
+            {"node_id": "patentability-substantive", "kc_name": "不授予专利权的主题（专利法第25条，详见子节点 non-patentable-subject）"}
+          ],
+          "legal_basis": [
+            {"article": "《专利法》第22条", "source": "《中华人民共和国专利法》（2024修正）"},
+            {"article": "《专利法》第23条", "source": "《中华人民共和国专利法》（2024修正）"},
+            {"article": "《专利法》第25条", "source": "《中华人民共和国专利法》（2024修正）"}
+          ],
+          "teaching_content": "专利授权实质条件的核心是三性齐备（发明/实用新型）或特定区别要求（外观设计）。发明和实用新型必须具备新颖性、创造性和实用性；外观设计需与现有设计相比具有明显区别且不与在先合法权利冲突；科学发现、智力活动规则、疾病诊断治疗方法等主题不授予专利权。",
+          "risks": [{"risk": "新颖性、创造性与实用性三性混淆或顺序错误", "related_node_id": "patentability-substantive"}],
+          "draft_stage": "integration"
+        },
+        "course_slides": {
+          "slides": [
+            {"id": "slide_001", "order": 1, "type": "title", "title": "专利授权实质条件：发明、实用新型与外观设计", "content": {"subtitle": "从三性齐备到外观设计的整体视觉区别"}, "narration": {"text": "大家好，我们开始学习专利授权的实质条件。这节课要弄清楚三件事：发明和实用新型要满足哪三个条件，外观设计有哪些不同的授权标准，以及哪些主题不能授予专利。我们先进入一个发明人的真实场景，再逐条对照《专利法》第22条、第23条和第25条。"}},
+            {"id": "slide_002", "order": 2, "type": "content", "title": "锚定场景：新型机器人导航器", "content": {"definition": "发明人开发了一种能自动避障并记录路径的机器人导航器，担心在技术会议展示后破坏新颖性，同时需要判断它是否属于可授权保护客体。", "key_points": ["先判断方案属于发明、实用新型还是外观设计", "再判断是否落入《专利法》第25条排除主题", "最终审查发明/实用新型的三性或外观设计的特定条件"]}, "narration": {"text": "假设你是专利代理人，一位发明人开发了新型机器人导航器，它能自动避障并记录路径。发明人想申请专利，却担心在技术会议上展示会影响新颖性。面对这个方案，你先不要急着写申请文件，第一步是确认它属于哪一类保护客体，第二步再考虑它要满足哪些授权实质条件。今天的所有规则，都围绕这个场景展开。"}},
+            {"id": "slide_003", "order": 3, "type": "content", "title": "法条依据", "content": {"items": ["《专利法》第22条第1款：发明和实用新型需具备新颖性、创造性和实用性", "《专利法》第23条：外观设计与现有设计相比具有明显区别且不与在先合法权利冲突", "《专利法》第25条：科学发现、智力活动规则、疾病诊疗方法等主题不授予专利权"]}, "narration": {"text": "先锚定法条依据。《专利法》第22条第1款规定，授予发明和实用新型专利要同时具备新颖性、创造性和实用性；第23条要求外观设计与现有设计相比具有明显区别，并且不能与在先的合法权利相冲突；第25条则把科学发现、智力活动的规则和方法、疾病诊断治疗方法等主题明确排除在授权范围之外。后面每一步判断都要回到这三条上来。"}},
+            {"id": "slide_004", "order": 4, "type": "content", "title": "发明与实用新型的三性", "content": {"definition": "发明、实用新型授权必须三性齐备：新颖性、创造性、实用性缺一不可。", "key_points": ["新颖性：申请日以前没有相同的公开", "创造性：对所属技术领域的技术人员来说是非显而易见的", "实用性：能够制造或使用，并且能够产生积极效果"]}, "narration": {"text": "发明和实用新型的三性可以理解成三道关卡。第一关是新颖性，看申请日以前有没有相同方案被公开；第二关是创造性，看对本领域技术人员来说是否非显而易见；第三关是实用性，看技术方案是否能够制造或使用并产生积极效果。三道关卡必须全部通过，也就是三性齐备。任何一个条件不满足，都不能获得授权。"}},
+            {"id": "slide_005", "order": 5, "type": "content", "title": "三性判断顺序", "content": {"steps": ["先判断是否属于可授权保护客体，不落入《专利法》第25条排除范围", "实用性审查：能够制造或使用并产生积极效果", "新颖性审查：申请日以前没有相同公开", "创造性审查：以具备新颖性为前提，对本领域技术人员非显而易见", "结论：三性齐备方可授权，任一不足即不授权"]}, "narration": {"text": "三性判断有固定顺序。第一步先看保护客体，确定方案没有被第25条排除；随后进入三性审查，实用性要求方案能制造或使用并产生积极效果；之后检查新颖性，看申请日前有无相同公开。创造性判断以具备新颖性为前提，只有先确认方案没有被单独公开，才继续讨论它是否显而易见。"}},
+            {"id": "slide_006", "order": 6, "type": "content", "title": "发明、实用新型与外观设计", "content": {"compare_a": "发明/实用新型", "compare_b": "外观设计", "differences": ["判断对象：技术方案 vs 整体视觉效果", "判断主体：所属技术领域的技术人员 vs 一般消费者", "创造性要求：非显而易见 vs 与现有设计相比有明显区别", "在先冲突：一般不直接涉及 vs 不得与在先合法权利冲突"]}, "narration": {"text": "外观设计与发明、实用新型的授权思路不同。发明和实用新型判断的是技术方案，判断主体是本领域技术人员；外观设计判断的是整体视觉效果，判断主体是一般消费者。外观设计不仅要求不属于现有设计，还要求与现有设计相比具有明显区别，并且不能与在先合法权利冲突。所以不要用技术特征的一一对比去评价外观设计。"}},
+            {"id": "slide_007", "order": 7, "type": "content", "title": "不授予专利权的主题", "content": {"definition": "《专利法》第25条明确排除的主题，不能授予专利权。", "key_points": ["科学发现", "智力活动的规则和方法", "疾病的诊断和治疗方法", "动物和植物品种", "食品配方和部分制备方法等", "基于科学发现开发出的具体技术方案仍可能申请发明专利"]}, "narration": {"text": "第25条相当于保护客体之门。科学发现、智力活动的规则和方法、疾病的诊断和治疗方法、动物和植物品种，以及食品配方和部分制备方法等，属于明确不予授权的主题。这里要特别区分：科学发现本身不能授予专利；但如果把发现应用到具体技术方案上，形成可制造、可使用并产生积极效果的方法或产品，仍然可以申请发明专利。"}},
+            {"id": "slide_008", "order": 8, "type": "content", "title": "易混淆点辨析", "content": {"compare_a": "发明/实用新型新颖性判断", "compare_b": "外观设计新颖性判断", "differences": ["判断主体：技术领域技术人员 vs 一般消费者", "比较对象：技术方案是否被单独公开 vs 整体视觉效果是否相同或实质相同", "明显区别：无此特别要求 vs 与现有设计相比具有明显区别", "科学发现不等于发明创造，但基于发现的落地技术方案可申请专利"]}, "narration": {"text": "这里有两大易混淆点。第一组，发明和实用新型的新颖性，是看技术方案是否被单独公开，由本领域技术人员判断；外观设计看的是整体视觉效果是否相同或实质相同，由一般消费者判断。第二组，科学发现属于抽象规则或自然现象本身，不能授权；只有把发现落地成具体技术方案，才能申请发明专利。"}},
+            {"id": "slide_009", "order": 9, "type": "summary", "title": "本节回顾：专利授权实质条件", "content": {"takeaways": ["发明/实用新型：新颖性、创造性、实用性三性必齐", "外观设计：不属于现有设计、有明显区别、不与在先合法权利冲突", "科学发现、智力活动规则、疾病诊疗方法等明确排除", "创造性以新颖性为前提，实用性先于新颖性和创造性审查", "发明/实用新型由技术人员判断，外观设计由一般消费者判断"]}, "narration": {"text": "最后我们收束一下。发明和实用新型必须同时具备新颖性、创造性和实用性；外观设计需要不属于现有设计、与现有设计相比有明显区别，并且不得与在先合法权利冲突；科学发现等主题则明确不予授权。审查时还要记住顺序和判断主体差异，把保护客体之门和三性判断整套逻辑记住，后续分析具体方案就有章法了。"}}
+          ],
+          "slide_to_block_id": {}
+        },
+        "events": []
+      }
+    }
+  }
+}

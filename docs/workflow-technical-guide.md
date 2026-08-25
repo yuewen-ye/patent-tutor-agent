@@ -170,7 +170,45 @@ Judge 通过且 `PATENT_TUTOR_SLIDE_DECK_ENABLED` 开启时，`slide_deck` 先�
 AI 不直接返回二进制文件、XML、任意坐标或网络资源。PPTX 生成失败只降级该 artifact，不影响课程、
 Markdown 课件或逐页讲稿音频。LLM 作为 Visual Director 自动选择主题包、模板、构图和语义图形；后端执行白名单校验、相邻模板去重和至少三种模板的 deck 多样性校验。
 
-## 5. 运行入口
+## 5. 单节点真实模型冒烟测试
+
+不需要每次修改都跑完整工作流。`backend/scripts/run_node.py` 会绕过 LangGraph，只构造并执行一个 Agent/检索节点；它仍通过 `AgentLLMRouter.from_env()` 读取 `.env` 和 `config/agents.yaml`，因此使用与正式运行相同的 Provider、模型、fallback 和重试配置。
+
+节点上游状态集中维护在 `backend/scripts/node_fixtures.json`。后续只需修改对应 fixture 的 `state`，不需要修改运行器代码；运行器不会把输出回写 fixture。阶段节点使用 `<node>.<phase>` 键，例如 `expert_a.draft`、`expert_a.cross_review`、`diagnosis_feedback.diagnosis`。`generate_pptx` 是图层节点，不属于 Agent 工厂，但也可以单独运行；它需要同时提供 `course_package` 和 `course_slides`，并要求 `--artifact-root` 可写。
+
+PowerShell：
+
+```powershell
+# 交互选择节点
+.\scripts\run-node.ps1
+
+# 指定节点和阶段
+.\scripts\run-node.ps1 -Node expert_a -Phase draft
+.\scripts\run-node.ps1 -Node judge
+.\scripts\run-node.ps1 -Node generate_pptx
+
+# 输出 JSON 到终端
+.\scripts\run-node.ps1 -Node route -Json
+```
+
+Python 入口等价于：
+
+```powershell
+uv run python backend/scripts/run_node.py --node expert_a --phase draft
+```
+
+默认不创建、不连接 `MySQLLearnerStore`，也不执行完整图的 `_init`、路由或持久化副作用。每次运行写入 `artifacts/node-runs/{UTC时间}-{node}/`：
+
+- `run.json`：节点、fixture、Provider/模型、状态和运行结果；
+- `input_state.json`：本次实际输入状态；
+- `updates.json`：节点返回的更新；
+- `output_state.json`：输入与更新合并后的调试快照；
+- `node.log`：节点级日志；
+- `error.json`：失败时的异常和 traceback。
+
+LLM 的请求/响应 telemetry 仍由既有日志上下文写入同一 `artifacts/node-runs/sessions/{session_id}/llm_calls.log.jsonl` 和 `llm_payloads.log.jsonl` 路径。该模式会产生真实模型调用和费用；需要离线检查时继续使用 `uv run pytest -m unit`。
+
+## 6. 运行入口
 
 - FastAPI：`uv run python backend/main.py`
 - CLI：`uv run python backend/scripts/run_workflow.py --user-input "我想学习专利新颖性" --artifact-root artifacts --learner-id learner-demo`

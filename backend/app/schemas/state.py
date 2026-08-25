@@ -543,12 +543,12 @@ class Assessment(ContractModel):
 # 讲稿 narration（页面文字 ≠ 老师说的话）。TTS 合成后回填 audio_url/duration_sec。
 SlideType = Literal[
     "title",
-    "concept",
-    "bullet",
-    "comparison",
-    "process",
-    "example",
     "summary",
+    "scenario",
+    "law-basis",
+    "example",
+    "assessment",
+    "content",
 ]
 
 

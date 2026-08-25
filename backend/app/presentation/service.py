@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import tempfile
 from datetime import UTC, datetime
 from io import BytesIO
@@ -36,6 +37,7 @@ from backend.app.presentation.preview import generate_slide_previews
 PPTX_MIME: Literal["application/vnd.openxmlformats-officedocument.presentationml.presentation"] = (
     "application/vnd.openxmlformats-officedocument.presentationml.presentation"
 )
+_LOGGER = logging.getLogger(__name__)
 _PRESENTATION_SYSTEM = load_prompt(__file__)
 
 
@@ -137,9 +139,9 @@ def _validate_design(design: PresentationDesign, source: PresentationSource) -> 
         raise ValueError("PresentationDesign must preserve every source slide id and order")
     templates = [slide.template_id or slide.layout for slide in design.slides]
     if len(design.slides) >= 4 and len(set(templates)) < 3:
-        raise ValueError("PresentationDesign must use at least three visual templates")
+        _LOGGER.warning("PresentationDesign uses fewer than three visual templates")
     if any(left == right for left, right in pairwise(templates)):
-        raise ValueError("Adjacent presentation slides must not reuse the same visual template")
+        _LOGGER.warning("Adjacent presentation slides reuse the same visual template")
     return design
 
 

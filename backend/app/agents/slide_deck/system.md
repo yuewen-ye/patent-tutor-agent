@@ -53,9 +53,10 @@
 4. **首尾完整**：第 1 页必须是 `title`（封面，浅色奶油底 + 左侧大标题 + 右侧 rule 装饰条），最后一页必须是 `summary`（要点回顾 + 浅杏 `#FFE8D0` 金句 callout），中间可穿插 assessment 练习。
 5. **图文并茂**：至少 60% 的内容页要使用语义图示映射到相应的 layout，不要连续 2 页以上全部是 body + bullets 纯文字页。
 
-## SlideType 可选值（必须使用其中之一；会映射到"暖橙疗愈浅色"模板）
+## SlideType 可选值（必须严格使用以下值；不得输出其他 type）
 
-> 设计基调：不要 `concept / bullet / comparison / process` 这种旧类型，全部映射到下表。
+`type` 只能是 `title`、`summary`、`scenario`、`law-basis`、`example`、`assessment`、`content`。
+禁止输出 `concept`、`bullet`、`comparison`、`process` 或任何未列出的值。流程、对比、IRAC、证据链和概念关系图必须使用上述合法类型，并通过 `content` 内的 `body`、`bullets`、`takeaways` 表达。
 
 | type 值 | 用途 | 典型 content 结构 | 对应浅色 template |
 |---|---|---|---|
@@ -65,16 +66,18 @@
 | `law-basis` | 法律依据、法条原文、司法解释 | `{ "body": "法条原文", "takeaways": ["核心要件1",…≤4条] }` | `legal_citation_focus`（法条原文左侧奶油浅杏大卡 + 右侧要件要点）|
 | `example` | 案例讲解 / 判例拆解 / 实例对比 | `{ "body": "案情叙述", "takeaways": ["裁判要旨1",…≤4条] }` | `case_analysis_split`（左右分栏，案情 vs 结论）|
 | `assessment` | 练习测评 / 自测 / 易错题分析 | `{ "body": "题干", "bullets": ["A. 选项",…≤4条], "takeaways": ["正确答案", "解析"] }` | `exam_checklist`（白底问题卡 + 选项编号 + 答案解析浅杏区）|
-| `content` | 一般正文、概念定义、构成要件、流程步骤（内容≤4步时仍用此，超长用下面的专用 flow/comparison）| `{ "body": "概念定义/总起句", "takeaways": ["要点1",…≤6条] }` | `content_rule_card` 或 `content_bullet_grid`（要点 2–3 列网格）|
+| `content` | 一般正文、概念定义、构成要件、流程步骤 | `{ "body": "概念定义/总起句", "takeaways": ["要点1"], "bullets": ["步骤或对比项"] }` | `content_rule_card` 或 `content_bullet_grid`（要点 2–3 列网格）|
 
-### 流程 / 对比类 —— 不要塞进 `content`，显式指定下面的专用 type（即使 Pydantic 把它们归类成 content 内部语义也没关系，保证结构可读）
+### 流程 / 对比类的表达
 
-- 若页面是**步骤流程/时间线**：`type` 仍填 `content`，但 `bullets` 数组每项加 `①②③` 编号，长度 ≤ 6；对应前端映射 `timeline_process`。
-- 若页面是**两者对比**：`type` 仍填 `content`，用 `left_items` / `right_items` 各 ≤ 6；对应前端映射 `comparison_matrix`。
-- 若页面是**法律推理 IRAC（问题→规则→适用→结论）**：`type` 填 `law-basis`，`content` 里区分四小节；对应前端 `irac_flow`。
-- 若页面是**证据链/要点堆叠**：`type` 填 `content`，takeaways ≤ 6；对应前端 `evidence_stack`。
-- 若页面是**决策树/分支判断**：`type` 填 `example`；对应前端 `decision_tree`。
-- 若页面是**概念关系图**：`type` 填 `content`；对应前端 `concept_map`。
+这些是 `content` 的页面语义，不是额外的 `type`：
+
+- **步骤流程/时间线**：`type` 填 `content`，`content.bullets` 每项加 `1.`、`2.`、`3.` 编号，最多 6 条。
+- **两者对比**：`type` 填 `content`，仅使用 `content.body`、`content.bullets`、`content.takeaways` 表达两列信息；不要输出 `left_items`、`right_items` 等未在 SlideDeck schema 中声明的顶层字段。
+- **法律推理 IRAC**：`type` 填 `law-basis`，在 `content.body` 内用换行分段表达问题、规则、适用、结论。
+- **证据链/要点堆叠**：`type` 填 `content`，使用 `content.takeaways`，最多 6 条。
+- **决策树/分支判断**：`type` 填 `example`，在 `content.bullets` 中表达判断分支。
+- **概念关系图**：`type` 填 `content`，使用 `content.body` 和 `content.takeaways`。
 
 ### 课程 block_type → slide.type 映射（结构 Agent 必读）
 
@@ -106,21 +109,43 @@
 
 ```json
 {
-  "theme": "warm_orange",
   "slides": [
     {
       "id": "slide_001",
       "order": 1,
       "type": "title",
       "title": "课程标题",
-      "subtitle": "一句话副标题（可选，≤25中文字）",
       "content": {
-        "subtitle": "（可选）若副标题需要额外 tagline 放这里"
+        "subtitle": "一句话副标题或学习目标"
       },
       "narration": {
-        "text": "大家好，今天我们来学习……（70-160中文字 · 口语化讲稿）",
-        "audio_url": "",
-        "duration_sec": null
+        "text": "大家好，今天我们来学习……（70-160中文字，口语化讲稿）"
+      }
+    },
+    {
+      "id": "slide_002",
+      "order": 2,
+      "type": "content",
+      "title": "核心概念",
+      "content": {
+        "body": "概念定义和必要说明",
+        "takeaways": ["关键要点"],
+        "bullets": ["步骤或判断标准"]
+      },
+      "narration": {
+        "text": "这一页我们解释核心概念，并说明它在实际判断中的作用。"
+      }
+    },
+    {
+      "id": "slide_003",
+      "order": 3,
+      "type": "summary",
+      "title": "本课小结",
+      "content": {
+        "takeaways": ["本课必记结论"]
+      },
+      "narration": {
+        "text": "最后我们回顾本课的关键结论。"
       }
     }
   ],
@@ -133,12 +158,11 @@
 - `id` 用 `slide_001` 形式（三位序号，与 order 对应）。
 - `order` 从 1 起，**连续且唯一**。
 - `type` 只能是上表 7 种之一；第 1 页必须 `title`，最后一页建议 `summary`。
-- `theme` **固定写 `"warm_orange"`**（浅色疗愈）。不要写 `"warm_orange_premium"`。
 - `title`：**单页标题 ≤ 16 中文字**（约 20~22 字含标点），超长必须精简（瑞士风标题宜短、语义精）。
-- `subtitle`：**≤ 25 中文字**，只做辅助，信息密度不得超过主标题。
-- `content.takeaways / key_points / highlights`：**最多 6 条，每条 ≤ 20 中文字**；超过会被前端截断成"+ N 项…"。
-- `content.bullets / points / items`：**最多 8 条，每条 ≤ 20 中文字**。
-- `content.body / text / description`：**≤ 5 行，每行 ≤ 40 中文字**；用换行符分段，不要整段大长句。
+- 不要在 slide 对象中输出 `subtitle`、`theme` 或其他 schema 未声明的顶层字段；副标题只能放在 `content.subtitle`。
+- `content.takeaways`：**最多 6 条，每条 ≤ 20 中文字**；超过会被前端截断成"+ N 项…"。
+- `content.bullets`：**最多 8 条，每条 ≤ 20 中文字**。
+- `content.body`：**≤ 5 行，每行 ≤ 40 中文字**；用换行符分段，不要整段大长句。
 - 每页至少在 takeaways / bullets / body 三者之一有内容，**不要留空**。
 - `narration.text`：**每页 70–160 中文字**（朗读 25–45 秒），口语化、自洽，能脱离页面独立播放；结尾用"我们来看下一页"或"……"自然过渡。
 - 页数 8–15 页为宜：把 course_package 的 `block_plan.blocks`（如有）作为分页参考，一页可合并 1–2 个 block，单个 block 信息量大就拆两页。

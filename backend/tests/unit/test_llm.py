@@ -6,6 +6,7 @@ from typing import Any, cast
 import httpx
 import pytest
 
+from backend.app.agents.common import generate_validated_json_stream
 from backend.app.core.agent_runtime_config import (
     AgentRuntimeConfigError,
     clear_agent_runtime_config_cache,
@@ -17,6 +18,9 @@ from backend.app.core.llm import (
     LLMMessage,
     LLMProviderConfig,
     LLMProviderError,
+    LLMResponseWithTools,
+    ToolCall,
+    ToolDefinition,
     _post_chat_completion_stream,
     _strict_schema_rejected,
     call_llm,
@@ -970,6 +974,84 @@ def test_semantic_validation_failure_uses_fallback_then_returns_to_primary(monke
         ("deepseek", "deepseek-v4-pro"),
         ("gpt", "gpt-5.6-terra"),
         ("deepseek", "deepseek-v4-pro"),
+    ]
+
+
+def test_invalid_tool_call_uses_fallback_model(monkeypatch) -> None:
+    _patch_retry_times(monkeypatch, 2)
+    calls: list[tuple[str | None, str | None]] = []
+    script: dict[tuple[str | None, str | None], list[LLMResponseWithTools]] = {
+        ("deepseek", "deepseek-v4-pro"): [
+            LLMResponseWithTools(content=None, tool_calls=[ToolCall("1", "wrong", {})])
+        ],
+        ("gpt", "gpt-5.6-terra"): [
+            LLMResponseWithTools(content=None, tool_calls=[ToolCall("2", "allowed", {"q": "x"})])
+        ],
+    }
+
+    def fake_tools(*, provider, model_name, **kwargs):
+        calls.append((provider, model_name))
+        return script[(provider, model_name)].pop(0)
+
+    monkeypatch.setattr("backend.app.core.llm.call_llm_tools", fake_tools)
+    tools = [ToolDefinition(name="allowed", description="", parameters={})]
+
+    def validator(response: LLMResponseWithTools) -> LLMResponseWithTools:
+        if len(response.tool_calls) != 1 or response.tool_calls[0].name != "allowed":
+            raise ValueError("unexpected tool call")
+        return response
+
+    result = _fallback_router().generate_validated_with_tools(
+        [LLMMessage(role="user", content="hi")],
+        tools,
+        0.5,
+        validator=validator,
+        agent="expert_b",
+    )
+
+    assert result.tool_calls[0].name == "allowed"
+    assert calls == [
+        ("deepseek", "deepseek-v4-pro"),
+        ("gpt", "gpt-5.6-terra"),
+    ]
+
+
+def test_streamed_contract_failure_uses_fallback_model(monkeypatch) -> None:
+    from pydantic import BaseModel
+
+    class Answer(BaseModel):
+        answer: str
+
+    _patch_retry_times(monkeypatch, 2)
+    calls: list[tuple[str | None, str | None]] = []
+    script: dict[tuple[str | None, str | None], list[object]] = {
+        ("deepseek", "deepseek-v4-pro"): ['{"wrong": true}', '{"wrong": true}'],
+        ("gpt", "gpt-5.6-terra"): ['{"answer": "fallback"}'],
+    }
+
+    def fake_stream(*, provider, model_name, **kwargs):
+        calls.append((provider, model_name))
+        outcome = script[(provider, model_name)].pop(0)
+        if isinstance(outcome, Exception):
+            raise outcome
+        yield outcome
+
+    monkeypatch.setattr("backend.app.core.llm.call_llm_json_stream", fake_stream)
+
+    result = generate_validated_json_stream(
+        _fallback_router(),
+        messages=[LLMMessage(role="user", content="hi")],
+        temperature=0.5,
+        agent="expert_b",
+        output_model=Answer,
+        schema_name="Answer",
+    )
+
+    assert result.answer == "fallback"
+    assert calls == [
+        ("deepseek", "deepseek-v4-pro"),
+        ("deepseek", "deepseek-v4-pro"),
+        ("gpt", "gpt-5.6-terra"),
     ]
 
 
