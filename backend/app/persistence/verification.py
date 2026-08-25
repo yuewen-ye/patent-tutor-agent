@@ -462,6 +462,10 @@ def run_write_smoke_test(database: MySQLDatabase) -> list[VerificationCheck]:
             with database.transaction() as connection:
                 cursor = connection.cursor()
                 cursor.execute(
+                    "DELETE FROM learner_learning_plan_decisions WHERE student_id=%s",
+                    (learner_id,),
+                )
+                cursor.execute(
                     "DELETE FROM learner_learning_plan_nodes WHERE plan_id IN "
                     "(SELECT plan_id FROM learner_learning_plans WHERE student_id=%s)",
                     (learner_id,),
