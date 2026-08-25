@@ -248,11 +248,32 @@ def generate_validated_json(
         current_messages.insert(0, schema_instruction)
 
     validated_generate = getattr(llm_client, "generate_structured_validated_json", None)
-    if semantic_validate is not None and callable(validated_generate):
+    if callable(validated_generate):
         def validate_provider_response(raw: object) -> ContractT:
             result = output_model.model_validate(normalize(raw) if normalize is not None else raw)
-            semantic_validate(result)
+            if semantic_validate is not None:
+                semantic_validate(result)
             return result
+
+        def build_structured_repair_messages(
+            prior_messages: list[LLMMessage], raw: object, error: Exception
+        ) -> list[LLMMessage]:
+            errors = _format_validation_errors(error)
+            return [
+                *prior_messages,
+                LLMMessage(
+                    role="assistant",
+                    content=json.dumps(raw, ensure_ascii=False, default=str),
+                ),
+                LLMMessage(
+                    role="user",
+                    content=(
+                        f"上一份输出未通过 {contract_name} 校验。请修复后返回完整 JSON，"
+                        "不要输出 Markdown 代码块、思考过程或解释，也不要省略必填字段。"
+                        f"校验错误：{json.dumps(errors, ensure_ascii=False)}"
+                    ),
+                ),
+            ]
 
         return validated_generate(
             current_messages,
@@ -260,6 +281,8 @@ def generate_validated_json(
             schema_name=contract_name,
             json_schema=json_schema,
             validator=validate_provider_response,
+            repair_messages=build_structured_repair_messages,
+            repair_attempts=attempts,
             agent=agent,
         )
 
@@ -425,6 +448,46 @@ def generate_validated_json_stream(
         current_messages.insert(1, schema_instruction)
     else:
         current_messages.insert(0, schema_instruction)
+
+    validated_stream_generate = getattr(llm_client, "generate_validated_json_stream", None)
+    if callable(validated_stream_generate):
+        def validate_streamed_response(raw_text: str) -> ContractT:
+            raw = _parse_streamed_json(raw_text)
+            normalized = normalize(raw) if normalize is not None else raw
+            result = output_model.model_validate(normalized)
+            if semantic_validate is not None:
+                semantic_validate(result)
+            return result
+
+        def build_repair_messages(
+            prior_messages: list[LLMMessage], raw_text: str, error: Exception
+        ) -> list[LLMMessage]:
+            errors = _format_validation_errors(error)
+            return [
+                *prior_messages,
+                LLMMessage(role="assistant", content=raw_text),
+                LLMMessage(
+                    role="user",
+                    content=(
+                        f"上一份输出未通过 {contract_name} 校验。"
+                        "请修复后返回完整 JSON，不要输出 Markdown 代码块、"
+                        "不要输出思考过程、不要输出任何解释或自然语言，"
+                        "也不要省略必填字段。"
+                        f"校验错误：{json.dumps(errors, ensure_ascii=False)}"
+                    ),
+                ),
+            ]
+
+        return validated_stream_generate(
+            messages=current_messages,
+            temperature=temperature,
+            schema_name=contract_name,
+            json_schema=json_schema,
+            validator=validate_streamed_response,
+            repair_messages=build_repair_messages,
+            agent=agent,
+            repair_attempts=attempts,
+        )
 
     for attempt in range(attempts):
         raw: object = ""

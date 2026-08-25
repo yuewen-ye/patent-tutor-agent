@@ -32,16 +32,21 @@ _MAX_TOOL_CALLS_PER_PHASE: Final = 1
 
 def _tool_top_k(call: ToolCall, default_top_k: int) -> int:
     raw_top_k = call.arguments.get("top_k")
-    if isinstance(raw_top_k, int):
-        return max(1, min(raw_top_k, 10))
-    return default_top_k
+    if raw_top_k is None:
+        return default_top_k
+    if isinstance(raw_top_k, bool) or not isinstance(raw_top_k, int) or not 1 <= raw_top_k <= 10:
+        raise ValueError("rag_retrieve top_k must be an integer from 1 to 10")
+    return raw_top_k
 
 
 def _tool_query(call: ToolCall) -> str:
+    unexpected = set(call.arguments) - {"query", "top_k"}
+    if unexpected:
+        raise ValueError(f"rag_retrieve has unknown arguments: {sorted(unexpected)}")
     raw_query = call.arguments.get("query")
     if isinstance(raw_query, str) and raw_query.strip():
         return raw_query
-    return ""
+    raise ValueError("rag_retrieve requires a non-empty query")
 
 
 def collect_expert_retrieval_context(
@@ -51,25 +56,54 @@ def collect_expert_retrieval_context(
     temperature: float,
     agent: AgentName,
 ) -> list[dict[str, object]]:
-    response = llm_client.generate_with_tools(
-        messages=messages,
-        tools=[_RAG_TOOL],
-        temperature=temperature,
-        agent=agent,
-    )
-    chunks: list[dict[str, object]] = []
-    default_top_k = agent_top_k(agent, 5)
-    for tool_call in response.tool_calls[:_MAX_TOOL_CALLS_PER_PHASE]:
-        if tool_call.name != "rag_retrieve":
-            raise RuntimeError(f"Unsupported expert tool call: {tool_call.name}")
-        chunks.extend(
-            chunk.model_dump()
-            for chunk in retrieve_context(
-                query=_tool_query(tool_call),
-                top_k=_tool_top_k(tool_call, default_top_k),
+    def collect(response):
+        chunks: list[dict[str, object]] = []
+        if not response.tool_calls:
+            return []
+        default_top_k = agent_top_k(agent, 5)
+        for tool_call in response.tool_calls[:_MAX_TOOL_CALLS_PER_PHASE]:
+            if tool_call.name != "rag_retrieve":
+                raise ValueError(f"Unsupported expert tool call: {tool_call.name}")
+            query = _tool_query(tool_call)
+            if not query:
+                raise ValueError("rag_retrieve requires a non-empty query")
+            chunks.extend(
+                chunk.model_dump()
+                for chunk in retrieve_context(
+                    query=query,
+                    top_k=_tool_top_k(tool_call, default_top_k),
+                )
             )
+        return chunks
+
+    validated_tools = getattr(llm_client, "generate_validated_with_tools", None)
+    if callable(validated_tools):
+        def repair_tool_messages(prior_messages, response, error):
+            return [
+                *prior_messages,
+                LLMMessage(role="assistant", content=str(response.model_dump())),
+                LLMMessage(
+                    role="user",
+                    content=f"工具调用未通过校验，请修复工具名和参数后重试：{error}",
+                ),
+            ]
+
+        return validated_tools(
+            messages=messages,
+            tools=[_RAG_TOOL],
+            temperature=temperature,
+            validator=collect,
+            repair_messages=repair_tool_messages,
+            agent=agent,
         )
-    return chunks
+    return collect(
+        llm_client.generate_with_tools(
+            messages=messages,
+            tools=[_RAG_TOOL],
+            temperature=temperature,
+            agent=agent,
+        )
+    )
 
 
 def collect_judge_retrieval_context(

@@ -967,7 +967,7 @@ def call_llm_json_stream(
         _log_llm_call(
             provider=config.provider,
             model=config.model,
-            status="fallback",
+            status="transport_mode_fallback",
             from_streaming=True,
             to_json_mode=True,
         )
@@ -1106,7 +1106,7 @@ def call_llm_json(
                 _mark_strict_schema_rejected(resolved)
             _log_llm_call(
                 provider=resolved,
-                status="fallback",
+                status="transport_mode_fallback",
                 from_json_mode=True,
                 to_json_mode=True,
                 reason=str(exc)[:300],
@@ -1122,7 +1122,7 @@ def call_llm_json(
             raise
         _log_llm_call(
             provider=resolved,
-            status="fallback",
+            status="transport_mode_fallback",
             from_json_mode=True,
             to_json_mode=False,
             reason=str(exc)[:300],
@@ -1501,6 +1501,12 @@ class AgentLLMRouter:
         primary_model = self.model_for(agent)
         fallback = self.agent_fallbacks.get(agent) if agent is not None else None
         if fallback is None:
+            _log_llm_call(
+                provider=primary,
+                model=primary_model,
+                status="fallback_unconfigured",
+                round=None,
+            )
             return invoke(primary, primary_model, None, None)
         rounds = load_provider_config(primary, model_name=primary_model).retry_times
         last_exc: LLMProviderError | None = None
@@ -1578,30 +1584,47 @@ class AgentLLMRouter:
         json_schema: dict[str, object],
         validator: Callable[[object], _T],
         agent: AgentName | None = None,
+        repair_messages: Callable[[list[LLMMessage], object, Exception], list[LLMMessage]] | None = None,
+        repair_attempts: int = 2,
     ) -> _T:
-        """Validate each provider response inside the primary/fallback attempt loop."""
+        """Validate provider responses, repairing before model failover when requested."""
 
         def invoke(
             provider: str | None, model_name: str | None, base_url: str | None, attempts: int | None
         ) -> _T:
-            raw = call_llm_json(
-                provider=provider,
-                messages=messages,
-                temperature=temperature,
-                model_name=model_name,
-                schema_name=schema_name,
-                json_schema=json_schema,
-                base_url_override=base_url,
-                max_attempts=attempts,
-            )
-            try:
-                return validator(raw)
-            except Exception as exc:
-                raise LLMProviderError(
-                    f"model output failed {schema_name} validation: {exc}",
+            current_messages = list(messages)
+            for attempt in range(repair_attempts):
+                raw = call_llm_json(
                     provider=provider,
-                    retryable=True,
-                ) from exc
+                    messages=current_messages,
+                    temperature=temperature,
+                    model_name=model_name,
+                    schema_name=schema_name,
+                    json_schema=json_schema,
+                    base_url_override=base_url,
+                    max_attempts=attempts,
+                )
+                try:
+                    return validator(raw)
+                except Exception as exc:
+                    if repair_messages is None or attempt + 1 >= repair_attempts:
+                        raise LLMProviderError(
+                            f"model output failed {schema_name} validation after "
+                            f"{repair_attempts} attempts: {exc}",
+                            provider=provider,
+                            retryable=True,
+                        ) from exc
+                    _log_llm_call(
+                        provider=provider,
+                        model=model_name,
+                        status="validation_retry",
+                        round=None,
+                        attempt=attempt + 1,
+                        failure_stage="contract_validation",
+                        error_type=type(exc).__name__,
+                        error_message=str(exc)[:300],
+                    )
+                    current_messages = repair_messages(current_messages, raw, exc)
 
         return self._with_fallback(agent, invoke)
 
@@ -1624,6 +1647,144 @@ class AgentLLMRouter:
                 base_url_override=base_url,
                 max_attempts=attempts,
             )
+
+        return self._with_fallback(agent, invoke)
+
+    def generate_validated_json_stream(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        *,
+        schema_name: str,
+        json_schema: dict[str, object],
+        validator: Callable[[str], _T],
+        repair_messages: Callable[[list[LLMMessage], str, Exception], list[LLMMessage]],
+        agent: AgentName | None = None,
+        repair_attempts: int = 2,
+    ) -> _T:
+        """Validate streamed output inside the primary/fallback model loop."""
+
+        def invoke(
+            provider: str | None, model_name: str | None, base_url: str | None, _attempts: int | None
+        ) -> _T:
+            current_messages = list(messages)
+            last_error: Exception | None = None
+            for attempt in range(repair_attempts):
+                raw_text = ""
+                try:
+                    raw_text = "".join(
+                        call_llm_json_stream(
+                            provider=provider,
+                            messages=current_messages,
+                            temperature=temperature,
+                            model_name=model_name,
+                            base_url_override=base_url,
+                            max_attempts=1,
+                            schema_name=schema_name,
+                            json_schema=json_schema,
+                        )
+                    )
+                    if not raw_text.strip():
+                        raise LLMProviderError(
+                            f"agent={agent} contract={schema_name} streaming returned empty content",
+                            provider=provider,
+                            retryable=True,
+                        )
+                    return validator(raw_text)
+                except LLMProviderError as exc:
+                    if exc.provider == provider and "streaming returned empty content" in str(exc):
+                        raise
+                    last_error = exc
+                    if attempt + 1 >= repair_attempts:
+                        raise LLMProviderError(
+                            f"agent={agent} contract={schema_name} validation failed after "
+                            f"{repair_attempts} attempts: {exc}",
+                            provider=provider,
+                            retryable=True,
+                        ) from exc
+                    _log_llm_call(
+                        provider=provider,
+                        model=model_name,
+                        status="validation_retry",
+                        round=None,
+                        attempt=attempt + 1,
+                        failure_stage="contract_validation",
+                        error_type=type(exc).__name__,
+                        error_message=str(exc)[:300],
+                    )
+                    current_messages = repair_messages(current_messages, raw_text, exc)
+                except Exception as exc:
+                    last_error = exc
+                    if attempt + 1 >= repair_attempts:
+                        raise LLMProviderError(
+                            f"agent={agent} contract={schema_name} validation failed after "
+                            f"{repair_attempts} attempts: {exc}",
+                            provider=provider,
+                            retryable=True,
+                        ) from exc
+                    _log_llm_call(
+                        provider=provider,
+                        model=model_name,
+                        status="validation_retry",
+                        round=None,
+                        attempt=attempt + 1,
+                        failure_stage="contract_validation",
+                        error_type=type(exc).__name__,
+                        error_message=str(exc)[:300],
+                    )
+                    current_messages = repair_messages(current_messages, raw_text, exc)
+            assert last_error is not None
+            raise LLMProviderError(str(last_error), provider=provider, retryable=True)
+
+        return self._with_fallback(agent, invoke)
+
+    def generate_validated_with_tools(
+        self,
+        messages: list[LLMMessage],
+        tools: list[ToolDefinition],
+        temperature: float,
+        *,
+        validator: Callable[[LLMResponseWithTools], _T],
+        repair_messages: Callable[[list[LLMMessage], LLMResponseWithTools, Exception], list[LLMMessage]] | None = None,
+        repair_attempts: int = 2,
+        agent: AgentName | None = None,
+    ) -> _T:
+        """Validate tool-call responses inside the primary/fallback model loop."""
+
+        def invoke(
+            provider: str | None, model_name: str | None, base_url: str | None, attempts: int | None
+        ) -> _T:
+            current_messages = list(messages)
+            for attempt in range(repair_attempts):
+                response = call_llm_tools(
+                    provider=provider,
+                    messages=current_messages,
+                    tools=tools,
+                    temperature=temperature,
+                    model_name=model_name,
+                    base_url_override=base_url,
+                    max_attempts=attempts,
+                )
+                try:
+                    return validator(response)
+                except Exception as exc:
+                    if repair_messages is None or attempt + 1 >= repair_attempts:
+                        raise LLMProviderError(
+                            f"tool-call response validation failed after {repair_attempts} attempts: {exc}",
+                            provider=provider,
+                            retryable=True,
+                        ) from exc
+                    _log_llm_call(
+                        provider=provider,
+                        model=model_name,
+                        status="validation_retry",
+                        round=None,
+                        attempt=attempt + 1,
+                        failure_stage="tool_call_validation",
+                        error_type=type(exc).__name__,
+                        error_message=str(exc)[:300],
+                    )
+                    current_messages = repair_messages(current_messages, response, exc)
 
         return self._with_fallback(agent, invoke)
 
@@ -1678,7 +1839,9 @@ class AgentLLMRouter:
                     last_exc = exc
                     _log_llm_call(
                         provider=primary,
+                        model=primary_model,
                         status="model_fallback",
+                        failure_stage="provider_or_contract",
                         from_model=primary_model,
                         to_provider=fallback.provider,
                         to_model=fallback.model_name,
