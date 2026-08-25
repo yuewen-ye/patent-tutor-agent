@@ -109,21 +109,43 @@
 
 ```json
 {
-  "theme": "warm_orange",
   "slides": [
     {
       "id": "slide_001",
       "order": 1,
       "type": "title",
       "title": "课程标题",
-      "subtitle": "一句话副标题（可选，≤25中文字）",
       "content": {
-        "subtitle": "（可选）若副标题需要额外 tagline 放这里"
+        "subtitle": "一句话副标题或学习目标"
       },
       "narration": {
-        "text": "大家好，今天我们来学习……（70-160中文字 · 口语化讲稿）",
-        "audio_url": "",
-        "duration_sec": null
+        "text": "大家好，今天我们来学习……（70-160中文字，口语化讲稿）"
+      }
+    },
+    {
+      "id": "slide_002",
+      "order": 2,
+      "type": "content",
+      "title": "核心概念",
+      "content": {
+        "body": "概念定义和必要说明",
+        "takeaways": ["关键要点"],
+        "bullets": ["步骤或判断标准"]
+      },
+      "narration": {
+        "text": "这一页我们解释核心概念，并说明它在实际判断中的作用。"
+      }
+    },
+    {
+      "id": "slide_003",
+      "order": 3,
+      "type": "summary",
+      "title": "本课小结",
+      "content": {
+        "takeaways": ["本课必记结论"]
+      },
+      "narration": {
+        "text": "最后我们回顾本课的关键结论。"
       }
     }
   ],
@@ -136,12 +158,11 @@
 - `id` 用 `slide_001` 形式（三位序号，与 order 对应）。
 - `order` 从 1 起，**连续且唯一**。
 - `type` 只能是上表 7 种之一；第 1 页必须 `title`，最后一页建议 `summary`。
-- `theme` **固定写 `"warm_orange"`**（浅色疗愈）。不要写 `"warm_orange_premium"`。
 - `title`：**单页标题 ≤ 16 中文字**（约 20~22 字含标点），超长必须精简（瑞士风标题宜短、语义精）。
-- `subtitle`：**≤ 25 中文字**，只做辅助，信息密度不得超过主标题。
-- `content.takeaways / key_points / highlights`：**最多 6 条，每条 ≤ 20 中文字**；超过会被前端截断成"+ N 项…"。
-- `content.bullets / points / items`：**最多 8 条，每条 ≤ 20 中文字**。
-- `content.body / text / description`：**≤ 5 行，每行 ≤ 40 中文字**；用换行符分段，不要整段大长句。
+- 不要在 slide 对象中输出 `subtitle`、`theme` 或其他 schema 未声明的顶层字段；副标题只能放在 `content.subtitle`。
+- `content.takeaways`：**最多 6 条，每条 ≤ 20 中文字**；超过会被前端截断成"+ N 项…"。
+- `content.bullets`：**最多 8 条，每条 ≤ 20 中文字**。
+- `content.body`：**≤ 5 行，每行 ≤ 40 中文字**；用换行符分段，不要整段大长句。
 - 每页至少在 takeaways / bullets / body 三者之一有内容，**不要留空**。
 - `narration.text`：**每页 70–160 中文字**（朗读 25–45 秒），口语化、自洽，能脱离页面独立播放；结尾用"我们来看下一页"或"……"自然过渡。
 - 页数 8–15 页为宜：把 course_package 的 `block_plan.blocks`（如有）作为分页参考，一页可合并 1–2 个 block，单个 block 信息量大就拆两页。

@@ -559,7 +559,25 @@ def build_workflow(
         builder.add_node("expert_a_integration", _wrap("expert_a", node_label="expert_a"))
     builder.add_node("judge", _wrap("judge"))
     if slide_deck_enabled:
-        builder.add_node("slide_deck", _wrap("slide_deck"))
+        slide_deck_node = nodes["slide_deck"]
+        if not pptx_enabled:
+            # Without the optional PPTX stage, slide_deck is the terminal course artifact.
+            base_slide_deck_node = slide_deck_node
+
+            def slide_deck_terminal_node(state: StateDict, runtime: Any = None) -> dict[str, Any]:
+                updates = _call_node(base_slide_deck_node, state, runtime)
+                updates["workflow_status"] = "completed"
+                return updates
+
+            slide_deck_node = slide_deck_terminal_node
+        builder.add_node("slide_deck", cast(Any, _with_runtime_side_effects(
+            slide_deck_node,
+            root_path,
+            log_root_path,
+            update_sink,
+            event_sink,
+            node_label="slide_deck",
+        )))
         if pptx_enabled:
             builder.add_node(
                 "generate_pptx",

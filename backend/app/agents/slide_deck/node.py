@@ -74,8 +74,7 @@ def build_slide_deck_node(llm_client: LLMClient) -> Node:
         )
         return {
             "course_slides": deck.model_dump(),
-            # PPTX 阶段启用时会继续运行；未启用时这是课程生成的最后一个节点。
-            "workflow_status": "completed",
+            # The graph wrapper/final stage owns the session-level completion status.
             "events": [
                 completed_event(
                     "slide_deck",
