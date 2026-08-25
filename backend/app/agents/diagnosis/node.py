@@ -1,32 +1,35 @@
 from __future__ import annotations
 
+import json
 import logging
 from copy import deepcopy
-import json
 from typing import Any, Literal, cast
 
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.runtime import Runtime
 
-from backend.app.core.agent_runtime_config import agent_temperature
 from backend.app.agents.common import (
     Node,
-    generate_validated_json,
+    generate_validated_json_stream,
     load_prompt,
     messages_from_prompt,
     normalize_key_aliases,
     schema_note,
 )
+from backend.app.core.agent_runtime_config import agent_temperature
 from backend.app.core.llm import LLMClient
+from backend.app.curriculum.learning_path import load_knowledge_dag
+from backend.app.curriculum.learning_progress import (
+    deterministic_next_action,
+    profile_progress_snapshot,
+)
+from backend.app.learner_memory.bkt.model import profile_confidence_from_mastery
 from backend.app.learner_memory.memory import (
     load_mastery_snapshot,
     load_profile_memories,
     save_learner_memories,
     save_profile_snapshot,
 )
-from backend.app.learner_memory.bkt.model import profile_confidence_from_mastery
-from backend.app.curriculum.learning_path import load_knowledge_dag
-from backend.app.curriculum.learning_progress import deterministic_next_action
 from backend.app.schemas.context import WorkflowContext
 from backend.app.schemas.state import (
     BKTUpdate,
@@ -362,14 +365,16 @@ def _build_five_dimensions(
         },
     }
     if isinstance(base_dimensions, dict):
-        for key in {"cognition", "style", "progress", "affect"}:
+        for key in ("cognition", "style", "affect"):
             if key in base_dimensions:
                 dimensions[key] = base_dimensions[key]
-    for key in {"cognition", "style", "affect"}:
+        if "progress" in base_dimensions:
+            dimensions["progress"] = profile_progress_snapshot(base_dimensions["progress"])
+    for key in ("cognition", "style", "affect"):
         if key in agent_values:
             dimensions[key] = agent_values[key]
     if isinstance(progress_override, dict):
-        dimensions["progress"] = progress_override
+        dimensions["progress"] = profile_progress_snapshot(progress_override)
     return FiveDimensions.model_validate({"knowledge": knowledge, **dimensions})
 
 
@@ -413,7 +418,7 @@ def build_diagnosis_phase_node(llm_client: LLMClient) -> Node:
             "questionnaire_responses", []
         )
         diagnostic_snapshot = input_payload.get("diagnostic_snapshot") or {}
-        agent_result = generate_validated_json(
+        agent_result = generate_validated_json_stream(
             llm_client,
             messages=messages_from_prompt(
                 prompt,
@@ -537,7 +542,7 @@ def build_feedback_phase_node(llm_client: LLMClient) -> Node:
         mastery_snapshot = input_payload.get("mastery_snapshot", {})
         progress_update = input_payload.get("learning_progress_update", {})
         progress_decision = input_payload.get("learning_progress_decision", {})
-        agent_result = generate_validated_json(
+        agent_result = generate_validated_json_stream(
             llm_client,
             messages=messages_from_prompt(
                 prompt,

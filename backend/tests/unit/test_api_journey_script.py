@@ -14,11 +14,24 @@ from backend.scripts.run_api_journey import (
     _artifact_api_path,
     _build_exercise_responses,
     _completed_event_summary,
+    _debate_enabled_from_env,
     _validate_questionnaire_responses,
     _workflow_progress,
 )
 
 pytestmark = pytest.mark.unit
+
+
+def test_api_journey_debate_flag_reads_strict_environment_values(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("PATENT_TUTOR_DEBATE_ENABLED", raising=False)
+    assert _debate_enabled_from_env() is True
+    monkeypatch.setenv("PATENT_TUTOR_DEBATE_ENABLED", "false")
+    assert _debate_enabled_from_env() is False
+    monkeypatch.setenv("PATENT_TUTOR_DEBATE_ENABLED", "True")
+    with pytest.raises(JourneyError, match="PATENT_TUTOR_DEBATE_ENABLED"):
+        _debate_enabled_from_env()
 
 
 def test_default_questionnaire_answers_match_requested_profile() -> None:
@@ -64,6 +77,25 @@ def test_artifact_api_path_removes_storage_prefix() -> None:
     )
 
 
+def test_single_agent_workflow_progress_goes_from_draft_to_judge() -> None:
+    snapshot = {
+        "status": "running",
+        "state": {
+            "workflow_mode": "teach",
+            "teach_phase": "single_agent",
+            "events": [
+                {"node": "planner", "message": "planned learning path"},
+                {"node": "expert_a", "message": "generated expert A draft with LLM"},
+            ],
+        },
+    }
+
+    progress = _workflow_progress(snapshot)
+
+    assert progress.current_stage == "Judge 课程审核"
+    assert len(progress.completed_events) == 2
+
+
 def test_workflow_progress_reports_parallel_expert_stage_and_missing_expert() -> None:
     snapshot = {
         "status": "running",
@@ -82,7 +114,7 @@ def test_workflow_progress_reports_parallel_expert_stage_and_missing_expert() ->
                 },
                 {
                     "node": "planner",
-                    "message": "planned learning path (deterministic_astar)",
+                    "message": "planned learning path (replace)",
                     "duration_ms": 314_036,
                 },
                 {
@@ -99,26 +131,26 @@ def test_workflow_progress_reports_parallel_expert_stage_and_missing_expert() ->
     assert progress.current_stage == "专家初稿（并行；等待 Expert A）"
     assert len(progress.completed_events) == 4
     assert _completed_event_summary(progress.completed_events[2], snapshot) == (
-        "Planner 学习路径规划完成（耗时 5分14秒）；使用 deterministic_astar"
+        "Planner 学习路径规划完成（耗时 5分14秒）"
     )
     assert _completed_event_summary(progress.completed_events[3], snapshot) == (
         "Expert B 初稿完成（耗时 4分28秒）"
     )
 
 
-def test_planner_progress_exposes_agent_fallback_reason() -> None:
-    snapshot = {
+def test_planner_progress_exposes_llm_decision() -> None:
+    snapshot: dict[str, Any] = {
         "status": "running",
         "state": {
             "workflow_mode": "teach",
             "path_decision": {
-                "algorithm": "deterministic_astar",
-                "fallback_reason": "ValidationError: nodes field required",
+                "algorithm": "candidate_route_keep",
+                "plan_action": "keep",
             },
             "events": [
                 {
                     "node": "planner",
-                    "message": "planned learning path (deterministic_astar)",
+                    "message": "planned learning path (replace)",
                     "duration_ms": 12_000,
                 }
             ],
@@ -126,8 +158,7 @@ def test_planner_progress_exposes_agent_fallback_reason() -> None:
     }
 
     assert _completed_event_summary(snapshot["state"]["events"][0], snapshot) == (
-        "Planner 学习路径规划完成（耗时 12秒）；使用 deterministic_astar；"
-        "Agent 降级原因：ValidationError: nodes field required"
+        "Planner 学习路径规划完成（耗时 12秒）；LLM 决策=keep；算法=candidate_route_keep"
     )
 
 
@@ -140,7 +171,7 @@ def test_workflow_progress_advances_through_review_revision_integration_and_judg
         {"node": "expert_b", "message": "generated expert B draft with LLM"},
         {"node": "expert_a", "message": "reviewed expert B draft"},
     ]
-    snapshot = {
+    snapshot: dict[str, Any] = {
         "status": "running",
         "state": {"workflow_mode": "teach", "events": events},
     }
@@ -171,7 +202,9 @@ def test_workflow_progress_advances_through_review_revision_integration_and_judg
     assert _workflow_progress(snapshot).current_stage == "课程结果持久化"
 
 
-def test_workflow_progress_handles_judge_revision_loop() -> None:
+def test_workflow_progress_after_judge_does_not_show_reintegration() -> None:
+    # max_revisions 默认配置为 0，judge 返回 revise 时也会直接收尾，
+    # 进度文案统一为“课程结果持久化”，不再提示“重新整合”。
     events = [
         {
             "node": "expert_a",
@@ -188,14 +221,8 @@ def test_workflow_progress_handles_judge_revision_loop() -> None:
         },
     }
 
-    assert _workflow_progress(snapshot).current_stage == (
-        "Expert A 按 Judge 意见重新整合"
-    )
-
-    events.append(
-        {"node": "expert_a", "message": "integrated expert debate result with LLM"}
-    )
-    assert _workflow_progress(snapshot).current_stage == "Judge 课程审核"
+    assert _workflow_progress(snapshot).current_stage == "课程结果持久化"
+    assert "重新整合" not in _workflow_progress(snapshot).current_stage
 
 
 def test_exercise_builder_uses_answer_key_without_client_grading() -> None:
@@ -392,6 +419,10 @@ def test_api_journey_calls_complete_rest_flow() -> None:
             )
         if request.method == "POST" and path.endswith("/questionnaire-responses"):
             return response(request, {"session_id": "course-session", "status": "running"})
+        if request.method == "POST" and path == "/sessions/course-session/reteach":
+            payload = json.loads(request.content)
+            assert payload == {"learner_id": "learner-demo"}
+            return response(request, {"session_id": "reteach-session", "status": "running"})
         if request.method == "GET" and path == "/sessions/course-session":
             return response(
                 request,
@@ -454,6 +485,25 @@ def test_api_journey_calls_complete_rest_flow() -> None:
             return response(
                 request, {"session_id": "feedback-session", "status": "running"}
             )
+        if request.method == "GET" and path == "/sessions/reteach-session":
+            return response(
+                request,
+                {
+                    "session_id": "reteach-session",
+                    "status": "completed",
+                    "state": {
+                        "path_decision": {
+                            "algorithm": "candidate_route_keep",
+                            "plan_action": "keep",
+                            "plan_id": "plan-1",
+                            "plan_version": 1,
+                        },
+                        "events": [
+                            {"node": "planner", "message": "planned learning path (keep)"}
+                        ],
+                    },
+                },
+            )
         if request.method == "GET" and path == "/sessions/feedback-session":
             return response(
                 request,
@@ -484,6 +534,11 @@ def test_api_journey_calls_complete_rest_flow() -> None:
                     "profiles": [{"version": 1}],
                     "history": [{"event_type": "feedback_completed"}],
                     "mastery": {"novelty": 0.42},
+                    "planning_history": [
+                        {"decision_kind": "initial", "outcome": "created"},
+                        {"decision_kind": "progress", "outcome": "no_change"},
+                        {"decision_kind": "keep", "outcome": "kept"},
+                    ],
                 },
             )
         if request.method == "GET" and path.endswith("/profiles"):
@@ -511,6 +566,10 @@ def test_api_journey_calls_complete_rest_flow() -> None:
     assert summary["success"] is True
     assert summary["course_session_id"] == "course-session"
     assert summary["feedback_session_id"] == "feedback-session"
+    assert summary["reteach_session_id"] == "reteach-session"
+    assert summary["reteach_planner_decision"]["plan_action"] == "keep"
+    assert len(summary["planning_history"]) == 3
     assert summary["mastery"] == {"novelty": 0.42}
     assert ("POST", "/sessions/course-session/exercise-responses") in calls
+    assert ("POST", "/sessions/course-session/reteach") in calls
     assert ("GET", "/learners/learner-demo/sessions") in calls

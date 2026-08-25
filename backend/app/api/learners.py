@@ -13,7 +13,6 @@ from backend.app.api.models import (
     StudentInfoResponse,
     UpdateStudentInfoRequest,
 )
-from backend.app.learner_memory.memory import LearnerMemoryStoreError
 from backend.app.persistence.repositories import LearnerRegistrationError
 from backend.app.services.session_service import SessionService
 
@@ -22,10 +21,7 @@ def create_learners_router(session_service: SessionService) -> APIRouter:
     router = APIRouter(tags=["learners"])
 
     def read_learner_memory(learner_id: str, limit: int) -> dict[str, Any]:
-        try:
-            return session_service.learner_memory(learner_id, limit=limit)
-        except LearnerMemoryStoreError as exc:
-            raise _memory_store_exception(exc) from exc
+        return session_service.learner_memory(learner_id, limit=limit)
 
     @router.get(
         "/learners/{learner_id}",
@@ -71,10 +67,7 @@ def create_learners_router(session_service: SessionService) -> APIRouter:
         learner_id: str,
         limit: int = Query(default=10, ge=1, le=50),
     ) -> LearnerSessionsResponse:
-        try:
-            sessions = session_service.learner_sessions(learner_id, limit=limit)
-        except LearnerMemoryStoreError as exc:
-            raise _memory_store_exception(exc) from exc
+        sessions = session_service.learner_sessions(learner_id, limit=limit)
         return LearnerSessionsResponse(learner_id=learner_id, sessions=sessions)
 
     @router.get(
@@ -127,14 +120,3 @@ def create_learners_router(session_service: SessionService) -> APIRouter:
         return StudentInfoResponse.model_validate(info)
 
     return router
-
-
-def _memory_store_exception(exc: LearnerMemoryStoreError) -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail={
-            "error": "memory_store_corrupt",
-            "store": exc.path.name,
-            "reason": exc.reason,
-        },
-    )

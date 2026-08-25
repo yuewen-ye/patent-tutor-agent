@@ -49,6 +49,7 @@
 ## 1. 当前工作流
 
 ```text
+默认 PATENT_TUTOR_DEBATE_ENABLED=true 时：
 START → _init → route ──┬── diagnose → diagnosis_feedback[diagnosis] → END
                          ├── chat → retrieve_context → chat_answer → END
                          └── teach → diagnosis_feedback[diagnosis]
@@ -73,7 +74,7 @@ POST /sessions/{course_session_id}/exercise-responses
   → _init → diagnosis_feedback[feedback] → END
 ```
 
-`diagnosis_feedback` 是一个多阶段 Agent 节点，通过 `diagnosis_feedback_phase` 在诊断和反馈阶段重入。专家 A、B 也各自只有一个 Agent，通过 `expert_phase` 在草稿、互评和修订阶段重入；三个阶段都并行执行，由 `_experts_barrier` 等待双方完成并推进阶段。整合阶段只运行专家 A。Judge 通过时课程会话结束，等待学员提交练习；Judge 不通过时回到 Expert A integration 重新整合并再次审核，直到通过。学员反馈只在提交练习后创建的独立 feedback 会话中生成。
+`diagnosis_feedback` 是一个多阶段 Agent 节点，通过 `diagnosis_feedback_phase` 在诊断和反馈阶段重入。`PATENT_TUTOR_DEBATE_ENABLED` 未设置或为严格真值时，专家 A、B 各自通过 `expert_phase` 在草稿、互评和修订阶段重入；三个阶段都并行执行，由 `_experts_barrier` 等待双方完成并推进阶段，整合阶段只运行专家 A。设为严格假值时，后端在建图时省略 Expert B、汇合、互评、修订与整合节点，路径为 `planner → expert_a[draft] → judge`；该唯一草稿同时写入 `course_package`，`teach_phase` 为 `single_agent`。单专家 Judge 不通过时保留当前课程并进入现有收尾路径，不重跑 Expert A。修改该环境变量后必须重启后端。学员反馈只在提交练习后创建的独立 feedback 会话中生成。
 
 推荐流程中，服务层把已完成 CAT/BKT 诊断的 69 节点快照注入课程会话。诊断和反馈 Agent 的
 LLM 输出合同均不含知识掌握度：诊断阶段由后端用 CAT/BKT 快照构造完整知识维度；反馈阶段先由
@@ -84,38 +85,36 @@ LLM 输出合同均不含知识掌握度：诊断阶段由后端用 CAT/BKT 快�
 
 - 知识轴来自 `backend/app/curriculum/data/knowledge-dag.json`。
 - 混淆对定义来自 `backend/app/curriculum/data/confusion-pairs.json`，运行时不改写静态定义。
-- `planner` 读取数据库中该学员的最新画像和 BKT 掌握度，将完整知识 DAG、完整易混淆图
-  及本地 A* 完整候选路线交给 LLM，要求它以 `PlannerAgentResult` 严格 Schema 给出路径提案；
-  提案不可用时由 `backend/app/curriculum/learning_path.py` 确定性降级。
-  降级原因写入 `path_decision.fallback_reason` 并记录 warning，不能静默吞掉。难度上限、
-  双轴快照和最终状态写入仍由后端负责。Planner 同时接收本地 A* 候选路线，Agent 可结合
-  画像删减或局部调整，但不得因单节课长度截断完整路线；节点真实性、重复项和先修顺序由后端校验。
-- 首次规划的完整路线会以学员级计划写入 `learner_learning_plans` 和
-  `learner_learning_plan_nodes`。后续 teach 会话若学习目标和知识 DAG 版本未变化，
-  Planner 节点直接恢复该计划，`path_decision.algorithm=persisted_plan`，不再调用 Planner
-  模型。只有首次学习、学习目标变化、知识 DAG 版本变化或计划损坏时才重新规划并新增
-  `plan_version`；旧计划保留为 `superseded` 审计记录。
-- 后端以 `five_dimensions.progress` 维护权威课程游标。完整 `learning_path` 用于导航；
-  `teaching_context` 只向 Expert A/B 暴露一个主教学节点、少量复习节点和至多一个前探节点。
-  两位专家每次协作生成一节单节点课程，不一次性讲完整条路线。
+- `planner` 在每个 teach 会话读取最新画像、BKT 掌握度、完整静态知识 DAG、完整静态易混淆图和
+  当前活动计划，并以 `PlannerAgentResult` 严格 Schema 作出 `keep` 或 `replace` 决策。没有
+  确定性 A* 路线降级：主模型失败后 Router 请求一次 fallback 模型；fallback 失败后才开始下一轮
+  主模型请求，直到主模型 `retry_times` 耗尽。全部模型尝试失败时 Planner 失败，课程会话不写入伪造路线。
+  节点真实性、规范名称、重复项、先修顺序、难度上限、游标与活动窗口仍由后端校验和组装。
+- 首次 `replace` 和后续替换以学员级计划写入 `learner_learning_plans`、
+  `learner_learning_plan_nodes` 并新增 `plan_version`；旧活动计划标记为 `superseded`。`keep`
+  保持原计划版本，但仍记录本次模型决策。所有 `initial`、`keep`、`replace` 和进度变更追加写入
+  `learner_learning_plan_decisions`，可按学员、计划或会话读取历史。
+- 后端以 `five_dimensions.progress` 维护权威课程游标。`completed_nodes` 是教学进度账本：只有节点
+  作为主教学节点生成过课程，并在该课程的练习提交中产生直接 BKT 证据且达到掌握阈值后，才会进入
+  `completed_nodes`。CAT、问卷和已有 BKT 掌握度只能影响路径规划、难度和复习风险，不能单独完成节点。
+  已完成节点仍可因掌握度下降、观测不足、薄弱点或混淆风险进入活动窗口的复习节点。完整
+  `learning_path` 仅用于导航、会话冻结和反馈进度；`teaching_context` 只向 Expert A/B 暴露当前规范知识点名称、少量复习节点、至多一个
+  前探节点、该节点的静态易混淆对和 Planner 本节建议。两位专家每次协作生成一节单节点课程，不一次性
+  讲完整路线。
 - 活动窗口中的复习节点由后端风险调度器选择，数量为 0 到 2，不按路径顺序机械回退。
   候选先综合 BKT 掌握度、有效观测数、画像薄弱点、与当前节点的直接先修关系和概念混淆风险；
   存在有风险的直接先修时，至多为其预留一个席位，其余席位仍由全体候选按综合风险竞争，避免
   两个中等风险先修挤掉严重薄弱节点。顺序只在综合风险相同时用于优先更早完成的节点。高掌握
   且观测充分的先修节点不会因为“恰好在前面”而重复进入窗口。复习节点的 `goal` 记录选择原因，
   Expert A/B 负责生成具体复习内容和题目，不负责改变节点选择。
-- 学员提交练习后，服务层先更新 BKT，再执行确定性通关判定：本轮必须有当前节点的直接
-  BKT 更新，且 `P(L) >= 0.8`、累计观测数至少为 2。满足时把当前节点加入
-  `completed_nodes` 并推进 `current_node`；否则保留当前节点用于下一节补强课程。
-  前探题只提供后续规划数据，不直接推进游标。反馈服务会同步更新活动计划的节点状态和
-  `current_node`；下一节课通过新的 teach 会话恢复同一计划与最新游标。
+- 学员提交练习后，服务层只根据已验证的课程反馈事件推进教学游标：当前节点必须属于本节已生成的课程、确实提交了答案，并带有反馈会话来源；满足时把当前节点加入 `completed_nodes` 并推进 `current_node`。BKT 掌握度和观测数只用于路径规划、风险和复习选择，不参与“是否完成”的判断。前探题只提供后续规划数据，不直接推进游标。反馈服务会同步更新活动计划的节点状态和 `current_node`；下一节课通过新的 teach 会话恢复同一计划与最新游标。
 - 任一 Agent 首次结构化输出校验失败并进入修复重试时，服务端 warning 会记录 Agent、
   Contract、重试序号和 Pydantic 字段错误；即使第二次修复成功，也能解释额外耗时。
 - 混淆风险同时考虑画像中的 `weak_points` 和相关概念的 BKT 掌握度；低掌握度会提高 `learner_risk` 并记录 `adjustment_reason`。
-- FastAPI 默认使用 MySQL 保存画像、历史、BKT 及其状态转移审计、CAT 诊断会话、诊断作答、
+- FastAPI 使用 MySQL 保存画像、历史、BKT 及其状态转移审计、CAT 诊断会话、诊断作答、
   DAG 传播审计、课程会话状态、事件、题目和作答。通过 `PATENT_TUTOR_MYSQL_URL` 配置连接；
-  演示环境可以自动迁移，生产环境应在发布阶段显式执行版本化迁移。SQLite 没有业务数据，只保留
-  为单元测试替身。
+  演示环境可以自动迁移，生产环境应在发布阶段显式执行版本化迁移。项目不保留 SQLite
+  存储后端。
 - Studio 由 LangGraph Dev 管理自己的 Store，不会自动读取 FastAPI 的 MySQL；要让 Studio 复用产品数据，必须显式注入同一个持久化 Store，或通过 FastAPI 启动产品流程。
 
 ## 3. Markdown 过程产物
@@ -142,7 +141,7 @@ artifacts/sessions/{session_id}/
   feedback/grading_report.md
 ```
 
-`course_package.md` 是专家整合阶段的过程稿；`judge_report.md` 始终保留。Judge 不通过时，当前课程会话回到 Expert A integration 并持续复审；审核通过后，反馈文件只在学员提交练习后的独立会话中生成。系统不会生成 `final_learning.md` 或独立答案文件。
+`course_package.md` 在默认模式是专家整合阶段的过程稿；在单专家模式是 Expert A draft 的同一份课程输出。`judge_report.md` 始终保留。默认模式 Judge 不通过时回到 Expert A integration 并持续复审；单专家模式保留当前课程并直接收尾。系统不会生成 `final_learning.md` 或独立答案文件。单专家模式不会生成 Expert B、互评、修订或 integration Markdown 工件。
 
 每个 Markdown 都先由通过 Pydantic 校验的结构化数据渲染，使用固定标题、表格和 JSON 代码块。`manifest.json` 保存路径、类型、生成节点、SHA-256 与时间戳，状态只允许 `running/completed/failed/canceled`。
 

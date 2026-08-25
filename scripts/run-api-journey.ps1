@@ -1,13 +1,13 @@
 [CmdletBinding()]
 param(
     [string]$BaseUrl = "http://127.0.0.1:8000",
-    [string]$LearnerId = "yueye005",
+    [string]$LearnerId = "yueye007",
     [ValidateSet("correct", "incorrect")]
     [string]$AnswerMode = "correct",
     [ValidateRange(1, 20)]
     [int]$MaxExercises = 3,
     [ValidateSet("interactive", "off")]
-    [string]$CatMode = "interactive",
+    [string]$CatMode = "off",
     [string]$EducationBackground = "其他",
     [ValidateRange(0, 40)]
     [int]$CatMaxAnswers = 5,
@@ -20,6 +20,10 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 $env:PYTHONUTF8 = "1"
+# Force UTF-8 for PowerShell -> external program argument/output passing on Windows
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
     throw "uv command was not found. Install uv and run 'uv sync' first."
@@ -27,6 +31,22 @@ if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
 
 $safeLearnerId = $LearnerId -replace '[^A-Za-z0-9_-]', '-'
 $outputPath = Join-Path $repoRoot "artifacts\api-journey-$safeLearnerId.json"
+$debateEnvValue = $env:PATENT_TUTOR_DEBATE_ENABLED
+$envPath = Join-Path $repoRoot ".env"
+if (Test-Path $envPath) {
+    $debateLine = Get-Content $envPath | Where-Object { $_ -match '^PATENT_TUTOR_DEBATE_ENABLED=' } | Select-Object -Last 1
+    if ($debateLine) {
+        $debateEnvValue = $debateLine.Substring('PATENT_TUTOR_DEBATE_ENABLED='.Length)
+    }
+}
+if ([string]::IsNullOrEmpty($debateEnvValue)) {
+    $debateEnvValue = "true"
+}
+if ($debateEnvValue -cne "true" -and $debateEnvValue -cne "false") {
+    throw "PATENT_TUTOR_DEBATE_ENABLED must be exactly true or false."
+}
+$env:PATENT_TUTOR_DEBATE_ENABLED = $debateEnvValue
+
 $journeyArgs = @(
     "run",
     "python",
@@ -49,6 +69,7 @@ Write-Host "[api-journey] FastAPI: $BaseUrl"
 Write-Host "[api-journey] learner_id: $LearnerId"
 Write-Host "[api-journey] answer_mode: $AnswerMode"
 Write-Host "[api-journey] cat_mode: $CatMode"
+Write-Host "[api-journey] debate_enabled: $debateEnvValue"
 Write-Host "[api-journey] require_pptx: $(-not $AllowMissingPptx)"
 
 & uv @journeyArgs

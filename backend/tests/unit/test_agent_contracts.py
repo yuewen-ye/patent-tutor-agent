@@ -40,11 +40,14 @@ def test_agent_output_json_schemas_follow_interface_spec() -> None:
     planner_schema = schemas["planner"]
     assert planner_schema["additionalProperties"] is False
     assert set(planner_schema["required"]) == {
-        "nodes",
+        "plan_action",
+        "decision_reason",
         "question_scope",
         "iteration_directive",
+        "teaching_guidance",
     }
-    assert "maxItems" not in planner_schema["properties"]["nodes"]
+    assert "maxItems" not in planner_schema["properties"]["nodes"]["anyOf"][0]
+    assert planner_schema["properties"]["plan_action"]["enum"] == ["keep", "replace"]
     planner_node = planner_schema["$defs"]["PlannerPathNode"]
     assert set(planner_node["required"]) == {
         "node_id",
@@ -258,3 +261,63 @@ def test_expert_draft_normalization_drops_uncontracted_knowledge_synthesis_field
         "coverage": [{"node_id": "direct-infringement"}],
         "confusable_pairs": [],
     }
+
+
+def test_expert_draft_normalization_coerces_markdown_artifact_created_by() -> None:
+    """Regression: LLM may invent 'expert_a_b_fusion' for markdown_artifact.created_by.
+
+    The graph wrapper overwrites the artifact later, but the LLM output must first
+    survive Pydantic validation. Normalize created_by to the actual producing agent.
+    """
+    from backend.app.schemas.state import ExpertDraft
+
+    raw = {
+        "expert": "A+B融合",
+        "style": "fused",
+        "knowledge_points": [{"node_id": "kp-01", "kc_name": "要点"}],
+        "legal_basis": [{"article": "《专利法》第22条"}],
+        "teaching_content": "正文",
+        "block_plan": {"node": "kp-01", "blocks": []},
+        "markdown_artifact": {
+            "artifact_id": "sess-round-01-expert_a_b_fusion",
+            "kind": "expert_draft",
+            "path": "artifacts/sessions/sess/round-01/expert_a_b_fusion.md",
+            "created_by": "expert_a_b_fusion",
+            "title": "专家 A+B融合 教学稿",
+            "extra_field": "should be dropped",
+        },
+    }
+
+    normalized = normalize_expert_draft_payload(raw)
+    assert isinstance(normalized, dict)
+
+    assert normalized["markdown_artifact"]["created_by"] == "expert_a"
+    assert "extra_field" not in normalized["markdown_artifact"]
+    # Must not raise ValidationError
+    ExpertDraft.model_validate(normalized)
+
+
+def test_expert_draft_normalization_respects_expert_b_for_markdown_artifact() -> None:
+    from backend.app.schemas.state import ExpertDraft
+
+    raw = {
+        "expert": "B",
+        "style": "accessible",
+        "knowledge_points": [{"node_id": "kp-01", "kc_name": "要点"}],
+        "legal_basis": [{"article": "《专利法》第22条"}],
+        "teaching_content": "正文",
+        "block_plan": {"node": "kp-01", "blocks": []},
+        "markdown_artifact": {
+            "artifact_id": "sess-round-01-expert_a_b_fusion",
+            "kind": "expert_draft",
+            "path": "artifacts/sessions/sess/round-01/expert_a_b_fusion.md",
+            "created_by": "expert_a_b_fusion",
+            "title": "专家 A+B融合 教学稿",
+        },
+    }
+
+    normalized = normalize_expert_draft_payload(raw)
+    assert isinstance(normalized, dict)
+
+    assert normalized["markdown_artifact"]["created_by"] == "expert_b"
+    ExpertDraft.model_validate(normalized)

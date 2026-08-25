@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import contextvars
 import json
 import os
 import re
 import threading
 import time
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -161,6 +162,24 @@ class LLMClient(Protocol):
         """Generate a response with tool-calling capability. Does NOT use json_mode."""
         ...
 
+    def generate_json_stream(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        agent: AgentName | None = None,
+        *,
+        schema_name: str | None = None,
+        json_schema: dict[str, object] | None = None,
+    ) -> Iterator[str]:
+        """Stream a JSON response from a chat model as content chunks.
+
+        Default implementation falls back to ``generate_json`` and yields the whole
+        JSON string in one chunk. Production clients should override with a true
+        streaming implementation.
+        """
+        raw = self.generate_json(messages, temperature, agent)
+        yield json.dumps(raw, ensure_ascii=False, default=str)
+
 
 class StructuredOutputLLMClient(Protocol):
     """Optional capability for providers that support strict JSON Schema output."""
@@ -216,30 +235,35 @@ def normalize_socks_proxy_env(
 
 
 _LLM_LOG_LOCK = threading.Lock()
-_llm_log_ctx = threading.local()
+_llm_session_id_ctx: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "llm_session_id", default=None
+)
+_llm_log_path_ctx: contextvars.ContextVar[Path | None] = contextvars.ContextVar(
+    "llm_log_path", default=None
+)
 
 
 def set_llm_log_context(
     *, session_id: str | None = None, log_root: Path | None = None
 ) -> None:
-    _llm_log_ctx.session_id = session_id
+    _llm_session_id_ctx.set(session_id)
     if log_root is not None and session_id:
         from backend.app.runtime_outputs.artifacts import sanitize_session_id
 
-        _llm_log_ctx.log_path = (
+        _llm_log_path_ctx.set(
             log_root / "sessions" / sanitize_session_id(session_id) / "llm_calls.log.jsonl"
         )
     else:
-        _llm_log_ctx.log_path = None
+        _llm_log_path_ctx.set(None)
 
 
 def _log_llm_call(**kwargs: object) -> None:
-    log_path = getattr(_llm_log_ctx, "log_path", None)
+    log_path = _llm_log_path_ctx.get()
     if log_path is None:
         return
     record: dict[str, object] = {
         "timestamp": datetime.now(UTC).isoformat(),
-        "session_id": getattr(_llm_log_ctx, "session_id", ""),
+        "session_id": _llm_session_id_ctx.get() or "",
         "type": "llm_call",
     }
     record.update(kwargs)
@@ -264,13 +288,13 @@ def _log_llm_payload(call_id: str, direction: str, **kwargs: object) -> None:
     """
     if not _llm_payload_log_enabled():
         return
-    log_path = getattr(_llm_log_ctx, "log_path", None)
+    log_path = _llm_log_path_ctx.get()
     if log_path is None:
         return
     payload_path = log_path.with_name("llm_payloads.log.jsonl")
     record: dict[str, object] = {
         "timestamp": datetime.now(UTC).isoformat(),
-        "session_id": getattr(_llm_log_ctx, "session_id", ""),
+        "session_id": _llm_session_id_ctx.get() or "",
         "type": "llm_payload",
         "call_id": call_id,
         "direction": direction,
@@ -558,6 +582,7 @@ def _post_chat_completion(
         try:
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
+            retryable = response.status_code in _RETRYABLE_STATUS_CODES
             _log_llm_call(
                 provider=config.provider,
                 model=config.model,
@@ -566,7 +591,7 @@ def _post_chat_completion(
                 error_type="HTTPStatusError",
                 error_message=f"{response.status_code} {response.text[:300]}",
                 status_code=response.status_code,
-                retryable=response.status_code in _RETRYABLE_STATUS_CODES,
+                retryable=retryable,
                 duration_ms=round((time.monotonic() - _call_start) * 1000),
             )
             _log_llm_payload(
@@ -580,7 +605,10 @@ def _post_chat_completion(
                 f"{config.provider} API request failed: {response.status_code} {response.text}",
                 status_code=response.status_code,
                 provider=config.provider,
+                retryable=retryable,
             ) from exc
+        raw_response = response.text
+        _log_llm_payload(call_id, "response", status="success", body=raw_response)
         payload = response.json()
         choice = payload["choices"][0]
         message = choice.get("message", {})
@@ -615,9 +643,8 @@ def _post_chat_completion(
             content_length=len(content),
             duration_ms=round((time.monotonic() - _call_start) * 1000),
         )
-        _log_llm_payload(call_id, "response", status="success", payload=payload)
         return content
-    except (KeyError, IndexError, json.JSONDecodeError) as exc:
+    except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
         _log_llm_call(
             provider=config.provider,
             model=config.model,
@@ -673,6 +700,201 @@ def _post_chat_completion(
             client.close()
 
 
+def _parse_sse_chunks(response: httpx.Response) -> Iterator[str]:
+    """Yield content fragments from a streaming chat completion response.
+
+    Handles OpenAI-compatible Server-Sent Events. Empty or malformed lines are
+    skipped so that downstream code only has to concatenate the yielded strings.
+    """
+    buffer = ""
+    for text in response.iter_text():
+        buffer += text
+        while "\n\n" in buffer:
+            event, buffer = buffer.split("\n\n", 1)
+            for line in event.split("\n"):
+                if not line.startswith("data: "):
+                    continue
+                data = line[6:]
+                if data == "[DONE]":
+                    return
+                try:
+                    chunk = json.loads(data)
+                except json.JSONDecodeError:
+                    continue
+                choices = chunk.get("choices") if isinstance(chunk, dict) else None
+                choice = choices[0] if isinstance(choices, list) and choices else {}
+                delta = choice.get("delta", {}) if isinstance(choice, dict) else {}
+                content = delta.get("content")
+                if isinstance(content, str) and content:
+                    yield content
+
+
+def _post_chat_completion_stream(
+    config: LLMProviderConfig,
+    messages: list[LLMMessage],
+    temperature: float,
+    json_mode: bool,
+    http_client: httpx.Client | None,
+    schema_name: str | None = None,
+    json_schema: dict[str, object] | None = None,
+) -> Iterator[str]:
+    """Open a streaming chat completion and yield content chunks."""
+    client = http_client or httpx.Client(timeout=config.timeout_seconds)
+    close_client = http_client is None
+
+    truncated_messages = _truncate_messages_for_token_limit(messages)
+
+    body = _build_chat_body(
+        config=config,
+        messages=truncated_messages,
+        temperature=temperature,
+        json_mode=json_mode,
+        stream=True,
+        schema_name=schema_name,
+        json_schema=json_schema,
+    )
+
+    _call_start = time.monotonic()
+    call_id = uuid4().hex
+    _log_llm_call(
+        provider=config.provider,
+        model=config.model,
+        json_mode=json_mode,
+        has_schema=json_schema is not None,
+        schema_name=schema_name,
+        message_count=len(truncated_messages),
+        estimated_input_tokens=sum(_estimate_tokens(m.content) for m in truncated_messages),
+        status="attempting",
+        streaming=True,
+    )
+    _log_llm_payload(
+        call_id,
+        "request",
+        provider=config.provider,
+        model=config.model,
+        base_url=config.base_url,
+        body=body,
+    )
+
+    try:
+        with (
+            _provider_semaphore(config.provider),
+            client.stream(
+                "POST",
+                f"{config.base_url}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {config.api_key}",
+                    "Content-Type": "application/json",
+                    "Accept": "text/event-stream",
+                },
+                json=body,
+                timeout=config.timeout_seconds,
+            ) as response,
+        ):
+            try:
+                response.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                try:
+                    response.read()
+                    error_body = response.text
+                except Exception as read_exc:  # noqa: BLE001
+                    error_body = f"<could not read error body: {read_exc}>"
+                retryable = response.status_code in _RETRYABLE_STATUS_CODES
+                _log_llm_call(
+                    provider=config.provider,
+                    model=config.model,
+                    json_mode=json_mode,
+                    status="error",
+                    error_type="HTTPStatusError",
+                    error_message=f"{response.status_code} {error_body[:300]}",
+                    status_code=response.status_code,
+                    retryable=retryable,
+                    streaming=True,
+                    duration_ms=round((time.monotonic() - _call_start) * 1000),
+                )
+                _log_llm_payload(
+                    call_id,
+                    "response",
+                    status="error",
+                    status_code=response.status_code,
+                    error_body=error_body,
+                )
+                raise LLMProviderError(
+                    f"{config.provider} streaming API request failed: {response.status_code} {error_body}",
+                    status_code=response.status_code,
+                    provider=config.provider,
+                    retryable=retryable,
+                ) from exc
+
+            content_parts: list[str] = []
+            for chunk in _parse_sse_chunks(response):
+                content_parts.append(chunk)
+                yield chunk
+
+            full_content = "".join(content_parts)
+            if not full_content.strip():
+                _log_llm_call(
+                    provider=config.provider,
+                    model=config.model,
+                    json_mode=json_mode,
+                    status="error",
+                    error_type="LLMProviderError",
+                    error_message="empty streaming content",
+                    retryable=True,
+                    streaming=True,
+                    duration_ms=round((time.monotonic() - _call_start) * 1000),
+                )
+                _log_llm_payload(
+                    call_id, "response", status="error", error_type="LLMProviderError",
+                    error_message="empty streaming content", body=full_content,
+                )
+                raise LLMProviderError(
+                    f"{config.provider} returned empty streaming content.",
+                    provider=config.provider,
+                    retryable=True,
+                )
+            _log_llm_call(
+                provider=config.provider,
+                model=config.model,
+                json_mode=json_mode,
+                status="success",
+                finish_reason="stop",
+                content_length=len(full_content),
+                streaming=True,
+                duration_ms=round((time.monotonic() - _call_start) * 1000),
+            )
+            _log_llm_payload(
+                call_id, "response", status="success", body=full_content
+            )
+    except httpx.TransportError as exc:
+        _log_llm_call(
+            provider=config.provider,
+            model=config.model,
+            json_mode=json_mode,
+            status="error",
+            error_type=type(exc).__name__,
+            error_message=str(exc)[:300],
+            retryable=True,
+            streaming=True,
+            duration_ms=round((time.monotonic() - _call_start) * 1000),
+        )
+        _log_llm_payload(
+            call_id,
+            "response",
+            status="error",
+            error_type=type(exc).__name__,
+            error_message=str(exc),
+        )
+        raise LLMProviderError(
+            f"{config.provider} streaming transport error: {exc}",
+            provider=config.provider,
+            retryable=True,
+        ) from exc
+    finally:
+        if close_client:
+            client.close()
+
+
 def call_llm(
     *,
     provider: str | None = None,
@@ -702,6 +924,65 @@ def call_llm(
         schema_name,
         json_schema,
     )
+
+
+def call_llm_json_stream(
+    *,
+    provider: str | None = None,
+    messages: list[LLMMessage],
+    temperature: float = 0.5,
+    http_client: httpx.Client | None = None,
+    model_name: str | None = None,
+    schema_name: str | None = None,
+    json_schema: dict[str, object] | None = None,
+    base_url_override: str | None = None,
+    max_attempts: int | None = None,
+) -> Iterator[str]:
+    """Stream a JSON-mode chat completion, yielding content chunks.
+
+    If the provider rejects streaming or returns an error, falls back to the
+    non-streaming ``call_llm_json`` and yields the complete response as a single
+    chunk so callers can treat the result uniformly.
+    """
+    config = load_provider_config(
+        provider, model_name=model_name, base_url_override=base_url_override
+    )
+
+    def _stream() -> Iterator[str]:
+        yield from _post_chat_completion_stream(
+            config=config,
+            messages=messages,
+            temperature=temperature,
+            json_mode=True,
+            http_client=http_client,
+            schema_name=schema_name,
+            json_schema=json_schema,
+        )
+
+    try:
+        yield from _stream()
+    except LLMProviderError:
+        # Streaming is best-effort. Retry via the non-streaming path which has
+        # tenacity-backed retries and broader provider compatibility.
+        _log_llm_call(
+            provider=config.provider,
+            model=config.model,
+            status="fallback",
+            from_streaming=True,
+            to_json_mode=True,
+        )
+        content = call_llm_json(
+            provider=provider,
+            messages=messages,
+            temperature=temperature,
+            http_client=http_client,
+            model_name=model_name,
+            schema_name=schema_name,
+            json_schema=json_schema,
+            base_url_override=base_url_override,
+            max_attempts=max_attempts,
+        )
+        yield json.dumps(content, ensure_ascii=False, default=str)
 
 
 def _salvage_first_json_value(text: str) -> tuple[bool, object]:
@@ -761,23 +1042,80 @@ def call_llm_json(
     base_url_override: str | None = None,
     max_attempts: int | None = None,
 ) -> object:
-    # Drop json_schema if provider is known to not support strict schema
     resolved = _resolve_provider(provider)
+    # Drop json_schema if provider is already known to not support strict schema.
     if json_schema is not None and not provider_supports_strict_schema(resolved):
         json_schema = None
         schema_name = None
-    try:
-        content = call_llm(
+
+    def _parse_response(content: str) -> object:
+        cleaned = _strip_json_fence(content)
+        try:
+            return json.loads(cleaned)
+        except json.JSONDecodeError as exc:
+            salvaged, value = _salvage_first_json_value(cleaned)
+            if salvaged:
+                _log_llm_call(
+                    provider=resolved,
+                    status="parse_salvaged",
+                    content_preview=content[:300],
+                    error_message=str(exc)[:300],
+                )
+                return value
+            _log_llm_call(
+                provider=resolved,
+                status="parse_error",
+                content_preview=content[:300],
+                error_message=str(exc)[:300],
+            )
+            raise LLMProviderError(
+                f"{resolved} returned non-JSON content: {content[:500]}",
+                provider=resolved,
+                retryable=True,
+            ) from exc
+
+    def _call(
+        *,
+        json_mode: bool,
+        schema_name: str | None,
+        json_schema: dict[str, object] | None,
+    ) -> str:
+        return call_llm(
             provider=resolved,
             messages=messages,
             temperature=temperature,
-            json_mode=True,
+            json_mode=json_mode,
             http_client=http_client,
             model_name=model_name,
             schema_name=schema_name,
             json_schema=json_schema,
             base_url_override=base_url_override,
             max_attempts=max_attempts,
+        )
+
+    # Attempt 1: strict JSON schema (if available and provider not known-bad).
+    if json_schema is not None:
+        try:
+            return _parse_response(
+                _call(json_mode=True, schema_name=schema_name, json_schema=json_schema)
+            )
+        except LLMProviderError as exc:
+            if exc.status_code in {401, 403}:
+                raise
+            if exc.status_code in {400, 404, 415, 422}:
+                _mark_strict_schema_rejected(resolved)
+            _log_llm_call(
+                provider=resolved,
+                status="fallback",
+                from_json_mode=True,
+                to_json_mode=True,
+                reason=str(exc)[:300],
+            )
+
+    # Attempt 2: JSON object mode (no schema, but still JSON-constrained).
+    try:
+        return _parse_response(
+            _call(json_mode=True, schema_name=None, json_schema=None)
         )
     except LLMProviderError as exc:
         if exc.status_code in {401, 403}:
@@ -789,42 +1127,11 @@ def call_llm_json(
             to_json_mode=False,
             reason=str(exc)[:300],
         )
-        content = call_llm(
-            provider=resolved,
-            messages=messages,
-            temperature=temperature,
-            json_mode=False,
-            http_client=http_client,
-            model_name=model_name,
-            schema_name=None,
-            json_schema=None,
-            base_url_override=base_url_override,
-            max_attempts=max_attempts,
-        )
-    cleaned = _strip_json_fence(content)
-    try:
-        return json.loads(cleaned)
-    except json.JSONDecodeError as exc:
-        salvaged, value = _salvage_first_json_value(cleaned)
-        if salvaged:
-            _log_llm_call(
-                provider=resolved,
-                status="parse_salvaged",
-                content_preview=content[:300],
-                error_message=str(exc)[:300],
-            )
-            return value
-        _log_llm_call(
-            provider=resolved,
-            status="parse_error",
-            content_preview=content[:300],
-            error_message=str(exc)[:300],
-        )
-        raise LLMProviderError(
-            f"{resolved} returned non-JSON content: {content[:500]}",
-            provider=resolved,
-            retryable=True,
-        ) from exc
+
+    # Attempt 3: plain text (rely on prompt + fence stripping).
+    return _parse_response(
+        _call(json_mode=False, schema_name=None, json_schema=None)
+    )
 
 
 def _post_chat_completion_with_tools(
@@ -880,6 +1187,7 @@ def _post_chat_completion_with_tools(
         try:
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
+            retryable = response.status_code in _RETRYABLE_STATUS_CODES
             _log_llm_call(
                 provider=config.provider,
                 model=config.model,
@@ -887,7 +1195,7 @@ def _post_chat_completion_with_tools(
                 error_type="HTTPStatusError",
                 error_message=f"{response.status_code} {response.text[:300]}",
                 status_code=response.status_code,
-                retryable=response.status_code in _RETRYABLE_STATUS_CODES,
+                retryable=retryable,
                 tool_call=True,
                 duration_ms=round((time.monotonic() - _call_start) * 1000),
             )
@@ -903,7 +1211,12 @@ def _post_chat_completion_with_tools(
                 f"{config.provider} tools API request failed: {response.status_code} {response.text}",
                 status_code=response.status_code,
                 provider=config.provider,
+                retryable=retryable,
             ) from exc
+        raw_response = response.text
+        _log_llm_payload(
+            call_id, "response", status="success", tool_call=True, body=raw_response
+        )
         payload = response.json()
         choice = payload["choices"][0]
         message = choice.get("message", {})
@@ -931,12 +1244,11 @@ def _post_chat_completion_with_tools(
             tool_call=True,
             duration_ms=round((time.monotonic() - _call_start) * 1000),
         )
-        _log_llm_payload(call_id, "response", status="success", tool_call=True, payload=payload)
         return LLMResponseWithTools(
             content=content if isinstance(content, str) and content.strip() else None,
             tool_calls=tool_calls,
         )
-    except (KeyError, IndexError, json.JSONDecodeError) as exc:
+    except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
         _log_llm_call(
             provider=config.provider,
             model=config.model,
@@ -953,7 +1265,7 @@ def _post_chat_completion_with_tools(
             status="error",
             status_code=response.status_code,
             tool_call=True,
-            error_body=response.text,
+            error_body=raw_response if "raw_response" in locals() else response.text,
         )
         raise LLMProviderError(
                 f"{config.provider} returned an invalid tools chat response.",
@@ -1047,6 +1359,24 @@ class DefaultLLMClient:
         agent: AgentName | None = None,
     ) -> object:
         return call_llm_json(
+            provider=self.provider,
+            messages=messages,
+            temperature=temperature,
+            model_name=self.model_name,
+            schema_name=schema_name,
+            json_schema=json_schema,
+        )
+
+    def generate_json_stream(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        agent: AgentName | None = None,
+        *,
+        schema_name: str | None = None,
+        json_schema: dict[str, object] | None = None,
+    ) -> Iterator[str]:
+        return call_llm_json_stream(
             provider=self.provider,
             messages=messages,
             temperature=temperature,
@@ -1239,6 +1569,42 @@ class AgentLLMRouter:
 
         return self._with_fallback(agent, invoke)
 
+    def generate_structured_validated_json(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        *,
+        schema_name: str,
+        json_schema: dict[str, object],
+        validator: Callable[[object], _T],
+        agent: AgentName | None = None,
+    ) -> _T:
+        """Validate each provider response inside the primary/fallback attempt loop."""
+
+        def invoke(
+            provider: str | None, model_name: str | None, base_url: str | None, attempts: int | None
+        ) -> _T:
+            raw = call_llm_json(
+                provider=provider,
+                messages=messages,
+                temperature=temperature,
+                model_name=model_name,
+                schema_name=schema_name,
+                json_schema=json_schema,
+                base_url_override=base_url,
+                max_attempts=attempts,
+            )
+            try:
+                return validator(raw)
+            except Exception as exc:
+                raise LLMProviderError(
+                    f"model output failed {schema_name} validation: {exc}",
+                    provider=provider,
+                    retryable=True,
+                ) from exc
+
+        return self._with_fallback(agent, invoke)
+
     def generate_with_tools(
         self,
         messages: list[LLMMessage],
@@ -1260,3 +1626,73 @@ class AgentLLMRouter:
             )
 
         return self._with_fallback(agent, invoke)
+
+    def generate_json_stream(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        agent: AgentName | None = None,
+        *,
+        schema_name: str | None = None,
+        json_schema: dict[str, object] | None = None,
+    ) -> Iterator[str]:
+        """Stream a JSON-mode chat completion with primary/fallback model failover.
+
+        ``call_llm_json_stream`` already falls back internally from streaming to
+        non-streaming for the same model. This method adds cross-model failover:
+        if the primary model's stream fails during iteration, it switches to the
+        configured fallback model and tries again, alternating primary/fallback for
+        ``retry_times`` rounds. Chunks are yielded as they arrive from whichever
+        model succeeds.
+        """
+
+        def invoke(
+            provider: str | None, model_name: str | None, base_url: str | None, attempts: int | None
+        ) -> Iterator[str]:
+            return call_llm_json_stream(
+                provider=provider,
+                messages=messages,
+                temperature=temperature,
+                model_name=model_name,
+                base_url_override=base_url,
+                max_attempts=attempts,
+                schema_name=schema_name,
+                json_schema=json_schema,
+            )
+
+        primary = self.provider_for(agent)
+        primary_model = self.model_for(agent)
+        fallback = self.agent_fallbacks.get(agent) if agent is not None else None
+        if fallback is None:
+            return invoke(primary, primary_model, None, None)
+
+        rounds = load_provider_config(primary, model_name=primary_model).retry_times
+
+        def _resilient_stream() -> Iterator[str]:
+            last_exc: LLMProviderError | None = None
+            for round_no in range(1, rounds + 1):
+                try:
+                    yield from invoke(primary, primary_model, None, 1)
+                    return
+                except LLMProviderError as exc:
+                    last_exc = exc
+                    _log_llm_call(
+                        provider=primary,
+                        status="model_fallback",
+                        from_model=primary_model,
+                        to_provider=fallback.provider,
+                        to_model=fallback.model_name,
+                        reason=str(exc)[:300],
+                        round=round_no,
+                    )
+                try:
+                    yield from invoke(fallback.provider, fallback.model_name, fallback.base_url, 1)
+                    return
+                except LLMProviderError as exc:
+                    last_exc = exc
+                    if round_no < rounds:
+                        time.sleep(min(0.5 * 2 ** (round_no - 1), 4.0))
+            assert last_exc is not None
+            raise last_exc
+
+        return _resilient_stream()

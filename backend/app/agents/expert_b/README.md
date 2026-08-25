@@ -17,7 +17,9 @@
 - `user_input`: 用户问题或学习目标。
 - `learner_profile`: 学习者画像，用于教学表达适配。
 - `retrieval_context`: RAG 注入的法条、指南、案例等上下文。
-- `learning_path`: 建议读取，用于对齐当前学习节点。
+- `teaching_context`: Planner 生成的受限单节窗口，用于对齐当前知识点、复习/探测范围和教学策略。
+
+`learning_path` 是 Planner、导航和审计专用的完整路线；Expert A/B 不读取它。
 
 ## 输出
 

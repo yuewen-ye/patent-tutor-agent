@@ -27,3 +27,20 @@ def test_pptx_artifact_downloads_as_attachment(tmp_path) -> None:
         "application/vnd.openxmlformats-officedocument.presentationml.presentation"
     )
     assert "attachment" in response.headers["content-disposition"]
+
+
+def test_png_preview_artifact_downloads_as_raw_image(tmp_path) -> None:
+    service = SessionService(artifact_root=tmp_path)
+    target = tmp_path / "sessions/s1/presentation/previews"
+    target.mkdir(parents=True)
+    target.joinpath("slide_001.png").write_bytes(b"\x89PNG")
+    app_client = TestClient(__import__("fastapi").FastAPI())
+    app_client.app.include_router(create_artifacts_router(service))
+
+    response = app_client.get(
+        "/sessions/s1/artifacts/presentation/previews/slide_001.png"
+    )
+
+    assert response.status_code == 200
+    assert response.content == b"\x89PNG"
+    assert response.headers["content-type"] == "image/png"

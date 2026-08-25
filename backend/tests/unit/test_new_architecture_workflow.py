@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import threading
+from collections.abc import Iterator
 from pathlib import Path
 from typing import cast
 
@@ -16,11 +17,29 @@ from backend.app.schemas.state import StateDict
 pytestmark = pytest.mark.unit
 
 
+@pytest.fixture(autouse=True)
+def disable_pptx(monkeypatch: pytest.MonkeyPatch) -> None:
+    """PPTX generation is tested separately; these workflow tests focus on graph topology."""
+    monkeypatch.setenv("PATENT_TUTOR_PPTX_ENABLED", "false")
+
+
 class PhaseLLMClient:
     def generate_json(
         self, messages: list[LLMMessage], temperature: float, agent: str | None = None
     ) -> object:
         raise AssertionError("not used")
+
+    def generate_json_stream(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        agent: str | None = None,
+        *,
+        schema_name: str | None = None,
+        json_schema: dict[str, object] | None = None,
+    ) -> Iterator[str]:
+        # Streaming callers accumulate the full text then parse it as JSON.
+        yield json.dumps(self.generate_json(messages, temperature, agent), ensure_ascii=False)
 
     def generate_with_tools(
         self,
@@ -112,6 +131,17 @@ class WorkflowLLMClient:
                     "five_dimensions": {"knowledge": {"novelty": {"pl": 0.3, "ci_low": 0.15, "ci_high": 0.5, "observations": 3, "low_confidence": False}}, "cognition": {"remember": 0.8, "understand": 0.6, "apply": 0.4, "analyze": 0.3, "evaluate": 0.2, "create": 0.1}, "style": {"perception": {"chosen": "sensing", "strength": 0.7}, "input": {"chosen": "visual", "strength": 0.6}, "processing": {"chosen": "active", "strength": 0.55}, "understanding": {"chosen": "sequential", "strength": 0.65}}, "progress": {"completed_nodes": ["patent-law-basic"], "current_node": "novelty-basic", "pending_nodes": ["inventiveness"], "avg_time_per_node_min": 22, "overall_completion_ratio": 0.3}, "affect": {"primary_state": "interested", "confidence": 0.6, "signals": ["主动提问"]}},
                 },
             ],
+            "planner": [{
+                "plan_action": "replace",
+                "decision_reason": "首次建立路线",
+                "nodes": [
+                    {"node_id": "patent-law-foundation", "node_name": "专利法律制度基础", "duration_min": 20, "strategy": "概念", "prerequisites": [], "difficulty_cap": "L1"},
+                    {"node_id": "patent-system-overview", "node_name": "专利制度概论", "duration_min": 20, "strategy": "框架", "prerequisites": ["patent-law-foundation"], "difficulty_cap": "L2"},
+                ],
+                "question_scope": {"backward_review": [], "forward_probe": [], "weakness_probe": []},
+                "iteration_directive": {"type": "无", "trigger": "首轮", "action": "反馈后调整"},
+                "teaching_guidance": {"lesson_focus": ["制度基础"], "priority_weaknesses": [], "teaching_strategy": "规则讲解", "confusion_guidance": "辨析相关概念"},
+            }],
             "expert_a": [draft_a, review_a, draft_a, integrated],
             "expert_b": [draft_b, review_b, draft_b],
             "judge": [
@@ -157,6 +187,28 @@ class WorkflowLLMClient:
             self.agents.append(agent)
         return self.queues[agent].pop(0)
 
+    def generate_json_stream(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        agent: str | None = None,
+        *,
+        schema_name: str | None = None,
+        json_schema: dict[str, object] | None = None,
+    ) -> Iterator[str]:
+        assert agent is not None
+        with self._agents_lock:
+            self.agents.append(agent)
+        payload = self.queues[agent].pop(0)
+        if agent == "planner" and payload.get("plan_action") == "replace":
+            user_text = messages[-1].content
+            marker = "# 算法候选路线"
+            if marker in user_text:
+                candidate_text = user_text.split(marker, 1)[1].split("\n# 基于学习目标", 1)[0]
+                payload = dict(payload)
+                payload["nodes"] = json.loads(candidate_text.split("\n", 1)[1])
+        return iter([json.dumps(payload, ensure_ascii=False)])
+
     def generate_with_tools(
         self,
         messages: list[LLMMessage],
@@ -174,16 +226,37 @@ class ParallelPhaseLLMClient(WorkflowLLMClient):
         self._phase_lock = threading.Lock()
         self._phase_barriers = [threading.Barrier(2) for _ in range(3)]
 
-    def generate_json(
-        self, messages: list[LLMMessage], temperature: float, agent: str | None = None
-    ) -> object:
+    def _track_phase(self, agent: str | None) -> None:
         if agent in self._phase_calls:
             with self._phase_lock:
                 phase_index = self._phase_calls[agent]
                 self._phase_calls[agent] += 1
             if phase_index < len(self._phase_barriers):
                 self._phase_barriers[phase_index].wait(timeout=2)
+
+    def generate_json(
+        self, messages: list[LLMMessage], temperature: float, agent: str | None = None
+    ) -> object:
+        self._track_phase(agent)
         return super().generate_json(messages, temperature, agent)
+
+    def generate_json_stream(
+        self,
+        messages: list[LLMMessage],
+        temperature: float,
+        agent: str | None = None,
+        *,
+        schema_name: str | None = None,
+        json_schema: dict[str, object] | None = None,
+    ) -> Iterator[str]:
+        self._track_phase(agent)
+        return super().generate_json_stream(
+            messages,
+            temperature,
+            agent,
+            schema_name=schema_name,
+            json_schema=json_schema,
+        )
 
 
 def test_graph_registers_diagnosis_feedback_agent_name() -> None:
@@ -210,6 +283,80 @@ def test_graph_parallelizes_experts_and_branches_after_judge() -> None:
     assert "publish_final_learning" not in mermaid
     assert "quality_gate_failed" not in mermaid
     assert "revise_integration" not in mermaid
+
+
+def test_debate_flag_defaults_on_and_rejects_invalid_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    from backend.app.graph.workflow import _is_debate_enabled
+
+    monkeypatch.delenv("PATENT_TUTOR_DEBATE_ENABLED", raising=False)
+    assert _is_debate_enabled() is True
+    monkeypatch.setenv("PATENT_TUTOR_DEBATE_ENABLED", "false")
+    assert _is_debate_enabled() is False
+    for invalid in ("fasle", "True", " false", "false "):
+        monkeypatch.setenv("PATENT_TUTOR_DEBATE_ENABLED", invalid)
+        with pytest.raises(ValueError, match="PATENT_TUTOR_DEBATE_ENABLED"):
+            _is_debate_enabled()
+
+
+def test_graph_omits_debate_nodes_when_disabled() -> None:
+    workflow = build_workflow(
+        llm_client=PhaseLLMClient(), slide_deck_enabled=True, debate_enabled=False
+    )
+    mermaid = export_workflow_mermaid(workflow)
+    edges = {(edge.source, edge.target) for edge in workflow.get_graph().edges}
+    nodes = set(workflow.get_graph().nodes)
+
+    assert ("planner", "expert_a") in edges
+    assert ("expert_a", "judge") in edges
+    assert ("judge", "slide_deck") in edges
+    assert "expert_b" not in nodes
+    assert "_experts_barrier" not in nodes
+    assert "expert_a_integration" not in nodes
+    assert "expert_b" not in mermaid
+    assert "cross_review" not in mermaid
+    assert "revision" not in mermaid
+
+
+def test_single_agent_teach_flow_writes_course_package_without_debate_artifacts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
+    artifact_root = tmp_path / "artifacts"
+    llm = WorkflowLLMClient()
+
+    state = run_workflow(
+        session_id="single-agent",
+        user_input="掌握专利新颖性",
+        llm_client=llm,
+        artifact_root=artifact_root,
+        learner_id="learner-1",
+        debate_enabled=False,
+    )
+
+    session_root = artifact_root / "sessions" / "single-agent"
+    assert state["workflow_status"] == "completed"
+    assert state["teach_phase"] == "single_agent"
+    assert state["expert_phase"] == "draft"
+    assert {
+        key: value
+        for key, value in state["course_package"].items()
+        if key != "markdown_artifact"
+    } == {
+        key: value
+        for key, value in state["expert_a_draft"].items()
+        if key != "markdown_artifact"
+    }
+    assert llm.agents.count("expert_a") == 1
+    assert "expert_b" not in llm.agents
+    assert "expert_b_draft" not in state
+    assert "expert_a_cross_review" not in state
+    assert "expert_b_cross_review" not in state
+    assert "expert_a_revision" not in state
+    assert "expert_b_revision" not in state
+    assert (session_root / "round-01/course_package.md").is_file()
+    assert not (session_root / "round-01/expert_b_draft.md").exists()
+    assert not (session_root / "round-01/expert_a_cross_review.md").exists()
+    assert not (session_root / "round-01/expert_a_revision.md").exists()
 
 
 def test_graph_skips_slide_deck_when_disabled() -> None:
@@ -500,6 +647,18 @@ def test_feedback_mode_reuses_diagnosis_feedback_and_skips_course_agents(
                 "five_dimensions": {"knowledge": {"novelty": {"pl": 0.3, "ci_low": 0.15, "ci_high": 0.5, "observations": 3, "low_confidence": False}}, "cognition": {"remember": 0.8, "understand": 0.6, "apply": 0.4, "analyze": 0.3, "evaluate": 0.2, "create": 0.1}, "style": {"perception": {"chosen": "sensing", "strength": 0.7}, "input": {"chosen": "visual", "strength": 0.6}, "processing": {"chosen": "active", "strength": 0.55}, "understanding": {"chosen": "sequential", "strength": 0.65}}, "progress": {"completed_nodes": ["patent-law-basic"], "current_node": "novelty-basic", "pending_nodes": ["inventiveness"], "avg_time_per_node_min": 22, "overall_completion_ratio": 0.3}, "affect": {"primary_state": "interested", "confidence": 0.6, "signals": ["主动提问"]}},
             }
 
+        def generate_json_stream(
+            self,
+            messages: list[LLMMessage],
+            temperature: float,
+            agent: str | None = None,
+            *,
+            schema_name: str | None = None,
+            json_schema: dict[str, object] | None = None,
+        ) -> Iterator[str]:
+            # Delegates to generate_json for the payload; tracking happens there.
+            yield json.dumps(self.generate_json(messages, temperature, agent), ensure_ascii=False)
+
         def generate_with_tools(
             self,
             messages: list[LLMMessage],
@@ -562,6 +721,19 @@ def test_rejected_judge_reintegrates_until_accepts(
 ) -> None:
     """judge 判 revise 时应打回 expert_a 重新整合（最终稿被修正），复审 accept 后完成，judge 至多 3 轮。"""
     monkeypatch.setenv("RAG_RETRIEVAL_MODE", "mock")
+    # 默认 max_revisions=0 会跳过修订循环；本测试专门验证循环机制，显式启用上限。
+    from backend.app.core.agent_runtime_config import AgentRuntimeSettings
+    from backend.app.graph import workflow as workflow_module
+
+    original_settings = workflow_module.agent_runtime_settings
+
+    def settings_with_revision_cap(agent: str) -> AgentRuntimeSettings:
+        settings = original_settings(agent)
+        if agent == "judge":
+            return settings.model_copy(update={"max_revisions": 3})
+        return settings
+
+    monkeypatch.setattr(workflow_module, "agent_runtime_settings", settings_with_revision_cap)
     llm = WorkflowLLMClient()
     rejected = {
         "decision": "revise",
@@ -588,7 +760,7 @@ def test_rejected_judge_reintegrates_until_accepts(
     }
     llm.queues["judge"] = [rejected, rejected, accepted]
     # 重新整合需要 expert_a 多一次 integration 响应（基于原整合稿修正）
-    integrated_revised = dict(llm.queues["expert_a"][3])
+    integrated_revised = dict(cast(dict[str, object], llm.queues["expert_a"][3]))
     integrated_revised["teaching_content"] = "修正后的课程正文（已补充法条与案例依据）"
     llm.queues["expert_a"].append(integrated_revised)
     llm.queues["expert_a"].append(dict(integrated_revised))

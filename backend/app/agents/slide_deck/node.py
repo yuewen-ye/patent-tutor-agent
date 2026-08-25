@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from backend.app.agents.common import Node, generate_validated_json, load_prompt
+from backend.app.agents.common import Node, generate_validated_json_stream, load_prompt
 from backend.app.core.agent_runtime_config import agent_temperature
 from backend.app.core.llm import LLMClient, LLMMessage
 from backend.app.schemas.state import SlideDeck, StateDict, completed_event
@@ -64,7 +64,7 @@ def build_slide_deck_node(llm_client: LLMClient) -> Node:
                 ),
             ),
         ]
-        deck = generate_validated_json(
+        deck = generate_validated_json_stream(
             llm_client,
             messages=messages,
             temperature=agent_temperature("slide_deck", 0.3),

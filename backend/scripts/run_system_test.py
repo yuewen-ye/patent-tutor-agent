@@ -1,4 +1,4 @@
-"""Run a full learner-path system test locally (no MySQL / no real LLM needed).
+"""Run a full learner-path system test locally with MySQL and a simulated LLM.
 
 Modes:
   questionnaire : POST-like questionnaire submission -> BKT seeding -> teach course
@@ -20,7 +20,6 @@ import argparse
 import json
 import os
 import sys
-import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -31,12 +30,13 @@ if str(PROJECT_ROOT) not in sys.path:
 
 os.environ.setdefault("RAG_RETRIEVAL_MODE", "mock")
 
+from backend.app.config import load_service_settings
 from backend.app.core.llm import (
     LLMMessage,
     LLMResponseWithTools,
     ToolDefinition,
 )
-from backend.app.learner_memory.sqlite_store import SQLiteLearnerStore
+from backend.app.persistence.repositories import MySQLLearnerStore
 from backend.app.services.session_service import SessionService
 
 ARTIFACT_ROOT = "artifacts"
@@ -311,8 +311,14 @@ def run_cat_path() -> None:
 
 
 def _new_service() -> SessionService:
-    store = SQLiteLearnerStore(
-        Path(tempfile.mkdtemp(prefix="system-test-")) / "learners.sqlite3"
+    settings = load_service_settings()
+    if not settings.mysql_url:
+        raise RuntimeError("PATENT_TUTOR_MYSQL_URL must be configured for the system test")
+    store = MySQLLearnerStore(
+        url=settings.mysql_url,
+        pool_size=settings.mysql_pool_size,
+        connect_timeout=settings.mysql_connect_timeout,
+        auto_migrate=settings.mysql_auto_migrate,
     )
     return SessionService(
         artifact_root=ARTIFACT_ROOT,

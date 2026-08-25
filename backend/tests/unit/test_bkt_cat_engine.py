@@ -211,3 +211,23 @@ def test_diagnosis_progress_is_backend_owned_and_not_required_from_llm() -> None
     assert dimensions.progress.completed_nodes == []
     assert dimensions.progress.current_node is None
     assert dimensions.progress.overall_completion_ratio == pytest.approx(0.0)
+
+
+def test_historical_profile_progress_does_not_restore_plan_completion_provenance() -> None:
+    dimensions = _build_five_dimensions(
+        {},
+        {},
+        base_dimensions={
+            "progress": {
+                "completed_nodes": ["patent-law-foundation"],
+                "completion_sessions": {"patent-law-foundation": "feedback-1"},
+                "current_node": None,
+                "pending_nodes": [],
+                "avg_time_per_node_min": None,
+                "overall_completion_ratio": 1.0,
+            }
+        },
+    )
+
+    assert dimensions.progress.completed_nodes == ["patent-law-foundation"]
+    assert not hasattr(dimensions.progress, "completion_sessions")

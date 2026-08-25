@@ -15,9 +15,13 @@ from backend.app.core.llm import (
     AgentLLMRouter,
     LLMConfigurationError,
     LLMMessage,
+    LLMProviderConfig,
     LLMProviderError,
+    _post_chat_completion_stream,
+    _strict_schema_rejected,
     call_llm,
     call_llm_json,
+    call_llm_json_stream,
     load_provider_config,
 )
 from backend.tests.helpers import make_provider_config, stub_llm_providers
@@ -34,6 +38,27 @@ def clear_config_cache() -> Iterator[None]:
 
 def _json_response(content: str) -> httpx.Response:
     return httpx.Response(200, json={"choices": [{"message": {"content": content}}]})
+
+
+def _sse_response(content: str, chunk_size: int = 8) -> httpx.Response:
+    """Return an OpenAI-compatible streaming completion response."""
+    lines: list[str] = []
+    for i in range(0, len(content), chunk_size):
+        chunk = content[i : i + chunk_size]
+        payload = json.dumps({"choices": [{"delta": {"content": chunk}}]}, ensure_ascii=False)
+        lines.append(f"data: {payload}")
+    lines.append("data: [DONE]")
+    body = "\n\n".join(lines) + "\n\n"
+    return httpx.Response(
+        200,
+        content=body.encode("utf-8"),
+        headers={"content-type": "text/event-stream"},
+    )
+
+
+def _choices_null_response() -> httpx.Response:
+    """Return a degenerate 200 response with choices:null (gateway bug)."""
+    return httpx.Response(200, json={"choices": None})
 
 
 def test_call_llm_omits_temperature_for_gpt56_model(monkeypatch) -> None:
@@ -182,6 +207,207 @@ def test_call_llm_json_salvage_failure_keeps_retryable_error(monkeypatch) -> Non
         )
 
     assert excinfo.value.retryable
+
+
+def test_call_llm_treats_choices_null_as_retryable_provider_error(monkeypatch) -> None:
+    """Regression: gateway may return HTTP 200 with choices:null.
+
+    Previously ``payload['choices'][0]`` raised ``TypeError`` because the
+    except clause only caught ``KeyError/IndexError/JSONDecodeError``.
+    This must be converted to a retryable ``LLMProviderError``.
+    """
+    stub_llm_providers(monkeypatch, {"qwen": make_provider_config()})
+
+    with pytest.raises(LLMProviderError) as excinfo:
+        call_llm(
+            provider="qwen",
+            messages=[LLMMessage(role="user", content="hi")],
+            http_client=httpx.Client(
+                transport=httpx.MockTransport(lambda request: _choices_null_response())
+            ),
+        )
+
+    assert excinfo.value.retryable
+    assert "invalid chat response" in str(excinfo.value)
+
+
+def test_call_llm_tools_treats_choices_null_as_retryable_provider_error(monkeypatch) -> None:
+    """The tools variant has the same choices:null vulnerability."""
+    from backend.app.core.llm import ToolDefinition, call_llm_tools
+
+    stub_llm_providers(monkeypatch, {"qwen": make_provider_config()})
+
+    with pytest.raises(LLMProviderError) as excinfo:
+        call_llm_tools(
+            provider="qwen",
+            messages=[LLMMessage(role="user", content="hi")],
+            tools=[
+                ToolDefinition(
+                    name="search",
+                    description="search",
+                    parameters={"type": "object", "properties": {}},
+                )
+            ],
+            http_client=httpx.Client(
+                transport=httpx.MockTransport(lambda request: _choices_null_response())
+            ),
+        )
+
+    assert excinfo.value.retryable
+    assert "invalid tools chat response" in str(excinfo.value)
+
+
+def test_call_llm_json_stream_fallback_yields_valid_json(monkeypatch) -> None:
+    """Regression: streaming fallback must yield JSON, not Python repr.
+
+    When the streaming endpoint times out, ``call_llm_json_stream`` falls back
+    to ``call_llm_json`` which returns a parsed Python object. Previously the
+    fallback yielded ``str(obj)`` (single-quoted repr); downstream chunk
+    concatenation and JSON parsing could then salvage an empty ``[]`` from the
+    repr and fail validation with ``Input should be a valid dictionary``.
+    """
+    stub_llm_providers(monkeypatch, {"qwen": make_provider_config()})
+
+    expected = {"expert": "expert_a", "items": [], "nested": {"value": 1}}
+    call_llm_json_calls: list[dict[str, object]] = []
+
+    def fake_call_llm_json(**kwargs: object) -> object:
+        call_llm_json_calls.append(kwargs)
+        return expected
+
+    monkeypatch.setattr("backend.app.core.llm.call_llm_json", fake_call_llm_json)
+    monkeypatch.setattr(
+        "backend.app.core.llm._post_chat_completion_stream",
+        lambda *a, **k: (_ for _ in ()).throw(
+            LLMProviderError("stream timeout", retryable=True)
+        ),
+    )
+
+    chunks = list(
+        call_llm_json_stream(
+            provider="qwen",
+            messages=[LLMMessage(role="user", content="hi")],
+            temperature=0.5,
+        )
+    )
+
+    joined = "".join(chunks)
+    assert json.loads(joined) == expected
+    assert len(call_llm_json_calls) == 1
+
+
+def test_call_llm_json_stream_uses_json_schema_response_format(monkeypatch) -> None:
+    """Streaming JSON generation must send the schema via response_format."""
+    stub_llm_providers(monkeypatch, {"qwen": make_provider_config(model_name="qwen3.7-plus")})
+    captured: dict[str, object] = {}
+    schema: dict[str, object] = {
+        "type": "object",
+        "properties": {"answer": {"type": "string"}},
+        "required": ["answer"],
+        "additionalProperties": False,
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = json.loads(request.content.decode("utf-8"))
+        return _sse_response('{"answer": "streamed"}')
+
+    chunks = list(
+        call_llm_json_stream(
+            provider="qwen",
+            messages=[LLMMessage(role="user", content="hi")],
+            temperature=0.5,
+            schema_name="Answer",
+            json_schema=schema,
+            http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+        )
+    )
+
+    joined = "".join(chunks)
+    assert json.loads(joined) == {"answer": "streamed"}
+    body = cast(dict[str, Any], captured["body"])
+    assert body["response_format"]["type"] == "json_schema"
+    assert body["response_format"]["json_schema"]["name"] == "Answer"
+    assert body["response_format"]["json_schema"]["schema"] == schema
+
+
+def test_post_chat_completion_stream_reads_error_body_on_http_status_error() -> None:
+    """Regression: streaming error responses must be read before accessing text.
+
+    ``httpx`` streaming responses raise ``ResponseNotRead`` if ``response.text`` is
+    accessed before the body is consumed. Previously the 502 error handler did exactly
+    that, so a retryable gateway error became an uncaught ``ResponseNotRead`` and
+    bypassed the primary/fallback model failover loop.
+    """
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        # Use a streaming body so the response is not pre-read; accessing
+        # ``response.text`` before ``response.read()`` would raise ``ResponseNotRead``.
+        def body() -> Iterator[bytes]:
+            yield b'{"error": {"message": "Bad Gateway"}}'
+
+        return httpx.Response(
+            502,
+            content=body(),
+            headers={"content-type": "text/event-stream"},
+        )
+
+    config = LLMProviderConfig(
+        provider="qwen",
+        api_key="test-key",
+        model="qwen3.7-plus",
+        base_url="https://gateway.example/v1",
+        timeout_seconds=30.0,
+        retry_times=3,
+    )
+
+    with pytest.raises(LLMProviderError, match="Bad Gateway") as excinfo:
+        list(
+            _post_chat_completion_stream(
+                config=config,
+                messages=[LLMMessage(role="user", content="hi")],
+                temperature=0.5,
+                json_mode=True,
+                http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+            )
+        )
+
+    assert excinfo.value.retryable
+    assert "streaming API request failed" in str(excinfo.value)
+
+
+def test_call_llm_json_stream_logs_full_content_before_downstream_parse(monkeypatch, tmp_path) -> None:
+    """Streaming payload must record the accumulated content before JSON parsing."""
+    from backend.app.core.llm import set_llm_log_context
+
+    stub_llm_providers(monkeypatch, {"qwen": make_provider_config(model_name="qwen3.7-plus")})
+    monkeypatch.setenv("LLM_LOG_PAYLOAD", "true")
+    set_llm_log_context(session_id="sess-stream-payload", log_root=tmp_path)
+    try:
+        chunks = list(
+            call_llm_json_stream(
+                provider="qwen",
+                messages=[LLMMessage(role="user", content="hi")],
+                temperature=0.5,
+                http_client=httpx.Client(
+                    transport=httpx.MockTransport(
+                        lambda request: _sse_response('{"answer": "streamed"}')
+                    )
+                ),
+            )
+        )
+    finally:
+        set_llm_log_context(session_id=None, log_root=None)
+
+    assert "".join(chunks) == '{"answer": "streamed"}'
+    log_file = tmp_path / "sessions" / "sess-stream-payload" / "llm_payloads.log.jsonl"
+    records = [
+        json.loads(line)
+        for line in log_file.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert [record["direction"] for record in records] == ["request", "response"]
+    assert records[1]["status"] == "success"
+    assert records[1]["body"] == '{"answer": "streamed"}'
 
 
 def test_call_llm_uses_explicit_model_name_override(monkeypatch) -> None:
@@ -346,7 +572,8 @@ def test_call_llm_logs_full_payload_pair_when_enabled(monkeypatch, tmp_path) -> 
         "type": "string"
     }
     assert records[1]["status"] == "success"
-    assert records[1]["payload"]["choices"][0]["message"]["content"] == '{"intent":"teach"}'
+    response_body = json.loads(records[1]["body"])
+    assert response_body["choices"][0]["message"]["content"] == '{"intent":"teach"}'
 
 
 def test_call_llm_skips_payload_log_when_disabled(monkeypatch, tmp_path) -> None:
@@ -713,6 +940,39 @@ def test_fallback_exhausts_rounds_then_raises(monkeypatch) -> None:
     assert len(calls) == 4  # 2 rounds x (primary + fallback)
 
 
+def test_semantic_validation_failure_uses_fallback_then_returns_to_primary(monkeypatch) -> None:
+    _patch_retry_times(monkeypatch, 2)
+    calls = _patch_call_llm_json(
+        monkeypatch,
+        {
+            ("deepseek", "deepseek-v4-pro"): [{"valid": False}, {"valid": True}],
+            ("gpt", "gpt-5.6-terra"): [{"valid": False}],
+        },
+    )
+
+    def validator(raw: object) -> dict[str, bool]:
+        assert isinstance(raw, dict)
+        if raw.get("valid") is not True:
+            raise ValueError("semantic route failure")
+        return {"valid": True}
+
+    result = _fallback_router().generate_structured_validated_json(
+        [LLMMessage(role="user", content="hi")],
+        0.5,
+        schema_name="PlannerAgentResult",
+        json_schema={"type": "object"},
+        validator=validator,
+        agent="expert_b",
+    )
+
+    assert result == {"valid": True}
+    assert [(call["provider"], call["model_name"]) for call in calls] == [
+        ("deepseek", "deepseek-v4-pro"),
+        ("gpt", "gpt-5.6-terra"),
+        ("deepseek", "deepseek-v4-pro"),
+    ]
+
+
 def test_our_side_error_also_triggers_fallback(monkeypatch) -> None:
     _patch_retry_times(monkeypatch, 3)
     calls = _patch_call_llm_json(
@@ -805,3 +1065,210 @@ def test_env_provider_override_ignores_yaml_fallback(monkeypatch, tmp_path) -> N
 
     assert router.provider_for("expert_b") == "gpt"
     assert "expert_b" not in router.agent_fallbacks
+
+
+def _patch_call_llm_json_stream(
+    monkeypatch,
+    script: dict[tuple[str, str | None], list[list[str] | Exception]],
+):
+    """Patch call_llm_json_stream with per-(provider, model) scripted iterators; returns call log."""
+    calls: list[dict[str, object]] = []
+
+    def fake_call_llm_json_stream(
+        *,
+        provider,
+        messages,
+        temperature,
+        http_client=None,
+        model_name=None,
+        schema_name=None,
+        json_schema=None,
+        base_url_override=None,
+        max_attempts=None,
+    ):
+        calls.append(
+            {
+                "provider": provider,
+                "model_name": model_name,
+                "base_url_override": base_url_override,
+                "max_attempts": max_attempts,
+            }
+        )
+        queue = script[(provider, model_name)]
+        outcome = queue.pop(0)
+        if isinstance(outcome, Exception):
+            raise outcome
+
+        def _iter() -> Iterator[str]:
+            yield from outcome
+
+        return _iter()
+
+    monkeypatch.setattr("backend.app.core.llm.call_llm_json_stream", fake_call_llm_json_stream)
+    return calls
+
+
+def test_fallback_model_used_on_streaming_failure(monkeypatch) -> None:
+    """Streaming JSON generation must fail over to fallback model when primary stream fails."""
+    _patch_retry_times(monkeypatch, 3)
+    calls = _patch_call_llm_json_stream(
+        monkeypatch,
+        {
+            ("deepseek", "deepseek-v4-pro"): [LLMProviderError("stream timeout", retryable=True)],
+            ("gpt", "gpt-5.6-terra"): [['{"answer": "from-fallback"}']],
+        },
+    )
+
+    chunks = list(
+        _fallback_router().generate_json_stream(
+            [LLMMessage(role="user", content="hi")], 0.5, agent="expert_b"
+        )
+    )
+
+    assert "".join(chunks) == '{"answer": "from-fallback"}'
+    assert [(c["provider"], c["model_name"]) for c in calls] == [
+        ("deepseek", "deepseek-v4-pro"),
+        ("gpt", "gpt-5.6-terra"),
+    ]
+
+
+def test_fallback_streaming_failure_returns_to_primary_next_round(monkeypatch) -> None:
+    """If fallback stream also fails, the next round starts from primary again."""
+    _patch_retry_times(monkeypatch, 3)
+    calls = _patch_call_llm_json_stream(
+        monkeypatch,
+        {
+            ("deepseek", "deepseek-v4-pro"): [
+                LLMProviderError("stream timeout", retryable=True),
+                ['{"answer": "primary-round-2"}'],
+            ],
+            ("gpt", "gpt-5.6-terra"): [LLMProviderError("fallback stream broken", retryable=True)],
+        },
+    )
+
+    chunks = list(
+        _fallback_router().generate_json_stream(
+            [LLMMessage(role="user", content="hi")], 0.5, agent="expert_b"
+        )
+    )
+
+    assert "".join(chunks) == '{"answer": "primary-round-2"}'
+    assert [(c["provider"], c["model_name"]) for c in calls] == [
+        ("deepseek", "deepseek-v4-pro"),
+        ("gpt", "gpt-5.6-terra"),
+        ("deepseek", "deepseek-v4-pro"),
+    ]
+
+
+def test_fallback_streaming_exhausts_rounds_then_raises(monkeypatch) -> None:
+    """Streaming failover alternates primary/fallback until rounds are exhausted."""
+    _patch_retry_times(monkeypatch, 2)
+    calls = _patch_call_llm_json_stream(
+        monkeypatch,
+        {
+            ("deepseek", "deepseek-v4-pro"): [
+                LLMProviderError("primary round 1", retryable=True),
+                LLMProviderError("primary round 2", retryable=True),
+            ],
+            ("gpt", "gpt-5.6-terra"): [
+                LLMProviderError("fallback round 1", retryable=True),
+                LLMProviderError("fallback round 2", retryable=True),
+            ],
+        },
+    )
+
+    with pytest.raises(LLMProviderError, match="fallback round 2"):
+        list(
+            _fallback_router().generate_json_stream(
+                [LLMMessage(role="user", content="hi")], 0.5, agent="expert_b"
+            )
+        )
+
+    assert len(calls) == 4  # 2 rounds x (primary + fallback)
+
+
+def test_call_llm_json_falls_back_schema_to_json_object_to_text(monkeypatch) -> None:
+    """Regression: json_schema 400 must try json_object before plain text.
+
+    Some providers reject ``response_format: json_schema`` but still accept
+    ``json_object``. The old code went straight from schema to ``json_mode=False``
+    (plain text), losing the JSON guarantee and often producing unparseable output.
+    """
+    stub_llm_providers(monkeypatch, {"ds": make_provider_config(model_name="ds-flash")})
+    requests: list[dict[str, object]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content.decode("utf-8"))
+        requests.append(body)
+        rf = body.get("response_format", {})
+        if rf.get("type") == "json_schema":
+            return httpx.Response(
+                400,
+                json={
+                    "error": {
+                        "message": "This response_format type is unavailable now",
+                        "type": "invalid_request_error",
+                    }
+                },
+            )
+        if rf.get("type") == "json_object":
+            return _json_response('{"answer": "from_json_object"}')
+        # plain text
+        return _json_response('{"answer": "from_text"}')
+
+    # Isolate from the dynamic strict-schema rejection cache.
+    _strict_schema_rejected.clear()
+
+    result = call_llm_json(
+        provider="ds",
+        messages=[LLMMessage(role="system", content="只输出 json")],
+        json_schema={"type": "object"},
+        schema_name="TestSchema",
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    assert result == {"answer": "from_json_object"}
+    assert len(requests) == 2
+    assert requests[0]["response_format"]["type"] == "json_schema"
+    assert requests[1]["response_format"]["type"] == "json_object"
+
+
+def test_call_llm_json_falls_back_schema_rejection_to_text_when_json_object_also_fails(
+    monkeypatch,
+) -> None:
+    """If both json_schema and json_object are rejected, fall back to plain text."""
+    stub_llm_providers(monkeypatch, {"ds": make_provider_config(model_name="ds-flash")})
+    requests: list[dict[str, object]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content.decode("utf-8"))
+        requests.append(body)
+        rf = body.get("response_format", {})
+        if rf.get("type") in {"json_schema", "json_object"}:
+            return httpx.Response(
+                400,
+                json={
+                    "error": {
+                        "message": "response_format unavailable",
+                        "type": "invalid_request_error",
+                    }
+                },
+            )
+        return _json_response('{"answer": "from_text"}')
+
+    # Isolate from the dynamic strict-schema rejection cache.
+    _strict_schema_rejected.clear()
+
+    result = call_llm_json(
+        provider="ds",
+        messages=[LLMMessage(role="system", content="只输出 json")],
+        json_schema={"type": "object"},
+        schema_name="TestSchema",
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    assert result == {"answer": "from_text"}
+    assert len(requests) == 3
+    assert requests[0]["response_format"]["type"] == "json_schema"
+    assert requests[1]["response_format"]["type"] == "json_object"
+    assert "response_format" not in requests[2]

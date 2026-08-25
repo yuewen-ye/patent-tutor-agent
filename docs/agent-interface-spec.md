@@ -8,14 +8,14 @@
 |---|---|---|
 | `route` | 严格 JSON Schema | `IntentResult` → `intent` |
 | `diagnosis_feedback` | 严格 JSON Schema + Store | LLM：`DiagnosisAgentResult` / `FeedbackAgentResult`；后端：`LearnerProfile` / `FeedbackResult` |
-| `planner` | 完整双图输入 + 严格 JSON Schema + 确定性校正/降级 + Store | `PlannerAgentResult` 提案、`LearningPathItem[]`、双轴快照、路径决策；降级时包含 `fallback_reason` |
+| `planner` | 完整双图与活动计划输入 + 严格 JSON Schema + Store | 每次 teach 的 `PlannerAgentResult` keep/replace 决策、`LearningPathItem[]`、双轴快照、路径决策与教学上下文 |
 | `expert_a` | 严格 JSON Schema / `generate_with_tools` | 草稿、互评、修订、整合课程包 |
 | `expert_b` | 严格 JSON Schema / `generate_with_tools` | 草稿、互评、修订 |
 | `judge` | 严格 JSON Schema | `JudgeReport` |
 | `_experts_barrier` | 确定性汇合节点 | 等待 A/B 同阶段完成并推进专家阶段 |
 | `retrieve_context` | 检索服务 | `RetrievalChunk[]` |
 | `chat_answer` | 严格 JSON Schema | `ChatAnswer` |
-| `generate_pptx` | LLM 版式设计 + 确定性 OOXML 渲染 | `.pptx` artifact 与 `pptx_result`；输入为 `course_package` + `course_slides` |
+| `generate_pptx` | LLM 版式设计 + 确定性 OOXML 渲染 | `.pptx` artifact 与 `pptx_result`；输入为 `course_package` + `course_slides`；`pptx_result.preview_images` 包含每页 PNG 预览（LibreOffice 可用时）|
 
 Provider 只能经 `AgentLLMRouter` 注入。`generate_pptx` 与其他 Agent 一样使用
 `agents.generate_pptx.provider` / `model_name` / `temperature` / `fallback_*`，并可由
@@ -27,9 +27,10 @@ Provider 只能经 `AgentLLMRouter` 注入。`generate_pptx` 与其他 Agent 一
 `legal_citation_focus`、`comparison_matrix`、`timeline_process`、`exam_checklist`、
 `summary_roadmap`、`hero_statement`、`evidence_stack`、`decision_tree`、`concept_map` 等模板。PresentationDesign 还包含由 LLM 自动决定的 `visual_style`、`composition` 和语义 `visual_elements`，后端用装饰层与语义图形层防止整份 deck 退化为纯文字页。专利法条卡、IRAC 流程、审查时间线、对比矩阵和练习题卡均由
 确定性后端组件绘制；模型不得直接输出 XML、任意坐标或网络资源。Planner 使用默认 Provider，并接收完整知识 DAG、
-完整易混淆图及本地 A* 完整候选路线；其 LLM 提案表示完整学习路线，不再用 16 个节点截断，
-但必须通过真实节点、去重和先修顺序校验。校验失败时回退到确定性路径算法，
-`path_decision.fallback_reason` 保存降级原因，最终路径仍由后端校正并负责。
+完整易混淆图及目标原子节点推荐；其 LLM 提案只决定 `keep` 或 `replace` 并提供教学元数据，
+可选节点仅作静态图语义校验。模型成功确认 `replace` 后，后端以静态 DAG、学习目标、BKT 和
+混淆风险确定性生成完整路线；`keep` 恢复活动计划。模型调用链耗尽时 Planner 失败，绝不以确定性
+路线替代失败的模型决策。后端负责最终路径、游标和活动窗口。
 
 CAT/BKT 诊断引擎也不是 LLM Agent 或 LangGraph 节点。它位于 FastAPI 服务层，负责多轮选题、
 服务端判分、掌握度更新、知识 DAG 传播与诊断会话持久化；诊断完成后把确定性快照注入新的
@@ -59,7 +60,7 @@ CAT/BKT 诊断引擎也不是 LLM Agent 或 LangGraph 节点。它位于 FastAPI
 
 - `diagnosis_feedback_phase`: `diagnosis | feedback`
 - `expert_phase`: `draft | cross_review | revision | integration`
-- `teach_phase`: `debate | integration`，仅用于专家 A 选择整合提示词，不代表循环轮数
+- `teach_phase`: `debate | single_agent | integration`。`single_agent` 表示部署级辩论开关关闭；此时唯一的 Expert A draft 同时作为 `course_package`，不代表循环轮数。
 
 禁止重新引入 `debate_round`、`max_debate_rounds`、`revision_history`、`final_learning_markdown`、`exercise_answer_key` 或 `quality_gate_failed`。
 
@@ -70,15 +71,19 @@ _init → route | diagnosis_feedback(feedback)
 route(chat) → retrieve_context → chat_answer → END
 route(diagnose) → diagnosis_feedback(diagnosis) → END
 route(teach) → diagnosis_feedback(diagnosis) → planner
-planner → expert_a(draft) || expert_b(draft)
-expert_a + expert_b → _experts_barrier
-_experts_barrier → expert_a(cross_review) || expert_b(cross_review)
-expert_a + expert_b → _experts_barrier
-_experts_barrier → expert_a(revision) || expert_b(revision)
-expert_a + expert_b → _experts_barrier
-_experts_barrier → expert_a(integration) → judge
+PATENT_TUTOR_DEBATE_ENABLED=true（默认）：
+  planner → expert_a(draft) || expert_b(draft)
+  expert_a + expert_b → _experts_barrier
+  _experts_barrier → expert_a(cross_review) || expert_b(cross_review)
+  expert_a + expert_b → _experts_barrier
+  _experts_barrier → expert_a(revision) || expert_b(revision)
+  expert_a + expert_b → _experts_barrier
+  _experts_barrier → expert_a(integration) → judge
+  judge(revise) → expert_a(integration) → judge（循环，直到 accept 或 accept_with_minor_revision）
+PATENT_TUTOR_DEBATE_ENABLED=false：
+  planner → expert_a(draft, course_package) → judge
+  judge(revise) → 保留当前 course_package 并进入收尾路径
 judge(accept | accept_with_minor_revision) → slide_deck → generate_pptx（PATENT_TUTOR_PPTX_ENABLED=true 时）→ END
-judge(revise) → expert_a(integration) → judge（循环，直到 accept 或 accept_with_minor_revision）
 exercise-responses → 独立 feedback 会话 → diagnosis_feedback(feedback) → END
 ```
 
@@ -99,18 +104,21 @@ Judge 的 `decision` 是图分支条件。`accept` 和 `accept_with_minor_revisi
 `LearnerProfile`。`progress` 同样由后端生成：初始诊断使用空课程进度，反馈阶段沿用后端历史
 进度，模型不得生成或覆盖。教育背景同样以诊断会话记录为准。
 
-Planner 生成完整 `learning_path` 后，后端把首个尚未掌握的拓扑节点写入
-`five_dimensions.progress.current_node`，其余未完成节点写入 `pending_nodes`；CAT/BKT 已有
-充分观测且 `P(L) >= 0.8` 的节点进入 `completed_nodes`。`path_decision.current_node_id`
-必须与画像游标一致。Expert A/B 不消费整条详细路线，只消费后端生成的
-`teaching_context`：一个主教学节点、少量向后复习节点和至多一个 L1 向前探测节点。
-完整路线同时保存为学员级活动计划。`path_decision` 返回 `plan_id`、`plan_version`、
-`plan_reused` 和 `knowledge_graph_version`。目标和图版本相同时，后续 teach 会话读取活动
-计划并跳过 Planner LLM；本次运行采用的路径和活动窗口随 `StateDict` 保存为会话状态快照。
+Planner 每次进入 teach 路径都调用 LLM 作出 `keep` 或 `replace` 决策。这里的完整路线是从当前学习起点到目标知识点的完整目标导向子路径，不要求覆盖整个静态 DAG；路线必须包含目标所需的静态先修节点并满足拓扑顺序。后端把该路线的首个尚未掌握拓扑节点写入 `five_dimensions.progress.current_node`，其余未完成节点写入 `pending_nodes`；
+CAT/BKT 已有充分观测且 `P(L) >= 0.8` 的节点进入 `completed_nodes`。`path_decision.current_node_id`
+必须与画像游标一致。Expert A/B 不消费完整长期路线，只消费后端生成的 `teaching_context`：规范的
+当前知识点名称、该节点涉及的静态易混淆对、Planner 本节建议、受限出题范围和迭代指令、少量向后复习节点和至多一个 L1
+向前探测节点。Expert A/B 的所有 draft、cross-review、revision 和 integration 阶段都只读取该投影；不得从 `StateDict.learning_path` 重建教学上下文。完整路线保存为学员级活动计划；`keep` 保留该版本，`replace` 创建新 `plan_version`
+并保留旧版本为 `superseded`。每次模型决策及其活动窗口追加保存到
+`learner_learning_plan_decisions`，同时在会话 `StateDict` 中保留本次路线快照。
 `teaching_context.backward_review_nodes` 为后端确定的 0 到 2 个风险复习节点：当存在有风险的
 直接先修节点时，两个复习席位中至多预留一个给最高风险先修节点，其余节点按 BKT、观测可信度、
 薄弱点和当前概念混淆风险综合竞争。顺序不单独触发复习；综合风险相同才优先更早完成的节点，
 LLM 不能把窗口外节点加入复习范围。
+
+`teaching_context.knowledge_points` 是 Planner 从静态知识图 `knowledge-dag.json`
+为当前主教学节点抽取的细粒度知识点清单。Expert A/B 在生成 `teaching_content` 与 `block_plan`
+时必须逐条覆盖这些知识点，不得遗漏，也不得扩展到当前节点之外。
 
 兼容问卷入口中，原始 `input_payload.questionnaire_responses` 保留用于审计；服务层根据版本化问卷
 定义生成 `input_payload.questionnaire_context`，为每条回答补充题目正文、选项和已选选项正文。
@@ -142,8 +150,9 @@ Planner 必须：
 1. 优先读取 Store 中该学员的最新画像。
 2. 在 Store 支持 `mastery(learner_id)` 时读取 BKT 掌握度。
 3. 用静态知识 DAG 与静态混淆对生成双轴快照。
-4. 校验 Planner 的完整路线提案；提案失败时使用确定性 A* 路线，并由后端确定当前课程游标。
-5. 优先复用目标和知识 DAG 版本均匹配的学员级活动计划；复用时不得调用 LLM。
+4. 在每个 teach 会话先以静态 DAG、目标、BKT、混淆风险和当前活动路线生成一次确定性候选路线，再请求 Planner LLM。候选路线注入模型上下文；`keep` 必须为 `nodes=null` 并接受候选路线，`replace` 必须返回完整调整路线。模型调用链耗尽时让 Planner 节点失败，绝不将候选路线作为模型失败替代。
+5. 后端在同一 streamed repair 回路校验 replace 路线的节点、目标覆盖、先修闭包与拓扑关系；最终路线实质变化时才创建新版本，未变化路线复用活动版本并记录决策。历史完成节点在其重新进入最终路线时继承。
+6. 路线来源和指纹持久化在 learner learning plan 与规划决策审计中；课程游标、静态规范名称、活动窗口和题目范围始终由后端确定。
 
 ## 5. Agent 输出校验
 

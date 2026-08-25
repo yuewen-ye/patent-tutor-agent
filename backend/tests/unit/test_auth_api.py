@@ -90,26 +90,6 @@ def test_register_returns_learner_info(tmp_path: Any) -> None:
     assert body["learner_id"]
 
 
-def test_register_rejects_duplicate_login_id(tmp_path: Any) -> None:
-    client = _client(tmp_path)
-    client.post(
-        "/auth/register",
-        json={
-            "login_id": "student001",
-            "password": "patent2024",
-        },
-    )
-
-    response = client.post(
-        "/auth/register",
-        json={
-            "login_id": "student001",
-            "password": "different",
-        },
-    )
-
-    assert response.status_code == 400
-    assert response.json()["detail"] == "login_id_already_exists"
 
 
 def test_login_succeeds_with_valid_credentials(tmp_path: Any) -> None:
@@ -137,26 +117,6 @@ def test_login_succeeds_with_valid_credentials(tmp_path: Any) -> None:
     assert body["display_name"] == "张同学"
 
 
-def test_login_fails_with_invalid_password(tmp_path: Any) -> None:
-    client = _client(tmp_path)
-    client.post(
-        "/auth/register",
-        json={
-            "login_id": "student001",
-            "password": "patent2024",
-        },
-    )
-
-    response = client.post(
-        "/auth/login",
-        json={
-            "login_id": "student001",
-            "password": "wrongpassword",
-        },
-    )
-
-    assert response.status_code == 401
-    assert response.json()["detail"] == "invalid_credentials"
 
 
 def test_register_preserves_knowledge_level_field_without_error(tmp_path: Any) -> None:

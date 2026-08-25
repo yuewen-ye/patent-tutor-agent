@@ -53,6 +53,19 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
 
+# ── 同步 .env 中的辩论开关到旅程脚本进程 ──
+# FastAPI 会自行加载 .env；此处只读取这一项，确保 API journey 也跳过单专家模式的复教会话。
+if [[ -f .env ]]; then
+    debate_line="$(grep -E '^PATENT_TUTOR_DEBATE_ENABLED=' .env | tail -n 1 || true)"
+    if [[ -n "$debate_line" ]]; then
+        export PATENT_TUTOR_DEBATE_ENABLED="${debate_line#*=}"
+    fi
+fi
+case "${PATENT_TUTOR_DEBATE_ENABLED:-true}" in
+    true|false) ;;
+    *) echo "错误: PATENT_TUTOR_DEBATE_ENABLED 必须精确为 true 或 false。" >&2; exit 1 ;;
+esac
+
 # ── 校验 uv ──
 if ! command -v uv >/dev/null 2>&1; then
     echo "错误: 未找到 uv 命令。请先安装 uv 并执行 'uv sync'。" >&2
@@ -68,6 +81,7 @@ echo "[api-journey] FastAPI: $BASE_URL"
 echo "[api-journey] learner_id: $LEARNER_ID"
 echo "[api-journey] answer_mode: $ANSWER_MODE"
 echo "[api-journey] cat_mode: $CAT_MODE"
+echo "[api-journey] debate_enabled: ${PATENT_TUTOR_DEBATE_ENABLED:-true}"
 echo "[api-journey] 输出: $OUTPUT_PATH"
 
 # ── 运行旅程脚本 ──

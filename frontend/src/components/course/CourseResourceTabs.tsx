@@ -13,13 +13,16 @@ import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { PresentationPlayer } from "@/components/course/PresentationPlayer";
 import { sessionsApi } from "@/api/sessions";
 import { getAuth } from "@/api/auth";
-import { BookOpen, Wrench, ListChecks, FileText, Scale, Lightbulb, CheckCircle2, XCircle, Loader2, Send, RefreshCw, ArrowRight, Presentation as PresentationIcon } from "lucide-react";
-import type { MarkdownArtifact, ExerciseSubmission, ExerciseResponseItem, SessionsListResponse } from "@/types";
+import { BookOpen, Wrench, ListChecks, FileText, Scale, Lightbulb, CheckCircle2, XCircle, Loader2, Send, RefreshCw, ArrowRight, Presentation as PresentationIcon, Database, ArrowUpRight } from "lucide-react";
+import type { MarkdownArtifact, ExerciseSubmission, ExerciseResponseItem, SessionsListResponse, SessionStatus } from "@/types";
+import { ApiError } from "@/api/client";
 
 interface CourseResourceTabsProps {
   sessionId: string;
   coursePackage?: Record<string, unknown>;
   artifacts: MarkdownArtifact[];
+  /** 会话状态；用于提前告知"课程生成中暂不可提交习题" */
+  sessionStatus?: SessionStatus | null;
 }
 
 interface BlockItem {
@@ -40,6 +43,7 @@ interface InteractiveQuestion {
   options?: string[] | null;
   kc_node_id?: string;
   source_tag?: string;
+  skills?: string[];
 }
 
 interface IracStructure {
@@ -75,7 +79,7 @@ const BLOCK_TYPE_ICONS: Record<string, typeof BookOpen> = {
   summary_card: FileText,
 };
 
-export function CourseResourceTabs({ sessionId, coursePackage, artifacts }: CourseResourceTabsProps) {
+export function CourseResourceTabs({ sessionId, coursePackage, artifacts, sessionStatus }: CourseResourceTabsProps) {
   const [activeTab, setActiveTab] = useState<string>("lecture");
   const packageArtifact = useMemo(
     () => artifacts.find((a) => a.kind === "course_package"),
@@ -100,7 +104,10 @@ export function CourseResourceTabs({ sessionId, coursePackage, artifacts }: Cour
   const exercises = (coursePackage?.exercises as InteractiveQuestion[]) || [];
   const allQuestions = [...interactiveQuestions, ...exercises];
 
-  const teachingContent = (coursePackage?.teaching_content as string) || "";
+  // 优先使用 teaching_content_full（完整讲义），fallback 到 teaching_content（简短摘要）
+  const teachingContent = (coursePackage?.teaching_content_full as string)
+    || (coursePackage?.teaching_content as string)
+    || "";
   const legalBasis = (coursePackage?.legal_basis as Array<Record<string, unknown>>) || [];
 
   return (
@@ -319,9 +326,9 @@ export function CourseResourceTabs({ sessionId, coursePackage, artifacts }: Cour
 
       {/* ── 分级习题 ── */}
       <TabsContent value="exercises" className="mt-4">
-        <div className="space-y-4 max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
+        <div className="space-y-4 h-[calc(100vh-280px)]">
         {allQuestions.length > 0 ? (
-          <ExercisePanel sessionId={sessionId} questions={allQuestions} />
+          <ExercisePanel sessionId={sessionId} questions={allQuestions} sessionStatus={sessionStatus} />
         ) : (
           <EmptyResource title="习题" />
         )}
@@ -389,9 +396,11 @@ interface SubmissionResult {
 function ExercisePanel({
   sessionId,
   questions,
+  sessionStatus,
 }: {
   sessionId: string;
   questions: InteractiveQuestion[];
+  sessionStatus?: SessionStatus | null;
 }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -399,12 +408,35 @@ function ExercisePanel({
   const [feedback, setFeedback] = useState("");
   const [results, setResults] = useState<Record<string, SubmissionResult> | null>(null);
   const [reteachSessionId, setReteachSessionId] = useState<string | null>(null);
+  const [submitBanner, setSubmitBanner] = useState<{
+    visible: boolean;
+    mode: "success" | "pending";
+    course_session_id?: string;
+    feedback_session_id?: string;
+  }>({ visible: false, mode: "pending" });
   const learnerId = getAuth()?.learner_id ?? "";
+
+  // 题目是否"需要作答才允许提交"：有客观选项的题目必须答；纯主观文本题可跳过
+  const requiredQuestions = useMemo(
+    () => questions.filter((q) => {
+      if (q.options && q.options.length > 0) return true;
+      const { options: inlineOpts } = extractInlineOptions(q.question);
+      return inlineOpts.length > 0;
+    }),
+    [questions]
+  );
 
   const submitMutation = useMutation({
     mutationFn: (submission: ExerciseSubmission) =>
       sessionsApi.submitExercise(sessionId, submission),
-    onSuccess: () => {
+    onMutate: () => {
+      setSubmitBanner({
+        visible: true,
+        mode: "pending",
+        course_session_id: sessionId,
+      });
+    },
+    onSuccess: (resp) => {
       // 简单前端判分（后端也会判分，这里仅用于即时反馈）
       const newResults: Record<string, SubmissionResult> = {};
       questions.forEach((q) => {
@@ -420,6 +452,22 @@ function ExercisePanel({
         };
       });
       setResults(newResults);
+      queryClient.invalidateQueries({ queryKey: ["sessions", learnerId] });
+      queryClient.invalidateQueries({ queryKey: ["learner", learnerId] });
+      queryClient.invalidateQueries({ queryKey: ["session", sessionId] });
+      // 明确告知用户：答题情况已真实写入 MySQL（questions/attempts/learning_history）
+      setSubmitBanner({
+        visible: true,
+        mode: "success",
+        course_session_id: sessionId,
+        feedback_session_id: resp?.session_id,
+      });
+      // 不再自动跳转，改由用户在成功条中点击"进入反馈教学会话"按钮手动进入，
+      // 保留 Course 页面上的"查看新课程/生成新课程"按钮供用户操作。
+      // FeedbackPage 同时添加了对应的生成/查看按钮，两条路径均可触发生成新课程。
+    },
+    onError: () => {
+      setSubmitBanner((prev) => ({ ...prev, visible: false, mode: "pending" }));
     },
   });
 
@@ -441,25 +489,47 @@ function ExercisePanel({
 
   const handleSubmit = () => {
     if (!learnerId) return;
+    // 客观题必须至少一题已答；纯主观文本允许全部空（只提交讲义建议）
+    const requiredAnswered = requiredQuestions.filter((q) => (answers[q.qid] || "").trim());
+    const hasAnyAnswer =
+      requiredAnswered.length > 0 ||
+      questions.some((q) => (answers[q.qid] || "").trim()) ||
+      feedback.trim().length > 0;
+
     const responses: ExerciseResponseItem[] = questions
-      .filter((q) => answers[q.qid])
-      .map((q) => ({
-        question_id: q.qid,
-        answer: answers[q.qid],
-        selected_option: answers[q.qid],
-        skill_id: q.kc_node_id || null,
-      }));
+      .map((q) => {
+        const raw = answers[q.qid] || "";
+        const value = typeof raw === "string" ? raw : String(raw ?? "");
+        const required = !!requiredQuestions.find((r) => r.qid === q.qid);
+        if (!value.trim() && !required) return null;
+        return {
+          question_id: q.qid,
+          question_text: q.question ?? "",
+          options: (q.options && q.options.length > 0) ? q.options : undefined,
+          correct_answer: (q.answer && String(q.answer).trim()) || undefined,
+          difficulty: q.difficulty ?? undefined,
+          category: q.category ?? undefined,
+          skills: q.skills,
+          answer: value,
+          selected_option: value, // 保持与历史一致：未作答时传空串""，避免MySQL legacy去重hash不一致
+          skill_id: q.kc_node_id || null,
+          kc_node_id: q.kc_node_id || null,
+        } as ExerciseResponseItem;
+      })
+      .filter((r): r is ExerciseResponseItem => Boolean(r));
+
     // 附带固定的主观题
     if (feedback.trim()) {
       responses.push({
         question_id: SUBJECTIVE_QID,
+        question_text: "请写出你对本章节学习的疑问或建议",
         answer: feedback.trim(),
-        selected_option: null,
+        selected_option: "",
         skill_id: null,
         is_subjective: true,
       });
     }
-    if (responses.length === 0) return;
+    if (!hasAnyAnswer || responses.length === 0) return;
     submitMutation.mutate({ learner_id: learnerId, responses });
   };
 
@@ -486,39 +556,169 @@ function ExercisePanel({
     if (latest) navigate(`/session/${latest.session_id}`);
   };
 
-  const answeredCount = questions.filter((q) => answers[q.qid]?.trim()).length;
-  const allAnswered = answeredCount === questions.length;
+  const answeredCount = requiredQuestions.filter((q) => (answers[q.qid] || "").trim()).length;
+  const allRequiredAnswered = requiredQuestions.length > 0 ? answeredCount === requiredQuestions.length : true;
   const isSubmitted = results !== null;
   const correctCount = results ? Object.values(results).filter((r) => r.is_correct).length : 0;
 
+  const canSubmit = Boolean(learnerId) && !isSubmitted && !submitMutation.isPending;
+  const needsWaitForSession = sessionStatus != null && sessionStatus !== "completed" && sessionStatus !== "failed";
+  const atLeastOneAnswer =
+    answeredCount > 0 ||
+    questions.some((q) => (answers[q.qid] || "").trim()) ||
+    feedback.trim().length > 0;
+
+  const disabledReason = (() => {
+    if (!learnerId) return "请先登录后再提交练习";
+    if (needsWaitForSession) return `课程生成中（${sessionStatus}），暂不可提交。请等待状态变为“已完成”后重试`;
+    if (sessionStatus === "failed") return "课程生成失败，无法提交练习。请返回会话列表重新发起";
+    if (requiredQuestions.length > 0 && !allRequiredAnswered)
+      return `还有 ${requiredQuestions.length - answeredCount} 道选择题/客观题未作答`;
+    if (!atLeastOneAnswer) return "请至少作答一道题或填写讲义建议后再提交";
+    return "";
+  })();
+
+  const submitErrorText = (() => {
+    if (!submitMutation.isError) return "";
+    const err = submitMutation.error;
+    if (err instanceof ApiError) {
+      switch (err.status) {
+        case 401:
+        case 403:
+          return `提交被拒绝（${err.status}）：${err.message || "请确认登录状态，并使用您本人的课程会话提交"}`;
+        case 404:
+          return `会话不存在（404）：${err.message || "课程会话未找到，请返回会话列表重新进入"}`;
+        case 409:
+          return `提交被拒绝（409）：${err.message || "课程尚未生成完成，请等待状态为“已完成”后再提交"}`;
+        case 422:
+          return `提交参数错误（422）：${err.message || "答案格式不符合要求，请刷新后重试"}`;
+        default:
+          return `提交失败（${err.status}）：${err.message}`;
+      }
+    }
+    return err instanceof Error ? `提交失败：${err.message}` : "提交失败：未知错误";
+  })();
+
   return (
-    <Card className="border-border/40 bg-card shadow-soft">
-      <CardHeader className="pb-3">
+    <Card className="border-border/40 bg-card shadow-soft flex flex-col h-full">
+      <CardHeader className="pb-3 shrink-0 bg-card/95 backdrop-blur sticky top-0 z-10 border-b border-border/30">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-medium flex items-center gap-2">
             <ListChecks className="h-4 w-4 text-emerald-500" />
-            分级习题（共 {questions.length} 题）
+            分级习题（共 {questions.length} 题{requiredQuestions.length > 0 ? `，选择题 ${requiredQuestions.length} 题` : ""}）
           </CardTitle>
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">
-              已答 {answeredCount}/{questions.length}
+              已答 {answeredCount}/{requiredQuestions.length > 0 ? requiredQuestions.length : questions.length}
             </span>
-            <Button
-              size="sm"
-              className="h-7 text-xs"
-              disabled={!allAnswered || isSubmitted || submitMutation.isPending || !learnerId}
-              onClick={handleSubmit}
-            >
-              {submitMutation.isPending ? (
-                <><Loader2 className="h-3 w-3 mr-1 animate-spin" />提交中</>
-              ) : isSubmitted ? (
-                <><CheckCircle2 className="h-3 w-3 mr-1" />已提交</>
-              ) : (
-                <><Send className="h-3 w-3 mr-1" />提交答案</>
-              )}
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs"
+                      disabled={!canSubmit || !!disabledReason}
+                      onClick={handleSubmit}
+                    >
+                      {submitMutation.isPending ? (
+                        <><Loader2 className="h-3 w-3 mr-1 animate-spin" />提交中</>
+                      ) : isSubmitted ? (
+                        <><CheckCircle2 className="h-3 w-3 mr-1" />已提交</>
+                      ) : (
+                        <><Send className="h-3 w-3 mr-1" />提交答案</>
+                      )}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {disabledReason ? (
+                  <TooltipContent side="bottom" className="max-w-xs text-xs whitespace-normal">
+                    {disabledReason}
+                  </TooltipContent>
+                ) : null}
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
+        {disabledReason && !isSubmitted && (
+          <div className="mt-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+            ⚠ {disabledReason}
+          </div>
+        )}
+        {submitErrorText && (
+          <div className="mt-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            ❌ {submitErrorText}
+          </div>
+        )}
+        {submitBanner.visible && (
+          <div
+            className={
+              "mt-2 rounded-md border px-3 py-2 text-xs flex items-start gap-2 " +
+              (submitBanner.mode === "success"
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                : "border-[#D9773E]/30 bg-[#FFE8D0]/50 text-[#5C3A26]")
+            }
+            role="status"
+          >
+            {submitBanner.mode === "success" ? (
+              <Database className="h-3.5 w-3.5 mt-0.5 shrink-0 text-emerald-600" />
+            ) : (
+              <Loader2 className="h-3.5 w-3.5 mt-0.5 shrink-0 animate-spin text-[#D9773E]" />
+            )}
+            <div className="flex-1">
+              {submitBanner.mode === "success" ? (
+                <>
+                  <div className="font-medium">答题情况已写入真实数据库，并创建了教学反馈会话</div>
+                  <div className="opacity-80 mt-0.5">
+                    原课程会话：<code className="px-1 rounded bg-white/60">{submitBanner.course_session_id ?? "-"}</code>
+                    {submitBanner.feedback_session_id ? (
+                      <>
+                        {" · "}
+                        反馈会话：<code className="px-1 rounded bg-white/60">{submitBanner.feedback_session_id}</code>
+                      </>
+                    ) : null}
+                  </div>
+                  <div className="mt-1 flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (!submitBanner.feedback_session_id) return;
+                        navigate(`/feedback/${submitBanner.feedback_session_id}`);
+                      }}
+                      disabled={!submitBanner.feedback_session_id}
+                    >
+                      进入反馈教学会话
+                      <ArrowUpRight className="h-3 w-3 ml-1" />
+                    </Button>
+                    {submitBanner.course_session_id ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          navigate(`/course/${submitBanner.course_session_id}`);
+                        }}
+                      >
+                        返回原课程
+                      </Button>
+                    ) : null}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="font-medium">正在同步到数据库并创建反馈教学会话…</div>
+                  <div className="opacity-80 mt-0.5">
+                    会话：<code className="px-1 rounded bg-white/60">{submitBanner.course_session_id ?? "-"}</code>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
         {isSubmitted && (
           <div className="mt-2 flex items-center gap-2 text-xs">
             <Badge variant="secondary" className="text-xs">
@@ -554,7 +754,7 @@ function ExercisePanel({
           </div>
         )}
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 overflow-y-auto flex-1 min-h-0 pt-4">
         {questions.map((q, idx) => (
           <ExerciseCard
             key={q.qid || idx}

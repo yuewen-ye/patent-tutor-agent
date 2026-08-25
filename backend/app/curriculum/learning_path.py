@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import heapq
 import json
+import re
 from copy import deepcopy
 from functools import lru_cache
 from pathlib import Path
@@ -132,6 +132,91 @@ def _resolve_weak_nodes(
     return resolved
 
 
+def _extract_goal_terms(goal: str) -> set[str]:
+    """从学习目标中提取候选关键词（长度>=2 的非停用词片段）。"""
+    if not goal:
+        return set()
+    # 按常见标点/空白切分，再保留>=2字符的片段
+    parts = re.split(r"[，。、；：！？\"\'\s\n\r，,;.!?:]+", goal)
+    terms: set[str] = set()
+    for part in parts:
+        part = part.strip()
+        if len(part) >= 2:
+            terms.add(part)
+        # 对较长片段再按 2-4 字窗口切分，提高命中
+        if len(part) >= 4:
+            for length in (4, 3, 2):
+                for i in range(len(part) - length + 1):
+                    terms.add(part[i : i + length])
+    return terms
+
+
+def recommend_target_nodes_for_goal(
+    learning_goal: str,
+    knowledge: dict[str, Any],
+    top_k: int = 8,
+) -> list[str]:
+    """根据学习目标文本，推荐最相关的原子/叶子目标节点 id 列表。
+
+    匹配信号：
+    - 节点名在目标文本中完整出现（权重最高）；
+    - 节点标签在目标文本中出现；
+    - 节点知识点/描述中的词与目标文本有重叠。
+
+    一级复合节点（有 knowledge_sub_nodes）的分数会均分给其子节点，
+    因此返回结果优先是二级及以下原子节点，便于 Planner 直接组成教学路径。
+    """
+    nodes = [n for n in knowledge.get("nodes", []) if isinstance(n, dict) and n.get("node_id")]
+    node_by_id = {str(n["node_id"]): n for n in nodes}
+    goal = str(learning_goal or "")
+    goal_terms = _extract_goal_terms(goal)
+
+    def _node_search_text(node: dict[str, Any]) -> str:
+        parts: list[str] = [str(node.get("node_name") or "")]
+        parts.extend(str(t) for t in (node.get("tags") or []) if t)
+        parts.append(str(node.get("description") or ""))
+        for kp in node.get("knowledge_points") or []:
+            if isinstance(kp, dict):
+                parts.append(str(kp.get("point") or ""))
+            elif isinstance(kp, str):
+                parts.append(kp)
+        return " ".join(parts)
+
+    def _score(node: dict[str, Any]) -> float:
+        text = _node_search_text(node)
+        score = 0.0
+        node_name = str(node.get("node_name") or "")
+        if node_name and node_name in goal:
+            score += 10.0
+        for tag in node.get("tags") or []:
+            tag = str(tag)
+            if tag and tag in goal:
+                score += 3.0
+        for term in goal_terms:
+            if term and term in text:
+                score += 0.5
+        return score
+
+    scores: dict[str, float] = {}
+    for node in nodes:
+        nid = str(node["node_id"])
+        score = _score(node)
+        sub_nodes = [str(s) for s in node.get("knowledge_sub_nodes") or [] if s and str(s) in node_by_id]
+        if sub_nodes:
+            per_child = score / len(sub_nodes)
+            for child in sub_nodes:
+                scores[child] = scores.get(child, 0.0) + per_child
+        else:
+            scores[nid] = scores.get(nid, 0.0) + score
+
+    atomic_nodes = [n for n in nodes if not n.get("knowledge_sub_nodes")]
+    ranked = sorted(
+        [n for n in atomic_nodes if scores.get(str(n["node_id"]), 0.0) > 0.0],
+        key=lambda n: (-scores[str(n["node_id"])], n.get("level", 99), str(n.get("node_id"))),
+    )
+    return [str(n["node_id"]) for n in ranked[:top_k]]
+
+
 def _pair_weak_match(
     pair: dict[str, Any],
     weak_points: list[Any],
@@ -256,7 +341,14 @@ def compute_learning_path(
     learning_goal: str,
     max_nodes: int = 8,
     mastery_snapshot: object | None = None,
+    current_route: object | None = None,
 ) -> list[dict[str, Any]]:
+    """Build one deterministic candidate route from goal, learner state, and active route.
+
+    ``max_nodes`` is a soft expansion budget, not a hard route length.  Required
+    prerequisites and the global-coverage floor may legitimately make the route
+    longer; otherwise a broad goal would be reduced to one locally relevant node.
+    """
     graph = load_knowledge_dag()
     nodes = {str(node["node_id"]): node for node in graph["nodes"]}
     weak_points = profile.get("weak_points", []) or []
@@ -270,51 +362,129 @@ def compute_learning_path(
         if mastery_snapshot is not None
         else (profile.get("five_dimensions") or {}).get("knowledge", {})
     )
-
-    # 混淆对补全：薄弱点命中某混淆对任一端时，把该对整体（两端 + 相关节点）强制纳入
-    # 路径，确保「辨析模块」两端齐备、common_pitfall 块能真正触发。
+    active_route_ids = {
+        str(item.get("node_id"))
+        for item in current_route
+        if isinstance(item, dict) and item.get("node_id") in nodes
+    } if isinstance(current_route, list) else set()
     confusion = load_confusion_pairs()
     confusion_companions: set[str] = set()
     for pair in confusion["confusion_pairs"]:
         pool = {str(pair.get("node_a")), str(pair.get("node_b"))} | {
-            str(r) for r in (pair.get("related_nodes") or [])
+            str(value) for value in (pair.get("related_nodes") or [])
         }
         if weak_node_ids & pool:
-            confusion_companions |= {p for p in pool if p in nodes}
+            confusion_companions.update(value for value in pool if value in nodes)
 
-    targets = [node_id for node_id, node in nodes.items() if _matches_node(node, search_text)]
-    if not targets:
-        targets = sorted(confusion_companions)  # 关键词无命中时优先以混淆补全节点为起点
-    if not targets:
-        targets = sorted(nodes, key=lambda node_id: _node_cost(nodes[node_id], weak_text))[:3]
+    recommended = recommend_target_nodes_for_goal(learning_goal, graph, top_k=max(8, max_nodes))
+    goal_lower = learning_goal.lower()
+    direct_goal_matches = [
+        node_id
+        for node_id, node in nodes.items()
+        if not node.get("knowledge_sub_nodes")
+        and (
+            str(node.get("node_id") or "").lower() in goal_lower
+            or str(node.get("node_name") or "") in learning_goal
+            or any(str(tag) and str(tag) in learning_goal for tag in node.get("tags") or [])
+        )
+    ]
+    goal_matches = direct_goal_matches or [
+        node_id
+        for node_id, node in nodes.items()
+        if not node.get("knowledge_sub_nodes") and _matches_node(node, search_text)
+    ]
+    candidate_ids = set(weak_node_ids) | set(confusion_companions) | set(goal_matches)
+    if not direct_goal_matches:
+        candidate_ids.update(recommended)
 
-    required: set[str] = set(confusion_companions)
-    # 展开混淆补全节点的先修祖先（保证路径拓扑完整、连贯）
-    _stack = list(confusion_companions)
-    while _stack and len(required) < max_nodes:
-        _nid = _stack.pop()
-        for _pred in nodes[_nid].get("predecessors", []):
-            if _pred in nodes and _pred not in required:
-                required.add(_pred)
-                _stack.append(_pred)
-    frontier: list[tuple[float, str]] = []
-    for target in sorted(targets):
-        heapq.heappush(frontier, (_node_cost(nodes[target], weak_text), target))
-    while frontier and len(required) < max_nodes:
-        _, node_id = heapq.heappop(frontier)
-        _pl, _obs = _mastery_with_evidence(
+    def mastery(node_id: str) -> tuple[float | None, int]:
+        return _mastery_with_evidence(
             node_id=node_id,
             bkt_knowledge=bkt_knowledge,
             legacy_mastery=legacy_mastery,
         )
-        if node_id in required or _is_mastered_with_evidence(_pl, _obs):
-            continue
-        required.add(node_id)
+
+    def score(node_id: str) -> tuple[float, str]:
+        node = nodes[node_id]
+        pl, observations = mastery(node_id)
+        weak = node_id in weak_node_ids
+        matched = _matches_node(node, search_text)
+        exam = _WEIGHTS.get(str(node.get("exam_weight", "中")), 0.6)
+        risk = 1.0 - (pl if pl is not None else 0.5)
+        value = (4.0 if matched else 0.0) + (4.0 if weak else 0.0)
+        value += 2.0 * risk + exam + (0.5 if observations == 0 else 0.0)
+        if node_id in active_route_ids:
+            value += 0.35
+        return value, node_id
+
+    # Keep one high-value atomic target per distinct goal category, then add
+    # remaining weak/confusion/recommended targets by marginal relevance.
+    selected_targets: set[str] = set()
+    categories: set[str] = set()
+    ranked = sorted(candidate_ids, key=lambda node_id: (-score(node_id)[0], node_id))
+    for node_id in ranked:
+        category = str(nodes[node_id].get("category") or node_id)
+        directly_relevant = node_id in direct_goal_matches or node_id in weak_node_ids
+        if directly_relevant or category not in categories and _matches_node(nodes[node_id], learning_goal):
+            selected_targets.add(node_id)
+            categories.add(category)
+    for node_id in ranked:
+        if node_id in weak_node_ids or node_id in confusion_companions:
+            selected_targets.add(node_id)
+    if not direct_goal_matches:
+        if not goal_matches:
+            for node_id in recommended:
+                if len(selected_targets) >= max(3, max_nodes):
+                    break
+                selected_targets.add(node_id)
+        else:
+            covered_categories = {str(nodes[node_id].get("category") or node_id) for node_id in selected_targets}
+            for node_id in recommended:
+                category = str(nodes[node_id].get("category") or node_id)
+                if category in covered_categories:
+                    continue
+                selected_targets.add(node_id)
+                covered_categories.add(category)
+                if len(covered_categories) >= max(2, len(categories)):
+                    break
+
+    if not selected_targets:
+        fallback = sorted(nodes, key=lambda node_id: (_node_cost(nodes[node_id], weak_text), node_id))
+        selected_targets.update(fallback[: max(1, min(3, max_nodes))])
+
+    required: set[str] = set(selected_targets)
+    stack = list(required)
+    while stack:
+        node_id = stack.pop()
         for predecessor in nodes[node_id].get("predecessors", []):
             if predecessor in nodes and predecessor not in required:
-                heapq.heappush(frontier, (_node_cost(nodes[predecessor], weak_text), predecessor))
+                required.add(predecessor)
+                stack.append(predecessor)
 
-    ordered = _topological_subset(nodes, required)
+    # Expand only with relevant candidates until the route has global coverage
+    # (at least three nodes, or one per selected topic plus its prerequisites).
+    minimum = max(3, min(max_nodes, len(categories) + 2))
+    expansion_candidates = ranked + [
+        node_id for node_id in sorted(nodes) if node_id not in ranked
+    ]
+    for node_id in expansion_candidates:
+        if len(required) >= minimum:
+            break
+        if node_id in required:
+            continue
+        pl, observations = mastery(node_id)
+        if _is_mastered_with_evidence(pl, observations) and node_id not in confusion_companions:
+            continue
+        required.add(node_id)
+        stack = [node_id]
+        while stack:
+            current = stack.pop()
+            for predecessor in nodes[current].get("predecessors", []):
+                if predecessor in nodes and predecessor not in required:
+                    required.add(predecessor)
+                    stack.append(predecessor)
+
+    ordered = _topological_subset(nodes, required, weak_node_ids)
     return [
         {
             "node_id": node_id,
@@ -338,30 +508,43 @@ def _matches_node(node: dict[str, Any], text: str) -> bool:
     return any(str(term).lower() in text.lower() for term in terms if term)
 
 
-def _node_cost(node: dict[str, Any], weak_text: str) -> float:
-    weakness = 1.0 if _matches_node(node, weak_text) else 0.25
-    benefit = weakness * _WEIGHTS.get(str(node.get("exam_weight", "中")), 0.6)
+def _node_cost(node: dict[str, Any], weak_text: str | set[str]) -> float:
+    weak = (
+        str(node.get("node_id")) in weak_text
+        if isinstance(weak_text, set)
+        else _matches_node(node, weak_text)
+    )
+    benefit = (1.0 if weak else 0.25) * _WEIGHTS.get(str(node.get("exam_weight", "中")), 0.6)
     hours = float(node.get("estimated_hours", 1.0))
     difficulty = float(node.get("difficulty", 0.5))
     return hours * (1 + difficulty) / max(0.05, benefit)
 
 
-def _topological_subset(nodes: dict[str, dict[str, Any]], selected: set[str]) -> list[str]:
+def _topological_subset(
+    nodes: dict[str, dict[str, Any]], selected: set[str], weak_node_ids: set[str] | None = None
+) -> list[str]:
+    """Return a stable Kahn topological order for the selected route."""
+    in_degree = {
+        node_id: sum(1 for predecessor in nodes[node_id].get("predecessors", []) if predecessor in selected)
+        for node_id in selected
+    }
+    weak_node_ids = weak_node_ids or set()
+    ready = sorted(
+        [node_id for node_id, degree in in_degree.items() if degree == 0],
+        key=lambda node_id: (_node_cost(nodes[node_id], weak_node_ids), node_id),
+    )
     ordered: list[str] = []
-    visiting: set[str] = set()
-
-    def visit(node_id: str) -> None:
-        if node_id in ordered or node_id in visiting:
-            return
-        visiting.add(node_id)
-        for predecessor in sorted(nodes[node_id].get("predecessors", [])):
-            if predecessor in selected:
-                visit(predecessor)
-        visiting.remove(node_id)
+    while ready:
+        node_id = ready.pop(0)
         ordered.append(node_id)
-
-    for selected_id in sorted(selected, key=lambda item: _node_cost(nodes[item], "")):
-        visit(selected_id)
+        for child in sorted(selected):
+            if node_id in nodes[child].get("predecessors", []):
+                in_degree[child] -= 1
+                if in_degree[child] == 0:
+                    ready.append(child)
+        ready.sort(key=lambda item: (_node_cost(nodes[item], weak_node_ids), item))
+    if len(ordered) != len(selected):
+        raise ValueError("knowledge DAG selected route contains a prerequisite cycle")
     return ordered
 
 
@@ -732,8 +915,10 @@ def format_default_block_plan_directive(default_plan: dict[str, Any]) -> str:
     """把确定性 default_plan 渲染为注入 integration 提示词的硬约束文本。"""
     lines = [
         f"# 确定性板块编排约束（当前节点 {default_plan['node']}，spec §3.3/§3.4 规则算得，硬约束）",
-        "你产出的 block_plan.blocks 必须且只能包含以下板块，block_plan.node 必须等于上述节点，"
-        "每块 trigger 使用给定值，不得自创或张冠李戴：",
+        (
+            "你产出的 block_plan.blocks 必须且只能包含以下板块，block_plan.node 必须等于上述节点，"
+            "每块 trigger 使用给定值，不得自创或张冠李戴："
+        ),
         "",
         "| block_type | 类型 | trigger（规则命中理由） |",
         "|---|---|---|",

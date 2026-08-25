@@ -1,103 +1,119 @@
-# config/agents.yaml — 全节点经 jiji.cc 聚合网关（2026-08-18 迁移为自定义通道）
+# config/agents.yaml — 全节点经 api.sh.kg 单 key 聚合网关（2026-08-23 异构调优版）
 # ============================================================================
-# 网关：jiji.cc https://api.jiji.cc/v1
-# 三个自定义通道（provider 名完全自定义，通道自带 base_url / api_key_env）：
-#   jiji-gpt      api_key_env: GPT_API_KEY      → gpt-5.6-terra / gpt-5.6-luna / gpt-5.4-mini
-#   jiji-deepseek api_key_env: DEEPSEEK_API_KEY → deepseek-v4-flash / deepseek-v4-pro
-#   jiji-grok     api_key_env: GROK_API_KEY     → grok-4.5 / grok-4.6
-# 节点 → 通道 → 模型（用户指定映射）：
-#   route          → jiji-gpt      gpt-5.4-mini
-#   chat_answer    → jiji-gpt      gpt-5.4-mini
-#   planner        → jiji-deepseek deepseek-v4-flash
-#   diagnosis      → jiji-deepseek deepseek-v4-flash
-#   expert_a       → jiji-grok     grok-4.5
-#   expert_b       → jiji-gpt      gpt-5.4-mini（fallback deepseek-v4-pro）
-#   judge          → jiji-gpt      gpt-5.6-terra（per-agent 覆盖；luna 在 jiji.cc 曾 503）
-#   generate_pptx  → ooio-gpt2     gpt-5.6-terra（生成完整 PPT 版式 JSON，后端渲染 .pptx）
-# 三系列异构：expert_a=grok(xAI) / expert_b=gpt / judge=gpt(OpenAI)
-# jiji-gpt 保持 supports_strict_schema=true：jiji.cc 拒绝 strict 时返回 400（在项目兜底集合
-#   {400,404,415,422} 内），系统首调撞 400 自动降级 json_object + schema 注入；其余通道为 false。
+# 网关：api.sh.kg  https://api.sh.kg/v1
+# 单 key 聚合（api_key_env 统一 = SHKG_API_KEY）：
+#   SHKG_API_KEY = sk-mHyvNSdgBP6ojm099Ubr6t3LJlGuIeZpkkOUt9jxWnxqcx9d
+# 网关在售模型（/v1/models 实测 9 个）：
+#   deepseek-v4-flash
+#   gemini-3.6-flash / gemini-3.7-flash
+#   gpt-5.4 / gpt-5.4-mini / gpt-5.6-luna / gpt-5.6-terra
+#   grok-4.5 / grok-4.6
+# Provider（5 个虚拟通道；同名 base_url/api_key_env，仅 model_name 不同，便于节点级模型覆盖）：
+#   shkg-gpt1      → gpt-5.4-mini      supports_strict_schema=true
+#   shkg-gpt2      → gpt-5.4           supports_strict_schema=true
+#   shkg-gpt3      → gpt-5.6-terra     supports_strict_schema=true
+#   shkg-deepseek  → deepseek-v4-flash supports_strict_schema=false
+#   shkg-grok      → grok-4.5          supports_strict_schema=true
+# 节点 → 通道 → 模型（9 节点映射）：
+#   route             → shkg-gpt1      gpt-5.4-mini      (fb deepseek-v4-flash)
+#   chat_answer       → shkg-gpt1      gpt-5.4-mini      (fb deepseek-v4-flash)
+#   planner           → shkg-gpt1      gpt-5.4-mini      (fb gpt-5.4)
+#   diagnosis_feedback→ shkg-gpt1      gpt-5.4-mini      (fb deepseek-v4-flash)
+#   expert_a          → shkg-gpt3      gpt-5.6-terra     (fb deepseek-v4-flash)
+#   expert_b          → shkg-grok      grok-4.5          (fb gpt-5.4)
+#   slide_deck        → shkg-grok      grok-4.5          (fb gpt-5.4-mini)
+#   judge             → shkg-deepseek  deepseek-v4-flash (fb gpt-5.6-terra; max_revisions=0)
+#   generate_pptx     → shkg-gpt1      gpt-5.4-mini      (fb gpt-5.4-mini)
+# 三系列异构（每节点主力选不同族，保留单 key 网关内最强对比）：
+#   gpt 族：route/chat/planner/diagnosis/generate_pptx（gpt-5.4-mini + gpt-5.4 + gpt-5.6-terra）
+#   deepseek 族：judge 主 + 多数 fallback（deepseek-v4-flash）
+#   grok 族：expert_b + slide_deck（grok-4.5）
+# supports_strict_schema=true 的通道：shkg-gpt1/gpt2/gpt3/shkg-grok（遇 strict 400 由项目兜底集合
+#   {400,404,415,422} 自动降级 json_object + schema 注入）；shkg-deepseek=false。
 # ============================================================================
 
 llm:
-  default_provider: jiji-deepseek
+  default_provider: shkg-deepseek
   timeout_seconds: 90
   retry_times: 3
 
 providers:
-  jiji-gpt:
-    base_url: https://api-slb.jiji.cc/v1
-    api_key_env: JIJI_GPT_API_KEY
+  shkg-gpt1:
+    base_url: https://api.sh.kg/v1
+    api_key_env: SHKG_API_KEY
     model_name: gpt-5.4-mini
     supports_strict_schema: true
-  jiji-deepseek:
-    base_url: https://api-slb.jiji.cc/v1
-    api_key_env: JIJI_DEEPSEEK_API_KEY
+  shkg-deepseek:
+    base_url: https://api.sh.kg/v1
+    api_key_env: SHKG_API_KEY
     model_name: deepseek-v4-flash
     supports_strict_schema: false
-  jiji-grok:
-    base_url: https://api-slb.jiji.cc/v1
-    api_key_env: JIJI_GROK_API_KEY
+  shkg-grok:
+    base_url: https://api.sh.kg/v1
+    api_key_env: SHKG_API_KEY
     model_name: grok-4.5
     supports_strict_schema: true
-  ooio-gpt1:
-    base_url: https://ooioo.work/v1
-    api_key_env: OOIO_GPT1_API_KEY
+  shkg-gpt2 :
+    base_url: https://api.sh.kg/v1
+    api_key_env: SHKG_API_KEY
     model_name: gpt-5.4
     supports_strict_schema: true
-  ooio-gpt2:
-    base_url: https://ooioo.work/v1
-    api_key_env: OOIO_GPT2_API_KEY
+  shkg-gpt3 :
+    base_url: https://api.sh.kg/v1
+    api_key_env: SHKG_API_KEY
     model_name: gpt-5.6-terra
     supports_strict_schema: true
 
 agents:
   route:
-    provider: jiji-gpt
+    provider: shkg-gpt1
     temperature: 0.0
-    fallback_provider: jiji-deepseek
+    fallback_provider: shkg-deepseek
     fallback_model_name: deepseek-v4-flash
   diagnosis_feedback:
-    provider: ooio-gpt1
+    provider: shkg-gpt1 
     temperature: 0.5
-    fallback_provider: jiji-gpt
-    fallback_model_name: gpt-5.4-mini
+    fallback_provider: shkg-deepseek
+    fallback_model_name: deepseek-v4-flash
   expert_a:
-    provider: ooio-gpt2
+    provider: shkg-gpt3 
     temperature: 0.4
     tool_temperature: 0.2
     integration_temperature: 0.3
-    top_k: 5
-    fallback_provider: jiji-deepseek
-    fallback_model_name: deepseek-v4-pro
+    top_k: 8
+    fallback_provider: shkg-deepseek
+    fallback_model_name: deepseek-v4-flash
   expert_b:
-    provider: ooio-gpt1
+    provider: shkg-grok 
     temperature: 0.7
     tool_temperature: 0.3
-    top_k: 5
-    fallback_provider: jiji-deepseek
-    fallback_model_name: deepseek-v4-pro
+    top_k: 8
+    fallback_provider: shkg-gpt2
+    fallback_model_name: gpt-5.4
   judge:
-    provider: ooio-gpt2
+    provider: shkg-deepseek 
     temperature: 0.0
     max_revisions: 0   
-    fallback_provider: jiji-deepseek
-    fallback_model_name: deepseek-v4-pro
+    fallback_provider: shkg-gpt3
+    fallback_model_name: gpt-5.6-terra
   chat_answer: 
-    provider: ooio-gpt1
+    provider: shkg-gpt1
     temperature: 0.3
     top_k: 5
-    fallback_provider: jiji-deepseek
+    fallback_provider: shkg-deepseek
     fallback_model_name: deepseek-v4-flash
   planner:
-    provider: ooio-gpt2
+    provider: shkg-gpt1
     temperature: 0.0
-    fallback_provider: jiji-gpt
+    fallback_provider: shkg-gpt2
+    fallback_model_name: gpt-5.4
+  slide_deck:
+    provider: shkg-grok
+    temperature: 0.3
+    fallback_provider: shkg-gpt1
     fallback_model_name: gpt-5.4-mini
-  # 完整 PPT 节点：走和其他 Agent 相同的 provider/model/key/fallback 配置链。
-  # Provider 对应的 api_key_env 在 providers.* 中声明，密钥仅写入 .env。
   generate_pptx:
-    provider: ooio-gpt2
+    provider: shkg-gpt1 
     temperature: 0.2
-    fallback_provider: jiji-gpt
+    fallback_provider: shkg-gpt2
     fallback_model_name: gpt-5.4-mini

@@ -7,29 +7,32 @@ from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
 
-from backend.app.core.agent_runtime_config import agent_temperature
 from backend.app.agents.common import (
     Node,
+    _slim_draft_for_review,
     constrain_expert_draft_to_current_lesson,
     extract_planning_directive,
     extract_teaching_context,
-    generate_validated_json,
+    generate_validated_json_stream,
     load_prompt,
     messages_from_prompt,
     normalize_cross_review_payload,
     normalize_expert_draft_payload,
-    _slim_draft_for_review,
 )
-from backend.app.agents.rag_tools import collect_expert_retrieval_context
+from backend.app.agents.rag_tools import (
+    cap_retrieval_context,
+    collect_expert_retrieval_context,
+)
+from backend.app.core.agent_runtime_config import agent_temperature
 from backend.app.core.llm import LLMClient, LLMMessage
+from backend.app.curriculum.block_content_spec import (
+    format_block_content_directive,
+    validate_block_payloads,
+)
 from backend.app.curriculum.learning_path import (
     compute_default_block_plan,
     format_default_block_plan_directive,
     reconcile_block_plan,
-)
-from backend.app.curriculum.block_content_spec import (
-    format_block_content_directive,
-    validate_block_payloads,
 )
 from backend.app.schemas.state import CrossReview, ExpertDraft, StateDict, completed_event
 
@@ -52,15 +55,17 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
             ),
             (
                 "user",
-                "问题：{user_input}\n"
-                "学习者画像：{learner_profile}\n"
-                "路径规划指令（来自 planner）：{planning_directive}\n"
-                "本节单节点教学上下文：{teaching_context}\n"
-                "检索上下文：{retrieval_context}\n"
-                "辩论上下文：{revision_context}\n"
-                "【教学模块选择硬约束（须严格遵循，据此产出 block_plan）】{block_plan_directive}\n"
-                "【各模块 payload 内容要素约束（须填实，禁空心 payload）】{block_content_directive}\n"
-                "请生成专家 A 草稿。",
+                (
+                    "问题：{user_input}\n"
+                    "学习者画像：{learner_profile}\n"
+                    "路径规划指令（来自 planner）：{planning_directive}\n"
+                    "本节单节点教学上下文：{teaching_context}\n"
+                    "检索上下文：{retrieval_context}\n"
+                    "辩论上下文：{revision_context}\n"
+                    "【教学模块选择硬约束（须严格遵循，据此产出 block_plan）】{block_plan_directive}\n"
+                    "【各模块 payload 内容要素约束（须填实，禁空心 payload）】{block_content_directive}\n"
+                    "请生成专家 A 草稿。"
+                ),
             ),
         ]
     )
@@ -68,7 +73,8 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
     def expert_a_node(state: StateDict) -> dict[str, Any]:
         phase = state.get("expert_phase", "draft")
         if phase == "cross_review":
-            review = generate_validated_json(
+            teaching_context = extract_teaching_context(state)
+            review = generate_validated_json_stream(
                 llm_client,
                 messages=[
                     LLMMessage(
@@ -78,9 +84,11 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                     LLMMessage(
                         role="user",
                         content=(
-                    f"学习者画像：{json.dumps(state.get('learner_profile', {}), ensure_ascii=False)}\n"
-                    f"专家B草稿：{json.dumps(_slim_draft_for_review(state.get('expert_b_draft', {})), ensure_ascii=False)}"
-                ),
+                            f"学习者画像：{json.dumps(state.get('learner_profile', {}), ensure_ascii=False)}\n"
+                            f"受限教学上下文（窗口权威）：{json.dumps(teaching_context, ensure_ascii=False)}\n"
+                            "请仅依据该窗口审查专家B草稿，发现超出窗口的教学节点时提出修改意见。\n"
+                            f"专家B草稿：{json.dumps(_slim_draft_for_review(state.get('expert_b_draft', {})), ensure_ascii=False)}"
+                        ),
                     ),
                 ],
                 temperature=agent_temperature("expert_a", 0.2),
@@ -94,7 +102,8 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                 "events": [completed_event("expert_a", "reviewed expert B draft")],
             }
         if phase == "revision":
-            draft = generate_validated_json(
+            teaching_context = extract_teaching_context(state)
+            draft = generate_validated_json_stream(
                 llm_client,
                 messages=[
                     LLMMessage(
@@ -104,6 +113,8 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                     LLMMessage(
                         role="user",
                         content=(
+                            "受限教学上下文（窗口权威，禁止扩展到其他路线节点）："
+                            f"{json.dumps(teaching_context, ensure_ascii=False)}\n"
                             f"原草稿：{json.dumps(state.get('expert_a_draft', {}), ensure_ascii=False)}\n"
                             f"专家B互评：{json.dumps(state.get('expert_b_cross_review', {}), ensure_ascii=False)}"
                         ),
@@ -167,12 +178,8 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                 )
 
             # C：锁定 planner 权威当前节点（不让 LLM 自由跳节点）
-            path_decision = state.get("path_decision", {}) or {}
-            current_node_id = str(path_decision.get("current_node_id") or "")
-            if not current_node_id:
-                lp = state.get("learning_path", []) or []
-                if lp and isinstance(lp[0], dict):
-                    current_node_id = str(lp[0].get("node_id") or "")
+            teaching_context = extract_teaching_context(state)
+            current_node_id = str(teaching_context.get("current_node_id") or "")
 
             # A/B：按 spec 规则确定性算出应含板块集合，渲染为整合硬约束
             profile = state.get("learner_profile", {}) or {}
@@ -192,7 +199,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                     block_content_directive = format_block_content_directive(
                         default_block_plan.get("required_blocks", [])
                     )
-                except Exception:
+                except (KeyError, TypeError, ValueError):
                     default_block_plan = None
                     block_plan_directive = ""
                     block_content_directive = ""
@@ -217,8 +224,10 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                 temperature=agent_temperature("expert_a", 0.2, "tool_temperature"),
                 agent="expert_a",
             )
-            retrieval_context = list(state.get("retrieval_context", []) or []) + retrieved_context
-            draft = generate_validated_json(
+            retrieval_context = cap_retrieval_context(
+                list(state.get("retrieval_context", []) or []) + retrieved_context
+            )
+            draft = generate_validated_json_stream(
                 llm_client,
                 messages=[
                     LLMMessage(
@@ -234,9 +243,9 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                             f"本节单节点教学上下文：{json.dumps(extract_teaching_context(state), ensure_ascii=False)}\n"
                             + (f"\n{block_plan_directive}\n\n" if block_plan_directive else "")
                             + f"专家A草稿：{json.dumps(state.get('expert_a_draft', {}), ensure_ascii=False)}\n"
-                            f"专家B草稿：{json.dumps(state.get('expert_b_draft', {}), ensure_ascii=False)}\n"
-                            f"裁判报告：{json.dumps(state.get('judge_report', {}), ensure_ascii=False)}\n"
-                            f"裁判打回意见（revision_requests，你必须逐条回应每条 required_change 并在整合稿中实际修正对应内容）：{json.dumps(revision_requests, ensure_ascii=False)}\n"
+                            + f"专家B草稿：{json.dumps(state.get('expert_b_draft', {}), ensure_ascii=False)}\n"
+                            + f"裁判报告：{json.dumps(state.get('judge_report', {}), ensure_ascii=False)}\n"
+                            + f"裁判打回意见（revision_requests，你必须逐条回应每条 required_change 并在整合稿中实际修正对应内容）：{json.dumps(revision_requests, ensure_ascii=False)}\n"
                             + (_revision_directive if _revision_directive else "")
                             + f"检索上下文：{json.dumps(retrieval_context, ensure_ascii=False)}\n"
                             + (f"\n{block_content_directive}\n\n" if block_content_directive else "")
@@ -284,12 +293,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
             }
 
         # 双专家初稿也按确定性块大纲写作（与 integration 一致的硬约束）
-        path_decision = state.get("path_decision", {}) or {}
-        _cur = str(path_decision.get("current_node_id") or "")
-        if not _cur:
-            _lp = state.get("learning_path", []) or []
-            if _lp and isinstance(_lp[0], dict):
-                _cur = str(_lp[0].get("node_id") or "")
+        _cur = str(extract_teaching_context(state).get("current_node_id") or "")
         _profile = state.get("learner_profile", {}) or {}
         _bp_dir = ""
         _bc_dir = ""
@@ -302,7 +306,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
                 )
                 _bp_dir = format_default_block_plan_directive(_default)
                 _bc_dir = format_block_content_directive(_default.get("required_blocks", []))
-            except Exception:
+            except (KeyError, TypeError, ValueError):
                 _bp_dir = ""
                 _bc_dir = ""
 
@@ -324,7 +328,7 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
             agent="expert_a",
         )
         retrieval_context = list(state.get("retrieval_context", []) or []) + retrieved_context
-        draft = generate_validated_json(
+        draft = generate_validated_json_stream(
             llm_client,
             messages=messages_from_prompt(
                 prompt,
@@ -345,10 +349,13 @@ def build_expert_a_node(llm_client: LLMClient) -> Node:
         )
         draft_dict = constrain_expert_draft_to_current_lesson(draft.model_dump(), state)
         draft_dict["draft_stage"] = "debate"
-        return {
+        updates: dict[str, Any] = {
             "expert_a_draft": draft_dict,
             **({"retrieval_context": retrieved_context} if retrieved_context else {}),
             "events": [completed_event("expert_a", "generated expert A draft with LLM")],
         }
+        if state.get("teach_phase") == "single_agent":
+            updates["course_package"] = draft_dict
+        return updates
 
     return expert_a_node

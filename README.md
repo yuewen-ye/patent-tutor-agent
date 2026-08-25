@@ -47,6 +47,8 @@ uv sync
 
 `uv sync` 会自动安装所有依赖，包括 `langgraph-cli`（LangGraph Studio 命令行工具）。
 
+> **PPTX 预览图额外依赖**：`generate_pptx` 节点默认启用（设 `PATENT_TUTOR_PPTX_ENABLED=false` 可禁用），生成 `.pptx` 后会调用 LibreOffice 把每页转成 PNG 预览图。Windows/macOS/Linux 都需要单独安装 LibreOffice（`soffice` 在 PATH 或常见安装路径即可）。未安装时 PPTX 仍可正常生成，只是 `pptx_result.preview_images` 会报告 `enabled: false`。
+
 ### 3. 配置 API Key
 
 **macOS / Linux：**
@@ -718,7 +720,7 @@ PY
 - 默认 learner memory、BKT、学员级活动计划、会话和题目作答写入 MySQL；通过
   `PATENT_TUTOR_MYSQL_URL` 配置连接
 - 演示环境可在首次数据库操作时自动执行 `backend/app/persistence/migrations/`；生产环境应关闭自动迁移并在发布阶段显式执行
-- SQLite 没有业务数据，不执行 SQLite 到 MySQL 的生产数据迁移；SQLite Store 只作为单元测试替身
+- learner memory、BKT、学员级活动计划、会话、题目和作答统一持久化到 MySQL；项目不提供 SQLite 存储后端
 - 使用 `uv run python backend/scripts/verify_mysql.py --apply-migrations --smoke-write` 完成真实 MySQL 验收
 - artifact API 直接读取会话目录，服务重启、内存会话清理后仍可读取历史 Markdown
 - `PATENT_TUTOR_CORS_ORIGINS` 支持逗号分隔的允许来源；为空时不启用 CORS

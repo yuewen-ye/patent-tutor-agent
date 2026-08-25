@@ -7,6 +7,7 @@ from backend.app.curriculum.learning_progress import (
     initialize_learning_progress,
     normalize_question_scope,
 )
+from backend.app.schemas.state import LearningProgressDecision
 
 pytestmark = pytest.mark.unit
 
@@ -19,62 +20,158 @@ def _path() -> list[dict[str, object]]:
     ]
 
 
-def test_initial_progress_skips_nodes_mastered_by_cat_bkt() -> None:
+def test_initial_progress_does_not_complete_nodes_from_cat_bkt_alone() -> None:
     progress = initialize_learning_progress(
         existing_progress={},
         learning_path=_path(),
-        mastery_snapshot={
-            "foundation": {"pl": 0.92, "observations": 3},
-            "novelty": {"pl": 0.45, "observations": 2},
+    )
+
+    assert progress["completed_nodes"] == []
+    assert progress["current_node"] == "foundation"
+    assert progress["pending_nodes"] == ["novelty", "inventive-step"]
+    assert progress["overall_completion_ratio"] == pytest.approx(0, abs=1e-4)
+
+
+def test_initial_progress_preserves_feedback_completed_nodes() -> None:
+    progress = initialize_learning_progress(
+        existing_progress={
+            "completed_nodes": ["foundation"],
+            "completion_sessions": {"foundation": "feedback-session"},
         },
+        learning_path=_path(),
     )
 
     assert progress["completed_nodes"] == ["foundation"]
     assert progress["current_node"] == "novelty"
     assert progress["pending_nodes"] == ["inventive-step"]
-    assert progress["overall_completion_ratio"] == pytest.approx(1 / 3, abs=1e-4)
+
+
+def test_initial_progress_discards_legacy_completion_without_provenance() -> None:
+    progress = initialize_learning_progress(
+        existing_progress={"completed_nodes": ["foundation"]},
+        learning_path=_path(),
+    )
+
+    assert progress["completed_nodes"] == []
+    assert progress["current_node"] == "foundation"
 
 
 def test_forward_probe_never_advances_current_node() -> None:
     progress, decision = advance_learning_progress(
         existing_progress={
             "completed_nodes": ["foundation"],
+            "completion_sessions": {"foundation": "feedback-foundation"},
             "current_node": "novelty",
             "pending_nodes": ["inventive-step"],
         },
         learning_path=_path(),
         current_node_id="novelty",
-        mastery_snapshot={
-            "novelty": {"pl": 0.85, "observations": 3},
-            "inventive-step": {"pl": 0.91, "observations": 2},
-        },
-        bkt_updates=[{"skill_id": "inventive-step", "posterior_pl": 0.91}],
     )
 
     assert decision["advanced"] is False
-    assert decision["direct_evidence"] is False
     assert progress["current_node"] == "novelty"
     assert "novelty" not in progress["completed_nodes"]
 
 
-def test_current_node_advances_only_with_threshold_and_evidence() -> None:
+def test_progress_decision_matches_its_runtime_contract() -> None:
+    _, decision = advance_learning_progress(
+        existing_progress={"current_node": "novelty"},
+        learning_path=_path(),
+        current_node_id="novelty",
+    )
+
+    validated = LearningProgressDecision.model_validate(decision)
+
+    assert validated.advanced is False
+    assert validated.completed_node_id is None
+    assert "observations" not in decision
+    assert "mastery_threshold" not in decision
+    assert "minimum_observations" not in decision
+    assert "direct_evidence" not in decision
+
+
+def test_current_node_advances_after_verified_course_feedback() -> None:
     progress, decision = advance_learning_progress(
         existing_progress={
             "completed_nodes": ["foundation"],
+            "completion_sessions": {"foundation": "feedback-foundation"},
             "current_node": "novelty",
             "pending_nodes": ["inventive-step"],
         },
         learning_path=_path(),
         current_node_id="novelty",
-        mastery_snapshot={"novelty": {"pl": 0.86, "observations": 2}},
-        bkt_updates=[{"skill_id": "novelty", "posterior_pl": 0.86}],
+        verified_completion_session_id="feedback-novelty",
     )
 
     assert decision["advanced"] is True
     assert decision["completed_node_id"] == "novelty"
     assert progress["completed_nodes"] == ["foundation", "novelty"]
+    assert progress["completion_sessions"] == {
+        "foundation": "feedback-foundation",
+        "novelty": "feedback-novelty",
+    }
     assert progress["current_node"] == "inventive-step"
     assert progress["pending_nodes"] == []
+
+
+def test_progress_does_not_advance_without_verified_feedback_provenance() -> None:
+    progress, decision = advance_learning_progress(
+        existing_progress={"current_node": "novelty"},
+        learning_path=_path(),
+        current_node_id="novelty",
+    )
+
+    assert decision["advanced"] is False
+    assert decision["completed_node_id"] is None
+    assert progress["current_node"] == "novelty"
+    assert progress["completed_nodes"] == []
+
+
+def test_path_external_current_node_does_not_advance() -> None:
+    progress, decision = advance_learning_progress(
+        existing_progress={},
+        learning_path=_path(),
+        current_node_id="outside-path",
+        verified_completion_session_id="feedback-session",
+    )
+
+    assert decision["advanced"] is False
+    assert decision["completed_node_id"] is None
+    assert progress["current_node"] == "foundation"
+
+
+def test_teaching_context_includes_current_node_knowledge_points() -> None:
+    progress = {
+        "completed_nodes": ["foundation"],
+        "current_node": "novelty",
+        "pending_nodes": ["inventive-step"],
+    }
+    learning_path = [
+        {
+            "node_id": "foundation",
+            "node_name": "基础",
+            "difficulty_cap": "L1",
+            "knowledge_points": ["基础点1", "基础点2"],
+        },
+        {
+            "node_id": "novelty",
+            "node_name": "新颖性",
+            "difficulty_cap": "L2",
+            "knowledge_points": ["新颖性点1", "新颖性点2", "新颖性点3"],
+        },
+        {
+            "node_id": "inventive-step",
+            "node_name": "创造性",
+            "difficulty_cap": "L3",
+            "knowledge_points": ["创造性点1"],
+        },
+    ]
+    context = build_teaching_context(
+        learning_path=learning_path,
+        progress=progress,
+        question_scope={"backward_review": [], "forward_probe": [], "weakness_probe": []},
+    )
+    assert context["knowledge_points"] == ["新颖性点1", "新颖性点2", "新颖性点3"]
 
 
 def test_teaching_context_and_draft_are_limited_to_active_window() -> None:

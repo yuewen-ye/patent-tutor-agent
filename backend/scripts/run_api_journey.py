@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import sys
 import time
@@ -20,6 +21,23 @@ import httpx
 
 TERMINAL_STATUSES = {"completed", "failed", "canceled"}
 PROGRESS_HEARTBEAT_SECONDS = 30.0
+
+
+def _repair_utf8_gbk_mojibake(text: str) -> str:
+    """Repair strings where UTF-8 bytes were mis-decoded as GBK.
+
+    On Windows, PowerShell/argument passing may decode UTF-8 bytes using the
+    system GBK code page, turning e.g. '其他' into '鍏朵粬'. Re-encode as GBK
+    and decode as UTF-8 to recover the original text. Correct strings usually
+    fail this round-trip and are returned unchanged.
+    """
+    try:
+        repaired = text.encode("gbk").decode("utf-8")
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return text
+    return repaired
+
+
 DEFAULT_QUESTIONNAIRE_RESPONSES: list[dict[str, Any]] = [
     {"question_id": "Q1", "answer": "B"},
     {"question_id": "Q2", "answer": "C"},
@@ -61,6 +79,17 @@ DEFAULT_QUESTIONNAIRE_RESPONSES: list[dict[str, Any]] = [
 ]
 
 
+def _debate_enabled_from_env() -> bool:
+    raw = os.environ.get("PATENT_TUTOR_DEBATE_ENABLED")
+    if raw is None:
+        return True
+    if raw == "true":
+        return True
+    if raw == "false":
+        return False
+    raise JourneyError("PATENT_TUTOR_DEBATE_ENABLED must be exactly true or false")
+
+
 class JourneyError(RuntimeError):
     """Raised when an API step cannot complete the business journey."""
 
@@ -86,6 +115,7 @@ class JourneyConfig:
     cat_mode: Literal["interactive", "off"] = "off"
     cat_max_answers: int = 0
     require_pptx: bool = True
+    verify_reteach_planning: bool = True
 
 
 def _workflow_events(snapshot: dict[str, Any]) -> tuple[dict[str, Any], ...]:
@@ -127,6 +157,7 @@ def _workflow_progress(snapshot: dict[str, Any]) -> WorkflowProgress:
     }
     workflow_mode = str(typed_state.get("workflow_mode") or "")
     diagnosis_phase = str(typed_state.get("diagnosis_feedback_phase") or "")
+    single_agent = typed_state.get("teach_phase") == "single_agent"
 
     if workflow_mode == "feedback" or diagnosis_phase == "feedback":
         current = (
@@ -160,18 +191,19 @@ def _workflow_progress(snapshot: dict[str, Any]) -> WorkflowProgress:
         default=-1,
     )
 
+    if single_agent and latest_judge < 0:
+        if "draft_a" in expert_steps:
+            current = "Judge 课程审核"
+        elif "planner" in nodes:
+            current = "Expert A 初稿"
+        else:
+            current = "意图路由"
+        return WorkflowProgress(current_stage=current, completed_events=events)
+
     if latest_judge > latest_integration:
-        judge_report = typed_state.get("judge_report")
-        decision = (
-            str(judge_report.get("decision") or "")
-            if isinstance(judge_report, dict)
-            else ""
-        )
-        current = (
-            "Expert A 按 Judge 意见重新整合"
-            if decision == "revise"
-            else "课程结果持久化"
-        )
+        # max_revisions 配置为 0 时，judge 给出 revise 也会直接收尾，
+        # 不再进入 expert_a_integration 重新整合循环。
+        current = "课程结果持久化"
     elif latest_integration >= 0:
         current = "Judge 课程审核"
     elif {"revision_a", "revision_b"}.issubset(expert_steps):
@@ -265,20 +297,18 @@ def _completed_event_summary(
     duration_suffix = ""
     if isinstance(duration, int | float):
         duration_suffix = f"（耗时 {_format_elapsed(float(duration) / 1000)}）"
-    message = str(event.get("message") or "")
-    algorithm_suffix = ""
-    if label == "Planner 学习路径规划" and "deterministic_astar" in message:
-        algorithm_suffix = "；使用 deterministic_astar"
+    planner_suffix = ""
+    if label == "Planner 学习路径规划":
         state = snapshot.get("state")
         path_decision = state.get("path_decision") if isinstance(state, dict) else None
-        fallback_reason = (
-            path_decision.get("fallback_reason")
-            if isinstance(path_decision, dict)
-            else None
-        )
-        if fallback_reason:
-            algorithm_suffix += f"；Agent 降级原因：{fallback_reason}"
-    return f"{label}完成{duration_suffix}{algorithm_suffix}"
+        if isinstance(path_decision, dict):
+            action = path_decision.get("plan_action")
+            algorithm = path_decision.get("algorithm")
+            if action in {"keep", "replace"}:
+                planner_suffix += f"；LLM 决策={action}"
+            if algorithm:
+                planner_suffix += f"；算法={algorithm}"
+    return f"{label}完成{duration_suffix}{planner_suffix}"
 
 
 class ApiJourney:
@@ -354,9 +384,10 @@ class ApiJourney:
         if isinstance(path_decision, dict) and path_decision.get("plan_id"):
             print(
                 "    学习计划："
+                f"action={path_decision.get('plan_action')}；"
                 f"id={path_decision['plan_id']}；"
                 f"version={path_decision.get('plan_version')}；"
-                f"reused={path_decision.get('plan_reused')}"
+                f"algorithm={path_decision.get('algorithm')}"
             )
         if cat_knowledge_snapshot is not None:
             self._validate_cat_course_handoff(
@@ -463,9 +494,7 @@ class ApiJourney:
                 "    教学游标："
                 f"{progress_decision.get('current_node_before') or '无'}"
                 f" -> {progress_decision.get('current_node_after') or '路径完成'}；"
-                f"advanced={progress_decision.get('advanced')}；"
-                f"P(L)={progress_decision.get('mastery_probability')}；"
-                f"observations={progress_decision.get('observations')}"
+                f"advanced={progress_decision.get('advanced')}"
             )
 
         self._step("10", "读取反馈 Markdown Artifact")
@@ -478,19 +507,73 @@ class ApiJourney:
             feedback_session_id, feedback_artifact
         )
 
-        self._step("11", "查询学员画像、画像历史、学习历史和会话历史")
+        reteach_session_id: str | None = None
+        reteach_path_decision: dict[str, Any] | None = None
+        debate_enabled = _debate_enabled_from_env()
+        if (
+            self.config.verify_reteach_planning
+            and debate_enabled
+            and course_state.get("teach_phase") != "single_agent"
+        ):
+            self._step("11", "创建复教会话，验证 Planner 再次调用与计划决策")
+            reteach_created = self._request_json(
+                "POST",
+                f"/sessions/{quote(course_session_id, safe='')}/reteach",
+                json_body={"learner_id": self.config.learner_id},
+            )
+            reteach_session_id = self._required_string(reteach_created, "session_id")
+            if reteach_session_id == course_session_id:
+                raise JourneyError("复教会话 ID 不应与原课程会话 ID 相同。")
+            reteach = self._wait_for_session(reteach_session_id)
+            reteach_state = self._required_mapping(reteach, "state")
+            reteach_path_decision = self._required_mapping(reteach_state, "path_decision")
+            if reteach_path_decision.get("algorithm") not in {
+                "candidate_route_keep",
+                "llm_adjusted_route_replace",
+            }:
+                raise JourneyError(
+                    "复教会话未记录有效的 Planner 路线来源："
+                    f"algorithm={reteach_path_decision.get('algorithm')!r}"
+                )
+            if reteach_path_decision.get("plan_action") not in {"keep", "replace"}:
+                raise JourneyError(
+                    "复教会话缺少 Planner keep/replace 决策："
+                    f"plan_action={reteach_path_decision.get('plan_action')!r}"
+                )
+            print(
+                "    复教 Planner："
+                f"action={reteach_path_decision['plan_action']}；"
+                f"plan_id={reteach_path_decision.get('plan_id')}；"
+                f"version={reteach_path_decision.get('plan_version')}"
+            )
+
+        self._step("12", "查询学员画像、画像历史、学习历史、计划历史和会话历史")
         learner = self._request_json("GET", f"/learners/{learner_path}")
         profiles = self._request_json("GET", f"/learners/{learner_path}/profiles")
         history = self._request_json("GET", f"/learners/{learner_path}/history")
         learner_sessions = self._request_json(
             "GET", f"/learners/{learner_path}/sessions"
         )
+        planning_history = learner.get("planning_history")
+        if self.config.verify_reteach_planning and reteach_session_id is not None:
+            if not isinstance(planning_history, list) or len(planning_history) < 2:
+                raise JourneyError(
+                    "复教后 planning_history 应至少包含首次与复教两条 Planner 生命周期记录。"
+                )
+            if not any(
+                isinstance(item, dict)
+                and item.get("decision_kind") in {"keep", "replace"}
+                for item in planning_history
+            ):
+                raise JourneyError("planning_history 缺少 Planner keep/replace 决策。")
+            print(f"    计划历史：{len(planning_history)} 条决策记录。")
 
         summary = {
             "success": True,
             "learner_id": self.config.learner_id,
             "course_session_id": course_session_id,
             "feedback_session_id": feedback_session_id,
+            "reteach_session_id": reteach_session_id,
             "questionnaire_version": questionnaire.get("version"),
             "questionnaire_question_count": len(question_ids),
             "questionnaire_response_count": len(self.config.questionnaire_responses),
@@ -506,6 +589,9 @@ class ApiJourney:
             },
             "mastery": learner.get("mastery", {}),
             "active_learning_plan": learner.get("active_learning_plan"),
+            "planning_history": planning_history,
+            "initial_planner_decision": path_decision,
+            "reteach_planner_decision": reteach_path_decision,
             "profile_count": len(profiles.get("profiles", [])),
             "history_count": len(history.get("history", [])),
             "learner_session_count": len(learner_sessions.get("sessions", [])),
@@ -1039,6 +1125,11 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Do not fail when PATENT_TUTOR_PPTX_ENABLED is disabled or PPTX is degraded.",
     )
+    parser.add_argument(
+        "--skip-reteach-planning-check",
+        action="store_true",
+        help="Skip the post-feedback reteach session and Planner history verification.",
+    )
     return parser
 
 
@@ -1061,7 +1152,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         config = JourneyConfig(
             learner_id=learner_id,
-            learning_goal=args.learning_goal,
+            learning_goal=_repair_utf8_gbk_mojibake(args.learning_goal),
             questionnaire_responses=_load_questionnaire_responses(
                 args.questionnaire_responses
             ),
@@ -1069,10 +1160,11 @@ def main(argv: list[str] | None = None) -> int:
             poll_interval=args.poll_interval,
             max_exercises=args.max_exercises,
             answer_mode=args.answer_mode,
-            education_background=args.education_background,
+            education_background=_repair_utf8_gbk_mojibake(args.education_background),
             cat_mode=args.cat_mode,
             cat_max_answers=args.cat_max_answers,
             require_pptx=not args.allow_missing_pptx,
+            verify_reteach_planning=not args.skip_reteach_planning_check,
         )
         with httpx.Client(
             base_url=args.base_url.rstrip("/"), timeout=args.request_timeout

@@ -14,13 +14,16 @@ from backend.app.curriculum.learning_plan import plan_node_status
 from backend.app.learner_memory.bkt.knowledge_graph import load_knowledge_graph
 from backend.app.learner_memory.bkt.model import (
     BKT_MODEL_VERSION,
+    DEFAULT_P_G,
+    DEFAULT_P_S,
+    DEFAULT_P_T,
+    UNOBSERVED_PL,
     BKTParameters,
     compute_bkt_step,
     knowledge_node_snapshot,
     parameters_for_background,
 )
 from backend.app.learner_memory.memory import JsonValue, StoredMemoryItem
-from backend.app.learner_memory.sqlite_store import P_G, P_L0, P_S, P_T
 from backend.app.onboarding.questionnaire_kc_map import load_questionnaire_kc_map
 from backend.app.persistence.db import MySQLDatabase
 
@@ -345,9 +348,8 @@ class LearnerRegistrationError(RuntimeError):
 class MySQLLearnerStore:
     """Compatibility Store plus normalized business persistence.
 
-    The public memory methods intentionally mirror ``SQLiteLearnerStore`` so
-    existing Agent helpers can use the MySQL implementation through dependency
-    injection. Structured profile and mastery tables are canonical; memory_items
+    The public memory methods implement the Store interface consumed by Agent
+    helpers. Structured profile and mastery tables are canonical; memory_items
     is retained only for episodic context compatibility.
     """
 
@@ -558,6 +560,7 @@ class MySQLLearnerStore:
             active_learning_plan = self._active_learning_plan_on_connection(
                 connection, learner_id
             )
+        decisions = self.list_learning_plan_decisions(learner_id, limit=limit)
         return {
             "learner_id": learner_id,
             "latest_profile": dict(profiles[0].value) if profiles else None,
@@ -566,7 +569,38 @@ class MySQLLearnerStore:
             "history": [dict(item.value) for item in history],
             "mastery": mastery,
             "active_learning_plan": active_learning_plan,
+            "planning_history": decisions,
         }
+
+    def historical_completed_node_ids(self, learner_id: str) -> list[str]:
+        """Return every node completed on any plan version for this learner."""
+        with self.database.transaction() as connection:
+            cursor = connection.cursor()
+            cursor.execute(
+                "SELECT DISTINCT node_id FROM learner_learning_plan_nodes n "
+                "JOIN learner_learning_plans p ON p.plan_id=n.plan_id "
+                "WHERE p.student_id=%s AND n.node_status='completed' "
+                "AND n.completion_session_id IS NOT NULL ORDER BY node_id",
+                (learner_id,),
+            )
+            return [str(row["node_id"]) for row in cursor.fetchall()]
+
+    def historical_completion_sessions(self, learner_id: str) -> dict[str, str]:
+        """Return feedback session provenance for completed nodes across plan versions."""
+        with self.database.transaction() as connection:
+            cursor = connection.cursor()
+            cursor.execute(
+                "SELECT node_id, MAX(completion_session_id) AS completion_session_id "
+                "FROM learner_learning_plan_nodes n "
+                "JOIN learner_learning_plans p ON p.plan_id=n.plan_id "
+                "WHERE p.student_id=%s AND n.node_status='completed' "
+                "AND n.completion_session_id IS NOT NULL GROUP BY node_id",
+                (learner_id,),
+            )
+            return {
+                str(row["node_id"]): str(row["completion_session_id"])
+                for row in cursor.fetchall()
+            }
 
     def active_learning_plan(self, learner_id: str) -> dict[str, Any] | None:
         with self.database.transaction() as connection:
@@ -583,6 +617,9 @@ class MySQLLearnerStore:
         nodes: list[dict[str, Any]],
         progress: dict[str, Any],
         replan_reason: str,
+        route_source: str = "legacy",
+        route_fingerprint: str = "",
+        decision_kind: str = "replace",
     ) -> dict[str, Any]:
         now = _db_now()
         plan_id = uuid.uuid4().hex
@@ -601,6 +638,18 @@ class MySQLLearnerStore:
             )
             version_row = cursor.fetchone()
             plan_version = int(version_row["max_version"]) + 1
+            cursor.execute(
+                "SELECT plan_id, plan_version, current_node_id, progress_json "
+                "FROM learner_learning_plans WHERE student_id=%s AND status='active' FOR UPDATE",
+                (learner_id,),
+            )
+            previous_row = cursor.fetchone()
+            previous_plan_id = previous_row.get("plan_id") if previous_row else None
+            previous_version = int(previous_row["plan_version"]) if previous_row else None
+            previous_node = previous_row.get("current_node_id") if previous_row else None
+            previous_progress = (
+                _json_load(previous_row.get("progress_json"), None) if previous_row else None
+            )
             cursor.execute(
                 "UPDATE learner_learning_plans SET status='superseded', updated_at=%s "
                 "WHERE student_id=%s AND status='active'",
@@ -624,8 +673,9 @@ class MySQLLearnerStore:
                 "plan_id, student_id, source_session_id, last_session_id, learning_goal, "
                 "learning_goal_hash, knowledge_graph_version, plan_version, status, "
                 "current_node_id, current_order_idx, progress_json, replan_reason, "
-                "last_progress_decision, created_at, updated_at, completed_at"
-                ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                "route_source, route_fingerprint, last_progress_decision, created_at, updated_at, "
+                "completed_at"
+                ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                 (
                     plan_id,
                     learner_id,
@@ -640,6 +690,8 @@ class MySQLLearnerStore:
                     current_order_idx,
                     _json_dump(progress),
                     replan_reason,
+                    route_source,
+                    route_fingerprint,
                     None,
                     now,
                     now,
@@ -652,8 +704,8 @@ class MySQLLearnerStore:
                 cursor.execute(
                     "INSERT INTO learner_learning_plan_nodes("
                     "plan_id, node_id, node_name, prerequisites, difficulty_cap, strategy, "
-                    "node_json, order_idx, node_status, completed_at, created_at, updated_at"
-                    ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                    "node_json, order_idx, node_status, completion_session_id, completed_at, created_at, updated_at"
+                    ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                     (
                         plan_id,
                         node_id,
@@ -664,11 +716,52 @@ class MySQLLearnerStore:
                         _json_dump(node),
                         order_idx,
                         node_status,
+                        (
+                            progress.get("completion_sessions", {}).get(node_id)
+                            if node_status == "completed"
+                            and isinstance(progress.get("completion_sessions"), dict)
+                            else None
+                        ),
                         now if node_status == "completed" else None,
                         now,
                         now,
                     ),
                 )
+            cursor.execute(
+                "INSERT INTO learner_learning_plan_decisions("
+                "decision_id, decision_key, student_id, session_id, plan_id, previous_plan_id, "
+                "decision_kind, outcome, reason_code, learning_goal_hash, knowledge_graph_version, "
+                "from_plan_version, to_plan_version, from_current_node_id, to_current_node_id, "
+                "progress_before_json, progress_after_json, path_decision_json, created_at"
+                ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                (
+                    uuid.uuid4().hex,
+                    f"{source_session_id}:plan:{plan_id}",
+                    learner_id,
+                    source_session_ref,
+                    plan_id,
+                    previous_plan_id,
+                    decision_kind,
+                    "created",
+                    replan_reason,
+                    learning_goal_hash,
+                    knowledge_graph_version,
+                    previous_version,
+                    plan_version,
+                    previous_node,
+                    current_node,
+                    _json_dump(previous_progress) if previous_progress is not None else None,
+                    _json_dump(progress),
+                    _json_dump(
+                        {
+                            "plan_action": decision_kind,
+                            "route_source": route_source,
+                            "route_fingerprint": route_fingerprint,
+                        }
+                    ),
+                    now,
+                ),
+            )
             cursor.execute(
                 "SELECT * FROM learner_learning_plans WHERE plan_id=%s",
                 (plan_id,),
@@ -736,22 +829,129 @@ class MySQLLearnerStore:
                 node_id = str(node["node_id"])
                 node_status = plan_node_status(node_id, progress)
                 cursor.execute(
-                    "UPDATE learner_learning_plan_nodes SET node_status=%s, completed_at=%s, "
-                    "updated_at=%s WHERE plan_id=%s AND node_id=%s",
+                    "UPDATE learner_learning_plan_nodes SET node_status=%s, completion_session_id=%s, "
+                    "completed_at=%s, updated_at=%s WHERE plan_id=%s AND node_id=%s",
                     (
                         node_status,
+                        (
+                            progress.get("completion_sessions", {}).get(node_id)
+                            if node_status == "completed"
+                            and isinstance(progress.get("completion_sessions"), dict)
+                            else None
+                        ),
                         now if node_status == "completed" else None,
                         now,
                         plan_id,
                         node_id,
                     ),
                 )
+            previous_version = int(row["plan_version"])
+            previous_node = row.get("current_node_id")
+            previous_progress = _json_load(row.get("progress_json"), None)
+            outcome = "completed" if status == "completed" else ("advanced" if decision.get("advanced") else "no_change")
+            cursor.execute(
+                "INSERT INTO learner_learning_plan_decisions("
+                "decision_id, decision_key, student_id, session_id, plan_id, decision_kind, outcome, "
+                "reason_code, from_plan_version, to_plan_version, from_current_node_id, to_current_node_id, "
+                "progress_before_json, progress_after_json, path_decision_json, created_at"
+                ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                (
+                    uuid.uuid4().hex,
+                    f"{source_session_id}:progress:{plan_id}:{now.isoformat()}",
+                    learner_id,
+                    session_ref,
+                    plan_id,
+                    "progress",
+                    outcome,
+                    str(decision.get("reason") or "feedback_progress"),
+                    previous_version,
+                    previous_version,
+                    previous_node,
+                    current_node,
+                    _json_dump(previous_progress) if previous_progress is not None else None,
+                    _json_dump(progress),
+                    _json_dump(decision),
+                    now,
+                ),
+            )
             cursor.execute(
                 "SELECT * FROM learner_learning_plans WHERE plan_id=%s",
                 (plan_id,),
             )
             updated = cursor.fetchone()
             return self._learning_plan_from_row(connection, updated)
+
+    def record_learning_plan_decision(
+        self,
+        *,
+        learner_id: str,
+        session_id: str | None,
+        plan_id: str | None,
+        previous_plan_id: str | None = None,
+        decision_kind: str,
+        outcome: str,
+        reason_code: str,
+        learning_goal_hash: str | None = None,
+        knowledge_graph_version: str | None = None,
+        from_plan_version: int | None = None,
+        to_plan_version: int | None = None,
+        from_current_node_id: str | None = None,
+        to_current_node_id: str | None = None,
+        progress_before: dict[str, Any] | None = None,
+        progress_after: dict[str, Any] | None = None,
+        path_decision: dict[str, Any] | None = None,
+        teaching_context: dict[str, Any] | None = None,
+        decision_key: str | None = None,
+    ) -> dict[str, Any]:
+        now = _db_now()
+        key = decision_key or f"{session_id or 'manual'}:{decision_kind}:{plan_id or 'none'}"
+        decision_id = uuid.uuid4().hex
+        with self.database.transaction() as connection:
+            self._ensure_student(connection, learner_id, now)
+            session_ref = (
+                self._existing_id(connection, "sessions", "session_id", session_id)
+                if session_id
+                else None
+            )
+            cursor = connection.cursor()
+            cursor.execute(
+                "INSERT INTO learner_learning_plan_decisions("
+                "decision_id, decision_key, student_id, session_id, plan_id, previous_plan_id, "
+                "decision_kind, outcome, reason_code, learning_goal_hash, knowledge_graph_version, "
+                "from_plan_version, to_plan_version, from_current_node_id, to_current_node_id, "
+                "progress_before_json, progress_after_json, path_decision_json, teaching_context_json, created_at"
+                ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) "
+                "ON DUPLICATE KEY UPDATE decision_id=decision_id",
+                (
+                    decision_id, key, learner_id, session_ref, plan_id, previous_plan_id,
+                    decision_kind, outcome, reason_code, learning_goal_hash, knowledge_graph_version,
+                    from_plan_version, to_plan_version, from_current_node_id, to_current_node_id,
+                    _json_dump(progress_before) if progress_before is not None else None,
+                    _json_dump(progress_after) if progress_after is not None else None,
+                    _json_dump(path_decision) if path_decision is not None else None,
+                    _json_dump(teaching_context) if teaching_context is not None else None, now,
+                ),
+            )
+            cursor.execute(
+                "SELECT * FROM learner_learning_plan_decisions WHERE student_id=%s AND decision_key=%s",
+                (learner_id, key),
+            )
+            return self._learning_plan_decision_from_row(cursor.fetchone())
+
+    def list_learning_plan_decisions(
+        self, learner_id: str, *, limit: int = 50, plan_id: str | None = None
+    ) -> list[dict[str, Any]]:
+        with self.database.transaction() as connection:
+            cursor = connection.cursor()
+            query = "SELECT * FROM learner_learning_plan_decisions WHERE student_id=%s"
+            parameters: list[Any] = [learner_id]
+            if plan_id:
+                query += " AND (plan_id=%s OR previous_plan_id=%s)"
+                parameters.extend([plan_id, plan_id])
+            query += " ORDER BY created_at DESC, decision_id DESC LIMIT %s"
+            parameters.append(limit)
+            cursor.execute(query, tuple(parameters))
+            return [self._learning_plan_decision_from_row(row) for row in cursor.fetchall()]
 
     def mastery(self, learner_id: str) -> dict[str, float]:
         with self.database.transaction() as connection:
@@ -791,10 +991,10 @@ class MySQLLearnerStore:
         skill_id: str,
         *,
         observed_correct: bool,
-        p_init: float = P_L0,
-        p_transit: float = P_T,
-        p_guess: float = P_G,
-        p_slip: float = P_S,
+        p_init: float = UNOBSERVED_PL,
+        p_transit: float = DEFAULT_P_T,
+        p_guess: float = DEFAULT_P_G,
+        p_slip: float = DEFAULT_P_S,
     ) -> float:
         now = _db_now()
         with self.database.transaction() as connection:
@@ -1649,7 +1849,7 @@ class MySQLLearnerStore:
         plan_id = str(row["plan_id"])
         cursor = connection.cursor()
         cursor.execute(
-            "SELECT node_id, node_name, order_idx, node_status, node_json, completed_at "
+            "SELECT node_id, node_name, order_idx, node_status, node_json, completion_session_id, completed_at "
             "FROM learner_learning_plan_nodes WHERE plan_id=%s ORDER BY order_idx",
             (plan_id,),
         )
@@ -1667,6 +1867,7 @@ class MySQLLearnerStore:
                     "node_id": str(node_row["node_id"]),
                     "order_idx": int(node_row["order_idx"]),
                     "status": str(node_row["node_status"]),
+                    "completion_session_id": node_row.get("completion_session_id"),
                     "completed_at": (
                         _iso(node_row["completed_at"])
                         if node_row.get("completed_at")
@@ -1674,6 +1875,17 @@ class MySQLLearnerStore:
                     ),
                 }
             )
+        progress = _json_load(row.get("progress_json"), {}) or {}
+        if not isinstance(progress, dict):
+            progress = {}
+        completion_sessions = {
+            item["node_id"]: str(item["completion_session_id"])
+            for item in node_states
+            if item["status"] == "completed" and item.get("completion_session_id")
+        }
+        progress["completed_nodes"] = list(completion_sessions)
+        progress["completion_sessions"] = completion_sessions
+
         return {
             "plan_id": plan_id,
             "learner_id": str(row["student_id"]),
@@ -1686,8 +1898,10 @@ class MySQLLearnerStore:
             "status": str(row["status"]),
             "current_node": row.get("current_node_id"),
             "current_order_idx": row.get("current_order_idx"),
-            "progress": _json_load(row.get("progress_json"), {}) or {},
+            "progress": progress,
             "replan_reason": str(row.get("replan_reason") or ""),
+            "route_source": str(row.get("route_source") or "legacy"),
+            "route_fingerprint": str(row.get("route_fingerprint") or ""),
             "last_progress_decision": (
                 _json_load(row.get("last_progress_decision"), None)
             ),
@@ -1698,6 +1912,30 @@ class MySQLLearnerStore:
             "completed_at": (
                 _iso(row["completed_at"]) if row.get("completed_at") else None
             ),
+        }
+
+    def _learning_plan_decision_from_row(self, row: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "decision_id": str(row["decision_id"]),
+            "decision_key": str(row["decision_key"]),
+            "learner_id": str(row["student_id"]),
+            "session_id": row.get("session_id"),
+            "plan_id": row.get("plan_id"),
+            "previous_plan_id": row.get("previous_plan_id"),
+            "decision_kind": str(row["decision_kind"]),
+            "outcome": str(row["outcome"]),
+            "reason_code": str(row.get("reason_code") or ""),
+            "learning_goal_hash": row.get("learning_goal_hash"),
+            "knowledge_graph_version": row.get("knowledge_graph_version"),
+            "from_plan_version": row.get("from_plan_version"),
+            "to_plan_version": row.get("to_plan_version"),
+            "from_current_node_id": row.get("from_current_node_id"),
+            "to_current_node_id": row.get("to_current_node_id"),
+            "progress_before": _json_load(row.get("progress_before_json"), None),
+            "progress_after": _json_load(row.get("progress_after_json"), None),
+            "path_decision": _json_load(row.get("path_decision_json"), None),
+            "teaching_context": _json_load(row.get("teaching_context_json"), None),
+            "created_at": _iso(row["created_at"]),
         }
 
     def _mastery_on_connection(self, connection: Any, learner_id: str) -> dict[str, float]:
@@ -1764,10 +2002,10 @@ class MySQLLearnerStore:
         *,
         attempt_id: str | None,
         now: datetime,
-        p_init: float = P_L0,
-        p_transit: float = P_T,
-        p_guess: float = P_G,
-        p_slip: float = P_S,
+        p_init: float = UNOBSERVED_PL,
+        p_transit: float = DEFAULT_P_T,
+        p_guess: float = DEFAULT_P_G,
+        p_slip: float = DEFAULT_P_S,
         source: str = _SOURCE_EXERCISE,
     ) -> dict[str, Any]:
         cursor = connection.cursor()

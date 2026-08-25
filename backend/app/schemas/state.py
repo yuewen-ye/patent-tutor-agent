@@ -5,7 +5,7 @@ from __future__ import annotations
 import operator
 from typing import Annotated, Any, Literal, NotRequired, TypedDict
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 AgentNode = Literal[
     "diagnosis_feedback",
@@ -198,6 +198,7 @@ class LearningPathItem(ContractModel):
     target_ability: str | None = None
     assessment: str | None = None
     markdown_artifact: MarkdownArtifact | None = None
+    knowledge_points: list[str] = Field(default_factory=list)
 
 
 class PlannerPathNode(ContractModel):
@@ -229,12 +230,32 @@ class IterationDirective(ContractModel):
     action: str
 
 
-class PlannerAgentResult(ContractModel):
-    """Validated planner proposal; deterministic code still owns the final path decision."""
+class PlannerGuidance(ContractModel):
+    """Planner advice scoped to the current teaching window."""
 
-    nodes: list[PlannerPathNode] = Field(min_length=1)
+    lesson_focus: list[str] = Field(min_length=1)
+    priority_weaknesses: list[str] = Field(default_factory=list)
+    teaching_strategy: str
+    confusion_guidance: str
+
+
+class PlannerAgentResult(ContractModel):
+    """LLM decision to keep or replace a learner's long-term plan."""
+
+    plan_action: Literal["keep", "replace"]
+    decision_reason: str = Field(min_length=1)
+    nodes: list[PlannerPathNode] | None = None
     question_scope: QuestionScope
     iteration_directive: IterationDirective
+    teaching_guidance: PlannerGuidance
+
+    @model_validator(mode="after")
+    def _validate_plan_action(self) -> PlannerAgentResult:
+        if self.plan_action == "keep" and self.nodes is not None:
+            raise ValueError("keep decisions must not include nodes")
+        if self.plan_action == "replace" and not self.nodes:
+            raise ValueError("replace decisions must include non-empty nodes")
+        return self
 
 
 class RetrievalMetadata(ContractModel):
@@ -657,18 +678,13 @@ class TeachingEvaluation(ContractModel):
 
 
 class LearningProgressDecision(ContractModel):
-    """Backend-owned result of applying BKT evidence to the active roadmap cursor."""
+    """Backend-owned result of verified course-feedback cursor advancement."""
 
     current_node_before: str | None = None
     current_node_after: str | None = None
     completed_node_id: str | None = None
     advanced: bool
     path_completed: bool
-    mastery_probability: float | None = Field(default=None, ge=0.0, le=1.0)
-    observations: int = Field(ge=0)
-    mastery_threshold: float = Field(ge=0.0, le=1.0)
-    minimum_observations: int = Field(ge=1)
-    direct_evidence: bool
     reason: str
     plan_id: str | None = None
     plan_version: int | None = Field(default=None, ge=1)
@@ -782,6 +798,24 @@ class LightweightReview(ContractModel):
     unresolved: list[str] | None = None
 
 
+class TeachingContext(ContractModel):
+    """Backend-owned bounded lesson window passed to teaching Experts."""
+
+    current_node_id: str | None = None
+    current_topic: dict[str, Any] = Field(default_factory=dict)
+    current_node: dict[str, Any] | None = None
+    current_static_confusion_pairs: list[dict[str, Any]] = Field(default_factory=list)
+    planner_guidance: dict[str, Any] = Field(default_factory=dict)
+    planning_directive: dict[str, Any] = Field(default_factory=dict)
+    backward_review_nodes: list[dict[str, Any]] = Field(default_factory=list)
+    forward_probe_nodes: list[dict[str, Any]] = Field(default_factory=list)
+    weakness_probe_nodes: list[dict[str, Any]] = Field(default_factory=list)
+    progress: dict[str, Any] = Field(default_factory=dict)
+    lesson_policy: dict[str, Any] = Field(default_factory=dict)
+    # 当前教学节点必须覆盖的细粒度知识点（来自静态知识图）
+    knowledge_points: list[str] = Field(default_factory=list)
+
+
 class StateDict(TypedDict):
     session_id: str
     user_input: str
@@ -799,7 +833,7 @@ class StateDict(TypedDict):
     revision_round: NotRequired[int]
     feedback_result: NotRequired[dict[str, Any]]
     intent: NotRequired[str]  # "teach" | "chat" | "diagnose"
-    teach_phase: NotRequired[Literal["debate", "integration"]]
+    teach_phase: NotRequired[Literal["debate", "single_agent", "integration"]]
     chat_answer: NotRequired[dict[str, Any]]
     workflow_mode: NotRequired[Literal["auto", "teach", "chat", "diagnose", "feedback"]]
     input_payload: NotRequired[dict[str, Any]]
@@ -808,6 +842,7 @@ class StateDict(TypedDict):
     expert_phase: NotRequired[Literal["draft", "cross_review", "revision", "integration"]]
     dual_axis_snapshot: NotRequired[dict[str, Any]]
     path_decision: NotRequired[dict[str, Any]]
+    # Serialized TeachingContext; full learning_path remains Planner/navigation/audit-only.
     teaching_context: NotRequired[dict[str, Any]]
     expert_a_cross_review: NotRequired[dict[str, Any]]
     expert_b_cross_review: NotRequired[dict[str, Any]]

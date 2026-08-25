@@ -48,5 +48,15 @@ def test_renderer_creates_editable_shapes_and_notes_for_layouts() -> None:
     assert all(len(slide.shapes) >= 3 for slide in presentation.slides)
     assert presentation.slides[2].shapes
     assert presentation.slides[4].notes_slide.notes_text_frame.text == "第 5 页讲稿。"
+    title_run = next(
+        run
+        for shape in presentation.slides[0].shapes
+        if hasattr(shape, "text_frame")
+        for paragraph in shape.text_frame.paragraphs
+        for run in paragraph.runs
+        if run.text == "页面 1"
+    )
+    assert title_run.font.name == "Aptos"
+    assert title_run.font._element.get("ea") == "Microsoft YaHei"
     with ZipFile(BytesIO(content)) as archive:
         assert len([n for n in archive.namelist() if n.startswith("ppt/notesSlides/notesSlide")]) == 6

@@ -107,6 +107,12 @@ class PresentationVisualSlide(PresentationContract):
     conclusion: str | None = None
     warning: str | None = None
     speaker_notes: str
+    # Premium 深色主题扩展字段
+    tabs: list[str] = Field(default_factory=list)
+    current_tab: str | None = None
+    section_number: str | None = None
+    stats: list[dict[str, str]] = Field(default_factory=list, max_length=4)
+    certificates: list[str] = Field(default_factory=list, max_length=6)
 
 
 class PresentationDesign(PresentationContract):
@@ -128,10 +134,28 @@ class PresentationArtifact(PresentationContract):
     created_at: str
 
 
+class PresentationPreviewSlide(PresentationContract):
+    page: int = Field(ge=1)
+    filename: str
+    path: str
+    size_bytes: int = Field(ge=0)
+
+
+class PresentationPreviewManifest(PresentationContract):
+    enabled: bool = False
+    reason: str | None = None
+    dpi: int | None = Field(default=None, ge=72)
+    count: int = Field(default=0, ge=0)
+    slides: list[PresentationPreviewSlide] = Field(default_factory=list)
+
+
 class PresentationResult(PresentationContract):
     status: Literal["generated", "skipped", "degraded"]
     provider: str
     source_slide_count: int = Field(ge=0)
     speaker_notes_status: Literal["written", "unsupported", "unknown"]
     artifact: PresentationArtifact | None = None
+    preview_images: PresentationPreviewManifest = Field(
+        default_factory=PresentationPreviewManifest
+    )
     error_summary: str | None = None

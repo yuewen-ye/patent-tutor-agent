@@ -12,11 +12,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_CONCURRENT_DOWNLOADS=4 \
     HF_HUB_DISABLE_TELEMETRY=1
 
-# 系统依赖：torch/sklearn 需要 libgomp1，modelscope 下载大模型可能用到 git
+# 系统依赖：torch/sklearn 需要 libgomp1；LibreOffice 用于生成 PPT 预览图；git 供 modelscope 下载模型
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libgomp1 \
         ca-certificates \
         git \
+        libreoffice-writer \
+        libreoffice-impress \
     && rm -rf /var/lib/apt/lists/*
 
 # uv（版本与宿主 uv 一致，避免 lock 格式不兼容）

@@ -12,13 +12,16 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from backend.app.agents.common import (
     Node,
-    generate_validated_json,
+    generate_validated_json_stream,
     load_prompt,
     messages_from_prompt,
     schema_note,
 )
-from backend.app.agents.rag_tools import collect_judge_retrieval_context
-from backend.app.core.agent_runtime_config import agent_temperature
+from backend.app.agents.rag_tools import (
+    cap_retrieval_context,
+    collect_judge_retrieval_context,
+)
+from backend.app.core.agent_runtime_config import agent_runtime_settings, agent_temperature
 from backend.app.core.llm import LLMClient, LLMMessage
 from backend.app.schemas.state import JudgeReport, StateDict, completed_event
 
@@ -157,11 +160,11 @@ def _normalize_judge_report(raw: object) -> object:
     for _f in ("accuracy_score", "adaptation_score", "completeness_score"):
         _v = normalized.get(_f)
         if isinstance(_v, float):
-            normalized[_f] = int(round(_v))
+            normalized[_f] = round(_v)
         elif isinstance(_v, str):
             _s = _v.strip()
             if _s and _s.replace(".", "", 1).isdigit():
-                normalized[_f] = int(round(float(_s)))
+                normalized[_f] = round(float(_s))
     decision = str(normalized.get("decision", "")).strip().lower()
     if decision in _DECISION_NORMALIZATION:
         normalized["decision"] = _DECISION_NORMALIZATION[decision]
@@ -235,15 +238,17 @@ def build_judge_node(llm_client: LLMClient) -> Node:
             ),
             (
                 "user",
-                "教学阶段：{teach_phase}\n"
-                "专家 A 整合稿：{expert_a_draft}\n"
-                "用户问题：{user_input}\n"
-                "检索上下文：{retrieval_context}\n"
-                "学习者画像：{learner_profile}\n"
-                "学习路径：{learning_path}\n"
-                "历史修订请求（含 request_id 与当前状态，用于跨轮闭环；后续轮必须复用 ID）：{prior_requests_text}\n"
-                "请只审核专家 A 的整合教学稿。通过后它就是 teach 路由的最终教学内容。"
-                "judge 只判断是否通过并说明理由，不生成教学正文，不承担整合过程输出。",
+                (
+                    "教学阶段：{teach_phase}\n"
+                    "历史修订请求（含 request_id 与当前状态，用于跨轮闭环；后续轮必须复用 ID）：{prior_requests_text}\n"
+                    "请只审核专家 A 的整合教学稿。通过后它就是 teach 路由的最终教学内容。"
+                    "judge 只判断是否通过并说明理由，不生成教学正文，不承担整合过程输出。\n"
+                    "专家 A 整合稿：{expert_a_draft}\n"
+                    "用户问题：{user_input}\n"
+                    "检索上下文：{retrieval_context}\n"
+                    "学习者画像：{learner_profile}\n"
+                    "学习路径：{learning_path}\n"
+                ),
             ),
         ]
     )
@@ -283,9 +288,11 @@ def build_judge_node(llm_client: LLMClient) -> Node:
             temperature=agent_temperature("judge", 0.2, "tool_temperature"),
             agent="judge",
         )
-        retrieval_context = list(state.get("retrieval_context", [])) + judge_retrieved
+        retrieval_context = cap_retrieval_context(
+            list(state.get("retrieval_context", [])) + judge_retrieved
+        )
 
-        report = generate_validated_json(
+        report = generate_validated_json_stream(
             llm_client,
             messages=messages_from_prompt(
                 prompt,
@@ -301,6 +308,7 @@ def build_judge_node(llm_client: LLMClient) -> Node:
             agent="judge",
             output_model=JudgeReport,
             normalize=_normalize_judge_report,
+            schema_name="JudgeReport",
         )
         # adaptation_rate 由代码根据已校验的 adaptation_score 确定性计算，
         # 覆盖 LLM 可能算错/漏填的值，保证 rate == round(score/5.0, 2)。
@@ -331,7 +339,9 @@ def build_judge_node(llm_client: LLMClient) -> Node:
             case "revise":
                 new_round = current_round + 1
                 updates["revision_round"] = new_round
-                if new_round >= 3:
+                max_revisions = agent_runtime_settings("judge").max_revisions
+                cap = max_revisions if max_revisions is not None else 3
+                if new_round >= cap:
                     updates["workflow_status"] = "completed"
             case unreachable:
                 assert_never(unreachable)

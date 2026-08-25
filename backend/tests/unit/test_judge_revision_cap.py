@@ -67,6 +67,15 @@ def test_judge_revise_honors_configured_cap(monkeypatch: pytest.MonkeyPatch) -> 
     assert route(_revise_state(1)) == "slide_deck"
 
 
+def test_single_agent_judge_revise_routes_to_completion_without_revising(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_max_revisions(monkeypatch, 3)
+
+    assert _make_route_after_judge(True, debate_enabled=False)(_revise_state(0)) == "slide_deck"
+    assert _make_route_after_judge(False, debate_enabled=False)(_revise_state(0)) == "_complete"
+
+
 def test_judge_revise_zero_cap_disables_revisions(monkeypatch: pytest.MonkeyPatch) -> None:
     _patch_max_revisions(monkeypatch, 0)
 

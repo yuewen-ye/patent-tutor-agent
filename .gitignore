@@ -13,9 +13,6 @@ build/
 *.egg-info/
 logs/
 artifacts/
-data/*.sqlite3
-data/*.sqlite3-wal
-data/*.sqlite3-shm
 .vscode/
 
 .langgraph_api/
@@ -25,6 +22,7 @@ graphify-out/
 backend/app/rag/data/milvus_lite.db/LOCK
 backend/app/rag/data/milvus_lite.db/**/wal/
 backend/app/rag/data/milvus_lite.db/**/*.prev
+backend/app/rag/data/milvus_lite.db/**/indexes/
 
 /data
 # 嵌入模型权重（体积大，本地/HF 拉取，不入库）

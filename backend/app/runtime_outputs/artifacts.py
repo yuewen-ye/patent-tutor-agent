@@ -6,9 +6,9 @@ import hashlib
 import json
 import re
 import threading
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
-from collections.abc import Mapping
 from typing import Any, Literal, cast
 
 from backend.app.schemas.state import MarkdownArtifact
@@ -323,18 +323,39 @@ def _learning_path_markdown(title: str, value: list[Any]) -> str:
     if not value:
         return "\n".join(lines) + "（暂无路径）\n"
     lines.extend([
-        "| 顺序 | 节点 | 时长 | 学习策略 | 前置节点 | 难度上限 |",
-        "|---:|---|---:|---|---|---:|",
+        f"**路径节点数：** {sum(1 for item in value if isinstance(item, dict))}",
+        "",
+        "| 顺序 | node_id | 节点名称 | 时长 | 学习策略 | 前置 node_id | 难度上限 |",
+        "|---:|---|---|---:|---|---|---:|",
     ])
     for index, item in enumerate(value, start=1):
         if not isinstance(item, dict):
             continue
         prerequisites = ", ".join(item.get("prerequisites", [])) or "无"
         lines.append(
-            f"| {index} | {item.get('node_name', '')} | {item.get('duration_min', '')} 分钟 | "
-            f"{item.get('strategy', '')} | {prerequisites} | {item.get('difficulty_cap') or '—'} |"
+            f"| {index} | `{item.get('node_id', '')}` | {item.get('node_name', '')} | "
+            f"{item.get('duration_min', '')} 分钟 | {item.get('strategy', '')} | {prerequisites} | "
+            f"{item.get('difficulty_cap') or '—'} |"
         )
     lines.append("")
+    lines.extend([
+        "## 各节点细粒度知识点",
+        "",
+    ])
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        node_id = item.get("node_id", "")
+        node_name = item.get("node_name", "")
+        knowledge_points = item.get("knowledge_points") or []
+        lines.append(f"### {node_name} (`{node_id}`)")
+        lines.append("")
+        if knowledge_points:
+            for point in knowledge_points:
+                lines.append(f"- {point}")
+        else:
+            lines.append("- （未配置细粒度知识点）")
+        lines.append("")
     lines.extend([
         "## 习题难度上限（分阶结论）",
         "",
@@ -355,11 +376,30 @@ def _path_decision_markdown(title: str, value: dict[str, Any]) -> str:
     lines = [f"# {title}", ""]
     lines.extend(
         [
+            "## 规划决策",
+            "",
+            f"- 决策：`{value.get('plan_action') or '—'}`",
+            f"- 决策原因：{value.get('decision_reason') or '—'}",
+            f"- 算法：`{value.get('algorithm') or '—'}`",
+            f"- 路线来源：`{value.get('route_source') or '—'}`",
+            f"- 路线指纹：`{value.get('route_fingerprint') or '—'}`",
+            f"- 路线是否实质变化：`{'是' if value.get('route_changed') else '否'}`",
+            f"- 计划版本动作：`{'创建新版本' if value.get('route_changed') else '复用当前版本'}`",
+            f"- 计划 ID：`{value.get('plan_id') or '—'}`",
+            f"- 计划版本：{value.get('plan_version') or '—'}",
+            f"- 知识图版本：{value.get('knowledge_graph_version') or '—'}",
+            "",
+            "## 长期目标路径",
+            "",
+            f"- 路径起点：`{value.get('path_start_node_id') or '—'}`",
+            f"- 目标节点：{', '.join(f'`{node_id}`' for node_id in value.get('path_target_node_ids', []) or []) or '—'}",
+            f"- 路径节点数：{value.get('roadmap_node_count') or 0}",
+            "",
             "## 本节课程游标",
             "",
-            f"- 当前主教学节点：{value.get('current_node_id') or '无'}",
-            f"- 已完成节点：{', '.join(value.get('completed_node_ids', []) or []) or '无'}",
-            f"- 后续待学节点：{', '.join(value.get('pending_node_ids', []) or []) or '无'}",
+            f"- 当前主教学节点：`{value.get('current_node_id') or '无'}`",
+            f"- 已完成节点：{', '.join(f'`{node_id}`' for node_id in value.get('completed_node_ids', []) or []) or '无'}",
+            f"- 后续待学节点：{', '.join(f'`{node_id}`' for node_id in value.get('pending_node_ids', []) or []) or '无'}",
             "",
         ]
     )

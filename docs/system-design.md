@@ -174,20 +174,25 @@ JSONL 日志（started/completed/error）、Markdown artifact 落盘与 `manifes
 - `learning_path.py`：`compute_learning_path()` 用 A* 从完整 DAG 中选路径；`build_dual_axis_snapshot()`
   把静态混淆对 × 个人 BKT 掌握度合成"双轴快照"（当前激活的混淆风险）。
 - `learning_plan.py`：跨会话学习计划（`learner_learning_plans` / `learner_learning_plan_nodes`）。
-  学习目标归一化 hash + 知识图版本一致时**复用已有完整路线与游标**，不再调用 Planner LLM。
+  Planner 每次 teach 会话先计算一次确定性候选路线，再由 LLM 决定 `keep` 或提供完整的
+  `replace` 调整路线；最终路线 fingerprint 未发生实质变化时复用活动版本，发生变化时创建新版本。
+  历史计划中已完成的节点会在节点重新出现时继承完成状态。
 - `learning_progress.py`：后端拥有最终游标与单节活动窗口——
   - 每节窗口 = 0～2 个历史复习节点 + 1 个主教学节点 + 至多 1 个前探节点；
   - 复习节点按确定性风险排序（BKT 掌握度、观测置信、薄弱点、混淆风险），完成顺序仅作稳定平局；
   - `question_scope` 生成三类出题范围（向后复习/向前探测/薄弱点探测），`build_teaching_context()`
     输出专家只能消费的**单节课窗口**，专家不得添加窗口外节点。
 
-**Planner 节点流程**：确定性 A* 候选路线 + 完整双图注入 → LLM 提案（`PlannerAgentResult`）→
-确定性校验（节点必须存在于 DAG、拓扑合法、无重复）→ 失败则降级为确定性路线并在
-`path_decision.fallback_reason` 记录原因。难度上限按 P(L) 分阶（L1/L2/L3），薄弱点强制 L3。
+**Planner 节点流程**：完整双图、活动计划、学员画像/BKT 和目标原子节点推荐注入 → 后端先计算
+一次确定性候选路线 → LLM 作出严格的 `keep`/`replace` 决策。`keep` 使用候选路线并要求
+`nodes=null`；`replace` 必须提供完整的 LLM 调整路线，后端负责节点存在性、去重、前置关系、
+拓扑顺序和目标覆盖校验。最终路线 fingerprint 未变化时复用活动版本，变化时才创建新版本；
+跨历史计划继承重新出现节点的完成状态，并将游标设为第一个未完成且未由 BKT 掌握的节点。
+模型调用链耗尽时 Planner 失败，不以确定性路线替代失败的模型决策。
 
 ### 4.2 学员记忆与 BKT（`backend/app/learner_memory/`）
 
-- `memory.py`：画像快照、历史事件、掌握度的读写（通过 Store，SQLite 仅测试替身）。
+- `memory.py`：画像快照、历史事件、掌握度的 Store 辅助逻辑；业务持久化统一由 MySQL Store 提供。
 - `bkt/model.py`：BKT 参数模型（P(L)/P(G)/P(S)/P(T)），`compute_bkt_step()` 单步贝叶斯更新；
   按教育背景取参数；更新后向 DAG 祖先传播、对未掌握节点剪枝传播。
 - `bkt/cat.py` + `question_bank.py`：CAT 自适应出题（服务端选下一题，问 1 题答 1 题）。

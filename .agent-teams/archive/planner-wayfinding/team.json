@@ -1,0 +1,54 @@
+{
+  "name": "planner-wayfinding",
+  "id": "planner-wayfinding",
+  "description": "为 Planner 路径规划机制改进建立可审查的实施计划；只调查和决策，不修改代码，保护 fallbackmodel 与重试机制。",
+  "captainSessionId": "session-cea40876-5ce6-4bda-a86b-d279fcec8bf0",
+  "createdAt": 1787524034727,
+  "members": [
+    {
+      "id": "6a257d76-ebb3-416a-aa3f-106d9d2ecafe",
+      "name": "planner-analyst",
+      "role": "researcher",
+      "provider": "sh",
+      "model": "gpt-5.6-terra",
+      "joinedAt": 1787524044341,
+      "status": "removed"
+    },
+    {
+      "id": "c27878df-6408-46de-8ae3-ef2793dcbde4",
+      "name": "planner-reviewer",
+      "role": "reviewer",
+      "provider": "sh",
+      "model": "gpt-5.6-terra",
+      "joinedAt": 1787524044402,
+      "status": "removed"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "t1",
+      "subject": "核对 Planner 当前实现",
+      "description": "阅读 backend/app/agents/planner/node.py、learning_path.py 及相关测试，判断报告描述与实际代码的差异，重点标出可改范围和现有契约。",
+      "status": "pending",
+      "dependencies": [],
+      "attempt": 1,
+      "createdAt": 1787524063511,
+      "updatedAt": 1787524334627,
+      "reassigning": false,
+      "handoffId": "43764526-be97-4695-86ed-c341e9b783f7"
+    },
+    {
+      "id": "t2",
+      "subject": "审查 fallback 与重试保护",
+      "description": "检查 Planner 调用链、AgentLLMRouter、fallback_model 和 retry_times 相关实现与测试，提出不可破坏的保护条件及验证方案。",
+      "status": "pending",
+      "dependencies": [],
+      "attempt": 1,
+      "createdAt": 1787524063543,
+      "updatedAt": 1787524334627,
+      "reassigning": false,
+      "handoffId": "fb2caa2b-6d8f-4934-a550-ff3ccff33ac5"
+    }
+  ],
+  "taskSeq": 2
+}

@@ -1,5 +1,15 @@
 # Repository Guidelines
 
+## Agent skills
+
+### Issue tracker
+
+Issues for this repo live in GitHub Issues and are managed with the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+This is a single-context repo. Use the root `CONTEXT.md` and `docs/adr/` when they exist; create them lazily when domain terms or durable decisions require them. See `docs/agents/domain.md`.
+
 ## Sources Of Truth
 
 Read [`docs/README.md`](docs/README.md) before changing architecture or contracts.
@@ -67,7 +77,7 @@ uv export --format requirements-txt --output-file requirements.txt
 │   │   ├── services/            # session lifecycle and event bridge
 │   │   ├── config.py            # FastAPI service settings
 │   │   └── middleware.py        # application-wide HTTP middleware
-│   ├── scripts/                 # workflow runner, graph export, memory migration
+│   ├── scripts/                 # workflow runner and graph export
 │   ├── tests/                   # unit and real-provider integration tests
 │   └── main.py                  # FastAPI entry point
 ├── frontend/                    # React 18 + TypeScript + Vite UI (pages, API client, components)
@@ -100,8 +110,8 @@ START -> _init -> route
                -> expert_a[revision] || expert_b[revision]
                -> _experts_barrier
                -> expert_a[integration] -> judge
-                    accept/minor -> slide_deck（可用 PATENT_TUTOR_SLIDE_DECK_ENABLED 关闭）
-                                  -> generate_pptx（可用 PATENT_TUTOR_PPTX_ENABLED 关闭）-> END
+                    accept/minor -> slide_deck（默认启用，设 PATENT_TUTOR_SLIDE_DECK_ENABLED=false 关闭）
+                                  -> generate_pptx（默认启用，设 PATENT_TUTOR_PPTX_ENABLED=false 关闭）-> END
                     revise       -> expert_a[integration] -> judge（循环，上限
                                     agents.judge.max_revisions 次，缺省 3；达上限后带当前
                                     course_package 继续收尾）
@@ -127,13 +137,13 @@ later, which creates a separate feedback session. The graph has no interrupt-bas
 |---|---|---|---|
 | `route` | LLM | classify `teach/chat/diagnose` | `intent` |
 | `diagnosis_feedback` | LLM + Store | diagnosis or feedback selected by phase | `learner_profile`, `feedback_result` |
-| `planner` | LLM proposal + deterministic guard + Store | read profile/BKT and compute dual-axis path | `dual_axis_snapshot`, `learning_path`, `path_decision` |
+| `planner` | LLM decision + deterministic route builder + Store | decide `keep`/`replace`; restore an active plan or build a goal-directed DAG route | `dual_axis_snapshot`, `learning_path`, `path_decision`, `teaching_context` |
 | `retrieve_context` | deterministic retrieval | fixed chat-path RAG call | `retrieval_context` |
 | `expert_a` | LLM + tool calling | draft, review B, revise, integrate course | A draft/review/revision, `course_package` |
 | `expert_b` | LLM + tool calling | draft, review A, revise | B draft/review/revision |
 | `judge` | LLM | evaluate integrated course without rewriting it | `judge_report` |
 | `chat_answer` | LLM | answer chat requests from retrieved context | `chat_answer` |
-| `generate_pptx` | LLM + deterministic renderer | choose visual direction/templates and render an editable PPTX from `course_package` + `course_slides` | `pptx_result`, session-scoped PPTX artifact |
+| `generate_pptx` | LLM + deterministic renderer | choose visual direction/templates and render an editable PPTX plus per-slide PNG previews from `course_package` + `course_slides` | `pptx_result`, session-scoped PPTX artifact and `slide_*.png` previews |
 
 Do not reintroduce removed `tool_agent`, `finalize`, or debate-round counters,
 `final_learning_markdown`, `exercise_answer_key`, or `quality_gate_failed` nodes/fields.
@@ -161,12 +171,21 @@ def build_<name>_node(llm_client: LLMClient) -> Node:
 
 - Agent factories receive `LLMClient`; never import provider state inside a node.
 - Every final Agent JSON result uses strict JSON Schema output through
-  `generate_validated_json()`, followed by Pydantic validation and one repair attempt.
+  `generate_validated_json_stream()`, followed by Pydantic validation and one repair attempt.
+  Non-streaming `generate_validated_json()` remains available for callers that require provider-side
+  structured output, but all current Agent nodes consume streaming chat completions; chunks are
+  accumulated, re-assembled into valid JSON, and validated before entering state. Tool calls remain
+  non-streaming. Wrappers such as `CancelAwareLLMClient` must proxy `generate_json_stream()` to the
+  inner client so that streaming is not silently downgraded.
 - Expert A/B use `generate_with_tools()` when deciding whether to call RAG, then validate final JSON.
-- Planner receives the complete runtime knowledge/confusion graphs and an A* candidate, then uses
-  a strict `PlannerAgentResult` proposal;
-  deterministic fallback must preserve and log `path_decision.fallback_reason`;
-  `retrieve_context` does not call an LLM.
+- Planner receives the complete runtime knowledge/confusion graphs, learner profile/BKT snapshot and
+  active plan, then makes a strict `PlannerAgentResult` keep/replace decision on every teach session.
+  `keep` accepts the deterministic candidate route and requires `nodes=null`; `replace` returns a
+  complete LLM-adjusted route that is semantically checked in the normal repair loop. The candidate
+  is computed once before the LLM and reused across fallback, retry, and repair. Model failure
+  follows configured primary-to-fallback rounds and fails the node when exhausted; deterministic
+  candidate generation never substitutes for an exhausted model decision. `retrieve_context` does
+  not call an LLM.
 - Multi-phase prompts live beside the node as `<phase>_system.md`; do not inline phase prompts.
 - Normalize provider-specific aliases before Pydantic validation.
 - Every LLM output must pass a `ContractModel` with `extra="forbid"` before entering state.
@@ -212,8 +231,11 @@ append-only reducer fields. Important phase fields are:
 
 - `workflow_mode`: `auto | teach | chat | diagnose | feedback`
 - `diagnosis_feedback_phase`: `diagnosis | feedback`
-- `expert_phase`: `draft | cross_review | revision | integration`
-- `teach_phase`: only selects Expert A's debate/integration prompt behavior
+- `expert_phase`: `draft | cross_review | revision | integration`; disabled debate mode keeps this at `draft`
+- `teach_phase`: `debate | single_agent | integration`; `single_agent` means the deployment debate switch is disabled and the Expert A draft is also the course package
+- `LearningPathItem.knowledge_points`: fine-grained points extracted from the static DAG
+  (`knowledge_points[].point` strings)
+- `TeachingContext.knowledge_points`: current-node point strings Experts must cover
 
 Schema changes must update, in order:
 
@@ -225,11 +247,10 @@ Schema changes must update, in order:
 
 ## Learner Memory And Dual Axes
 
-FastAPI and the CLI use `MySQLLearnerStore` by default, configured by `PATENT_TUTOR_MYSQL_URL`. It
+FastAPI and the CLI use `MySQLLearnerStore`, configured by `PATENT_TUTOR_MYSQL_URL`. It
 stores profile snapshots, learning history, BKT mastery and audit events, workflow state, events,
-questions, attempts, learner-level versioned learning plans and Artifact indexes. SQLite stores are
-unit-test substitutes only; there is no SQLite-to-MySQL production data migration because the former
-database contains no business data.
+questions, attempts, learner-level versioned learning plans and Artifact indexes. MySQL is the only
+business persistence backend; there is no SQLite storage or SQLite-to-MySQL migration path.
 
 The default graph checkpointer is in-memory. LangGraph Studio uses the Store/checkpointing managed by
 LangGraph Dev and does not automatically read FastAPI's MySQL learner store. Product workflows that
@@ -240,12 +261,35 @@ Planner reads these backend runtime assets directly:
 - `backend/app/curriculum/data/knowledge-dag.json`
 - `backend/app/curriculum/data/confusion-pairs.json`
 
+`knowledge-dag.json` nodes carry a `knowledge_points` list of fine-grained learning objectives;
+each item is an object with a `point` string. Planner extracts the `point` text and enriches every
+`LearningPathItem` with these strings, then surfaces the current node's list in
+`teaching_context.knowledge_points`; Experts must cover each point in `teaching_content` and
+`block_plan` without expanding outside the current node.
+
 The knowledge axis is static. Runtime confusion risk is derived from the latest learner profile and
-BKT mastery. Planner LLM proposes a complete route only when no reusable learner plan matches the
-normalized learning goal and knowledge-graph version. A matching active plan restores its complete
-node list and cursor without another Planner LLM call. Every teach session still recomputes the
-session activity window from the latest cursor, BKT evidence, weak points and current-node confusion
-risk.
+BKT mastery. Planner LLM runs on every teach session and decides whether to keep the deterministic
+candidate route or replace it with a complete LLM-adjusted route. The candidate is computed once
+before the LLM from the active route and learner state. A final route only creates a new plan version
+when its persisted route fingerprint materially changes; an unchanged keep reuses the active version.
+Historical completion is carried forward only when backed by a completed course-feedback session for a
+node that reappears; BKT mastery affects routing and review risk, not the completion ledger. The backend
+recomputes the cursor as the first final-route node not completed. Every teach session
+recomputes the activity window from the latest cursor, BKT evidence, weak points and current-node
+confusion risk.
+
+The candidate route is produced by `compute_learning_path()` before the Planner LLM. It combines
+atomic goal matches, relevant weak/confusion signals, BKT mastery evidence, active-route continuity
+and the static prerequisite closure, then emits a stable Kahn topological order. The route is not
+selected by fixed competition/foundation/remediation branches and does not force every weak point;
+it expands only as needed for goal coverage, prerequisite completeness and the configured route
+budget. The recommender (`recommend_target_nodes_for_goal`) supplies goal-related atomic candidates.
+`keep` requires `nodes=null`; `replace.nodes` is a complete LLM-adjusted route and is semantically
+validated against candidate target coverage. The LLM must return a non-empty `decision_reason`, which is
+persisted in `path_decision`, the plan-decision audit row, and the rendered `artifacts/.../path/path_decision.md`.
+The rendered Planner artifacts expose the route source, fingerprint, material-change flag, and whether the
+active plan was reused or a new version was created. The LLM must still successfully decide `replace`;
+exhausted primary/fallback/retry calls fail Planner rather than activating a deterministic failure fallback.
 
 The backend owns the final topological validation, cursor and activity window. Historical review is
 zero to two completed nodes selected by deterministic risk; at-risk direct prerequisites can reserve
@@ -299,8 +343,14 @@ artifacts/sessions/{session_id}/
   presentation/
     course_deck.pptx
     pptx_manifest.json
+    slide_01.png          # per-slide PNG preview for frontend thumbnails
+    slide_02.png
+    ...
   feedback/{feedback_report,learner_profile_update,grading_report}.md
 ```
+
+`path/learning_path.md` renders the planned route as a table and lists the per-node fine-grained
+`knowledge_points` extracted from the static DAG, so the artifact is directly inspectable.
 
 The graph side-effect wrapper owns file I/O. Agent nodes must not write files directly. Artifact paths
 are session-scoped and path traversal must remain rejected. Markdown artifacts remain the audit/read
@@ -309,9 +359,10 @@ surface, while the optional `generate_pptx` node writes an editable PPTX under t
 source slide count and selected theme. PPTX generation uses the configured `generate_pptx` LLM only for
 strict `PresentationDesign` JSON; the backend deterministically renders the visual director decision,
 theme/template selection, decorative layer, semantic patent-course components and speaker notes. The
-LLM does not return binary PPTX, XML, SVG or arbitrary external resources. PPTX is controlled by
-`PATENT_TUTOR_PPTX_ENABLED` and degrades only that artifact on failure; the course and other artifacts
-continue. There is no final Markdown file; `course_package.md` is the integrated course process artifact.
+LLM does not return binary PPTX, XML, SVG or arbitrary external resources. PPTX is enabled by default
+and can be disabled by setting `PATENT_TUTOR_PPTX_ENABLED=false`; on failure it degrades only that
+artifact and the course and other artifacts continue. There is no final Markdown file;
+`course_package.md` is the integrated course process artifact.
 
 ## FastAPI Surface
 
@@ -352,7 +403,7 @@ requires them or the user asks for a complete integration run.
 - Judge evaluates only. It never writes teaching content.
 - Experts do not read the other expert's full draft during initial drafting.
 - Static assets and API inputs are parsed at their boundary; internal code consumes typed data.
-- Do not commit `.env`, credentials, `artifacts/`, learner SQLite files or generated caches.
+- Do not commit `.env`, credentials, `artifacts/` or generated caches.
 - Do not add completed plans, temporary research notes or obsolete diagrams to `docs/`; Git history is
   the archive. Keep `docs/README.md` current when the active document set changes.
 

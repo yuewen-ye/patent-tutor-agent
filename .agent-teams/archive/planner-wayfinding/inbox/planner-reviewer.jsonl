@@ -1,0 +1,3 @@
+{"id":"1435b26d-86cb-46ec-bfd1-d9527dc79832","from":"captain","to":"planner-reviewer","content":"请现在执行 t2：检查 common.py、core/llm.py 中 generate_validated_json_stream、fallback_model、retry_times 及对应测试。输出不可触碰的调用边界、计划中如何验证不破坏 fallback/重试。不要修改文件。完成后更新 t2。","ts":1787524221943,"deliveredAt":1787524221949,"readAt":1787524221949}
+{"id":"97ea54ce-5b13-4d0f-95fa-060f0bac85e2","from":"captain","to":"planner-reviewer","content":"请完成 t2 并在 task output 中给出结论，避免仅报告待命。","ts":1787524274774,"deliveredAt":1787524274780,"readAt":1787524274780}
+{"id":"6a811c2b-be89-4fd4-a7c1-b6c50f1bdcd9","from":"captain","to":"planner-reviewer","content":"请立即返回已完成的 fallback/retry 结论；如果无法继续，请说明已检查的文件和结论。","ts":1787524325142,"deliveredAt":1787524325149,"readAt":1787524325149}

@@ -2,11 +2,35 @@
 
 from __future__ import annotations
 
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 DEFAULT_MASTERY_THRESHOLD = 0.80
 DEFAULT_MIN_OBSERVATIONS = 2
 DEFAULT_MAX_REVIEW_NODES = 2
+_PROFILE_PROGRESS_FIELDS = (
+    "completed_nodes",
+    "current_node",
+    "pending_nodes",
+    "avg_time_per_node_min",
+    "overall_completion_ratio",
+)
+
+
+def profile_progress_snapshot(progress: object) -> dict[str, Any]:
+    """Project the learning-plan ledger into the public learner-profile shape.
+
+    ``completion_sessions`` is plan provenance and must stay in the plan store;
+    it is intentionally excluded from ``FiveDimensions.progress``.
+    """
+
+    if not isinstance(progress, dict):
+        return {}
+    return {
+        key: progress[key]
+        for key in _PROFILE_PROGRESS_FIELDS
+        if key in progress
+    }
 
 
 def _node_ids(path: Iterable[dict[str, Any]]) -> list[str]:
@@ -35,21 +59,6 @@ def _mastery_value(
     except (TypeError, ValueError):
         observations = 0
     return probability, max(0, observations)
-
-
-def _is_mastered(
-    mastery_snapshot: dict[str, dict[str, Any]],
-    node_id: str,
-    *,
-    mastery_threshold: float,
-    minimum_observations: int,
-) -> bool:
-    probability, observations = _mastery_value(mastery_snapshot, node_id)
-    return (
-        probability is not None
-        and probability >= mastery_threshold
-        and observations >= minimum_observations
-    )
 
 
 def _unique(values: Iterable[object]) -> list[str]:
@@ -195,28 +204,31 @@ def initialize_learning_progress(
     *,
     existing_progress: object,
     learning_path: list[dict[str, Any]],
-    mastery_snapshot: dict[str, dict[str, Any]],
-    mastery_threshold: float = DEFAULT_MASTERY_THRESHOLD,
-    minimum_observations: int = DEFAULT_MIN_OBSERVATIONS,
 ) -> dict[str, Any]:
     """Initialize or reconcile the backend-owned cursor against a planned roadmap.
 
-    CAT/BKT nodes already supported by sufficient evidence are treated as completed.
+    ``completed_nodes`` is a teaching-progress ledger, not a mastery snapshot.  Only
+    nodes already recorded as completed by a course feedback submission are carried
+    forward here.  CAT/questionnaire/BKT evidence can influence planning and review
+    risk, but cannot complete a node before that node has been taught and assessed.
     The first unresolved topological path node becomes the only active teaching node.
     """
 
     previous = dict(existing_progress) if isinstance(existing_progress, dict) else {}
     roadmap = _node_ids(learning_path)
-    completed = _unique(previous.get("completed_nodes") or [])
-    for node_id in roadmap:
-        if _is_mastered(
-            mastery_snapshot,
-            node_id,
-            mastery_threshold=mastery_threshold,
-            minimum_observations=minimum_observations,
-        ) and node_id not in completed:
-            completed.append(node_id)
-
+    # Completion is carried only from the persisted teaching-progress ledger.
+    # Mastery evidence remains available to planning/review callers, but it is not
+    # sufficient to claim that a node has already been taught and assessed.
+    completion_sessions = {
+        str(node_id): str(session_id)
+        for node_id, session_id in (previous.get("completion_sessions") or {}).items()
+        if node_id and session_id
+    }
+    completed = [
+        node_id
+        for node_id in _unique(previous.get("completed_nodes") or [])
+        if node_id in completion_sessions
+    ]
     unresolved = [node_id for node_id in roadmap if node_id not in completed]
     current = unresolved[0] if unresolved else None
     pending = unresolved[1:] if unresolved else []
@@ -225,6 +237,11 @@ def initialize_learning_progress(
 
     return {
         "completed_nodes": completed,
+        "completion_sessions": {
+            node_id: completion_sessions[node_id]
+            for node_id in completed
+            if node_id in completion_sessions
+        },
         "current_node": current,
         "pending_nodes": pending,
         "avg_time_per_node_min": previous.get("avg_time_per_node_min"),
@@ -237,40 +254,36 @@ def advance_learning_progress(
     existing_progress: object,
     learning_path: list[dict[str, Any]],
     current_node_id: str | None,
-    mastery_snapshot: dict[str, dict[str, Any]],
-    bkt_updates: list[dict[str, Any]],
-    mastery_threshold: float = DEFAULT_MASTERY_THRESHOLD,
-    minimum_observations: int = DEFAULT_MIN_OBSERVATIONS,
+    verified_completion_session_id: str | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Advance one roadmap cursor only when this lesson supplies mastery evidence."""
+    """Advance one roadmap cursor only from a service-verified feedback event.
+
+    The service validates the generated course, its current node, submitted answers,
+    and feedback session before supplying ``verified_completion_session_id``. BKT is
+    intentionally outside this teaching-progress transition.
+    """
 
     previous = dict(existing_progress) if isinstance(existing_progress, dict) else {}
     roadmap = _node_ids(learning_path)
-    completed = _unique(previous.get("completed_nodes") or [])
+    completion_sessions = {
+        str(node_id): str(session_id)
+        for node_id, session_id in (previous.get("completion_sessions") or {}).items()
+        if node_id and session_id
+    }
+    completed = [
+        node_id
+        for node_id in _unique(previous.get("completed_nodes") or [])
+        if node_id in completion_sessions
+    ]
     current_before = str(current_node_id or previous.get("current_node") or "") or None
-    probability: float | None = None
-    observations = 0
-    direct_evidence = False
-
-    if current_before:
-        probability, observations = _mastery_value(mastery_snapshot, current_before)
-        direct_evidence = any(
-            isinstance(update, dict) and str(update.get("skill_id") or "") == current_before
-            for update in bkt_updates
-        )
-
-    mastered = bool(
-        current_before
-        and direct_evidence
-        and probability is not None
-        and probability >= mastery_threshold
-        and observations >= minimum_observations
-    )
-    if mastered and current_before is not None and current_before not in completed:
+    current_is_in_path = current_before in roadmap if current_before else False
+    completion_granted = bool(current_is_in_path and verified_completion_session_id)
+    if completion_granted and current_before is not None and current_before not in completed:
         completed.append(current_before)
+        completion_sessions[current_before] = verified_completion_session_id
 
     unresolved = [node_id for node_id in roadmap if node_id not in completed]
-    if mastered:
+    if completion_granted:
         current_after = unresolved[0] if unresolved else None
     else:
         current_after = current_before if current_before in unresolved else (
@@ -282,27 +295,22 @@ def advance_learning_progress(
 
     if not current_before:
         reason = "course session has no authoritative current node"
-    elif not direct_evidence:
-        reason = "no BKT update was recorded for the current teaching node"
-    elif probability is None:
-        reason = "current teaching node has no mastery probability"
-    elif probability < mastery_threshold:
-        reason = (
-            f"current node mastery {probability:.4f} is below threshold "
-            f"{mastery_threshold:.2f}"
-        )
-    elif observations < minimum_observations:
-        reason = (
-            f"current node has {observations} observation(s), below minimum "
-            f"{minimum_observations}"
-        )
+    elif not current_is_in_path:
+        reason = "course session current node is not in its learning path"
+    elif not verified_completion_session_id:
+        reason = "service-verified course-feedback provenance is missing"
     elif current_after:
-        reason = f"current node mastered; advance to {current_after}"
+        reason = f"current teaching node completed; advance to {current_after}"
     else:
-        reason = "current node mastered; roadmap completed"
+        reason = "current teaching node completed; roadmap completed"
 
     progress = {
         "completed_nodes": completed,
+        "completion_sessions": {
+            node_id: completion_sessions[node_id]
+            for node_id in completed
+            if node_id in completion_sessions
+        },
         "current_node": current_after,
         "pending_nodes": pending,
         "avg_time_per_node_min": previous.get("avg_time_per_node_min"),
@@ -311,14 +319,9 @@ def advance_learning_progress(
     decision = {
         "current_node_before": current_before,
         "current_node_after": current_after,
-        "completed_node_id": current_before if mastered else None,
-        "advanced": mastered,
-        "path_completed": bool(mastered and not current_after),
-        "mastery_probability": probability,
-        "observations": observations,
-        "mastery_threshold": mastery_threshold,
-        "minimum_observations": minimum_observations,
-        "direct_evidence": direct_evidence,
+        "completed_node_id": current_before if completion_granted else None,
+        "advanced": completion_granted,
+        "path_completed": bool(completion_granted and not current_after),
         "reason": reason,
     }
     return progress, decision
@@ -430,6 +433,9 @@ def build_teaching_context(
     learning_path: list[dict[str, Any]],
     progress: dict[str, Any],
     question_scope: dict[str, list[dict[str, Any]]],
+    static_confusion_pairs: list[dict[str, Any]] | None = None,
+    planner_guidance: dict[str, Any] | None = None,
+    iteration_directive: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the small, explicit context consumed by both teaching Experts."""
 
@@ -450,9 +456,26 @@ def build_teaching_context(
                 result.append({**path_by_id[node_id], "question_scope": dict(scope)})
         return result
 
+    current_node = path_by_id.get(current_id)
     return {
         "current_node_id": current_id or None,
-        "current_node": path_by_id.get(current_id),
+        "current_topic": {
+            "node_id": current_id or None,
+            "node_name": (current_node or {}).get("node_name") if current_node else None,
+        },
+        "current_node": current_node,
+        "knowledge_points": (current_node or {}).get("knowledge_points") or [],
+        "current_static_confusion_pairs": [
+            dict(pair) for pair in (static_confusion_pairs or []) if isinstance(pair, dict)
+        ],
+        "planner_guidance": dict(planner_guidance or {}),
+        "planning_directive": {
+            "question_scope": {
+                key: [dict(item) for item in values]
+                for key, values in question_scope.items()
+            },
+            "iteration_directive": dict(iteration_directive or {}),
+        },
         "backward_review_nodes": scoped_nodes("backward_review"),
         "forward_probe_nodes": scoped_nodes("forward_probe"),
         "weakness_probe_nodes": scoped_nodes("weakness_probe"),

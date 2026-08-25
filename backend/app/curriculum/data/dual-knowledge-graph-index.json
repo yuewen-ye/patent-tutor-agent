@@ -4,7 +4,8 @@
   "generated_at": "2026-08-11",
   "knowledge_axis": {
     "file": "knowledge-dag.json",
-    "version": "1.0.0",
+    "version": "1.1.0",
+    "knowledge_point_model": "每个二级知识小节以 knowledge_points 保存具体细目；细目不单独创建 BKT/CAT/Planner 可学习节点。",
     "scope": [
       "专利法",
       "专利审查指南",

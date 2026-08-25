@@ -1,6 +1,8 @@
 # Issue tracker: GitHub
 
-Issues and PRDs for this repo live as GitHub issues. Use the `gh` CLI for all operations.
+Issues for this repo live in GitHub Issues. Use the `gh` CLI for all issue operations.
+
+The canonical repository is `yuewen-ye/patent-tutor-agent`; `gh` infers it from the current clone.
 
 ## Conventions
 
@@ -10,6 +12,13 @@ Issues and PRDs for this repo live as GitHub issues. Use the `gh` CLI for all op
 - **Comment on an issue**: `gh issue comment <number> --body "..."`
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
 - **Close**: `gh issue close <number> --comment "..."`
+
+## Wayfinding operations
+
+Wayfinder maps and decision tickets are GitHub issues. The map carries the `wayfinder:map` label;
+child decision tickets carry one of `wayfinder:research`, `wayfinder:prototype`,
+`wayfinder:grilling`, or `wayfinder:task`. Create issues with `gh issue create`, link child tickets
+in the map body, record resolutions as comments, and close resolved tickets with `gh issue close`.
 
 Infer the repo from `git remote -v` — `gh` does this automatically when run inside a clone.
 
