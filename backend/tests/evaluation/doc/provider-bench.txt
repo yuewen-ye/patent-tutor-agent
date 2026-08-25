@@ -1,0 +1,178 @@
+﻿.venv\Scripts\python.exe : D:\workspace-agent\patnet-turor-agent\scripts_check_providers.py:74: PydanticDeprecatedSince
+20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed i
+n V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+At line:15 char:3428
++ ... pgrep\bin'; .venv\Scripts\python.exe -u scripts_check_providers.py -- ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (D:\workspace-ag...2.13/migration/:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  class PatentConditions(BaseModel):
+
+==========================================================================================
+Provider 连通性 & 速度评估
+  provider 数: 5   回合数: 2   单调用超时: 90.0s
+  Base URL: https://api.sh.kg/v1   Key: sk-TChZ2SD...i8MSLg
+==========================================================================================
+
+── shkg-gpt1 (model=gpt-5.4-mini, supports_strict_schema=True) ──
+  [short text ] round 1/2:   2483ms chars=219
+  [short text ] round 2/2:   2218ms chars=235
+  [medium text] round 1/2:  23047ms chars=879
+  [medium text] round 2/2:  27000ms chars=2608
+  [long text  ] round 1/2:  59092ms chars=5851
+  [long text  ] round 2/2:  56593ms chars=3998
+  [strict json] round 1/2:   3969ms chars=471
+  [strict json] round 2/2:   3968ms chars=601
+
+── shkg-deepseek (model=deepseek-v4-flash, supports_strict_schema=False) ──
+  [short text ] round 1/2:  14500ms chars=303
+  [short text ] round 2/2:   4906ms chars=304
+  [medium text] round 1/2:  90311ms [TIMEOUT] ReadTimeout: The read operation timed out
+  [medium text] round 2/2:  90297ms [TIMEOUT] ReadTimeout: The read operation timed out
+  [long text  ] round 1/2:  90327ms [TIMEOUT] ReadTimeout: The read operation timed out
+  [long text  ] round 2/2:  90297ms [TIMEOUT] ReadTimeout: The read operation timed out
+  [strict json] round 1/2:   6891ms chars=420
+  [strict json] round 2/2:   7250ms chars=456
+
+── shkg-grok (model=grok-4.5, supports_strict_schema=True) ──
+  [short text ] round 1/2:   5733ms chars=232
+  [short text ] round 2/2:  16750ms chars=309
+  [medium text] round 1/2:  44609ms chars=1694
+  [medium text] round 2/2:  33920ms chars=1273
+  [long text  ] round 1/2:  31985ms [5XX(504)] HTTP: {"error":{"message":"Server error, please try again later.","type":"upstream_header_timeout","param":"","code":null}}
+  [long text  ] round 2/2:  44561ms chars=4091
+  [strict json] round 1/2:  36766ms chars=424
+  [strict json] round 2/2:   6297ms [ERROR] JSON_SCHEMA_MISMATCH: 1 validation error for PatentConditions
+  Invalid JSON: expected value at line 1 column 1 [type=json_invalid, input_value='Patent novelty is a core...ly novel contributions.', input_type=str]
+    For 
+
+── shkg-gpt2 (model=gpt-5.4, supports_strict_schema=True) ──
+  [short text ] round 1/2:   3983ms chars=261
+  [short text ] round 2/2:   2250ms chars=251
+  [medium text] round 1/2:  85468ms chars=3570
+  [medium text] round 2/2:  60718ms chars=4087
+  [long text  ] round 1/2:  90328ms [TIMEOUT] ReadTimeout: The read operation timed out
+  [long text  ] round 2/2:  90327ms [TIMEOUT] ReadTimeout: The read operation timed out
+  [strict json] round 1/2:  90281ms [TIMEOUT] ReadTimeout: The read operation timed out
+  [strict json] round 2/2:  90327ms [TIMEOUT] ReadTimeout: The read operation timed out
+
+── shkg-gpt3 (model=gpt-5.6-terra, supports_strict_schema=True) ──
+  [short text ] round 1/2:  59375ms chars=289
+  [short text ] round 2/2:  90327ms [TIMEOUT] ReadTimeout: The read operation timed out
+  [medium text] round 1/2:  90282ms [TIMEOUT] ReadTimeout: The read operation timed out
+  [medium text] round 2/2:  43000ms chars=2454
+  [long text  ] round 1/2:  84750ms chars=5122
+  [long text  ] round 2/2:  74875ms chars=4989
+  [strict json] round 1/2:   2750ms chars=227
+  [strict json] round 2/2:   2828ms chars=193
+
+==========================================================================================
+(1/4) 明细: 每个 Provider × Mode 汇总
+==========================================================================================
+Provider/Model           Mode         Succ%       P50(ms)  P90(ms)   Ch/s  ChLen Fails           
+-------------------------------------------------------------------------------------------------
+shkg-gpt1/gpt-5.4-mini   short text   2/2 (100%)     2350     2456     96    227 -               
+shkg-gpt1/gpt-5.4-mini   medium text  2/2 (100%)    25023    26604     69   1743 -               
+shkg-gpt1/gpt-5.4-mini   long text    2/2 (100%)    57842    58842     85   4924 -               
+shkg-gpt1/gpt-5.4-mini   strict json  2/2 (100%)     3968     3968    135    536 -               
+shkg-deepseek/deepseek-v4-flash short text   2/2 (100%)     9703    13540     31    303 -               
+shkg-deepseek/deepseek-v4-flash medium text  0/2 (0%)          0    90309      0      0 TIMEOUT         
+shkg-deepseek/deepseek-v4-flash long text    0/2 (0%)          0    90324      0      0 TIMEOUT         
+shkg-deepseek/deepseek-v4-flash strict json  2/2 (100%)     7070     7214     61    438 -               
+shkg-grok/grok-4.5       short text   2/2 (100%)    11241    15648     24    270 -               
+shkg-grok/grok-4.5       medium text  2/2 (100%)    39264    43540     37   1483 -               
+shkg-grok/grok-4.5       long text    1/2 (50%)     44561    43303     91   4091 5XX(504)        
+shkg-grok/grok-4.5       strict json  1/2 (50%)     36766    33719     11    424 ERROR           
+shkg-gpt2/gpt-5.4        short text   2/2 (100%)     3116     3809     82    256 -               
+shkg-gpt2/gpt-5.4        medium text  2/2 (100%)    73093    82993     52   3828 -               
+shkg-gpt2/gpt-5.4        long text    0/2 (0%)          0    90327      0      0 TIMEOUT         
+shkg-gpt2/gpt-5.4        strict json  0/2 (0%)          0    90322      0      0 TIMEOUT         
+shkg-gpt3/gpt-5.6-terra  short text   1/2 (50%)     59375    87231      4    289 TIMEOUT         
+shkg-gpt3/gpt-5.6-terra  medium text  1/2 (50%)     43000    85553     57   2454 TIMEOUT         
+shkg-gpt3/gpt-5.6-terra  long text    2/2 (100%)    79812    83762     63   5055 -               
+shkg-gpt3/gpt-5.6-terra  strict json  2/2 (100%)     2789     2820     75    210 -               
+
+==========================================================================================
+(2/4) 总体: 每 Provider 全模式合并（按 综合分数 降序）
+==========================================================================================
+R   Provider/Model           Succ%       P50(ms)  P90(ms)   Ch/s  ChLen Fails             Score
+-----------------------------------------------------------------------------------------------
+1   shkg-deepseek/deepseek-v4-flash 4/8 (50%)      7070    90315     44    362 TIMEOUT           -20.7
+2   shkg-gpt1/gpt-5.4-mini   8/8 (100%)    13508    57342     83    740 -                 -35.1
+3   shkg-gpt2/gpt-5.4        4/8 (50%)     32350    90327     53   1915 TIMEOUT          -273.5
+4   shkg-grok/grok-4.5       6/8 (75%)     35343    44575     44    848 5XX(504),ERROR   -278.4
+5   shkg-gpt3/gpt-5.6-terra  6/8 (75%)     51187    90295     49   1371 TIMEOUT          -436.9
+
+==========================================================================================
+(3/4) 各模式下的最佳 Provider 排名（按 Succ% − P50/100 降序）
+==========================================================================================
+  short text (route/chat)         : 1. shkg-gpt1/gpt-5.4-mini  2. shkg-gpt2/gpt-5.4  3. shkg-deepseek/deepseek-v4-flash  4. shkg-grok/grok-4.5
+  medium text (diagnosis/planner) : 1. shkg-gpt1/gpt-5.4-mini  2. shkg-grok/grok-4.5  3. shkg-gpt2/gpt-5.4
+  long text (expert_a/b)          : 1. shkg-grok/grok-4.5  2. shkg-gpt1/gpt-5.4-mini  3. shkg-gpt3/gpt-5.6-terra
+  strict json (slide_deck/pptx)   : 1. shkg-gpt3/gpt-5.6-terra  2. shkg-gpt1/gpt-5.4-mini  3. shkg-deepseek/deepseek-v4-flash  4. shkg-grok/grok-4.5
+
+==========================================================================================
+(4/4) agents.yaml 当前配置 → 推荐替换
+==========================================================================================
+Agent                当前                 Fallback           建议 Primary               建议 Fallback               理由
+------------------------------------------------------------------------------------------------------------------------------------------------------
+route                shkg-gpt1          shkg-deepseek      shkg-gpt1（不变）            shkg-gpt2/gpt-5.4         短文本分类，快，稳定. 若替换: 成功 100%→100% (Δ+0%), P50 13508ms→13508ms (Δ+0ms)
+diagnosis_feedback   shkg-gpt1          shkg-deepseek      shkg-gpt1（不变）            shkg-grok/grok-4.5        中文中长文本诊断+反馈. 若替换: 成功 100%→100% (Δ+0%), P50 13508ms→13508ms (Δ+0ms)
+expert_a             shkg-gpt3          shkg-deepseek      shkg-grok/grok-4.5       shkg-gpt1/gpt-5.4-mini    长文本课程生成，支持长上下文（主力专家）. 若替换: 成功 75%→75% (Δ+0%), P50 51187ms→35343ms (Δ-15844ms)
+expert_b             shkg-grok          shkg-gpt2          shkg-grok（不变）            shkg-gpt1/gpt-5.4-mini    长文本课程生成（与A差异化的副专家）. 若替换: 成功 75%→75% (Δ+0%), P50 35343ms→35343ms (Δ+0ms)
+judge                shkg-deepseek      shkg-gpt3          shkg-gpt1/gpt-5.4-mini   shkg-gpt2/gpt-5.4         短文本裁判判断，低幻觉. 若替换: 成功 50%→100% (Δ+50%), P50 7070ms→13508ms (Δ+6438ms)
+chat_answer          shkg-gpt1          shkg-deepseek      shkg-gpt1（不变）            shkg-grok/grok-4.5        中文中长文本RAG问答. 若替换: 成功 100%→100% (Δ+0%), P50 13508ms→13508ms (Δ+0ms)
+planner              shkg-gpt1          shkg-gpt2          shkg-gpt3/gpt-5.6-terra  shkg-gpt1/gpt-5.4-mini    严格 JSON 输出（PlannerAgentResult）. 若替换: 成功 100%→75% (Δ-25%), P50 13508ms→51187ms (Δ+37679ms)
+slide_deck           shkg-gpt1          shkg-gpt2          shkg-gpt3/gpt-5.6-terra  shkg-gpt1/gpt-5.4-mini    严格 JSON（SlideDeck schema）. 若替换: 成功 100%→75% (Δ-25%), P50 13508ms→51187ms (Δ+37679ms)
+generate_pptx        shkg-gpt1          shkg-gpt2          shkg-gpt3/gpt-5.6-terra  shkg-gpt1/gpt-5.4-mini    严格 JSON（PresentationDesign）. 若替换: 成功 100%→75% (Δ-25%), P50 13508ms→51187ms (Δ+37679ms)
+
+==========================================================================================
+(附) 推荐 agents.yaml 补丁 (只列需要改动的 agent)
+==========================================================================================
+agents:
+  route:
+    provider: shkg-gpt1
+    temperature: 0.0
+  diagnosis_feedback:
+    provider: shkg-gpt1
+    temperature: 0.5
+  expert_a:
+    provider: shkg-grok  # 原 shkg-gpt3
+    temperature: 0.4
+    fallback_provider: shkg-gpt1  # 原 shkg-deepseek
+    fallback_model_name: gpt-5.4-mini
+    tool_temperature: 0.2
+    integration_temperature: 0.3
+    top_k: 8
+  expert_b:
+    provider: shkg-grok
+    temperature: 0.7
+    tool_temperature: 0.3
+    top_k: 8
+  judge:
+    provider: shkg-gpt1  # 原 shkg-deepseek
+    temperature: 0.0
+    fallback_provider: shkg-gpt2  # 原 shkg-gpt3
+    fallback_model_name: gpt-5.4
+    max_revisions: 0
+  chat_answer:
+    provider: shkg-gpt1
+    temperature: 0.3
+    top_k: 5
+  planner:
+    provider: shkg-gpt3  # 原 shkg-gpt1
+    temperature: 0.0
+    fallback_provider: shkg-gpt1  # 原 shkg-gpt2
+    fallback_model_name: gpt-5.4-mini
+  slide_deck:
+    provider: shkg-gpt3  # 原 shkg-gpt1
+    temperature: 0.3
+    fallback_provider: shkg-gpt1  # 原 shkg-gpt2
+    fallback_model_name: gpt-5.4-mini
+  generate_pptx:
+    provider: shkg-gpt3  # 原 shkg-gpt1
+    temperature: 0.2
+    fallback_provider: shkg-gpt1  # 原 shkg-gpt2
+    fallback_model_name: gpt-5.4-mini
+

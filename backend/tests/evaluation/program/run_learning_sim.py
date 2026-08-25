@@ -360,11 +360,34 @@ def _save_feedback_artifacts(
     feedback_dir = round_dir / "feedback"
     feedback_dir.mkdir(parents=True, exist_ok=True)
 
+    sys_session_root = common.SYS_ARTIFACTS_DIR / feedback_session_id
+
     # 1. 从系统产物目录复制 feedback 相关的 .md 文件
-    sys_feedback_dir = common.SYS_ARTIFACTS_DIR / feedback_session_id / "feedback"
+    sys_feedback_dir = sys_session_root / "feedback"
     if sys_feedback_dir.is_dir():
         for f in sys_feedback_dir.glob("*.md"):
             shutil.copy2(f, feedback_dir / f.name)
+
+    # 1b. feedback session 自己的过程化元数据/日志 → feedback/meta/
+    #     与 teach round 的 meta/ 布局保持一致，保证 list_round_artifacts 正确归类
+    feedback_meta_dir = feedback_dir / "meta"
+    feedback_meta_dir.mkdir(parents=True, exist_ok=True)
+    for meta_file in (
+        "manifest.json",
+        "workflow.log.jsonl",
+        "llm_calls.log.jsonl",
+        "llm_payloads.log.jsonl",
+    ):
+        src = sys_session_root / meta_file
+        if src.exists():
+            shutil.copy2(src, feedback_meta_dir / meta_file)
+    for sub in ("presentation", "audio", "onboarding"):
+        sys_sub = sys_session_root / sub
+        if sys_sub.is_dir():
+            dst_sub = feedback_meta_dir / sub
+            if dst_sub.exists():
+                shutil.rmtree(dst_sub)
+            shutil.copytree(sys_sub, dst_sub)
 
     # 2. 保存 feedback session snapshot
     if feedback_session_result is not None:

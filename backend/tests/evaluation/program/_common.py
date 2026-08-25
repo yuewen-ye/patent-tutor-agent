@@ -28,7 +28,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 from urllib.parse import unquote
 
 import httpx
@@ -51,7 +51,7 @@ EVAL_ARTIFACTS_DIR = EVAL_DIR / "artifacts"
 SYS_ARTIFACTS_DIR = PROJECT_ROOT / "artifacts" / "sessions"
 DEFAULT_BASE_URL = "http://localhost:8000"
 POLL_INTERVAL_SEC = 10.0
-POLL_TIMEOUT_SEC = 60 * 20  # 20 minutes
+POLL_TIMEOUT_SEC = 60 * 50  # 50 minutes (完整 teach 流程含 slide_deck/PPTX/audio 实测 ~43 分钟)
 
 if str(EVAL_DIR) not in sys.path:
     sys.path.insert(0, str(EVAL_DIR))
@@ -217,8 +217,8 @@ def check_test_environment(
         items.append(("backend /health/ready", f"UNREACHABLE: {exc}  → start with: uv run python backend/main.py"))
 
     # 5. LLM provider env (non-fatal, informative only)
-    providers = [p for p in ("QWEN_API_KEY", "GLM_API_KEY", "GPT_API_KEY", "LUNA_API_KEY", "GROK_API_KEY") if os.environ.get(p)]
-    items.append(("LLM API keys set", ", ".join(providers) if providers else "NONE — teach sessions will likely fail"))
+    llm_keys = [k for k in ("SHKG_API_KEY",) if os.environ.get(k)]
+    items.append(("LLM API keys set", ", ".join(llm_keys) if llm_keys else "NONE — teach sessions will likely fail"))
 
     return EnvReport(ok, items)
 
@@ -283,8 +283,26 @@ def create_teach_session_subsequent(
         return str(resp.json()["session_id"])
 
 
-def poll_session_until_terminal(base_url: str, session_id: str) -> SessionResult:
-    deadline = time.time() + POLL_TIMEOUT_SEC
+def poll_session_until_terminal(
+    base_url: str,
+    session_id: str,
+    *,
+    rescue_callback: (
+        None | (Callable[[str, float, str], Any])
+    ) = None,
+) -> SessionResult:
+    """轮询 session 直到终态或超时。
+
+    Parameters
+    ----------
+    rescue_callback:
+        超时时回调：``rescue_callback(session_id, elapsed_sec, last_status)``。
+        上层可借此在工作流仍 running 但核心产物（course_package+judge_report）
+        已经就绪时，主动把产物抢救一份到评估快照目录，避免 20+ 分钟课程生成
+        因 slide_deck / generate_pptx 等收尾节点卡住而整轮零产物。
+    """
+    start = time.time()
+    deadline = start + POLL_TIMEOUT_SEC
     last_status = "<unknown>"
     while time.time() < deadline:
         try:
@@ -307,6 +325,12 @@ def poll_session_until_terminal(base_url: str, session_id: str) -> SessionResult
         except httpx.HTTPError:
             pass
         time.sleep(POLL_INTERVAL_SEC)
+    elapsed = time.time() - start
+    if rescue_callback is not None:
+        try:
+            rescue_callback(session_id, elapsed, str(last_status))
+        except Exception:  # noqa: BLE001 - 抢救回调自身失败不得吞掉 timeout 结果
+            pass
     return SessionResult(session_id=session_id, status="timeout", snapshot=None,
                          error=f"timeout after {POLL_TIMEOUT_SEC}s; last={last_status}")
 
@@ -404,6 +428,104 @@ def _extract_raw_md(blob: Any) -> str | None:
     return None
 
 
+def core_artifacts_ready(
+    sys_session_dir: Path,
+    round_idx: int = 1,
+) -> bool:
+    """判断系统产物目录里，是否已经有可交付的最小核心教学产物。
+
+    最小集合 = ``round-{NN}/course_package.md`` + ``round-{NN}/judge_report.md``。
+    若指定 round 目录不存在（或者 round_idx > 1 但后端仍硬编码写 round-01），
+    本函数**不会**自动回退到 round-01（回退逻辑在 ``rescue_round_artifacts`` /
+    ``save_round_artifacts`` 内）。
+    """
+    if not isinstance(sys_session_dir, Path):
+        sys_session_dir = Path(sys_session_dir)
+    round_dir = sys_session_dir / f"round-{round_idx:02d}"
+    if not round_dir.is_dir():
+        return False
+    return (
+        (round_dir / "course_package.md").is_file()
+        and (round_dir / "judge_report.md").is_file()
+    )
+
+
+def _copy_sys_session_to_round_dir(
+    *,
+    sys_session_dir: Path,
+    round_dir: Path,
+    round_idx: int,
+) -> None:
+    """把 ``artifacts/sessions/{sid}/`` 下的系统产物复制到评估 round 目录。
+
+    共享给 ``save_round_artifacts``（正常路径）和 ``rescue_round_artifacts``
+    （超时抢救路径），保证两种路径的产物形态一致。
+
+    ``round_idx=0`` (primer, 诊断画像/首轮启动阶段) 同样会复制：
+    此阶段 teach session 只会产出 ``profile/*.md`` + 根 4 个 meta log
+    （以及偶发的 onboarding/），不会有 round-*/path/feedback/presentation/audio。
+    """
+    # round-{NN}/ 下的 *.md
+    sys_round_dir = sys_session_dir / f"round-{round_idx:02d}" if round_idx > 0 \
+        else None
+    # 回退：后端每个 session 的产物都存到 round-01/（workflow.py 硬编码 round_number=1）
+    if sys_round_dir is None or not sys_round_dir.is_dir():
+        sys_round_dir = sys_session_dir / "round-01"
+    if sys_round_dir.is_dir():
+        for f in sys_round_dir.glob("*.md"):
+            shutil.copy2(f, round_dir / f.name)
+
+    # path/*.md
+    sys_path_dir_src = sys_session_dir / "path"
+    if sys_path_dir_src.is_dir():
+        for f in sys_path_dir_src.glob("*.md"):
+            shutil.copy2(f, round_dir / f.name)
+
+    # feedback/*.md → round/feedback/
+    sys_feedback_src = sys_session_dir / "feedback"
+    if sys_feedback_src.is_dir():
+        round_feedback_dir = round_dir / "feedback"
+        round_feedback_dir.mkdir(parents=True, exist_ok=True)
+        for f in sys_feedback_src.glob("*.md"):
+            shutil.copy2(f, round_feedback_dir / f.name)
+
+    # profile/*.md（首轮诊断画像 learner_profile.md），但不覆盖已经从
+    # learner memory 中写出的版本。
+    sys_profile_src = sys_session_dir / "profile"
+    if sys_profile_src.is_dir():
+        for f in sys_profile_src.glob("*.md"):
+            if not (round_dir / f.name).exists():
+                shutil.copy2(f, round_dir / f.name)
+
+    # 根目录散落 .md 产物：course_slides.md / chat_answer.md
+    for root_md in ("course_slides.md", "chat_answer.md"):
+        src_md = sys_session_dir / root_md
+        if src_md.exists():
+            shutil.copy2(src_md, round_dir / root_md)
+
+    # 非 md 过程化文件 → meta/
+    meta_dir = round_dir / "meta"
+    meta_dir.mkdir(parents=True, exist_ok=True)
+    for meta_file in (
+        "manifest.json",
+        "workflow.log.jsonl",
+        "llm_calls.log.jsonl",
+        "llm_payloads.log.jsonl",
+    ):
+        src = sys_session_dir / meta_file
+        if src.exists():
+            shutil.copy2(src, meta_dir / meta_file)
+
+    # presentation/ audio/ onboarding/ 子目录
+    for sub in ("presentation", "audio", "onboarding"):
+        sys_sub = sys_session_dir / sub
+        if sys_sub.is_dir():
+            dst_sub = meta_dir / sub
+            if dst_sub.exists():
+                shutil.rmtree(dst_sub)
+            shutil.copytree(sys_sub, dst_sub)
+
+
 def save_round_artifacts(
     *,
     artifact_root: Path,
@@ -411,14 +533,17 @@ def save_round_artifacts(
     round_idx: int,          # 1-based teaching round; 0 = "primer" infusion
     session_result: SessionResult | None,
     memory: dict[str, Any] | None,
+    sys_session_dir: Path | None = None,
 ) -> Path:
     """Save snapshot + memory + 完整系统产物到 ``{root}/{learner}/round-{NN}/``.
 
-    从系统产物目录 ``artifacts/sessions/{session_id}/`` 复制完整的 round 文件
-    （course_package/judge_report/expert_a_cross_review/expert_b_cross_review 等）
-    以及该轮对应的 ``path/learning_path.md``，规范命名到测试快照目录。
-
-    目录命名统一用连字符 ``round-{NN:02d}``（与后端系统产物一致）。
+    Parameters
+    ----------
+    sys_session_dir:
+        显式传入系统产物目录（``artifacts/sessions/{sid}/``）。当传入时优先用它
+        做复制；否则回退使用 ``session_result.session_id`` 拼出的目录。
+        典型场景：超时后 ``session_result.snapshot is None``，但调用者仍知道
+        ``sys_session_dir``，此时可做产物抢救。
     """
     label = "primer" if round_idx == 0 else f"round-{round_idx:02d}"
     round_dir = artifact_root / learner_id / label
@@ -432,27 +557,17 @@ def save_round_artifacts(
         )
 
     # 2. 从系统产物目录复制完整的 round 文件 + 该轮的 path 产物 + feedback 产物
-    if session_result is not None and round_idx > 0:
-        sys_session_dir = SYS_ARTIFACTS_DIR / session_result.session_id
-        sys_round_dir = sys_session_dir / f"round-{round_idx:02d}"
-        # 回退：后端每个 session 的产物都存到 round-01/（workflow.py 硬编码 round_number=1）
-        if not sys_round_dir.is_dir():
-            sys_round_dir = sys_session_dir / "round-01"
-        if sys_round_dir.is_dir():
-            for f in sys_round_dir.glob("*.md"):
-                shutil.copy2(f, round_dir / f.name)
-        # 把该轮的 path 产物（learning_path.md + dual_axis_snapshot.md）复制到 round 目录
-        sys_path_dir_src = sys_session_dir / "path"
-        if sys_path_dir_src.is_dir():
-            for f in sys_path_dir_src.glob("*.md"):
-                shutil.copy2(f, round_dir / f.name)
-        # 把 feedback/ 产物（learner_profile_update.md, feedback_report.md, grading_report.md）复制到 round/feedback/
-        sys_feedback_src = sys_session_dir / "feedback"
-        if sys_feedback_src.is_dir():
-            round_feedback_dir = round_dir / "feedback"
-            round_feedback_dir.mkdir(parents=True, exist_ok=True)
-            for f in sys_feedback_src.glob("*.md"):
-                shutil.copy2(f, round_feedback_dir / f.name)
+    resolved_sys_dir: Path | None = None
+    if sys_session_dir is not None:
+        resolved_sys_dir = Path(sys_session_dir)
+    elif session_result is not None and round_idx >= 0:
+        resolved_sys_dir = SYS_ARTIFACTS_DIR / session_result.session_id
+    if resolved_sys_dir is not None and resolved_sys_dir.is_dir():
+        _copy_sys_session_to_round_dir(
+            sys_session_dir=resolved_sys_dir,
+            round_dir=round_dir,
+            round_idx=round_idx if round_idx > 0 else 1,
+        )
 
     # 3. 保存 learner memory
     if memory is not None:
@@ -465,6 +580,188 @@ def save_round_artifacts(
         if raw_profile and not (round_dir / "learner_profile.md").exists():
             (round_dir / "learner_profile.md").write_text(raw_profile, encoding="utf-8")
     return round_dir
+
+
+def rescue_round_artifacts(
+    *,
+    artifact_root: Path,
+    sys_session_id: str,
+    learner_id: str,
+    round_idx: int,
+    sys_sessions_root: Path | None = None,
+) -> Path:
+    """超时/中断后手动抢救入口。
+
+    等价于 ``save_round_artifacts`` 但不需要 ``SessionResult``：只要知道
+    ``sys_session_id`` 就能从系统产物目录拷贝出这一轮已生成的一切。
+
+    Returns
+    -------
+    Path
+        抢救后的评估 round 目录。调用者可用 ``list_round_artifacts()`` 打印清单。
+    """
+    if sys_sessions_root is None:
+        sys_sessions_root = SYS_ARTIFACTS_DIR
+    sys_sessions_root = Path(sys_sessions_root)
+    sys_session_dir = sys_sessions_root / sys_session_id
+    if not sys_session_dir.is_dir():
+        raise FileNotFoundError(f"sys_session_dir not found: {sys_session_dir}")
+    # round_idx 回退：若传入 round_idx 没有目录，但 round-01 有核心产物，
+    # 仍按用户传入的 round_idx 生成评估目录命名（如 round-02），但内容从
+    # round-01 拷贝。拷贝函数内部已做该回退。
+    label = "primer" if round_idx == 0 else f"round-{round_idx:02d}"
+    round_dir = Path(artifact_root) / learner_id / label
+    round_dir.mkdir(parents=True, exist_ok=True)
+    # 写一个最小 snapshot.json，标明来自 rescue，便于人工排查
+    info = {
+        "rescued": True,
+        "sys_session_id": sys_session_id,
+        "sys_session_dir": str(sys_session_dir),
+        "learner_id": learner_id,
+        "round_idx": round_idx,
+    }
+    (round_dir / "session_snapshot.json").write_text(
+        json.dumps(info, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    # primer (round_idx=0) 同样需要复制 session 的 profile + 4 meta logs；
+    # sys round_dir 按 round_idx>0 才精确匹配，否则回退到 round-01 (primer 下通常没有)
+    _copy_sys_session_to_round_dir(
+        sys_session_dir=sys_session_dir,
+        round_dir=round_dir,
+        round_idx=round_idx if round_idx > 0 else 1,
+    )
+    return round_dir
+
+
+def list_round_artifacts(round_dir: Path) -> dict[str, list[str]]:
+    """扫描 round 目录，返回所有已收集的过程化文件清单。
+
+    返回 dict，key 为分类，value 为文件名列表。
+
+    根目录 .md 按来源拆成 4 个桶，方便人工核对"系统规划/画像/根散落 md/
+    真正的 round 产物"是否都到齐了，而不是堆在同一个清单里：
+
+    * ``round .md``       — 教学生产物 round-{NN}/*.md 的集合
+      (expert drafts/reviews/revisions, course_package, judge_report,
+      retrieval_context*)
+    * ``path .md``        — Planner 规划产物 learning_path / dual_axis_snapshot /
+      path_decision
+    * ``profile .md``     — learner_profile.md 等画像快照
+    * ``top-level .md``   — slide_deck / chat_answer 等从 sys session 根直接抄
+      过来的散落 md
+    """
+    result: dict[str, list[str]] = {}
+
+    # 先看 meta/feedback 子目录，避免它们的 .md 被混进根桶
+    reserved_names = {"feedback", "meta"}
+
+    # 0. 按来源给 round 根目录下的 .md 分桶（从 sys session 不同子目录拷来的）
+    #    这里用命名/来源稳定的启发式：
+    #      - path: learning_path.md, dual_axis_snapshot.md, path_decision.md
+    #      - profile: learner_profile.md
+    #      - top-level: course_slides.md, chat_answer.md
+    #      - round: 其它（expert_*, course_package, judge_report,
+    #        retrieval_context*）
+    path_md_names = {"learning_path.md", "dual_axis_snapshot.md", "path_decision.md"}
+    profile_md_names = {"learner_profile.md"}
+    toplevel_md_names = {"course_slides.md", "chat_answer.md"}
+
+    round_mds: list[str] = []
+    path_mds: list[str] = []
+    profile_mds: list[str] = []
+    toplevel_mds: list[str] = []
+    for f in sorted(round_dir.glob("*.md")):
+        name = f.name
+        if name in path_md_names:
+            path_mds.append(name)
+        elif name in profile_md_names:
+            profile_mds.append(name)
+        elif name in toplevel_md_names:
+            toplevel_mds.append(name)
+        else:
+            round_mds.append(name)
+    if round_mds:
+        result["round .md"] = round_mds
+    if path_mds:
+        result["path .md"] = path_mds
+    if profile_mds:
+        result["profile .md"] = profile_mds
+    if toplevel_mds:
+        result["top-level .md"] = toplevel_mds
+
+    # 2. feedback/ 目录（feedback_report / learner_profile_update / grading_report）
+    #    feedback/ 下的 .md 放 feedback/；feedback/meta/ 按与外层 meta 一致的
+    #    规则单独展开，叫 feedback/meta/, feedback/meta/presentation/ 等
+    feedback_dir = round_dir / "feedback"
+    if feedback_dir.is_dir():
+        feedback_mds = sorted(f.name for f in feedback_dir.glob("*.md"))
+        if feedback_mds:
+            result["feedback/"] = feedback_mds
+        feedback_meta = feedback_dir / "meta"
+        if feedback_meta.is_dir():
+            _append_meta_tree(result, feedback_meta, prefix="feedback/meta/")
+
+    # 3. meta/ 目录（manifest / workflow.log / llm_calls.log / llm_payloads.log +
+    #    子目录 presentation / audio / onboarding 及其任意嵌套）
+    meta_dir = round_dir / "meta"
+    if meta_dir.is_dir():
+        _append_meta_tree(result, meta_dir, prefix="meta/")
+
+    # 4. 其他文件（session_snapshot.json / learner_memory.json 等）
+    other_files = sorted(
+        f.name for f in round_dir.iterdir()
+        if f.is_file() and f.suffix != ".md"
+    )
+    if other_files:
+        result["其他"] = other_files
+
+    return result
+
+
+def _append_meta_tree(
+    result: dict[str, list[str]],
+    meta_root: Path,
+    *,
+    prefix: str,
+) -> None:
+    """把 ``meta_root`` 下的"顶层文件 + 每一级子目录树"按分类拼入 ``result``。
+
+    ``prefix`` 控制分类名，外层 meta 传 ``meta/``，feedback 层传
+    ``feedback/meta/``。子目录分类名是相对 ``meta_root`` 的相对路径做 key，
+    例如 ``meta/presentation/previews/slide_01.png`` 的 key 为
+    ``meta/presentation/previews/``，value 里仍记录 ``slide_01.png``——但因为 key
+    带了子路径，人工看不会混淆。每一类 value 都是相对于该分类 key 的文件名，
+    不重复父路径，便于和终端 ``ls`` 输出对齐。
+    """
+    # meta 顶层文件（manifest / logs）
+    top_files = sorted(f.name for f in meta_root.glob("*") if f.is_file())
+    if top_files:
+        result[prefix] = top_files
+    # meta 所有子目录
+    for sub in sorted(meta_root.rglob("*")):
+        if not sub.is_dir():
+            continue
+        rel = sub.relative_to(meta_root).as_posix()
+        key = f"{prefix}{rel}/"
+        sub_files = sorted(f.name for f in sub.iterdir() if f.is_file())
+        if sub_files:
+            result[key] = sub_files
+
+
+def print_round_artifacts(round_dir: Path) -> None:
+    """打印 round 目录下已收集的产物清单。"""
+    artifacts = list_round_artifacts(round_dir)
+    if not artifacts:
+        print(f"  （{round_dir.name} 无产物）")
+        return
+    total = 0
+    for category, files in artifacts.items():
+        print(f"  [{category}] ({len(files)})")
+        for fname in files:
+            print(f"    - {fname}")
+        total += len(files)
+    print(f"  共 {total} 个文件")
 
 
 def clean_profile_artifacts(profile_letter: str, *, learner_prefix: str = "multi") -> None:
@@ -878,9 +1175,12 @@ __all__ = [
     "fetch_learner_memory",
     "PlanInspection", "inspect_plan",
     "make_mysql_store", "advance_bkt_correct",
-    "save_round_artifacts", "clean_profile_artifacts",
+    "save_round_artifacts", "rescue_round_artifacts", "core_artifacts_ready",
+    "clean_profile_artifacts",
     "generate_control_md", "parse_control_md", "update_profile_marker",
     "wait_for_ready_or_exit", "delete_run_results", "wipe_learner_mysql",
     # 新增 M2/M3/M11 辅助
     "load_knowledge_dag", "parse_learner_profile_pl", "load_feedback_md",
+    # 产物清单
+    "list_round_artifacts", "print_round_artifacts",
 ]

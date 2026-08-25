@@ -805,6 +805,7 @@ def _run_course_gen(
         )
         if result.round_dir:
             print(f"  产物: {result.round_dir}")
+            common.print_round_artifacts(result.round_dir)
         return round_idx
     if result.status == "no-op":
         print("  ⚠️ 学习计划已全部完成，无需生成新课程")
@@ -892,6 +893,7 @@ def _run_infuse(
     )
     if r.saved_to:
         print(f"  产物: {r.saved_to}")
+        common.print_round_artifacts(r.saved_to)
     return True
 
 
