@@ -30,6 +30,7 @@ NODE_NAMES = (
     "expert_b",
     "judge",
     "slide_deck",
+    "generate_pptx",
 )
 
 
@@ -59,12 +60,14 @@ def _load_fixture(path: Path, node: str, phase: str | None) -> tuple[str, dict[s
     return key, cast(dict[str, Any], copy.deepcopy(state))
 
 
-def _build_node(node_name: str, llm_client: Any) -> Any:
+def _build_node(node_name: str, llm_client: Any, artifact_root: Path) -> Any:
     from backend.app.agents import build_agent_nodes
-    from backend.app.graph.workflow import retrieve_context_node
+    from backend.app.graph.workflow import _generate_pptx_node, retrieve_context_node
 
     if node_name == "retrieve_context":
         return retrieve_context_node
+    if node_name == "generate_pptx":
+        return lambda state: _generate_pptx_node(state, artifact_root, llm_client)
     nodes = build_agent_nodes(llm_client)
     return nodes[node_name]
 
@@ -127,7 +130,7 @@ def main() -> int:
     logger.info("Starting node=%s phase=%s fixture=%s", node_name, args.phase, fixture_key)
     set_llm_log_context(session_id=session_id, log_root=args.artifact_root)
     try:
-        node = _build_node(node_name, router)
+        node = _build_node(node_name, router, args.artifact_root)
         updates = node(state)
         _write_json(run_dir / "updates.json", updates)
         combined = dict(state)

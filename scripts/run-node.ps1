@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet("route", "diagnosis_feedback", "planner", "retrieve_context", "chat_answer", "expert_a", "expert_b", "judge", "slide_deck")]
+    [ValidateSet("route", "diagnosis_feedback", "planner", "retrieve_context", "chat_answer", "expert_a", "expert_b", "judge", "slide_deck", "generate_pptx")]
     [string]$Node,
     [string]$Phase,
     [string]$Fixture = "backend\scripts\node_fixtures.json",

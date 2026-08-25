@@ -174,7 +174,7 @@ Markdown 课件或逐页讲稿音频。LLM 作为 Visual Director 自动选择�
 
 不需要每次修改都跑完整工作流。`backend/scripts/run_node.py` 会绕过 LangGraph，只构造并执行一个 Agent/检索节点；它仍通过 `AgentLLMRouter.from_env()` 读取 `.env` 和 `config/agents.yaml`，因此使用与正式运行相同的 Provider、模型、fallback 和重试配置。
 
-节点上游状态集中维护在 `backend/scripts/node_fixtures.json`。后续只需修改对应 fixture 的 `state`，不需要修改运行器代码；运行器不会把输出回写 fixture。阶段节点使用 `<node>.<phase>` 键，例如 `expert_a.draft`、`expert_a.cross_review`、`diagnosis_feedback.diagnosis`。
+节点上游状态集中维护在 `backend/scripts/node_fixtures.json`。后续只需修改对应 fixture 的 `state`，不需要修改运行器代码；运行器不会把输出回写 fixture。阶段节点使用 `<node>.<phase>` 键，例如 `expert_a.draft`、`expert_a.cross_review`、`diagnosis_feedback.diagnosis`。`generate_pptx` 是图层节点，不属于 Agent 工厂，但也可以单独运行；它需要同时提供 `course_package` 和 `course_slides`，并要求 `--artifact-root` 可写。
 
 PowerShell：
 
@@ -185,6 +185,7 @@ PowerShell：
 # 指定节点和阶段
 .\scripts\run-node.ps1 -Node expert_a -Phase draft
 .\scripts\run-node.ps1 -Node judge
+.\scripts\run-node.ps1 -Node generate_pptx
 
 # 输出 JSON 到终端
 .\scripts\run-node.ps1 -Node route -Json

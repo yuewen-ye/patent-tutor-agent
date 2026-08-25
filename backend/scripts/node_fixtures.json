@@ -214,6 +214,21 @@
         "learner_profile": {},
         "events": []
       }
+    },
+    "generate_pptx": {
+      "state": {
+        "session_id": "node-generate-pptx",
+        "user_input": "学习专利新颖性",
+        "course_package": {"expert": "expert_a", "style": "conservative", "knowledge_points": [{"node_id": "novelty-basic", "kc_name": "新颖性"}], "legal_basis": [], "teaching_content": "请在此填入课程内容", "risks": []},
+        "course_slides": {
+          "slides": [
+            {"id": "slide_001", "order": 1, "type": "title", "title": "新颖性入门", "content": {"subtitle": "专利三性之一"}, "narration": {"text": "今天学习新颖性。"}},
+            {"id": "slide_002", "order": 2, "type": "summary", "title": "小结", "content": {"takeaways": ["新颖性需要与现有技术进行比对"]}, "narration": {"text": "总结本节要点。"}}
+          ],
+          "slide_to_block_id": {}
+        },
+        "events": []
+      }
     }
   }
 }
