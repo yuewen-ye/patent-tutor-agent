@@ -53,9 +53,10 @@
 4. **首尾完整**：第 1 页必须是 `title`（封面，浅色奶油底 + 左侧大标题 + 右侧 rule 装饰条），最后一页必须是 `summary`（要点回顾 + 浅杏 `#FFE8D0` 金句 callout），中间可穿插 assessment 练习。
 5. **图文并茂**：至少 60% 的内容页要使用语义图示映射到相应的 layout，不要连续 2 页以上全部是 body + bullets 纯文字页。
 
-## SlideType 可选值（必须使用其中之一；会映射到"暖橙疗愈浅色"模板）
+## SlideType 可选值（必须严格使用以下值；不得输出其他 type）
 
-> 设计基调：不要 `concept / bullet / comparison / process` 这种旧类型，全部映射到下表。
+`type` 只能是 `title`、`summary`、`scenario`、`law-basis`、`example`、`assessment`、`content`。
+禁止输出 `concept`、`bullet`、`comparison`、`process` 或任何未列出的值。流程、对比、IRAC、证据链和概念关系图必须使用上述合法类型，并通过 `content` 内的 `body`、`bullets`、`takeaways` 表达。
 
 | type 值 | 用途 | 典型 content 结构 | 对应浅色 template |
 |---|---|---|---|
@@ -65,16 +66,18 @@
 | `law-basis` | 法律依据、法条原文、司法解释 | `{ "body": "法条原文", "takeaways": ["核心要件1",…≤4条] }` | `legal_citation_focus`（法条原文左侧奶油浅杏大卡 + 右侧要件要点）|
 | `example` | 案例讲解 / 判例拆解 / 实例对比 | `{ "body": "案情叙述", "takeaways": ["裁判要旨1",…≤4条] }` | `case_analysis_split`（左右分栏，案情 vs 结论）|
 | `assessment` | 练习测评 / 自测 / 易错题分析 | `{ "body": "题干", "bullets": ["A. 选项",…≤4条], "takeaways": ["正确答案", "解析"] }` | `exam_checklist`（白底问题卡 + 选项编号 + 答案解析浅杏区）|
-| `content` | 一般正文、概念定义、构成要件、流程步骤（内容≤4步时仍用此，超长用下面的专用 flow/comparison）| `{ "body": "概念定义/总起句", "takeaways": ["要点1",…≤6条] }` | `content_rule_card` 或 `content_bullet_grid`（要点 2–3 列网格）|
+| `content` | 一般正文、概念定义、构成要件、流程步骤 | `{ "body": "概念定义/总起句", "takeaways": ["要点1"], "bullets": ["步骤或对比项"] }` | `content_rule_card` 或 `content_bullet_grid`（要点 2–3 列网格）|
 
-### 流程 / 对比类 —— 不要塞进 `content`，显式指定下面的专用 type（即使 Pydantic 把它们归类成 content 内部语义也没关系，保证结构可读）
+### 流程 / 对比类的表达
 
-- 若页面是**步骤流程/时间线**：`type` 仍填 `content`，但 `bullets` 数组每项加 `①②③` 编号，长度 ≤ 6；对应前端映射 `timeline_process`。
-- 若页面是**两者对比**：`type` 仍填 `content`，用 `left_items` / `right_items` 各 ≤ 6；对应前端映射 `comparison_matrix`。
-- 若页面是**法律推理 IRAC（问题→规则→适用→结论）**：`type` 填 `law-basis`，`content` 里区分四小节；对应前端 `irac_flow`。
-- 若页面是**证据链/要点堆叠**：`type` 填 `content`，takeaways ≤ 6；对应前端 `evidence_stack`。
-- 若页面是**决策树/分支判断**：`type` 填 `example`；对应前端 `decision_tree`。
-- 若页面是**概念关系图**：`type` 填 `content`；对应前端 `concept_map`。
+这些是 `content` 的页面语义，不是额外的 `type`：
+
+- **步骤流程/时间线**：`type` 填 `content`，`content.bullets` 每项加 `1.`、`2.`、`3.` 编号，最多 6 条。
+- **两者对比**：`type` 填 `content`，仅使用 `content.body`、`content.bullets`、`content.takeaways` 表达两列信息；不要输出 `left_items`、`right_items` 等未在 SlideDeck schema 中声明的顶层字段。
+- **法律推理 IRAC**：`type` 填 `law-basis`，在 `content.body` 内用换行分段表达问题、规则、适用、结论。
+- **证据链/要点堆叠**：`type` 填 `content`，使用 `content.takeaways`，最多 6 条。
+- **决策树/分支判断**：`type` 填 `example`，在 `content.bullets` 中表达判断分支。
+- **概念关系图**：`type` 填 `content`，使用 `content.body` 和 `content.takeaways`。
 
 ### 课程 block_type → slide.type 映射（结构 Agent 必读）
 
