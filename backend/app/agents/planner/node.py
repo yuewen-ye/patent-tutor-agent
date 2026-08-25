@@ -24,6 +24,7 @@ from backend.app.curriculum.learning_progress import (
     build_teaching_context,
     initialize_learning_progress,
     normalize_question_scope,
+    profile_progress_snapshot,
 )
 from backend.app.learner_memory.memory import load_profile_memories, save_profile_snapshot
 from backend.app.schemas.context import WorkflowContext
@@ -493,7 +494,7 @@ def build_planner_node(llm_client: LLMClient) -> Node:
             plan_metadata.update({"plan_id": active_plan.get("plan_id"), "plan_version": active_plan.get("plan_version")})
         updated_profile = deepcopy(profile)
         dimensions = dict(updated_profile.get("five_dimensions") or {})
-        dimensions["progress"] = progress
+        dimensions["progress"] = profile_progress_snapshot(progress)
         updated_profile["five_dimensions"] = dimensions
         save_profile_snapshot(runtime, state, updated_profile, source="planner")
         roadmap_ids = [item["node_id"] for item in serialized_path]

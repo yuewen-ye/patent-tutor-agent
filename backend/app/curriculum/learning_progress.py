@@ -8,6 +8,29 @@ from typing import Any
 DEFAULT_MASTERY_THRESHOLD = 0.80
 DEFAULT_MIN_OBSERVATIONS = 2
 DEFAULT_MAX_REVIEW_NODES = 2
+_PROFILE_PROGRESS_FIELDS = (
+    "completed_nodes",
+    "current_node",
+    "pending_nodes",
+    "avg_time_per_node_min",
+    "overall_completion_ratio",
+)
+
+
+def profile_progress_snapshot(progress: object) -> dict[str, Any]:
+    """Project the learning-plan ledger into the public learner-profile shape.
+
+    ``completion_sessions`` is plan provenance and must stay in the plan store;
+    it is intentionally excluded from ``FiveDimensions.progress``.
+    """
+
+    if not isinstance(progress, dict):
+        return {}
+    return {
+        key: progress[key]
+        for key in _PROFILE_PROGRESS_FIELDS
+        if key in progress
+    }
 
 
 def _node_ids(path: Iterable[dict[str, Any]]) -> list[str]:

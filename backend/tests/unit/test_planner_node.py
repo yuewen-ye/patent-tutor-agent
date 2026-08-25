@@ -110,6 +110,7 @@ class PersistedPlanStore:
     def __init__(self, plan: dict[str, object]) -> None:
         self.plan = plan
         self.decisions: list[dict[str, object]] = []
+        self.saved_profiles: list[dict[str, object]] = []
 
     def active_learning_plan(self, learner_id: str) -> dict[str, object]:
         return self.plan
@@ -121,7 +122,9 @@ class PersistedPlanStore:
         return {}
 
     def save_profile(self, **kwargs: object) -> None:
-        return None
+        profile = kwargs.get("profile")
+        if isinstance(profile, dict):
+            self.saved_profiles.append(profile)
 
     def record_learning_plan_decision(self, **kwargs: object) -> dict[str, object]:
         self.decisions.append(dict(kwargs))
@@ -266,6 +269,56 @@ def test_planner_keep_calls_llm_and_preserves_plan_version() -> None:
     assert result["path_decision"]["plan_version"] == 1
     assert result["path_decision"]["planning_history_id"] == "history-1"
     assert store.decisions[0]["decision_kind"] == "keep"
+
+
+def test_planner_keeps_completion_provenance_out_of_profile_snapshot() -> None:
+    learning_goal = "学习专利制度"
+    nodes = [
+        {
+            "node_id": "patent-law-foundation",
+            "node_name": "专利法律制度基础",
+            "duration_min": 20,
+            "strategy": "概念",
+            "prerequisites": [],
+            "difficulty_cap": "L1",
+        }
+    ]
+    plan: dict[str, object] = {
+        "plan_id": "persisted-plan-provenance",
+        "plan_version": 1,
+        "status": "active",
+        "learning_goal_hash": learning_goal_hash(learning_goal),
+        "knowledge_graph_version": str(load_knowledge_dag().get("version")),
+        "nodes": nodes,
+        "progress": {
+            "completed_nodes": ["patent-law-foundation"],
+            "completion_sessions": {"patent-law-foundation": "feedback-1"},
+            "current_node": None,
+            "pending_nodes": [],
+            "overall_completion_ratio": 1.0,
+        },
+    }
+    store = PersistedPlanStore(plan)
+    runtime = Runtime(context=WorkflowContext(learner_id="learner-provenance"), store=store)  # type: ignore[arg-type]
+
+    result = build_planner_node(PlannerLLMClient("keep"))(
+        {
+            "session_id": "course-provenance",
+            "user_input": "继续学习",
+            "events": [],
+            "learner_profile": {
+                "learning_goal": learning_goal,
+                "five_dimensions": {"knowledge": {}},
+            },
+        },
+        runtime,
+    )
+
+    assert result["teaching_context"]["progress"]["completion_sessions"] == {
+        "patent-law-foundation": "feedback-1"
+    }
+    saved_progress = store.saved_profiles[0]["five_dimensions"]["progress"]
+    assert "completion_sessions" not in saved_progress
 
 
 def test_planner_failure_does_not_fallback_to_deterministic_path() -> None:

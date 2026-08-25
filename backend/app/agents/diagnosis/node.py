@@ -19,7 +19,10 @@ from backend.app.agents.common import (
 from backend.app.core.agent_runtime_config import agent_temperature
 from backend.app.core.llm import LLMClient
 from backend.app.curriculum.learning_path import load_knowledge_dag
-from backend.app.curriculum.learning_progress import deterministic_next_action
+from backend.app.curriculum.learning_progress import (
+    deterministic_next_action,
+    profile_progress_snapshot,
+)
 from backend.app.learner_memory.bkt.model import profile_confidence_from_mastery
 from backend.app.learner_memory.memory import (
     load_mastery_snapshot,
@@ -362,14 +365,16 @@ def _build_five_dimensions(
         },
     }
     if isinstance(base_dimensions, dict):
-        for key in ("cognition", "style", "progress", "affect"):
+        for key in ("cognition", "style", "affect"):
             if key in base_dimensions:
                 dimensions[key] = base_dimensions[key]
+        if "progress" in base_dimensions:
+            dimensions["progress"] = profile_progress_snapshot(base_dimensions["progress"])
     for key in ("cognition", "style", "affect"):
         if key in agent_values:
             dimensions[key] = agent_values[key]
     if isinstance(progress_override, dict):
-        dimensions["progress"] = progress_override
+        dimensions["progress"] = profile_progress_snapshot(progress_override)
     return FiveDimensions.model_validate({"knowledge": knowledge, **dimensions})
 
 
