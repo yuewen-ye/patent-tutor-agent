@@ -1,0 +1,119 @@
+# config/agents.yaml — 全节点经 api.sh.kg 单 key 聚合网关（2026-08-23 异构调优版）
+# ============================================================================
+# 网关：api.sh.kg  https://api.sh.kg/v1
+# 单 key 聚合（api_key_env 统一 = SHKG_API_KEY）：
+#   SHKG_API_KEY = sk-mHyvNSdgBP6ojm099Ubr6t3LJlGuIeZpkkOUt9jxWnxqcx9d
+# 网关在售模型（/v1/models 实测 9 个）：
+#   deepseek-v4-flash
+#   gemini-3.6-flash / gemini-3.7-flash
+#   gpt-5.4 / gpt-5.4-mini / gpt-5.6-luna / gpt-5.6-terra
+#   grok-4.5 / grok-4.6
+# Provider（5 个虚拟通道；同名 base_url/api_key_env，仅 model_name 不同，便于节点级模型覆盖）：
+#   shkg-gpt1      → gpt-5.4-mini      supports_strict_schema=true
+#   shkg-gpt2      → gpt-5.4           supports_strict_schema=true
+#   shkg-gpt3      → gpt-5.6-terra     supports_strict_schema=true
+#   shkg-deepseek  → deepseek-v4-flash supports_strict_schema=false
+#   shkg-grok      → grok-4.5          supports_strict_schema=true
+# 节点 → 通道 → 模型（9 节点映射）：
+#   route             → shkg-gpt1      gpt-5.4-mini      (fb deepseek-v4-flash)
+#   chat_answer       → shkg-gpt1      gpt-5.4-mini      (fb deepseek-v4-flash)
+#   planner           → shkg-gpt1      gpt-5.4-mini      (fb gpt-5.4)
+#   diagnosis_feedback→ shkg-gpt1      gpt-5.4-mini      (fb deepseek-v4-flash)
+#   expert_a          → shkg-gpt3      gpt-5.6-terra     (fb deepseek-v4-flash)
+#   expert_b          → shkg-grok      grok-4.5          (fb gpt-5.4)
+#   slide_deck        → shkg-grok      grok-4.5          (fb gpt-5.4-mini)
+#   judge             → shkg-gpt2      gpt-5.4          (fb gpt-5.6-terra; max_revisions=0)
+#   generate_pptx     → shkg-gpt1      gpt-5.4-mini      (fb gpt-5.4-mini)
+# 三系列异构（每节点主力选不同族，保留单 key 网关内最强对比）：
+#   gpt 族：route/chat/planner/diagnosis/generate_pptx（gpt-5.4-mini + gpt-5.4 + gpt-5.6-terra）
+#   deepseek 族：judge 主 + 多数 fallback（deepseek-v4-flash）
+#   grok 族：expert_b + slide_deck（grok-4.5）
+# supports_strict_schema=true 的通道：shkg-gpt1/gpt2/gpt3/shkg-grok（遇 strict 400 由项目兜底集合
+#   {400,404,415,422} 自动降级 json_object + schema 注入）；shkg-deepseek=false。
+# ============================================================================
+
+llm:
+  default_provider: shkg-deepseek
+  timeout_seconds: 90
+  retry_times: 3
+
+providers:
+  shkg-gpt1:
+    base_url: https://api.sh.kg/v1
+    api_key_env: SHKG_API_KEY
+    model_name: gpt-5.4-mini
+    supports_strict_schema: true
+  shkg-deepseek:
+    base_url: https://api.sh.kg/v1
+    api_key_env: SHKG_API_KEY
+    model_name: deepseek-v4-flash
+    supports_strict_schema: false
+  shkg-grok:
+    base_url: https://api.sh.kg/v1
+    api_key_env: SHKG_API_KEY
+    model_name: grok-4.5
+    supports_strict_schema: true
+  shkg-gpt2 :
+    base_url: https://api.sh.kg/v1
+    api_key_env: SHKG_API_KEY
+    model_name: gpt-5.4
+    supports_strict_schema: true
+  shkg-gpt3 :
+    base_url: https://api.sh.kg/v1
+    api_key_env: SHKG_API_KEY
+    model_name: gpt-5.6-terra
+    supports_strict_schema: true
+
+agents:
+  route:
+    provider: shkg-gpt1
+    temperature: 0.0
+    fallback_provider: shkg-deepseek
+    fallback_model_name: deepseek-v4-flash
+  diagnosis_feedback:
+    provider: shkg-gpt1 
+    temperature: 0.5
+    fallback_provider: shkg-deepseek
+    fallback_model_name: deepseek-v4-flash
+  expert_a:
+    provider: shkg-gpt3 
+    temperature: 0.4
+    tool_temperature: 0.2
+    integration_temperature: 0.3
+    top_k: 5
+    fallback_provider: shkg-deepseek
+    fallback_model_name: deepseek-v4-flash
+  expert_b:
+    provider: shkg-grok 
+    temperature: 0.7
+    tool_temperature: 0.3
+    top_k: 5
+    fallback_provider: shkg-gpt2
+    fallback_model_name: gpt-5.4
+  judge:
+    provider: shkg-gpt2
+    temperature: 0.0
+    max_revisions: 0
+    fallback_provider: shkg-gpt3
+    fallback_model_name: gpt-5.6-terra
+  chat_answer: 
+    provider: shkg-gpt1
+    temperature: 0.3
+    top_k: 5
+    fallback_provider: shkg-deepseek
+    fallback_model_name: deepseek-v4-flash
+  planner:
+    provider: shkg-gpt1
+    temperature: 0.0
+    fallback_provider: shkg-gpt2
+    fallback_model_name: gpt-5.4
+  slide_deck:
+    provider: shkg-grok
+    temperature: 0.3
+    fallback_provider: shkg-gpt2
+    fallback_model_name: gpt-5.4
+  generate_pptx:
+    provider: shkg-gpt2
+    temperature: 0.2
+    fallback_provider: shkg-gpt3
+    fallback_model_name: gpt-5.6-terra
