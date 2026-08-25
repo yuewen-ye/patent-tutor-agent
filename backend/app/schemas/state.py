@@ -678,18 +678,13 @@ class TeachingEvaluation(ContractModel):
 
 
 class LearningProgressDecision(ContractModel):
-    """Backend-owned result of applying BKT evidence to the active roadmap cursor."""
+    """Backend-owned result of verified course-feedback cursor advancement."""
 
     current_node_before: str | None = None
     current_node_after: str | None = None
     completed_node_id: str | None = None
     advanced: bool
     path_completed: bool
-    mastery_probability: float | None = Field(default=None, ge=0.0, le=1.0)
-    observations: int = Field(ge=0)
-    mastery_threshold: float = Field(ge=0.0, le=1.0)
-    minimum_observations: int = Field(ge=1)
-    direct_evidence: bool
     reason: str
     plan_id: str | None = None
     plan_version: int | None = Field(default=None, ge=1)

@@ -494,9 +494,7 @@ class ApiJourney:
                 "    教学游标："
                 f"{progress_decision.get('current_node_before') or '无'}"
                 f" -> {progress_decision.get('current_node_after') or '路径完成'}；"
-                f"advanced={progress_decision.get('advanced')}；"
-                f"P(L)={progress_decision.get('mastery_probability')}；"
-                f"observations={progress_decision.get('observations')}"
+                f"advanced={progress_decision.get('advanced')}"
             )
 
         self._step("10", "读取反馈 Markdown Artifact")

@@ -7,6 +7,7 @@ from backend.app.curriculum.learning_progress import (
     initialize_learning_progress,
     normalize_question_scope,
 )
+from backend.app.schemas.state import LearningProgressDecision
 
 pytestmark = pytest.mark.unit
 
@@ -70,6 +71,23 @@ def test_forward_probe_never_advances_current_node() -> None:
     assert decision["advanced"] is False
     assert progress["current_node"] == "novelty"
     assert "novelty" not in progress["completed_nodes"]
+
+
+def test_progress_decision_matches_its_runtime_contract() -> None:
+    _, decision = advance_learning_progress(
+        existing_progress={"current_node": "novelty"},
+        learning_path=_path(),
+        current_node_id="novelty",
+    )
+
+    validated = LearningProgressDecision.model_validate(decision)
+
+    assert validated.advanced is False
+    assert validated.completed_node_id is None
+    assert "observations" not in decision
+    assert "mastery_threshold" not in decision
+    assert "minimum_observations" not in decision
+    assert "direct_evidence" not in decision
 
 
 def test_current_node_advances_after_verified_course_feedback() -> None:
