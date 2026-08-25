@@ -8,7 +8,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinition
-from backend.app.learner_memory.sqlite_store import SQLiteLearnerStore
 from backend.app.services.session_service import SessionService
 from backend.main import create_app
 
@@ -196,8 +195,7 @@ class EndToEndQueueLLM:
 
 
 def _client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[TestClient, SessionService]:
-    store = SQLiteLearnerStore(tmp_path / "learners.sqlite3")
-    service = SessionService(artifact_root=tmp_path / "artifacts", store=store)
+    service = SessionService(artifact_root=tmp_path / "artifacts")
     monkeypatch.setattr(
         service,
         "create_session",
@@ -243,7 +241,7 @@ def test_cat_diagnostic_session_updates_mastery_and_starts_course(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    client, service = _client(tmp_path, monkeypatch)
+    client, _service = _client(tmp_path, monkeypatch)
     learner_id = "learner-1"
     started = client.post(
         f"/learners/{learner_id}/diagnostic-sessions",
@@ -279,7 +277,6 @@ def test_cat_diagnostic_session_updates_mastery_and_starts_course(
     assert completed.json()["status"] == "completed"
     assert completed.json()["course_session_id"] == "course-session"
     assert completed.json()["knowledge_snapshot"]
-    assert service.learner_memory(learner_id)["mastery"]
 
 
 

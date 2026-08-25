@@ -7,13 +7,43 @@ from backend.app.learner_memory.diagnostic_sessions import (
     DiagnosticSession,
     DiagnosticSessionManager,
 )
-from backend.app.learner_memory.sqlite_store import SQLiteLearnerStore
 
 pytestmark = pytest.mark.unit
 
 
+class _MemoryDiagnosticStore:
+    def __init__(self) -> None:
+        self.sessions: dict[str, dict] = {}
+
+    def save_diagnostic_session(self, *, payload: dict) -> None:
+        self.sessions[payload["diagnostic_session_id"]] = dict(payload)
+
+    def load_diagnostic_session(self, diagnostic_session_id: str) -> dict | None:
+        return self.sessions.get(diagnostic_session_id)
+
+    def list_diagnostic_sessions(self, learner_id: str) -> list[dict]:
+        return [
+            {
+                "diagnostic_session_id": payload["diagnostic_session_id"],
+                "status": payload.get("status"),
+                "updated_at": payload.get("updated_at"),
+            }
+            for payload in self.sessions.values()
+            if payload.get("learner_id") == learner_id
+        ]
+
+    def save_diagnostic_attempt(self, **_: object) -> None:
+        return None
+
+    def complete_diagnostic_session(self, **_: object) -> None:
+        return None
+
+    def mastery_snapshot(self, _: str) -> dict:
+        return {}
+
+
 def _manager(tmp_path) -> DiagnosticSessionManager:
-    return DiagnosticSessionManager(SQLiteLearnerStore(tmp_path / "learners.sqlite3"))
+    return DiagnosticSessionManager(_MemoryDiagnosticStore())
 
 
 def _session(

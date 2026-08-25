@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
-from typing import Any, Mapping
+from typing import Any
 
 from scipy.stats import beta  # type: ignore[import-untyped]
 
 BKT_MODEL_VERSION = "bkt-cat-v1"
 DEFAULT_P_G = 0.08
 DEFAULT_P_S = 0.05
+DEFAULT_P_T = 0.25
 UNOBSERVED_PL = 0.15
 UNOBSERVED_CI = (0.02, 0.40)
 
@@ -233,7 +235,7 @@ class BKTTracker:
         }
 
     @classmethod
-    def from_state_dict(cls, payload: Mapping[str, Any]) -> "BKTTracker":
+    def from_state_dict(cls, payload: Mapping[str, Any]) -> BKTTracker:
         raw_parameters = payload.get("parameters") or {}
         parameters = BKTParameters(
             p_init=float(raw_parameters.get("p_init", UNOBSERVED_PL)),

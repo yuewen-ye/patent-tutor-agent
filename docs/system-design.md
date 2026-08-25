@@ -192,7 +192,7 @@ JSONL 日志（started/completed/error）、Markdown artifact 落盘与 `manifes
 
 ### 4.2 学员记忆与 BKT（`backend/app/learner_memory/`）
 
-- `memory.py`：画像快照、历史事件、掌握度的读写（通过 Store，SQLite 仅测试替身）。
+- `memory.py`：画像快照、历史事件、掌握度的 Store 辅助逻辑；业务持久化统一由 MySQL Store 提供。
 - `bkt/model.py`：BKT 参数模型（P(L)/P(G)/P(S)/P(T)），`compute_bkt_step()` 单步贝叶斯更新；
   按教育背景取参数；更新后向 DAG 祖先传播、对未掌握节点剪枝传播。
 - `bkt/cat.py` + `question_bank.py`：CAT 自适应出题（服务端选下一题，问 1 题答 1 题）。

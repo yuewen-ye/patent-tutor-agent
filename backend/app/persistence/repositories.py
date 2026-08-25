@@ -14,13 +14,16 @@ from backend.app.curriculum.learning_plan import plan_node_status
 from backend.app.learner_memory.bkt.knowledge_graph import load_knowledge_graph
 from backend.app.learner_memory.bkt.model import (
     BKT_MODEL_VERSION,
+    DEFAULT_P_G,
+    DEFAULT_P_S,
+    DEFAULT_P_T,
+    UNOBSERVED_PL,
     BKTParameters,
     compute_bkt_step,
     knowledge_node_snapshot,
     parameters_for_background,
 )
 from backend.app.learner_memory.memory import JsonValue, StoredMemoryItem
-from backend.app.learner_memory.sqlite_store import P_G, P_L0, P_S, P_T
 from backend.app.onboarding.questionnaire_kc_map import load_questionnaire_kc_map
 from backend.app.persistence.db import MySQLDatabase
 
@@ -345,9 +348,8 @@ class LearnerRegistrationError(RuntimeError):
 class MySQLLearnerStore:
     """Compatibility Store plus normalized business persistence.
 
-    The public memory methods intentionally mirror ``SQLiteLearnerStore`` so
-    existing Agent helpers can use the MySQL implementation through dependency
-    injection. Structured profile and mastery tables are canonical; memory_items
+    The public memory methods implement the Store interface consumed by Agent
+    helpers. Structured profile and mastery tables are canonical; memory_items
     is retained only for episodic context compatibility.
     """
 
@@ -989,10 +991,10 @@ class MySQLLearnerStore:
         skill_id: str,
         *,
         observed_correct: bool,
-        p_init: float = P_L0,
-        p_transit: float = P_T,
-        p_guess: float = P_G,
-        p_slip: float = P_S,
+        p_init: float = UNOBSERVED_PL,
+        p_transit: float = DEFAULT_P_T,
+        p_guess: float = DEFAULT_P_G,
+        p_slip: float = DEFAULT_P_S,
     ) -> float:
         now = _db_now()
         with self.database.transaction() as connection:
@@ -2000,10 +2002,10 @@ class MySQLLearnerStore:
         *,
         attempt_id: str | None,
         now: datetime,
-        p_init: float = P_L0,
-        p_transit: float = P_T,
-        p_guess: float = P_G,
-        p_slip: float = P_S,
+        p_init: float = UNOBSERVED_PL,
+        p_transit: float = DEFAULT_P_T,
+        p_guess: float = DEFAULT_P_G,
+        p_slip: float = DEFAULT_P_S,
         source: str = _SOURCE_EXERCISE,
     ) -> dict[str, Any]:
         cursor = connection.cursor()

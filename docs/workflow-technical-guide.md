@@ -111,10 +111,10 @@ LLM 输出合同均不含知识掌握度：诊断阶段由后端用 CAT/BKT 快�
 - 任一 Agent 首次结构化输出校验失败并进入修复重试时，服务端 warning 会记录 Agent、
   Contract、重试序号和 Pydantic 字段错误；即使第二次修复成功，也能解释额外耗时。
 - 混淆风险同时考虑画像中的 `weak_points` 和相关概念的 BKT 掌握度；低掌握度会提高 `learner_risk` 并记录 `adjustment_reason`。
-- FastAPI 默认使用 MySQL 保存画像、历史、BKT 及其状态转移审计、CAT 诊断会话、诊断作答、
+- FastAPI 使用 MySQL 保存画像、历史、BKT 及其状态转移审计、CAT 诊断会话、诊断作答、
   DAG 传播审计、课程会话状态、事件、题目和作答。通过 `PATENT_TUTOR_MYSQL_URL` 配置连接；
-  演示环境可以自动迁移，生产环境应在发布阶段显式执行版本化迁移。SQLite 没有业务数据，只保留
-  为单元测试替身。
+  演示环境可以自动迁移，生产环境应在发布阶段显式执行版本化迁移。项目不保留 SQLite
+  存储后端。
 - Studio 由 LangGraph Dev 管理自己的 Store，不会自动读取 FastAPI 的 MySQL；要让 Studio 复用产品数据，必须显式注入同一个持久化 Store，或通过 FastAPI 启动产品流程。
 
 ## 3. Markdown 过程产物

@@ -77,7 +77,7 @@ uv export --format requirements-txt --output-file requirements.txt
 │   │   ├── services/            # session lifecycle and event bridge
 │   │   ├── config.py            # FastAPI service settings
 │   │   └── middleware.py        # application-wide HTTP middleware
-│   ├── scripts/                 # workflow runner, graph export, memory migration
+│   ├── scripts/                 # workflow runner and graph export
 │   ├── tests/                   # unit and real-provider integration tests
 │   └── main.py                  # FastAPI entry point
 ├── frontend/                    # React 18 + TypeScript + Vite UI (pages, API client, components)
@@ -247,11 +247,10 @@ Schema changes must update, in order:
 
 ## Learner Memory And Dual Axes
 
-FastAPI and the CLI use `MySQLLearnerStore` by default, configured by `PATENT_TUTOR_MYSQL_URL`. It
+FastAPI and the CLI use `MySQLLearnerStore`, configured by `PATENT_TUTOR_MYSQL_URL`. It
 stores profile snapshots, learning history, BKT mastery and audit events, workflow state, events,
-questions, attempts, learner-level versioned learning plans and Artifact indexes. SQLite stores are
-unit-test substitutes only; there is no SQLite-to-MySQL production data migration because the former
-database contains no business data.
+questions, attempts, learner-level versioned learning plans and Artifact indexes. MySQL is the only
+business persistence backend; there is no SQLite storage or SQLite-to-MySQL migration path.
 
 The default graph checkpointer is in-memory. LangGraph Studio uses the Store/checkpointing managed by
 LangGraph Dev and does not automatically read FastAPI's MySQL learner store. Product workflows that
@@ -404,7 +403,7 @@ requires them or the user asks for a complete integration run.
 - Judge evaluates only. It never writes teaching content.
 - Experts do not read the other expert's full draft during initial drafting.
 - Static assets and API inputs are parsed at their boundary; internal code consumes typed data.
-- Do not commit `.env`, credentials, `artifacts/`, learner SQLite files or generated caches.
+- Do not commit `.env`, credentials, `artifacts/` or generated caches.
 - Do not add completed plans, temporary research notes or obsolete diagrams to `docs/`; Git history is
   the archive. Keep `docs/README.md` current when the active document set changes.
 

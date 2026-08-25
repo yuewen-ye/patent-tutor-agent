@@ -6,7 +6,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinition
-from backend.app.learner_memory.memory import FileLearnerMemoryStore
 from backend.app.services.session_service import SessionService
 from backend.main import create_app
 
@@ -170,59 +169,3 @@ def _make_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[TestC
     )
     app = create_app(session_service=service)
     return TestClient(app), service
-
-
-def _make_memory_client(tmp_path: Path) -> tuple[TestClient, SessionService]:
-    service = SessionService(
-        artifact_root=tmp_path / "artifacts",
-        llm_client=QueueLLMClient(),
-        store=FileLearnerMemoryStore(tmp_path / "learner-memory.json"),
-    )
-    return TestClient(create_app(session_service=service)), service
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-@pytest.mark.parametrize(
-    "path",
-    [
-        "/learners/learner-api",
-        "/learners/learner-api/profiles",
-        "/learners/learner-api/history",
-        "/learners/learner-api/sessions",
-    ],
-)
-def test_learner_api_returns_controlled_error_for_corrupt_memory_store(
-    path: str,
-    tmp_path: Path,
-) -> None:
-    # Given: a learner memory store file containing invalid JSON.
-    memory_path = tmp_path / "learner-memory.json"
-    memory_path.write_text("{not valid json", encoding="utf-8")
-    service = SessionService(
-        artifact_root=tmp_path / "artifacts",
-        llm_client=QueueLLMClient(),
-        store=FileLearnerMemoryStore(memory_path),
-    )
-    client = TestClient(create_app(session_service=service), raise_server_exceptions=False)
-
-    # When: the learner memory API reads the corrupt store.
-    learner = client.get(path)
-    sessions = client.get("/sessions")
-
-    # Then: the learner API returns a controlled JSON error without breaking sessions.
-    assert learner.status_code == 500
-    detail = learner.json()["detail"]
-    assert detail["error"] == "memory_store_corrupt"
-    assert detail["store"] == "learner-memory.json"
-    assert sessions.status_code == 200
