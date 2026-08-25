@@ -1,0 +1,219 @@
+{
+  "_README": "编辑 fixtures 中对应节点/阶段的 state；运行器只读取，不会回写。字段应遵循 backend/app/schemas/state.py 和当前节点输入合同。",
+  "fixtures": {
+    "route": {
+      "state": {
+        "session_id": "node-route",
+        "user_input": "我想系统学习专利新颖性",
+        "workflow_mode": "auto",
+        "events": []
+      }
+    },
+    "retrieve_context": {
+      "state": {
+        "session_id": "node-retrieve",
+        "user_input": "什么是专利法中的新颖性？",
+        "events": []
+      }
+    },
+    "chat_answer": {
+      "state": {
+        "session_id": "node-chat",
+        "user_input": "什么是抵触申请？",
+        "retrieval_context": [
+          {
+            "chunk_id": "patent-law-22",
+            "source": "patent_law",
+            "citation": "专利法第二十二条",
+            "text": "新颖性，是指该发明或者实用新型不属于现有技术。",
+            "score": 0.9
+          }
+        ],
+        "events": []
+      }
+    },
+    "diagnosis_feedback.diagnosis": {
+      "state": {
+        "session_id": "node-diagnosis",
+        "user_input": "我想学习专利新颖性",
+        "intent": "diagnose",
+        "diagnosis_feedback_phase": "diagnosis",
+        "input_payload": {
+          "questionnaire_context": [],
+          "diagnostic_snapshot": {
+            "education_background": "其他",
+            "knowledge": {
+              "novelty-basic": {"pl": 0.35, "ci_low": 0.2, "ci_high": 0.5, "observations": 2, "low_confidence": false, "inferred": false}
+            },
+            "answer_log": []
+          }
+        },
+        "events": []
+      }
+    },
+    "diagnosis_feedback.feedback": {
+      "state": {
+        "session_id": "node-feedback",
+        "user_input": "继续学习专利新颖性",
+        "diagnosis_feedback_phase": "feedback",
+        "learner_profile": {},
+        "judge_report": {},
+        "input_payload": {
+          "exercise_responses": [],
+          "bkt_updates": [],
+          "mastery_snapshot": {},
+          "learning_progress_update": {},
+          "learning_progress_decision": {}
+        },
+        "events": []
+      }
+    },
+    "planner": {
+      "state": {
+        "session_id": "node-planner",
+        "user_input": "我想学习专利新颖性",
+        "learner_profile": {
+          "education_background": "其他",
+          "knowledge_level": "beginner",
+          "learning_style": "sensing/sequential",
+          "weak_points": ["新颖性"],
+          "learning_goal": "学习专利新颖性",
+          "error_pattern": "concept_confusion",
+          "confidence": 0.5,
+          "five_dimensions": {
+            "knowledge": {},
+            "cognition": {"remember": 0.4, "understand": 0.3, "apply": 0.2, "analyze": 0.1, "evaluate": 0.1, "create": 0.05},
+            "style": {
+              "perception": {"chosen": "sensing", "strength": 0.5},
+              "input": {"chosen": "verbal", "strength": 0.5},
+              "processing": {"chosen": "active", "strength": 0.5},
+              "understanding": {"chosen": "sequential", "strength": 0.5}
+            },
+            "progress": {"completed_nodes": [], "current_node": null, "pending_nodes": []},
+            "affect": {"primary_state": "interested", "confidence": 0.5, "signals": []}
+          }
+        },
+        "events": []
+      }
+    },
+    "expert_a.draft": {
+      "state": {
+        "session_id": "node-expert-a",
+        "user_input": "学习专利新颖性",
+        "expert_phase": "draft",
+        "teach_phase": "single_agent",
+        "teaching_context": {
+          "current_node_id": "novelty-basic",
+          "current_topic": {"node_id": "novelty-basic", "node_name": "新颖性基础"},
+          "backward_review_nodes": [],
+          "forward_probe_nodes": [],
+          "weakness_probe_nodes": [],
+          "planner_guidance": {"lesson_focus": ["新颖性"]},
+          "planning_directive": {"question_scope": {}}
+        },
+        "learner_profile": {},
+        "events": []
+      }
+    },
+    "expert_b.draft": {
+      "state": {
+        "session_id": "node-expert-b",
+        "user_input": "学习专利新颖性",
+        "expert_phase": "draft",
+        "teach_phase": "debate",
+        "teaching_context": {
+          "current_node_id": "novelty-basic",
+          "current_topic": {"node_id": "novelty-basic", "node_name": "新颖性基础"},
+          "backward_review_nodes": [],
+          "forward_probe_nodes": [],
+          "weakness_probe_nodes": [],
+          "planner_guidance": {"lesson_focus": ["新颖性"]},
+          "planning_directive": {"question_scope": {}}
+        },
+        "learner_profile": {},
+        "events": []
+      }
+    },
+    "expert_a.cross_review": {
+      "state": {
+        "session_id": "node-expert-a-review",
+        "user_input": "学习专利新颖性",
+        "expert_phase": "cross_review",
+        "teaching_context": {"current_node_id": "novelty-basic", "current_topic": {"node_id": "novelty-basic", "node_name": "新颖性基础"}, "backward_review_nodes": [], "forward_probe_nodes": [], "weakness_probe_nodes": [], "planner_guidance": {}, "planning_directive": {}},
+        "expert_a_draft": {},
+        "expert_b_draft": {},
+        "events": []
+      }
+    },
+    "expert_a.revision": {
+      "state": {
+        "session_id": "node-expert-a-revision",
+        "user_input": "学习专利新颖性",
+        "expert_phase": "revision",
+        "teaching_context": {"current_node_id": "novelty-basic", "current_topic": {"node_id": "novelty-basic", "node_name": "新颖性基础"}, "backward_review_nodes": [], "forward_probe_nodes": [], "weakness_probe_nodes": [], "planner_guidance": {}, "planning_directive": {}},
+        "expert_a_draft": {},
+        "expert_b_draft": {},
+        "expert_a_cross_review": {},
+        "expert_b_cross_review": {},
+        "events": []
+      }
+    },
+    "expert_a.integration": {
+      "state": {
+        "session_id": "node-expert-a-integration",
+        "user_input": "学习专利新颖性",
+        "expert_phase": "integration",
+        "teach_phase": "debate",
+        "teaching_context": {"current_node_id": "novelty-basic", "current_topic": {"node_id": "novelty-basic", "node_name": "新颖性基础"}, "backward_review_nodes": [], "forward_probe_nodes": [], "weakness_probe_nodes": [], "planner_guidance": {}, "planning_directive": {}},
+        "expert_a_draft": {},
+        "expert_b_draft": {},
+        "expert_a_cross_review": {},
+        "expert_b_cross_review": {},
+        "events": []
+      }
+    },
+    "expert_b.cross_review": {
+      "state": {
+        "session_id": "node-expert-b-review",
+        "user_input": "学习专利新颖性",
+        "expert_phase": "cross_review",
+        "teaching_context": {"current_node_id": "novelty-basic", "current_topic": {"node_id": "novelty-basic", "node_name": "新颖性基础"}, "backward_review_nodes": [], "forward_probe_nodes": [], "weakness_probe_nodes": [], "planner_guidance": {}, "planning_directive": {}},
+        "expert_a_draft": {},
+        "expert_b_draft": {},
+        "events": []
+      }
+    },
+    "expert_b.revision": {
+      "state": {
+        "session_id": "node-expert-b-revision",
+        "user_input": "学习专利新颖性",
+        "expert_phase": "revision",
+        "teaching_context": {"current_node_id": "novelty-basic", "current_topic": {"node_id": "novelty-basic", "node_name": "新颖性基础"}, "backward_review_nodes": [], "forward_probe_nodes": [], "weakness_probe_nodes": [], "planner_guidance": {}, "planning_directive": {}},
+        "expert_b_draft": {},
+        "expert_a_cross_review": {},
+        "events": []
+      }
+    },
+    "judge": {
+      "state": {
+        "session_id": "node-judge",
+        "user_input": "学习专利新颖性",
+        "teach_phase": "single_agent",
+        "expert_a_draft": {"expert": "expert_a", "teaching_content": "请在此填入待审核的整合课程稿", "knowledge_points": [{"node_id": "novelty-basic", "kc_name": "新颖性"}], "legal_basis": [], "risks": []},
+        "retrieval_context": [],
+        "learner_profile": {},
+        "learning_path": [],
+        "events": []
+      }
+    },
+    "slide_deck": {
+      "state": {
+        "session_id": "node-slide-deck",
+        "user_input": "学习专利新颖性",
+        "course_package": {"expert": "expert_a", "style": "conservative", "knowledge_points": [{"node_id": "novelty-basic", "kc_name": "新颖性"}], "legal_basis": [], "teaching_content": "请在此填入课程内容", "risks": []},
+        "learner_profile": {},
+        "events": []
+      }
+    }
+  }
+}
