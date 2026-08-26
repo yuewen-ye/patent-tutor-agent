@@ -218,15 +218,11 @@ GET /sessions/{session_id}/artifacts/presentation/previews/slide_001.png
 
 查询会话完整快照，包含 `session_id`、`status`、`learner_id`、`state`、`error`、`created_at` 和 `updated_at`。
 
-### `POST /sessions/{session_id}/cancel`
-
-用途：取消一个仍在运行的后台会话，但保留会话历史、状态和日志。接口返回取消请求处理后的会话快照；对已经结束的会话不会重新执行任务。
-
-请求取消会话，并返回更新后的完整快照。会话不存在时返回 `404`。评估脚本在轮询超时或启动新 teach 轮次前使用此接口，避免旧 workflow 继续运行。
-
 ### `DELETE /sessions/{session_id}`
 
-用途：永久删除会话及其相关数据和产物。该接口不是普通的超时取消接口；仅在明确需要清理历史数据时使用。
+用途：取消一个仍在运行的后台会话。接口返回取消请求处理后的会话快照；对已经结束的会话不会重新执行任务。
+
+请求取消会话，并返回更新后的完整快照。会话不存在时返回 `404`。
 
 ## 3. CAT 诊断
 

@@ -169,18 +169,6 @@ def create_sessions_router(session_service: SessionService) -> APIRouter:
             limit=limit,
         )
 
-    @router.post(
-        "/sessions/{session_id}/cancel",
-        response_model=SessionSnapshotResponse,
-        responses={404: {"model": ErrorResponse}},
-        description="Cancel a running workflow session.",
-    )
-    def cancel_session(session_id: str) -> SessionSnapshotResponse:
-        try:
-            return SessionSnapshotResponse.model_validate(session_service.cancel_session(session_id))
-        except KeyError as exc:
-            raise HTTPException(status_code=404, detail="Session not found.") from exc
-
     @router.get(
         "/sessions/{session_id}",
         response_model=SessionSnapshotResponse,

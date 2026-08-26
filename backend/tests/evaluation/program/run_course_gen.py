@@ -83,7 +83,6 @@ def run_first_round(
     - Save round_01/ artifacts (snapshot + memory + rendered MDs).
     """
     profile = common.load_profile(profile_letter, learner_prefix=learner_prefix)
-    common.cancel_running_teach_sessions(base_url, profile.learner_id)
     # memory BEFORE: this first HTTP call also acts as a connectivity preflight.
     try:
         mem_before = common.fetch_learner_memory(base_url, profile.learner_id)
@@ -144,13 +143,6 @@ def run_subsequent_round(
         raise ValueError("round_idx must be >= 1 for a subsequent teaching round")
 
     profile = common.load_profile(profile_letter, learner_prefix=learner_prefix)
-    # A next round is allowed only after the immediately preceding teach session
-    # completed. Check before cleanup so a canceled predecessor cannot look valid.
-    if round_idx >= 2:
-        common.require_latest_teach_completed(base_url, profile.learner_id)
-    # Do not overlap teach workflows for one learner. A timeout is not proof that
-    # the backend stopped, so cancel any stale running teach session before launch.
-    common.cancel_running_teach_sessions(base_url, profile.learner_id)
     mem_before = common.fetch_learner_memory(base_url, profile.learner_id)
     plan_before = common.inspect_plan(mem_before)
     print(

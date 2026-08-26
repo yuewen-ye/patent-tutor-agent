@@ -237,79 +237,6 @@ def _client(base_url: str, timeout: float = 30.0) -> httpx.Client:
     return httpx.Client(base_url=base_url, timeout=timeout)
 
 
-def cancel_session(
-    base_url: str,
-    session_id: str,
-    *,
-    client: httpx.Client | None = None,
-) -> dict[str, Any]:
-    """Request cooperative cancellation without deleting session history or artifacts."""
-    if client is not None:
-        response = client.post(f"/sessions/{session_id}/cancel")
-        response.raise_for_status()
-        return response.json()
-    with _client(base_url) as owned_client:
-        response = owned_client.post(f"/sessions/{session_id}/cancel")
-        response.raise_for_status()
-        return response.json()
-
-
-def list_learner_sessions(base_url: str, learner_id: str) -> list[dict[str, Any]]:
-    """Return all persisted session summaries for one learner, newest first."""
-    with _client(base_url) as client:
-        response = client.get("/sessions", params={"learner_id": learner_id, "limit": 100})
-        response.raise_for_status()
-        body = response.json()
-    sessions = body.get("sessions", [])
-    return [session for session in sessions if isinstance(session, dict)]
-
-
-def latest_teach_session(base_url: str, learner_id: str) -> dict[str, Any] | None:
-    """Return the newest teach-session summary for a learner, regardless of status."""
-    for session in list_learner_sessions(base_url, learner_id):
-        if session.get("workflow_mode") == "teach":
-            return session
-    return None
-
-
-def require_latest_teach_completed(base_url: str, learner_id: str) -> str:
-    """Return the preceding teach id only when that course session completed."""
-    latest = latest_teach_session(base_url, learner_id)
-    if latest is None:
-        raise RuntimeError(f"No preceding teach session exists for learner {learner_id}.")
-    session_id = latest.get("session_id")
-    status = latest.get("status")
-    if not isinstance(session_id, str) or not session_id:
-        raise RuntimeError(f"Latest teach session for learner {learner_id} has no session_id.")
-    if status != "completed":
-        raise RuntimeError(
-            f"Cannot launch the next course round: preceding teach session {session_id} "
-            f"has status={status!r}, expected 'completed'."
-        )
-    return session_id
-
-
-def cancel_running_teach_sessions(
-    base_url: str,
-    learner_id: str,
-    *,
-    list_sessions: Callable[[], list[dict[str, Any]]] | None = None,
-    cancel: Callable[[str], Any] | None = None,
-) -> list[str]:
-    """Cancel existing running teach sessions before launching another teach round."""
-    sessions = list_sessions() if list_sessions is not None else list_learner_sessions(base_url, learner_id)
-    cancel_one = cancel or (lambda session_id: cancel_session(base_url, session_id))
-    canceled_ids: list[str] = []
-    for session in sessions:
-        if session.get("workflow_mode") != "teach" or session.get("status") != "running":
-            continue
-        session_id = session.get("session_id")
-        if isinstance(session_id, str) and session_id:
-            cancel_one(session_id)
-            canceled_ids.append(session_id)
-    return canceled_ids
-
-
 def submit_questionnaire_launch_round1(
     base_url: str,
     profile: LoadedProfile,
@@ -363,7 +290,6 @@ def poll_session_until_terminal(
     rescue_callback: (
         None | (Callable[[str, float, str], Any])
     ) = None,
-    client: httpx.Client | None = None,
 ) -> SessionResult:
     """轮询 session 直到终态或超时。
 
@@ -380,11 +306,8 @@ def poll_session_until_terminal(
     last_status = "<unknown>"
     while time.time() < deadline:
         try:
-            if client is not None:
-                resp = client.get(f"/sessions/{session_id}")
-            else:
-                with _client(base_url) as owned_client:
-                    resp = owned_client.get(f"/sessions/{session_id}")
+            with _client(base_url) as c:
+                resp = c.get(f"/sessions/{session_id}")
             if resp.status_code == 200:
                 body = resp.json()
                 last_status = body.get("status", last_status)
@@ -408,17 +331,8 @@ def poll_session_until_terminal(
             rescue_callback(session_id, elapsed, str(last_status))
         except Exception:  # noqa: BLE001 - 抢救回调自身失败不得吞掉 timeout 结果
             pass
-    cancel_error: str | None = None
-    try:
-        cancel_session(base_url, session_id, client=client)
-    except httpx.HTTPError as exc:
-        cancel_error = f"; cancellation failed: {exc}"
-    return SessionResult(
-        session_id=session_id,
-        status="timeout",
-        snapshot=None,
-        error=f"timeout after {POLL_TIMEOUT_SEC}s; last={last_status}{cancel_error or ''}",
-    )
+    return SessionResult(session_id=session_id, status="timeout", snapshot=None,
+                         error=f"timeout after {POLL_TIMEOUT_SEC}s; last={last_status}")
 
 
 def fetch_learner_memory(base_url: str, learner_id: str) -> dict[str, Any]:
@@ -1257,9 +1171,7 @@ __all__ = [
     "profile_letter_from_id",
     "EnvReport", "check_test_environment",
     "SessionResult", "submit_questionnaire_launch_round1",
-    "create_teach_session_subsequent", "cancel_session", "list_learner_sessions",
-    "latest_teach_session", "require_latest_teach_completed", "cancel_running_teach_sessions",
-    "poll_session_until_terminal",
+    "create_teach_session_subsequent", "poll_session_until_terminal",
     "fetch_learner_memory",
     "PlanInspection", "inspect_plan",
     "make_mysql_store", "advance_bkt_correct",
