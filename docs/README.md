@@ -17,6 +17,7 @@
 | `mysql-verification-guide.md` | MySQL 初始化、真实写入冒烟测试和成功判定标准 |
 | `mysql-setup.md` | WSL2、Ubuntu、Docker Engine/CLI、MySQL 容器和数据库初始化指南 |
 | `agents-yaml-config.md` | `config/agents.yaml` 通道/节点配置、key 解析链、fallback 语义和排错指引 |
+| `evaluation-docker-guide.md` | 多 Docker Compose 实验栈的隔离、并行运行与结果比较指南 |
 
 运行时行为冲突时，以 `backend/app/graph/workflow.py`、
 `backend/app/schemas/state.py` 和实际 API 路由为准，并同步修正文档。

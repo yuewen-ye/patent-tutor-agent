@@ -1,0 +1,102 @@
+# 独立、可重复的评测栈：每次使用不同的 Compose project name 启动一套
+# MySQL + backend + evaluator。不要与 docker-compose.yml 的生产栈混用。
+#
+# 示例：
+# docker compose -p evaluation-normal --env-file .env --env-file docker/evaluation/normal.env \
+#   -f docker-compose.evaluation.yml up --build --abort-on-container-exit --exit-code-from evaluator evaluator
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: "no"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-patent_tutor_pw}
+      MYSQL_DATABASE: patent_tutor
+      MYSQL_USER: patent_tutor
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-patent_tutor_pw}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: patent-tutor-backend:evaluation
+    restart: "no"
+    env_file:
+      - .env
+    environment:
+      PATENT_TUTOR_MYSQL_URL: mysql://patent_tutor:${MYSQL_PASSWORD:-patent_tutor_pw}@mysql:3306/patent_tutor
+      PATENT_TUTOR_MYSQL_AUTO_MIGRATE: "true"
+      PATENT_TUTOR_ENV: evaluation
+      RAG_EMBEDDING_MODEL_PATH: /app/models/bge-m3
+      RAG_RERANKER_MODEL_PATH: /app/models/bge-reranker-v2-m3
+      ARTIFACT_ROOT: /app/artifacts
+      WORKFLOW_LOG_ROOT: /app/artifacts
+      # 各实验条件由 docker/evaluation/*.env 提供；使用精确 true/false。
+      RAG_RETRIEVAL_MODE: ${RAG_RETRIEVAL_MODE:-real}
+      RAG_RERANK_ENABLED: ${RAG_RERANK_ENABLED:-true}
+      PATENT_TUTOR_RAG_TOOL_ENABLED: ${PATENT_TUTOR_RAG_TOOL_ENABLED:-true}
+      PATENT_TUTOR_DEBATE_ENABLED: ${PATENT_TUTOR_DEBATE_ENABLED:-true}
+    volumes:
+      - ${EVAL_BACKEND_ARTIFACT_DIR:?set EVAL_BACKEND_ARTIFACT_DIR}:/app/artifacts
+      - models:/app/models
+      - ./config/agents.yaml:/app/config/agents.yaml:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx,sys; sys.exit(0 if httpx.get('http://127.0.0.1:8000/health/ready', timeout=5).json().get('ready') else 1)"]
+      interval: 15s
+      timeout: 10s
+      retries: 30
+      start_period: 300s
+
+  evaluator:
+    image: patent-tutor-backend:evaluation
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: "no"
+    entrypoint: []
+    working_dir: /app
+    environment:
+      PATENT_TUTOR_MYSQL_URL: mysql://patent_tutor:${MYSQL_PASSWORD:-patent_tutor_pw}@mysql:3306/patent_tutor
+      AGENT_CONFIG_PATH: /app/config/agents.yaml
+    volumes:
+      # _common.py 从 /app/artifacts/sessions 读取后端过程产物。
+      - ${EVAL_BACKEND_ARTIFACT_DIR:?set EVAL_BACKEND_ARTIFACT_DIR}:/app/artifacts:ro
+      - ${EVAL_RESULT_DIR:?set EVAL_RESULT_DIR}:/app/evaluation-artifacts
+      - ./config/agents.yaml:/app/config/agents.yaml:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    command:
+      - python
+      - backend/tests/evaluation/evaluation_test_v1.1_batchrun.py
+      - --base-url
+      - http://backend:8000
+      - --artifact-dir
+      - /app/evaluation-artifacts
+      - --learner-prefix
+      - ${EVAL_LEARNER_PREFIX:?set EVAL_LEARNER_PREFIX}
+      - --profiles
+      - ${EVAL_PROFILES:?set EVAL_PROFILES}
+      - --round
+      - ${EVAL_TARGET_ROUND:?set EVAL_TARGET_ROUND}
+
+volumes:
+  # 模型只读共享；先执行文档中的 bootstrap，避免四个实验首次同时下载模型。
+  models:
+    external: true
+    name: ${EVAL_MODELS_VOLUME:-patent-tutor-evaluation-models}
+  mysql-data:
