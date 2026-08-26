@@ -2,6 +2,10 @@
   "learning_goal": "补齐从法条到办案的实务链路：撰写、审查答复、无效与侵权诉讼",
   "responses": [
     {
+      "question_id": "Q0",
+      "answer": "A"
+    },
+    {
       "question_id": "Q1",
       "answer": "B"
     },

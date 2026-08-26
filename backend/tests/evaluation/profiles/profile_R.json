@@ -1,53 +1,201 @@
 {
   "learning_goal": "我想理解专利规则背后的商业逻辑，掌握FTO分析和融资出海前的专利准备",
   "responses": [
-    {"question_id": "Q1", "answer": "B"},
-    {"question_id": "Q2", "answer": "D"},
-    {"question_id": "Q3", "answer": "D"},
-    {"question_id": "Q4", "answer": "A"},
-    {"question_id": "Q5", "answer": "B"},
-    {"question_id": "Q6", "answer": "D"},
-    {"question_id": "Q7", "answer": "B"},
-    {"question_id": "Q8", "answer": "C"},
-    {"question_id": "Q9", "answer": "D"},
-    {"question_id": "Q10", "answer": "A"},
-    {"question_id": "Q11", "answer": "A"},
-    {"question_id": "Q12", "answer": "B"},
-    {"question_id": "Q13", "answer": "C"},
-    {"question_id": "Q14", "answer": "B"},
-    {"question_id": "Q15", "answer": "A"},
-    {"question_id": "Q16", "answer": "C"},
-    {"question_id": "Q17", "answer": "D"},
-    {"question_id": "Q18", "answer": "A"},
-    {"question_id": "Q19", "answer": "D"},
-    {"question_id": "Q20", "answer": "A"},
-    {"question_id": "Q21", "answer": "B"},
-    {"question_id": "Q22", "answer": "B"},
-    {"question_id": "Q23", "answer": "D"},
-    {"question_id": "Q24", "answer": "B"},
-    {"question_id": "Q25", "answer": "D"},
-    {"question_id": "Q26", "answer": "B"},
-    {"question_id": "Q27", "answer": "A"},
-    {"question_id": "Q28", "answer": "B"},
-    {"question_id": "Q29", "answer": "B"},
-    {"question_id": "Q30", "answer": "D"},
-    {"question_id": "Q31", "answer": "B"},
-    {"question_id": "Q32", "answer": "B"},
-    {"question_id": "Q33", "answer": "C"},
-    {"question_id": "Q34", "answer": "D"},
-    {"question_id": "Q35", "answer": "B"},
-    {"question_id": "Q36", "answer": "B"},
-    {"question_id": "Q37", "answer": "A"},
-    {"question_id": "Q38", "answer": "C"},
-    {"question_id": "Q39", "answer": "B"},
-    {"question_id": "Q40", "answer": "A"},
-    {"question_id": "Q41", "answer": "C"},
-    {"question_id": "Q42", "answer": "C"},
-    {"question_id": "Q43", "answer": "B"},
-    {"question_id": "Q44", "answer": "D"},
-    {"question_id": "Q45", "answer": "B"},
-    {"question_id": "Q46", "answer": "B"},
-    {"question_id": "Q47", "answer": "我是从技术创业角度看专利，战略上清楚它重要，但规则细节很粗糙。最困惑的是程序类问题——实质审查怎么走、PCT进入中国的节点、分案和优先权的实操边界，以及侵权诉讼里我们作为原告/被告分别要注意什么。"},
-    {"question_id": "Q48", "answer": "希望用'创业者/CTO视角'讲，比如一次融资或出海前要做哪些专利准备、FTO分析怎么读、什么动作会让自己丧失新颖性，最好结合硬件创业的真实案例。"}
+    {
+      "question_id": "Q0",
+      "answer": "D"
+    },
+    {
+      "question_id": "Q1",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q2",
+      "answer": "D"
+    },
+    {
+      "question_id": "Q3",
+      "answer": "D"
+    },
+    {
+      "question_id": "Q4",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q5",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q6",
+      "answer": "D"
+    },
+    {
+      "question_id": "Q7",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q8",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q9",
+      "answer": "D"
+    },
+    {
+      "question_id": "Q10",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q11",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q12",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q13",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q14",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q15",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q16",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q17",
+      "answer": "D"
+    },
+    {
+      "question_id": "Q18",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q19",
+      "answer": "D"
+    },
+    {
+      "question_id": "Q20",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q21",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q22",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q23",
+      "answer": "D"
+    },
+    {
+      "question_id": "Q24",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q25",
+      "answer": "D"
+    },
+    {
+      "question_id": "Q26",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q27",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q28",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q29",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q30",
+      "answer": "D"
+    },
+    {
+      "question_id": "Q31",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q32",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q33",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q34",
+      "answer": "D"
+    },
+    {
+      "question_id": "Q35",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q36",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q37",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q38",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q39",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q40",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q41",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q42",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q43",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q44",
+      "answer": "D"
+    },
+    {
+      "question_id": "Q45",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q46",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q47",
+      "answer": "我是从技术创业角度看专利，战略上清楚它重要，但规则细节很粗糙。最困惑的是程序类问题——实质审查怎么走、PCT进入中国的节点、分案和优先权的实操边界，以及侵权诉讼里我们作为原告/被告分别要注意什么。"
+    },
+    {
+      "question_id": "Q48",
+      "answer": "希望用'创业者/CTO视角'讲，比如一次融资或出海前要做哪些专利准备、FTO分析怎么读、什么动作会让自己丧失新颖性，最好结合硬件创业的真实案例。"
+    }
   ]
 }
