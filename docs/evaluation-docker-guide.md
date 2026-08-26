@@ -57,6 +57,14 @@ docker compose -p evaluation-bootstrap --env-file .env --env-file docker/evaluat
   -f docker-compose.evaluation.yml run --rm --no-deps backend true
 ```
 
+Linux / macOS：
+
+```bash
+docker volume create patent-tutor-evaluation-models
+docker compose -p evaluation-bootstrap --env-file .env --env-file docker/evaluation/normal.env \
+  -f docker-compose.evaluation.yml run --rm --no-deps backend true
+```
+
 验证模型卷内容：
 
 ```powershell
@@ -96,10 +104,20 @@ Remove-Item Env:EVAL_PROFILES, Env:EVAL_TARGET_ROUND
 
 ## 并行运行矩阵
 
-先按实际需求修改每个条件文件的 `EVAL_PROFILES` 与 `EVAL_TARGET_ROUND`。然后从根目录运行：
+先按实际需求修改每个条件文件的 `EVAL_PROFILES` 与 `EVAL_TARGET_ROUND`（当前均为
+`6-9-10-13-15` / `3`）。然后从根目录运行。
+
+Windows PowerShell：
 
 ```powershell
 .\scripts\run-evaluation-matrix.ps1
+```
+
+Linux / macOS（需要 docker compose v2 插件）：
+
+```bash
+chmod +x scripts/run-evaluation-matrix.sh
+./scripts/run-evaluation-matrix.sh
 ```
 
 脚本并行启动以下 project：
@@ -116,15 +134,24 @@ evaluation-single-model
 ```powershell
 .\scripts\run-evaluation-matrix.ps1 `
   -Experiments normal,no-rag `
-  -Profiles '1-3-5' `
+  -Profiles '6-9-10-13-15' `
   -TargetRound 2
 ```
 
+```bash
+./scripts/run-evaluation-matrix.sh --experiments normal,no-rag --profiles 6-9-10-13-15 --round 2
+```
+
 默认脚本完成后执行 `down --remove-orphans`，保留 MySQL 命名卷和全部宿主 artifacts。如要保留容器用于
-排障，添加 `-KeepStacks`，之后手工清理：
+排障，添加 `-KeepStacks`（PowerShell）或 `--keep-stacks`（bash），之后手工清理：
 
 ```powershell
 docker compose -p evaluation-no-rag --env-file .env --env-file docker/evaluation/no-rag.env `
+  -f docker-compose.evaluation.yml down --remove-orphans
+```
+
+```bash
+docker compose -p evaluation-no-rag --env-file .env --env-file docker/evaluation/no-rag.env \
   -f docker-compose.evaluation.yml down --remove-orphans
 ```
 
