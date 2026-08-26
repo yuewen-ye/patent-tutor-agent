@@ -51,7 +51,7 @@ EVAL_ARTIFACTS_DIR = EVAL_DIR / "artifacts"
 SYS_ARTIFACTS_DIR = PROJECT_ROOT / "artifacts" / "sessions"
 DEFAULT_BASE_URL = "http://localhost:8000"
 POLL_INTERVAL_SEC = 10.0
-POLL_TIMEOUT_SEC = 60 * 50  # 50 minutes (完整 teach 流程含 slide_deck/PPTX/audio 实测 ~43 分钟)
+POLL_TIMEOUT_SEC = 60 * 120  # 120 minutes（网关慢时单轮 teach 会话可达 60-90 分钟，50 分钟会误杀）
 
 if str(EVAL_DIR) not in sys.path:
     sys.path.insert(0, str(EVAL_DIR))
