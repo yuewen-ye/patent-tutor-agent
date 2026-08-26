@@ -47,6 +47,13 @@ services:
       RAG_RERANK_ENABLED: ${RAG_RERANK_ENABLED:-true}
       PATENT_TUTOR_RAG_TOOL_ENABLED: ${PATENT_TUTOR_RAG_TOOL_ENABLED:-true}
       PATENT_TUTOR_DEBATE_ENABLED: ${PATENT_TUTOR_DEBATE_ENABLED:-true}
+      # 评测默认不生成结构化课件/音频/PPT；每个条件 env 明确设为 false。
+      PATENT_TUTOR_SLIDE_DECK_ENABLED: ${PATENT_TUTOR_SLIDE_DECK_ENABLED:-false}
+      PATENT_TUTOR_PPTX_ENABLED: ${PATENT_TUTOR_PPTX_ENABLED:-false}
+      # 单模型实验通过 provider override 覆盖 agents.yaml，且不会使用其 fallback。
+      EXPERT_A_PROVIDER: ${EXPERT_A_PROVIDER:-}
+      EXPERT_B_PROVIDER: ${EXPERT_B_PROVIDER:-}
+      JUDGE_PROVIDER: ${JUDGE_PROVIDER:-}
     volumes:
       - ${EVAL_BACKEND_ARTIFACT_DIR:?set EVAL_BACKEND_ARTIFACT_DIR}:/app/artifacts
       - models:/app/models

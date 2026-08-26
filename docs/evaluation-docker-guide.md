@@ -2,7 +2,7 @@
 
 本指南运行同一批 `evaluation_test_v1.1_batchrun.py` 评测，但让每个实验条件获得一套独立的
 `backend + MySQL + evaluator` 容器。它适用于已熟悉本项目 Docker 部署、需要比较 RAG、rerank
-和专家辩论开关的评测人员。
+以及异构/单模型 Expert-Judge 编排的评测人员。所有评测条件均关闭结构化课件、音频与 PPT/PPTX 节点，以缩短每轮时间。
 
 ## 隔离边界和实验矩阵
 
@@ -17,12 +17,15 @@
 状态；它只避免 BGE-M3 和 reranker 模型在每个容器中重复下载。由于模型加载在每个后端 Python
 进程内独立发生，首次并发运行仍会产生较高内存/CPU 峰值。
 
-| 条件文件 | RAG 检索 | Expert RAG 工具 | rerank | A/B 辩论 |
-|---|---:|---:|---:|---:|
-| `docker/evaluation/normal.env` | real | 开 | 开 | 开 |
-| `docker/evaluation/no-rag.env` | off | 关 | 关 | 开 |
-| `docker/evaluation/no-debate.env` | real | 开 | 开 | 关 |
-| `docker/evaluation/no-rerank.env` | real | 开 | 关 | 开 |
+| 条件文件 | RAG 检索 | Expert RAG 工具 | rerank | A/B 辩论 | A/B/Judge 模型 |
+|---|---:|---:|---:|---:|---|
+| `docker/evaluation/normal.env` | real | 开 | 开 | 开 | 沿用 `agents.yaml` 异构配置 |
+| `docker/evaluation/no-rag.env` | off | 关 | 关 | 开 | 沿用 `agents.yaml` 异构配置 |
+| `docker/evaluation/no-rerank.env` | real | 开 | 关 | 开 | 沿用 `agents.yaml` 异构配置 |
+| `docker/evaluation/single-model.env` | real | 开 | 开 | 开 | 都强制为 `greatrouter-gpt3` / `gpt-5.6-terra` |
+
+所有条件均显式设定 `PATENT_TUTOR_SLIDE_DECK_ENABLED=false` 和
+`PATENT_TUTOR_PPTX_ENABLED=false`，因而不会执行 slide deck、音频合成或 PPTX 生成节点。
 
 “关闭 RAG”同时设置 `RAG_RETRIEVAL_MODE=off` 和
 `PATENT_TUTOR_RAG_TOOL_ENABLED=false`：前者关闭 chat 固定检索，后者移除 Expert 的可选检索工具。
@@ -60,7 +63,7 @@ docker compose -p evaluation-bootstrap --env-file .env --env-file docker/evaluat
 docker run --rm -v patent-tutor-evaluation-models:/models alpine ls -la /models
 ```
 
-预期至少包含 `bge-m3/`；正常和 no-debate 实验还会使用 `bge-reranker-v2-m3/`。
+预期至少包含 `bge-m3/`；normal、no-rerank 和 single-model 实验还会使用 `bge-reranker-v2-m3/`。
 
 ## 先运行一个小样本
 
@@ -104,8 +107,8 @@ Remove-Item Env:EVAL_PROFILES, Env:EVAL_TARGET_ROUND
 ```text
 evaluation-normal
 evaluation-no-rag
-evaluation-no-debate
 evaluation-no-rerank
+evaluation-single-model
 ```
 
 仅运行两组或临时覆盖画像/轮次：
@@ -140,8 +143,10 @@ artifacts/evaluation/<condition>/
 
 1. `results/**/session_snapshot.json`：完成/失败/超时数量与耗时；
 2. `results/**/round-*/course_package.md`、`judge_report.md`：课程与 Judge 质量；
-3. `system/sessions/**/llm_calls.log.jsonl`：模型调用次数、token 和耗时；
-4. `system/sessions/**/round-01/retrieval_context*.md`：确认 normal/no-rerank 有检索、no-rag 没有检索；
+3. `system/sessions/**/llm_calls.log.jsonl`：模型调用次数、token、耗时；并核对 single-model 中
+   `expert_a`、`expert_b`、`judge` 的 provider/model 均为 `greatrouter-gpt3` / `gpt-5.6-terra`；
+4. `system/sessions/**/round-01/retrieval_context*.md`：确认 normal/no-rerank/single-model 有检索、
+   no-rag 没有检索；
 5. `compose.log`：容器启动、OOM、MySQL 或模型加载异常。
 
 ## 清理数据

@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  并行运行 normal、no-rag、no-debate、no-rerank 四个完全隔离的 Docker Compose 评测栈。
+  并行运行 normal、no-rag、no-rerank、single-model 四个完全隔离的 Docker Compose 评测栈。
 
 .EXAMPLE
   .\scripts\run-evaluation-matrix.ps1
@@ -8,7 +8,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string[]]$Experiments = @('normal', 'no-rag', 'no-debate', 'no-rerank'),
+    [string[]]$Experiments = @('normal', 'no-rag', 'no-rerank', 'single-model'),
     [string]$Profiles,
     [int]$TargetRound,
     [switch]$KeepStacks
