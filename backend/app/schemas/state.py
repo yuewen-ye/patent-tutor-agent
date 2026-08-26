@@ -826,6 +826,7 @@ class StateDict(TypedDict):
     grading_report: NotRequired[list[dict[str, Any]]]
     learning_path: NotRequired[list[dict[str, Any]]]
     retrieval_context: NotRequired[Annotated[list[dict[str, Any]], operator.add]]
+    rag_tool_enabled: NotRequired[bool]
     expert_a_draft: NotRequired[dict[str, Any]]
     expert_b_draft: NotRequired[dict[str, Any]]
     judge_report: NotRequired[dict[str, Any]]

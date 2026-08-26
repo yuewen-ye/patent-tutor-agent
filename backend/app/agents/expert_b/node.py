@@ -155,6 +155,7 @@ def build_expert_b_node(llm_client: LLMClient) -> Node:
             messages=prompt_messages,
             temperature=agent_temperature("expert_b", 0.3, "tool_temperature"),
             agent="expert_b",
+            enabled=state.get("rag_tool_enabled", True),
         )
         retrieval_context = list(state.get("retrieval_context", []) or []) + retrieved_context
         draft = generate_validated_json_stream(

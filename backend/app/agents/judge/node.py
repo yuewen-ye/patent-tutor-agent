@@ -287,6 +287,7 @@ def build_judge_node(llm_client: LLMClient) -> Node:
             messages=judge_probe_messages,
             temperature=agent_temperature("judge", 0.2, "tool_temperature"),
             agent="judge",
+            enabled=state.get("rag_tool_enabled", True),
         )
         retrieval_context = cap_retrieval_context(
             list(state.get("retrieval_context", [])) + judge_retrieved

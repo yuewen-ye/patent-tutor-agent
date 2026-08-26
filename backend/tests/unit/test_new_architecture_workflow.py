@@ -285,6 +285,37 @@ def test_graph_parallelizes_experts_and_branches_after_judge() -> None:
     assert "revise_integration" not in mermaid
 
 
+def test_rag_tool_flag_defaults_on_and_rejects_invalid_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    from backend.app.graph.workflow import _is_rag_tool_enabled
+
+    monkeypatch.delenv("PATENT_TUTOR_RAG_TOOL_ENABLED", raising=False)
+    assert _is_rag_tool_enabled() is True
+    monkeypatch.setenv("PATENT_TUTOR_RAG_TOOL_ENABLED", "true")
+    assert _is_rag_tool_enabled() is True
+    monkeypatch.setenv("PATENT_TUTOR_RAG_TOOL_ENABLED", "false")
+    assert _is_rag_tool_enabled() is False
+    for invalid in ("True", " false", "false ", "0"):
+        monkeypatch.setenv("PATENT_TUTOR_RAG_TOOL_ENABLED", invalid)
+        with pytest.raises(ValueError, match="PATENT_TUTOR_RAG_TOOL_ENABLED"):
+            _is_rag_tool_enabled()
+
+
+def test_disabled_rag_tool_is_recorded_in_initial_state() -> None:
+    state = run_workflow(
+        session_id="rag-off",
+        user_input="test",
+        llm_client=WorkflowLLMClient(),
+        slide_deck_enabled=False,
+        debate_enabled=False,
+        rag_tool_enabled=False,
+    )
+    assert state["rag_tool_enabled"] is False
+    assert any(
+        event["message"] == "rag_tool_enabled=false (deployment setting)"
+        for event in state["events"]
+    )
+
+
 def test_debate_flag_defaults_on_and_rejects_invalid_values(monkeypatch: pytest.MonkeyPatch) -> None:
     from backend.app.graph.workflow import _is_debate_enabled
 
