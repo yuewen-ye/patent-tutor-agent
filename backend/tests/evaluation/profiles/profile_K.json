@@ -2,6 +2,10 @@
   "learning_goal": "以IP管理者评审视角，独立评判代理所提交文件与答复意见的质量",
   "responses": [
     {
+      "question_id": "Q0",
+      "answer": "A"
+    },
+    {
       "question_id": "Q1",
       "answer": "B"
     },

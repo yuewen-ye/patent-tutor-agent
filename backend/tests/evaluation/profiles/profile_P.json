@@ -1,53 +1,201 @@
 {
   "learning_goal": "我想掌握创造性论证和权利要求撰写技巧，通过真实案件拆解",
   "responses": [
-    {"question_id": "Q1", "answer": "B"},
-    {"question_id": "Q2", "answer": "D"},
-    {"question_id": "Q3", "answer": "D"},
-    {"question_id": "Q4", "answer": "A"},
-    {"question_id": "Q5", "answer": "B"},
-    {"question_id": "Q6", "answer": "B"},
-    {"question_id": "Q7", "answer": "B"},
-    {"question_id": "Q8", "answer": "C"},
-    {"question_id": "Q9", "answer": "B"},
-    {"question_id": "Q10", "answer": "A"},
-    {"question_id": "Q11", "answer": "C"},
-    {"question_id": "Q12", "answer": "B"},
-    {"question_id": "Q13", "answer": "C"},
-    {"question_id": "Q14", "answer": "A"},
-    {"question_id": "Q15", "answer": "A"},
-    {"question_id": "Q16", "answer": "C"},
-    {"question_id": "Q17", "answer": "D"},
-    {"question_id": "Q18", "answer": "A"},
-    {"question_id": "Q19", "answer": "D"},
-    {"question_id": "Q20", "answer": "A"},
-    {"question_id": "Q21", "answer": "B"},
-    {"question_id": "Q22", "answer": "C"},
-    {"question_id": "Q23", "answer": "A"},
-    {"question_id": "Q24", "answer": "A"},
-    {"question_id": "Q25", "answer": "A"},
-    {"question_id": "Q26", "answer": "A"},
-    {"question_id": "Q27", "answer": "A"},
-    {"question_id": "Q28", "answer": "B"},
-    {"question_id": "Q29", "answer": "B"},
-    {"question_id": "Q30", "answer": "A"},
-    {"question_id": "Q31", "answer": "D"},
-    {"question_id": "Q32", "answer": "A"},
-    {"question_id": "Q33", "answer": "B"},
-    {"question_id": "Q34", "answer": "C"},
-    {"question_id": "Q35", "answer": "B"},
-    {"question_id": "Q36", "answer": "A"},
-    {"question_id": "Q37", "answer": "B"},
-    {"question_id": "Q38", "answer": "B"},
-    {"question_id": "Q39", "answer": "C"},
-    {"question_id": "Q40", "answer": "B"},
-    {"question_id": "Q41", "answer": "B"},
-    {"question_id": "Q42", "answer": "A"},
-    {"question_id": "Q43", "answer": "B"},
-    {"question_id": "Q44", "answer": "D"},
-    {"question_id": "Q45", "answer": "B"},
-    {"question_id": "Q46", "answer": "C"},
-    {"question_id": "Q47", "answer": "我系统学过专利法和相关法，知识点大体清楚，但实务 gap 很明显。最卡的是把法条落到具体案件——比如创造性争辩的论证结构、权利要求修改的边界、无效请求中证据的运用，这些课堂上学得浅。"},
-    {"question_id": "Q48", "answer": "希望多给真实案件的拆解，尤其是审查意见答复的论证思路、权利要求撰写的布局技巧，以及无效宣告程序中的攻防要点。"}
+    {
+      "question_id": "Q0",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q1",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q2",
+      "answer": "D"
+    },
+    {
+      "question_id": "Q3",
+      "answer": "D"
+    },
+    {
+      "question_id": "Q4",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q5",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q6",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q7",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q8",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q9",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q10",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q11",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q12",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q13",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q14",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q15",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q16",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q17",
+      "answer": "D"
+    },
+    {
+      "question_id": "Q18",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q19",
+      "answer": "D"
+    },
+    {
+      "question_id": "Q20",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q21",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q22",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q23",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q24",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q25",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q26",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q27",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q28",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q29",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q30",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q31",
+      "answer": "D"
+    },
+    {
+      "question_id": "Q32",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q33",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q34",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q35",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q36",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q37",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q38",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q39",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q40",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q41",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q42",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q43",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q44",
+      "answer": "D"
+    },
+    {
+      "question_id": "Q45",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q46",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q47",
+      "answer": "我系统学过专利法和相关法，知识点大体清楚，但实务 gap 很明显。最卡的是把法条落到具体案件——比如创造性争辩的论证结构、权利要求修改的边界、无效请求中证据的运用，这些课堂上学得浅。"
+    },
+    {
+      "question_id": "Q48",
+      "answer": "希望多给真实案件的拆解，尤其是审查意见答复的论证思路、权利要求撰写的布局技巧，以及无效宣告程序中的攻防要点。"
+    }
   ]
 }

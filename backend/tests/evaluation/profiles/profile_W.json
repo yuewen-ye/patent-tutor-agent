@@ -1,53 +1,201 @@
 {
   "learning_goal": "我想系统掌握专利法律知识，并与商标著作权作对比",
   "responses": [
-    {"question_id": "Q1", "answer": "B"},
-    {"question_id": "Q2", "answer": "C"},
-    {"question_id": "Q3", "answer": "D"},
-    {"question_id": "Q4", "answer": "A"},
-    {"question_id": "Q5", "answer": "B"},
-    {"question_id": "Q6", "answer": "C"},
-    {"question_id": "Q7", "answer": "B"},
-    {"question_id": "Q8", "answer": "C"},
-    {"question_id": "Q9", "answer": "A"},
-    {"question_id": "Q10", "answer": "A"},
-    {"question_id": "Q11", "answer": "C"},
-    {"question_id": "Q12", "answer": "B"},
-    {"question_id": "Q13", "answer": "C"},
-    {"question_id": "Q14", "answer": "B"},
-    {"question_id": "Q15", "answer": "A"},
-    {"question_id": "Q16", "answer": "C"},
-    {"question_id": "Q17", "answer": "D"},
-    {"question_id": "Q18", "answer": "A"},
-    {"question_id": "Q19", "answer": "D"},
-    {"question_id": "Q20", "answer": "A"},
-    {"question_id": "Q21", "answer": "B"},
-    {"question_id": "Q22", "answer": "B"},
-    {"question_id": "Q23", "answer": "A"},
-    {"question_id": "Q24", "answer": "A"},
-    {"question_id": "Q25", "answer": "A"},
-    {"question_id": "Q26", "answer": "A"},
-    {"question_id": "Q27", "answer": "D"},
-    {"question_id": "Q28", "answer": "A"},
-    {"question_id": "Q29", "answer": "A"},
-    {"question_id": "Q30", "answer": "B"},
-    {"question_id": "Q31", "answer": "A"},
-    {"question_id": "Q32", "answer": "A"},
-    {"question_id": "Q33", "answer": "B"},
-    {"question_id": "Q34", "answer": "C"},
-    {"question_id": "Q35", "answer": "A"},
-    {"question_id": "Q36", "answer": "A"},
-    {"question_id": "Q37", "answer": "B"},
-    {"question_id": "Q38", "answer": "B"},
-    {"question_id": "Q39", "answer": "B"},
-    {"question_id": "Q40", "answer": "A"},
-    {"question_id": "Q41", "answer": "A"},
-    {"question_id": "Q42", "answer": "C"},
-    {"question_id": "Q43", "answer": "B"},
-    {"question_id": "Q44", "answer": "A"},
-    {"question_id": "Q45", "answer": "C"},
-    {"question_id": "Q46", "answer": "C"},
-    {"question_id": "Q47", "answer": "我从事商标与著作权管理已近四年，流程层面比较熟悉，但专利对我而言属于全新领域。当前最大的盲区在于技术性判断，例如创造性的把握尺度、权利要求中'必要技术特征'的界定，这些概念仅从定义层面难以真正理解。"},
-    {"question_id": "Q48", "answer": "建议将专利与商标、著作权在申请流程与保护范围上作对比讲解，有助于我在已有认知框架内建立专利的整体概念，也为后续统筹企业知识产权运营积累基础。"}
+    {
+      "question_id": "Q0",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q1",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q2",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q3",
+      "answer": "D"
+    },
+    {
+      "question_id": "Q4",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q5",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q6",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q7",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q8",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q9",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q10",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q11",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q12",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q13",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q14",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q15",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q16",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q17",
+      "answer": "D"
+    },
+    {
+      "question_id": "Q18",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q19",
+      "answer": "D"
+    },
+    {
+      "question_id": "Q20",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q21",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q22",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q23",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q24",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q25",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q26",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q27",
+      "answer": "D"
+    },
+    {
+      "question_id": "Q28",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q29",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q30",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q31",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q32",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q33",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q34",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q35",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q36",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q37",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q38",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q39",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q40",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q41",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q42",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q43",
+      "answer": "B"
+    },
+    {
+      "question_id": "Q44",
+      "answer": "A"
+    },
+    {
+      "question_id": "Q45",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q46",
+      "answer": "C"
+    },
+    {
+      "question_id": "Q47",
+      "answer": "我从事商标与著作权管理已近四年，流程层面比较熟悉，但专利对我而言属于全新领域。当前最大的盲区在于技术性判断，例如创造性的把握尺度、权利要求中'必要技术特征'的界定，这些概念仅从定义层面难以真正理解。"
+    },
+    {
+      "question_id": "Q48",
+      "answer": "建议将专利与商标、著作权在申请流程与保护范围上作对比讲解，有助于我在已有认知框架内建立专利的整体概念，也为后续统筹企业知识产权运营积累基础。"
+    }
   ]
 }
