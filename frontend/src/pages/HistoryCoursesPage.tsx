@@ -196,7 +196,7 @@ export function HistoryCoursesPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-semibold">{totalDuration}</p>
-                  <p className="text-xs text-muted-foreground">学习时长(分)</p>
+                  <p className="text-xs text-muted-foreground">学习强度(分)</p>
                 </div>
               </div>
             </CardContent>

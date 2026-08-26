@@ -106,6 +106,8 @@ export interface CrossReview {
   review_opinions: ReviewOpinion[];
   positive_confirmation?: string;
   overall_assessment: string;
+  legal_basis?: string[];
+  markdown_artifact?: MarkdownArtifact;
 }
 
 export interface RevisionItem {
@@ -251,6 +253,22 @@ export interface WorkflowState {
   error?: string;
   error_traceback?: string[];
   last_failed_node?: string;
+}
+
+export interface RetrievalChunk {
+  chunk_id: string;
+  source: string;
+  citation: string;
+  text: string;
+  score?: number | null;
+  rerank_score?: number | null;
+  metadata?: {
+    doc_type?: string | null;
+    page_start?: number | null;
+    page_end?: number | null;
+    law_article?: string | null;
+    retrieval_method?: string | null;
+  } | null;
 }
 
 export interface SessionSnapshot {

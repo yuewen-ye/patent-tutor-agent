@@ -42,7 +42,12 @@ from backend.app.onboarding.questionnaire import (
     onboarding_questionnaire,
     resolve_questionnaire_responses,
 )
-from backend.app.runtime_outputs.artifacts import write_manifest, write_process_markdown
+from backend.app.runtime_outputs.artifacts import (
+    _FILE_BY_FIELD,
+    _markdown_for,
+    write_manifest,
+    write_process_markdown,
+)
 from backend.app.schemas.state import StateDict
 from backend.app.services.artifact_paths import InvalidArtifactPathError, normalize_artifact_path
 from backend.app.services.cancellation import CancelAwareLLMClient, SessionCancelled
@@ -59,6 +64,7 @@ from backend.app.services.session_types import (
 
 _APPEND_FIELDS = {"events", "artifacts"}
 _TERMINAL_STATUSES: set[SessionStatus] = {"completed", "failed", "canceled"}
+_FIELD_BY_FILE: dict[str, str] = {v: k for k, v in _FILE_BY_FIELD.items()}
 logger = logging.getLogger(__name__)
 
 
@@ -1028,7 +1034,40 @@ class SessionService:
             ) from exc
         if not candidate.is_file():
             raise FileNotFoundError(artifact_path)
+        # Regenerate markdown from the latest state data so that rendering
+        # fixes (e.g. newly added sections) are reflected even for sessions
+        # whose on-disk artifact was written by older code.
+        regenerated = self._regenerate_markdown_from_state(session_id, artifact_path)
+        if regenerated is not None:
+            return regenerated
         return candidate.read_text(encoding="utf-8")
+
+    def _regenerate_markdown_from_state(
+        self, session_id: str, artifact_path: str
+    ) -> str | None:
+        """Regenerate a markdown artifact from session state.
+
+        Returns ``None`` when the path does not map to a state-backed markdown
+        field or the state lacks the corresponding value, so the caller falls
+        back to reading the on-disk file.
+        """
+        if not artifact_path.endswith(".md"):
+            return None
+        filename = Path(artifact_path).name
+        field = _FIELD_BY_FILE.get(filename)
+        if not field:
+            return None
+        record = self.get_session(session_id)
+        if record is None:
+            return None
+        value = record.state.get(field)
+        if value is None:
+            return None
+        try:
+            return _markdown_for(field, value)
+        except Exception:
+            logger.warning("Failed to regenerate %s from state", filename, exc_info=True)
+            return None
 
     def read_artifact_bytes(self, session_id: str, artifact_path: str) -> bytes:
         """Read a session artifact as raw bytes (e.g. audio files).

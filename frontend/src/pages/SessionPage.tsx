@@ -198,6 +198,7 @@ export function SessionPage() {
                   gradingReport={state?.grading_report}
                   feedbackResult={state?.feedback_result as Record<string, unknown> | undefined}
                   inputPayload={state?.input_payload}
+                  pathDecision={state?.path_decision as Record<string, unknown> | undefined}
                 />
               )}
 

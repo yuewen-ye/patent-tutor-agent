@@ -105,7 +105,7 @@ export function HomePage() {
                 <span className="inline-flex items-center justify-center rounded-xl bg-[#D9773E]/10 p-2 text-[#D9773E]">
                   <MessageSquare className="h-5 w-5" />
                 </span>
-                快速问答与诊断
+                快速问答
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">

@@ -185,13 +185,13 @@ export function ExpertDebatePanel({
                 title="A 对 B 的互评"
                 review={expertACrossReview}
                 sessionId={sessionId}
-                artifactPath={resolvePath("expert_a_cross_review")}
+                artifactPath={resolvePath("expert_a_cross_review", expertACrossReview?.markdown_artifact)}
               />
               <ReviewCard
                 title="B 对 A 的互评"
                 review={expertBCrossReview}
                 sessionId={sessionId}
-                artifactPath={resolvePath("expert_b_cross_review")}
+                artifactPath={resolvePath("expert_b_cross_review", expertBCrossReview?.markdown_artifact)}
               />
             </div>
           </TabsContent>
@@ -319,7 +319,7 @@ function DraftCard({
             )) || <li>无</li>}
           </ul>
         </div>
-        <FullTextButton sessionId={sessionId} artifactPath={artifactPath} title={`${title} · 教学正文`} fallbackContent={draft.teaching_content} />
+        <FullTextButton sessionId={sessionId} artifactPath={artifactPath} title={`${title} · 教学正文`} fallbackContent={buildDraftFallback(draft)} />
       </CardContent>
     </Card>
   );
@@ -346,14 +346,17 @@ function ReviewCard({
     );
   }
   const reviewFallback = [
-    review.overall_assessment,
+    `## 总体评价\n\n${review.overall_assessment}`,
     ...(review.positive_confirmation
-      ? [`**肯定确认**：${review.positive_confirmation}`]
+      ? [`## 肯定确认\n\n${review.positive_confirmation}`]
       : []),
     ...(review.review_opinions ?? []).map(
       (op) =>
         `- **${op.category}**（${op.location}）\n  - 问题：${op.problem}\n  - 建议：${op.suggestion}`
     ),
+    ...(review.legal_basis?.length
+      ? [`\n## 法条依据\n\n${review.legal_basis.map((lb) => `- ${lb}`).join("\n")}`]
+      : []),
   ].join("\n\n");
 
   return (
@@ -469,10 +472,44 @@ function RevisionCard({
             )) || <li>无</li>}
           </ul>
         </div>
-        <FullTextButton sessionId={sessionId} artifactPath={artifactPath} title={`${title} · 全文`} fallbackContent={draft.teaching_content} />
+        <FullTextButton sessionId={sessionId} artifactPath={artifactPath} title={`${title} · 全文`} fallbackContent={buildDraftFallback(draft)} />
       </CardContent>
     </Card>
   );
+}
+
+/** 从 ExpertDraft 各字段拼装完整 fallback Markdown，避免仅有 teaching_content 摘要导致内容过短。 */
+function buildDraftFallback(draft: ExpertDraft): string {
+  const sections: string[] = [];
+
+  if (draft.teaching_content) {
+    sections.push(draft.teaching_content);
+  }
+
+  if (draft.knowledge_points?.length) {
+    const kps = draft.knowledge_points
+      .map((kp) => (typeof kp === "string" ? kp : (kp as { kc_name?: string; node_id?: string }).kc_name ?? (kp as { node_id?: string }).node_id ?? String(kp)))
+      .join("、");
+    sections.push(`\n## 知识点\n\n${kps}`);
+  }
+
+  if (draft.legal_basis?.length) {
+    const lbs = draft.legal_basis
+      .map((lb) => (typeof lb === "string" ? lb : (lb as { article?: string }).article ?? String(lb)))
+      .map((text) => `- ${text}`)
+      .join("\n");
+    sections.push(`\n## 法条依据\n\n${lbs}`);
+  }
+
+  if (draft.risks?.length) {
+    const rks = draft.risks
+      .map((r) => (typeof r === "string" ? r : (r as { risk?: string }).risk ?? String(r)))
+      .map((text) => `- ${text}`)
+      .join("\n");
+    sections.push(`\n## 风险提示\n\n${rks}`);
+  }
+
+  return sections.join("\n\n");
 }
 
 /** “阅读全文”按钮：优先通过 artifacts API 拉取稿件 Markdown 全文；产物不可用时回退到会话状态中的全文。 */

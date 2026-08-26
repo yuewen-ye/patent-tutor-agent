@@ -31,7 +31,7 @@ function CustomTooltip({
   if (!item) return null;
 
   const difficulty = payload.find((p) => p.dataKey === "difficulty")?.value;
-  const duration = payload.find((p) => p.dataKey === "duration")?.value;
+  const intensity = payload.find((p) => p.dataKey === "intensity")?.value;
 
   return (
     <div className="rounded-lg border border-border bg-card px-4 py-3 shadow-xl min-w-[240px]">
@@ -49,13 +49,13 @@ function CustomTooltip({
             <span className="font-medium text-foreground">L{difficulty}</span>
           </div>
         )}
-        {duration !== undefined && (
+        {intensity !== undefined && (
           <div className="flex items-center justify-between gap-3">
             <span className="text-muted-foreground flex items-center gap-1">
               <Clock className="h-3 w-3" />
-              时长
+              学习强度
             </span>
-            <span className="font-medium text-foreground">{duration} 分钟</span>
+            <span className="font-medium text-foreground">{Number(intensity).toFixed(3)}</span>
           </div>
         )}
         <div className="flex items-start justify-between gap-3">
@@ -79,6 +79,7 @@ function CustomTooltip({
 }
 
 const DIFFICULTY_MAP: Record<string, number> = { L1: 1, L2: 2, L3: 3 };
+const INTENSITY_FACTOR: Record<string, number> = { L1: 1.0, L2: 1.3, L3: 1.6 };
 
 function resolveDifficulty(item: LearningPathItem): number {
   if (item.difficulty_cap) {
@@ -88,6 +89,27 @@ function resolveDifficulty(item: LearningPathItem): number {
     if (match) return Number(match[1]);
   }
   return 0;
+}
+
+function resolveIntensity(item: LearningPathItem): number {
+  const base = item.duration_min || 0;
+  let result: number;
+  if (item.difficulty_cap) {
+    const level = item.difficulty_cap.toUpperCase();
+    if (level in INTENSITY_FACTOR) {
+      result = base * INTENSITY_FACTOR[level];
+    } else {
+      const match = level.match(/L(\d)/);
+      if (match) {
+        result = base * (1 + Number(match[1]) * 0.3);
+      } else {
+        result = base;
+      }
+    }
+  } else {
+    result = base;
+  }
+  return Math.round(result) / 1000;
 }
 
 export function DifficultyCurve({ path }: DifficultyCurveProps) {
@@ -101,110 +123,116 @@ export function DifficultyCurve({ path }: DifficultyCurveProps) {
       prerequisites: item.prerequisites,
       difficulty,
       difficultyArea: difficulty,
-      duration: item.duration_min,
+      intensity: resolveIntensity(item),
     };
   });
 
   return (
-    <div className="h-[320px] w-full rounded-xl border border-border/30 bg-card/80 p-4">
-      <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 28 }}>
-          <defs>
-            <linearGradient id="difficultyGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#1f5f4f" stopOpacity={0.25} />
-              <stop offset="95%" stopColor="#1f5f4f" stopOpacity={0.02} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-          <XAxis
-            dataKey="step"
-            stroke="hsl(var(--muted-foreground))"
-            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-            label={{
-              value: "学习进度（节点顺序）",
-              position: "insideBottom",
-              offset: -18,
-              fill: "hsl(var(--muted-foreground))",
-              fontSize: 12,
-            }}
-          />
-          <YAxis
-            yAxisId="left"
-            stroke="hsl(var(--muted-foreground))"
-            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-            domain={[0, 4]}
-            ticks={[0, 1, 2, 3]}
-            tickFormatter={(v: number) => (v === 0 ? "—" : `L${v}`)}
-            label={{
-              value: "难度等级",
-              angle: -90,
-              position: "insideLeft",
-              fill: "hsl(var(--muted-foreground))",
-              fontSize: 12,
-            }}
-          />
-          <YAxis
-            yAxisId="right"
-            orientation="right"
-            stroke="hsl(var(--muted-foreground))"
-            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-            label={{
-              value: "时长（分钟）",
-              angle: 90,
-              position: "insideRight",
-              fill: "hsl(var(--muted-foreground))",
-              fontSize: 12,
-            }}
-          />
-          <Tooltip
-            content={<CustomTooltip />}
-            cursor={{ stroke: "hsl(var(--primary))", strokeWidth: 1, strokeDasharray: "4 4" }}
-          />
-          <Legend
-            verticalAlign="top"
-            height={36}
-            iconType="plainline"
-            formatter={(value: string) => (
-              <span className="text-sm text-foreground/80">
-                {value === "difficulty"
-                  ? "难度等级（左轴）"
-                  : value === "duration"
-                    ? "学习时长（右轴）"
-                    : ""}
-              </span>
-            )}
-          />
-          <Area
-            yAxisId="left"
-            type="monotone"
-            dataKey="difficultyArea"
-            stroke="none"
-            fill="url(#difficultyGradient)"
-            legendType="none"
-          />
-          <Line
-            yAxisId="left"
-            type="monotone"
-            dataKey="difficulty"
-            name="difficulty"
-            stroke="hsl(var(--primary))"
-            strokeWidth={2.5}
-            dot={{ fill: "hsl(var(--primary))", strokeWidth: 0, r: 4 }}
-            activeDot={{ r: 7, fill: "hsl(var(--primary))", stroke: "hsl(var(--card))", strokeWidth: 2 }}
-          />
-          <Line
-            yAxisId="right"
-            type="monotone"
-            dataKey="duration"
-            name="duration"
-            stroke="#c69456"
-            strokeWidth={2}
-            strokeDasharray="5 5"
-            dot={{ fill: "#c69456", strokeWidth: 0, r: 3 }}
-            activeDot={{ r: 6, fill: "#c69456", stroke: "hsl(var(--card))", strokeWidth: 2 }}
-          />
-        </ComposedChart>
-      </ResponsiveContainer>
+    <div className="w-full">
+      <div className="h-[320px] w-full rounded-xl border border-border/30 bg-card/80 p-4">
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 28 }}>
+            <defs>
+              <linearGradient id="difficultyGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#1f5f4f" stopOpacity={0.25} />
+                <stop offset="95%" stopColor="#1f5f4f" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis
+              dataKey="step"
+              stroke="hsl(var(--muted-foreground))"
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+              label={{
+                value: "学习进度（节点顺序）",
+                position: "insideBottom",
+                offset: -18,
+                fill: "hsl(var(--muted-foreground))",
+                fontSize: 12,
+              }}
+            />
+            <YAxis
+              yAxisId="left"
+              stroke="hsl(var(--muted-foreground))"
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+              domain={[0, 4]}
+              ticks={[0, 1, 2, 3]}
+              tickFormatter={(v: number) => (v === 0 ? "—" : `L${v}`)}
+              label={{
+                value: "难度等级",
+                angle: -90,
+                position: "insideLeft",
+                fill: "hsl(var(--muted-foreground))",
+                fontSize: 12,
+              }}
+            />
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              stroke="hsl(var(--muted-foreground))"
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+              label={{
+                value: "学习强度 (时长×系数/1000)",
+                angle: 90,
+                position: "insideRight",
+                fill: "hsl(var(--muted-foreground))",
+                fontSize: 11,
+              }}
+            />
+            <Tooltip
+              content={<CustomTooltip />}
+              cursor={{ stroke: "hsl(var(--primary))", strokeWidth: 1, strokeDasharray: "4 4" }}
+            />
+            <Legend
+              verticalAlign="top"
+              height={36}
+              iconType="plainline"
+              formatter={(value: string) => (
+                <span className="text-sm text-foreground/80">
+                  {value === "difficulty"
+                    ? "难度等级（左轴）"
+                    : value === "intensity"
+                      ? "学习强度（右轴，时长×系数/1000）"
+                      : ""}
+                </span>
+              )}
+            />
+            <Area
+              yAxisId="left"
+              type="monotone"
+              dataKey="difficultyArea"
+              stroke="none"
+              fill="url(#difficultyGradient)"
+              legendType="none"
+            />
+            <Line
+              yAxisId="left"
+              type="monotone"
+              dataKey="difficulty"
+              name="difficulty"
+              stroke="hsl(var(--primary))"
+              strokeWidth={2.5}
+              dot={{ fill: "hsl(var(--primary))", strokeWidth: 0, r: 4 }}
+              activeDot={{ r: 7, fill: "hsl(var(--primary))", stroke: "hsl(var(--card))", strokeWidth: 2 }}
+            />
+            <Line
+              yAxisId="right"
+              type="monotone"
+              dataKey="intensity"
+              name="intensity"
+              stroke="#c69456"
+              strokeWidth={2}
+              strokeDasharray="5 5"
+              dot={{ fill: "#c69456", strokeWidth: 0, r: 3 }}
+              activeDot={{ r: 6, fill: "#c69456", stroke: "hsl(var(--card))", strokeWidth: 2 }}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="mt-2 text-[11px] text-muted-foreground flex items-center gap-4 px-1">
+        <span>强度 = 时长 × 难度系数 ÷ 1000</span>
+        <span>系数：L1×1.0 · L2×1.3 · L3×1.6</span>
+      </div>
     </div>
   );
 }
