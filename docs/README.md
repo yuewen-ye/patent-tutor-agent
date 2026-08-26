@@ -49,8 +49,6 @@ Markdown 文件用于展示各阶段产物格式。真实会话输出写入
 
 `agents/` 保存 issue tracker、triage 标签和领域文档工具的约定，不描述产品运行时架构。
 
-- `research-academic-agent-skills.md`：基于一手来源整理的学术论文写作 Agent skills、文献 API 和可重复编译工具清单。
-
 ## 维护规则
 
 - 不在 `docs/` 长期保留已经完成的选型草案、迁移计划或旧架构截图。
