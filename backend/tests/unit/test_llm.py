@@ -1174,6 +1174,8 @@ def _patch_call_llm_json_stream(
                 "model_name": model_name,
                 "base_url_override": base_url_override,
                 "max_attempts": max_attempts,
+                "schema_name": schema_name,
+                "json_schema": json_schema,
             }
         )
         queue = script[(provider, model_name)]
@@ -1188,6 +1190,36 @@ def _patch_call_llm_json_stream(
 
     monkeypatch.setattr("backend.app.core.llm.call_llm_json_stream", fake_call_llm_json_stream)
     return calls
+
+
+def test_streaming_call_omits_schema_for_configured_non_strict_provider(monkeypatch) -> None:
+    """Regression: streaming must honor supports_strict_schema=false."""
+    stub_llm_providers(
+        monkeypatch,
+        {"deepseek": make_provider_config(model_name="deepseek-v4-flash", supports_strict_schema=False)},
+    )
+    calls = _patch_call_llm_json_stream(
+        monkeypatch,
+        {("deepseek", "deepseek-v4-flash"): [['{"answer": "ok"}']]},
+    )
+
+    chunks = list(
+        AgentLLMRouter(
+            default_provider="deepseek",
+            agent_providers={"judge": "deepseek"},
+            agent_model_names={"judge": "deepseek-v4-flash"},
+        ).generate_json_stream(
+            [LLMMessage(role="user", content="hi")],
+            0.0,
+            agent="judge",
+            schema_name="JudgeReport",
+            json_schema={"type": "object"},
+        )
+    )
+
+    assert "".join(chunks) == '{"answer": "ok"}'
+    assert calls[0]["schema_name"] is None
+    assert calls[0]["json_schema"] is None
 
 
 def test_fallback_model_used_on_streaming_failure(monkeypatch) -> None:

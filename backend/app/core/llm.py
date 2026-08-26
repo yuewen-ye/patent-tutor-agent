@@ -1810,6 +1810,7 @@ class AgentLLMRouter:
         def invoke(
             provider: str | None, model_name: str | None, base_url: str | None, attempts: int | None
         ) -> Iterator[str]:
+            use_schema = json_schema is not None and provider is not None and provider_supports_strict_schema(provider)
             return call_llm_json_stream(
                 provider=provider,
                 messages=messages,
@@ -1817,8 +1818,8 @@ class AgentLLMRouter:
                 model_name=model_name,
                 base_url_override=base_url,
                 max_attempts=attempts,
-                schema_name=schema_name,
-                json_schema=json_schema,
+                schema_name=schema_name if use_schema else None,
+                json_schema=json_schema if use_schema else None,
             )
 
         primary = self.provider_for(agent)
