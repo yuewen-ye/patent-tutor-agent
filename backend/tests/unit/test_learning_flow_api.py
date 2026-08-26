@@ -221,6 +221,31 @@ def _client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[TestClient
 
 
 
+def test_cancel_session_endpoint_delegates_to_service(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client, service = _client(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        service,
+        "cancel_session",
+        lambda session_id: {
+            "session_id": session_id,
+            "status": "canceled",
+            "learner_id": "learner-1",
+            "state": {},
+            "error": "Session canceled.",
+            "created_at": "2026-01-01T00:00:00+00:00",
+            "updated_at": "2026-01-01T00:01:00+00:00",
+        },
+    )
+
+    response = client.post("/sessions/course-session/cancel")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "canceled"
+
+
+
 def test_frontend_can_fetch_versioned_onboarding_questionnaire(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
