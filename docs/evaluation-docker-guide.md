@@ -139,6 +139,55 @@ artifacts/evaluation/<condition>/
   results/<learner>/round-XX/   # batchrun 复制出的评测快照
 ```
 
+### 查看每个容器的日志
+
+所有实验日志都会落盘到宿主仓库根目录（bind mount），容器停止后依然可读：
+
+```powershell
+# 实验总日志（evaluator + backend 合并输出，由矩阵脚本实时写入）
+Get-Content artifacts/evaluation/normal/compose.log -Tail 100
+```
+
+实时跟踪某组某个服务的日志（等价于 `docker logs -f`）：
+
+```powershell
+docker compose -p evaluation-normal --env-file .env --env-file docker/evaluation/normal.env `
+  -f docker-compose.evaluation.yml logs -f backend evaluator
+```
+
+只看最近 N 行、不跟踪：
+
+```powershell
+docker compose -p evaluation-normal --env-file .env --env-file docker/evaluation/normal.env `
+  -f docker-compose.evaluation.yml logs --tail=200 evaluator
+```
+
+也可以按容器名直接看（命名规则 `<project>-<service>-<副本号>`）：
+
+```powershell
+docker ps --format '{{.Names}}\t{{.Status}}'
+docker logs -f evaluation-normal-backend-1
+docker logs -f evaluation-normal-evaluator-1
+docker logs -f evaluation-normal-mysql-1
+```
+
+### 每轮的详细产物
+
+以画像 6、9、10、13、15 为例，learner ID 形如 `eval-normal-6`：
+
+```text
+artifacts/evaluation/normal/results/eval-normal-6/round-01/
+  session_snapshot.json     # session 终态与耗时
+  learner_memory.json       # 画像记忆快照
+  course_package.md         # 课程正文
+  judge_report.md           # Judge 评审
+  feedback/                 # 反馈轮产物
+  meta/                     # manifest + workflow.log.jsonl + llm_calls.log.jsonl
+```
+
+后端原始过程产物（含完整 LLM 调用明细）在同一组的 `system/sessions/<session-id>/` 下；
+`llm_calls.log.jsonl` 记录每次调用的模型、token、耗时，`llm_payloads.log.jsonl` 记录完整请求/响应。
+
 建议每组完成后，以相同画像、目标轮次和相同 `config/agents.yaml` 汇总以下信息：
 
 1. `results/**/session_snapshot.json`：完成/失败/超时数量与耗时；
