@@ -47,36 +47,107 @@ docker compose -p evaluation-bootstrap --env-file .env --env-file docker/evaluat
 
 ## 第五步：运行中/运行后查看容器日志
 
-每个实验组有 3 个容器：`<组>-mysql-1`、`<组>-backend-1`、`<组>-evaluator-1`（组名如 `evaluation-normal`）。
+每个实验组 3 个容器，命名固定：`evaluation-<组>-{mysql,backend,evaluator}-1`。
+脚本每次用相同 project 名重建，容器名不变，下面命令可直接复制。
+注意：脚本默认结束后清理容器，容器没了之后 `docker logs` / `docker compose logs` 会失效，
+只能看落盘的 `compose.log`（见本节末尾）；想事后保留容器日志，运行矩阵时加 `--keep-stacks`。
 
-看某组的实时日志：
+### 实时跟踪单个容器（最常用）
+
+**normal 组**
 
 ```bash
-docker logs -f evaluation-normal-backend-1       # 后端工作流日志
+docker logs -f evaluation-normal-backend-1       # 后端日志（模型加载、会话、LLM 调用）
 docker logs -f evaluation-normal-evaluator-1     # 评测脚本进度（画像/轮次推进）
 docker logs -f evaluation-normal-mysql-1         # MySQL 日志
 ```
 
-或按服务看（不用记容器名）：
+**no-rag 组**
+
+```bash
+docker logs -f evaluation-no-rag-backend-1
+docker logs -f evaluation-no-rag-evaluator-1
+docker logs -f evaluation-no-rag-mysql-1
+```
+
+**no-rerank 组**
+
+```bash
+docker logs -f evaluation-no-rerank-backend-1
+docker logs -f evaluation-no-rerank-evaluator-1
+docker logs -f evaluation-no-rerank-mysql-1
+```
+
+**single-model 组**
+
+```bash
+docker logs -f evaluation-single-model-backend-1
+docker logs -f evaluation-single-model-evaluator-1
+docker logs -f evaluation-single-model-mysql-1
+```
+
+只看最近 N 行、不跟随：把 `-f` 换成 `--tail 200`，例如
+
+```bash
+docker logs --tail 200 evaluation-normal-backend-1
+```
+
+### 整组按服务看（不用记容器名）
+
+**normal 组**
 
 ```bash
 docker compose -p evaluation-normal --env-file .env --env-file docker/evaluation/normal.env \
   -f docker-compose.evaluation.yml logs -f backend evaluator
 ```
 
-看该组完整落盘日志（容器停止后仍可读）：
+**no-rag 组**
+
+```bash
+docker compose -p evaluation-no-rag --env-file .env --env-file docker/evaluation/no-rag.env \
+  -f docker-compose.evaluation.yml logs -f backend evaluator
+```
+
+**no-rerank 组**
+
+```bash
+docker compose -p evaluation-no-rerank --env-file .env --env-file docker/evaluation/no-rerank.env \
+  -f docker-compose.evaluation.yml logs -f backend evaluator
+```
+
+**single-model 组**
+
+```bash
+docker compose -p evaluation-single-model --env-file .env --env-file docker/evaluation/single-model.env \
+  -f docker-compose.evaluation.yml logs -f backend evaluator
+```
+
+想连 MySQL 一起看，把末尾的 `backend evaluator` 换成 `backend evaluator mysql`。
+
+### 容器状态一览（只看评测相关）
+
+```bash
+docker ps -a --filter name=evaluation- --format '{{.Names}}\t{{.Status}}'
+```
+
+### 运行结束后（容器已被清理）看落盘日志
+
+每组运行全过程写入 `artifacts/evaluation/<组>/compose.log`（构建输出、容器生命周期、
+evaluator 进度；backend 自己的 stdout 需在运行中及时用 `docker logs` 看）：
 
 ```bash
 tail -f artifacts/evaluation/normal/compose.log
+tail -f artifacts/evaluation/no-rag/compose.log
+tail -f artifacts/evaluation/no-rerank/compose.log
+tail -f artifacts/evaluation/single-model/compose.log
 ```
 
-列出所有容器状态：
+想保留容器以便事后用 `docker logs` 排障：运行矩阵加 `--keep-stacks`，结束手动清理：
 
 ```bash
-docker ps -a --format '{{.Names}}\t{{.Status}}'
+docker compose -p evaluation-normal --env-file .env --env-file docker/evaluation/normal.env \
+  -f docker-compose.evaluation.yml down --remove-orphans
 ```
-
-其他组把命令里的 `normal` 换成 `no-rag` / `no-rerank` / `single-model` 即可。
 
 ## 第六步：结果在哪里
 
