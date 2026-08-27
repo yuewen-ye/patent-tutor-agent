@@ -165,7 +165,41 @@ artifacts/evaluation/<组>/
 - `meta/llm_calls.log.jsonl`：每次 LLM 调用的模型、token、耗时
 - `feedback/`：反馈轮产物
 
-## 第七步：清理
+## 第七步：跑 bootrun 出指标和报告（5 个类别）
+
+产物跑完后，用 `backend/tests/evaluation/evaluation_test_v1.1_bootrun.py` 离线计算指标和生成报告。
+不需要后端、MySQL 或 LLM（外部 LLM 评估除外）。共 5 个类别，每个类别跑一次，`--learner-prefix` 不同：
+
+| 类别 | 数据位置 | learner 前缀 |
+|---|---|---|
+| no-debate（原产物，无辩论） | `backend/tests/evaluation/artifacts/multi-*` | `multi` |
+| normal | `artifacts/evaluation/normal/results/eval-normal-*` | `eval-normal` |
+| no-rag | `artifacts/evaluation/no-rag/results/eval-no-rag-*` | `eval-no-rag` |
+| no-rerank | `artifacts/evaluation/no-rerank/results/eval-no-rerank-*` | `eval-no-rerank` |
+| single-model | `artifacts/evaluation/single-model/results/eval-single-model-*` | `eval-single-model` |
+
+```bash
+uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix multi
+uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-normal
+uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-no-rag
+uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-no-rerank
+uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-single-model
+```
+
+交互菜单：
+
+- 输入 `1` 计算指标 → 多选画像（如 `1-2-3`）→ 自动算该画像所有轮次，打印到终端
+- 输入 `2` 生成报告 → 输入最大轮次（no-debate 输 `10` 或 `all`，其余输 `5` 或 `all`）
+- 输入 `4` 外部 LLM 评估（可选）→ 需先 `cp backend/tests/evaluation/LLM/config/external_llm.example.yaml backend/tests/evaluation/LLM/config/external_llm.yaml` 并填 key
+- 输入 `0` 退出
+
+注意：
+
+1. 报告固定写到 `backend/tests/evaluation/results/reports/report_full.md`，每组跑完会被覆盖，跑完一组立即改名存档（如 `report_no-debate.md`）。
+2. **不要选菜单 `3`（运行系统）**：会启动新一轮真实运行并写回 `backend/tests/evaluation/artifacts/`，默认前缀 `multi`，误选会污染无辩论组产物。
+3. 指标不落盘，只打印终端；外部 LLM 评估结果在 `backend/tests/evaluation/results/record/*.json`。
+
+## 第八步：清理
 
 - 日常：脚本已自动清理容器；保留 MySQL 卷便于复查。
 - 想保留容器排障：加 `--keep-stacks` 运行，之后手动 `docker compose -p evaluation-<组> ... down --remove-orphans`。
