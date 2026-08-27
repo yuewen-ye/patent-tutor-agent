@@ -101,6 +101,37 @@ services:
       - --round
       - ${EVAL_TARGET_ROUND:?set EVAL_TARGET_ROUND}
 
+  # 外部 LLM 评估（bootrun 菜单 4）的非交互式并行容器。
+  # 用法：scripts/run-llm-eval-matrix.sh（每个类别一个 project，并行 run）。
+  # 不需要 MySQL/后端；只挂载评估产物/画像/结果目录与外部 LLM 配置。
+  bootrun:
+    image: patent-tutor-backend:evaluation
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: "no"
+    entrypoint: []
+    working_dir: /app
+    env_file:
+      - .env
+    environment:
+      # 类别前缀与可选参数；也可用 -e LEARNER_PREFIX=... 覆盖。
+      LEARNER_PREFIX: ${LEARNER_PREFIX:?set LEARNER_PREFIX}
+      LLM_EVAL_PROFILES: ${LLM_EVAL_PROFILES:-}
+      LLM_EVAL_ROUNDS: ${LLM_EVAL_ROUNDS:-all}
+      LLM_EVAL_SYSTEM: ${LLM_EVAL_SYSTEM:-false}
+      LLM_EVAL_FORCE: ${LLM_EVAL_FORCE:-false}
+    volumes:
+      # 镜像内路径即代码默认路径：artifacts/profiles 只读，results 可写（按前缀分目录）。
+      - ./backend/tests/evaluation/artifacts:/app/backend/tests/evaluation/artifacts:ro
+      - ./backend/tests/evaluation/profiles:/app/backend/tests/evaluation/profiles:ro
+      - ./backend/tests/evaluation/results:/app/backend/tests/evaluation/results
+      - ./backend/tests/evaluation/LLM/config:/app/backend/tests/evaluation/LLM/config:ro
+      - ./config/agents.yaml:/app/config/agents.yaml:ro
+    command:
+      - python
+      - backend/tests/evaluation/run_llm_eval_noninteractive.py
+
 volumes:
   # 模型只读共享；先执行文档中的 bootstrap，避免四个实验首次同时下载模型。
   models:

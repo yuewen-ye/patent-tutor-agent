@@ -197,7 +197,30 @@ uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner
 
 1. 报告固定写到 `backend/tests/evaluation/results/reports/report_full.md`，每组跑完会被覆盖，跑完一组立即改名存档（如 `report_no-debate.md`）。
 2. **不要选菜单 `3`（运行系统）**：会启动新一轮真实运行并写回 `backend/tests/evaluation/artifacts/`，误选会污染现有产物。
-3. 指标不落盘，只打印终端；外部 LLM 评估结果在 `backend/tests/evaluation/results/record/*.json`。
+3. 指标不落盘，只打印终端；外部 LLM 评估结果在 `backend/tests/evaluation/results/record_<前缀>/*.json`（按类别隔离）。
+
+### 并行跑外部 LLM 评估（多容器，不影响正在跑的进程）
+
+bootrun 菜单 4 是交互式的，容器里无法无人值守；用非交互驱动
+`backend/tests/evaluation/run_llm_eval_noninteractive.py`（复刻菜单 4 画像评测，
+失败 section 自动写入失败标记、重跑自动重试，输出按类别隔离到
+`results/record_<前缀>/`）：
+
+```bash
+# 本地试跑（dry-run 不调 LLM）
+uv run python backend/tests/evaluation/run_llm_eval_noninteractive.py \
+  --learner-prefix eval-no-rag --dry-run
+
+# Docker 并行跑（默认排除 eval-normal，留给正在跑的进程；--all 包含全部 5 类）
+./scripts/run-llm-eval-matrix.sh
+./scripts/run-llm-eval-matrix.sh --all
+./scripts/run-llm-eval-matrix.sh eval-no-rag eval-no-rerank   # 只跑指定类别
+```
+
+每个类别一个 Compose project（`llm-eval-<类别>`），容器并行执行，日志在
+`artifacts/evaluation/<类别>/llm-eval.log`。需要 LLM key：compose 的 `bootrun`
+服务已配 `env_file: .env`（`SHKG_API_KEY` 经 `external_llm.yaml` 的 `${SHKG_API_KEY}` 解析）。
+退出码 1 表示该类别存在失败 section（标记已写入产物，重跑会自动重试）。
 
 ## 第八步：清理
 
