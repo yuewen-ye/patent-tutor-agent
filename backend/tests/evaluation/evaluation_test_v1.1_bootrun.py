@@ -39,12 +39,12 @@ import program.report as report  # noqa: E402
 
 # ── helpers ─────────────────────────────────────────────────────────────────
 
-def _profiles_with_run_data() -> list[str]:
-    """列出磁盘上有运行痕迹的画像 ID。"""
+def _profiles_with_run_data(learner_prefix: str = "multi") -> list[str]:
+    """列出磁盘上有运行痕迹的画像 ID（跟随 --learner-prefix）。"""
     result: list[str] = []
     for pid in common.list_profile_ids():
         letter = common.profile_letter_from_id(pid)
-        learner_id = f"multi-{letter}"
+        learner_id = f"{learner_prefix}-{letter}"
         paths = [
             common.EVAL_ARTIFACTS_DIR / learner_id,
             common.EVAL_ARTIFACTS_DIR / pid,
@@ -256,7 +256,7 @@ def _do_metrics_one(profile_id: str, learner_prefix: str = "multi") -> None:
 def _do_report(learner_prefix: str = "multi") -> None:
     """④-3 生成报告：选择最大轮次，只计算有 ≤ 该轮次产物的画像。"""
     # 1. 先列出所有有数据的画像及其最大轮次
-    profiles_with_data = _profiles_with_run_data()
+    profiles_with_data = _profiles_with_run_data(learner_prefix)
     if not profiles_with_data:
         print("  ❌ 没有找到任何有运行数据的画像")
         return
@@ -360,10 +360,13 @@ def _run_prepare_probe() -> None:
         print(f"    ⚠️  prepare_probe.py 返回非 0 退出码（{r.returncode}），继续后续步骤")
 
 
-def _run_prepare_m14() -> None:
+def _run_prepare_m14(learner_prefix: str = "multi") -> None:
     """执行画像级前置：prepare_m14.py（跨轮事实点抽取，用于 1.6 跨轮自洽率）。"""
     import subprocess
-    cmd = [sys.executable, str(_PROGRAM_DIR / "prepare_m14.py")]
+    cmd = [
+        sys.executable, str(_PROGRAM_DIR / "prepare_m14.py"),
+        "--learner-prefix", learner_prefix,
+    ]
     print(f"    ▶ 命令: {' '.join(cmd)}")
     r = subprocess.run(cmd, cwd=str(_PROJECT_ROOT))
     if r.returncode == 0:
@@ -506,7 +509,7 @@ def _case_profile_eval(
     model = config.get("llm", {}).get("model", "unknown")
 
     # 1. 选画像
-    profiles = _profiles_with_run_data()
+    profiles = _profiles_with_run_data(learner_prefix)
     if not profiles:
         print("  ❌ 没有找到有运行数据的画像")
         return 0, 0, 0
@@ -646,7 +649,7 @@ def _case_profile_eval(
         # 每个画像的最后：profile-indicator.md (1.6 跨轮自洽率)
         print(f"\n    📌 {pid} — profile-indicator.md（1.6 跨轮自洽率，每画像一次）")
         print("      前置准备：prepare_m14.py")
-        _run_prepare_m14()
+        _run_prepare_m14(learner_prefix)
         try:
             res = llm_evaluator.evaluate_m14(letter, config, force=force)
             if res is None:
@@ -1073,7 +1076,7 @@ def main(argv: list[str] | None = None) -> int:
         # 3=运行系统 → 列全部画像，单选
         multi_select = choice == "1"
         if choice == "1":
-            profiles = _profiles_with_run_data()
+            profiles = _profiles_with_run_data(args.learner_prefix)
             print(f"\n有运行数据的画像（{len(profiles)} 个）：")
         else:
             profiles = common.list_profile_ids()
