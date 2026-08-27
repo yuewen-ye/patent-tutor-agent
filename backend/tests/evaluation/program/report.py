@@ -46,9 +46,12 @@ import calculate  # noqa: E402
 REPORTS_DIR = _EVAL_DIR / "results" / "reports"
 
 def _resolve_llm_results_dir(learner_prefix: str = "multi") -> Path:
-    """解析外部 LLM 结果目录：按类别隔离（record_{前缀}），回退旧目录。"""
+    """解析外部 LLM 结果目录：按类别隔离（record_{前缀}）。
+
+    旧共享目录仅作为 multi 前缀的回退；非 multi 前缀绝不读共享池。
+    """
     new_dir = common.llm_results_dir(learner_prefix)
-    if new_dir.exists():
+    if learner_prefix != "multi" or new_dir.exists():
         return new_dir
     alt_dir = _EVAL_DIR / "results" / "reports" / "record"
     if alt_dir.exists():
@@ -507,7 +510,9 @@ def _load_llm_eval_results(learner_prefix: str = "multi") -> dict[str, Any]:
     return results
 
 
-def _load_profile_level_metrics(profile_letter: str | None = None, learner_prefix: str = "multi") -> list[calculate.MetricResult]:
+def _load_profile_level_metrics(
+    profile_letter: str | None = None, learner_prefix: str = "multi",
+) -> list[calculate.MetricResult]:
     """加载系统级指标（M6 问答质量测试），独立于画像。"""
     return calculate.calculate_system_level_metrics(learner_prefix=learner_prefix)
 
@@ -1422,7 +1427,9 @@ def generate_full_report(
             print(f"  [profile_{letter}] ⚠️ 无符合条件的轮次数据，已跳过")
             continue
         print(f"  [profile_{letter}] 计算 {len(rounds)} 个轮次...")
-        pr = _calculate_profile(letter, session_dir, max_round=max_round, learner_prefix=learner_prefix)
+        pr = _calculate_profile(
+            letter, session_dir, max_round=max_round, learner_prefix=learner_prefix,
+        )
         if pr.rounds:
             profiles.append(pr)
         else:

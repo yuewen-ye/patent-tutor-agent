@@ -31,6 +31,7 @@ _spec.loader.exec_module(br)
 @pytest.mark.unit
 def test_next_round_idx_uses_artifact_dir(tmp_path: Path) -> None:
     # 模拟容器：EVAL_ARTIFACTS_DIR 指向镜像内空目录（没有任何轮次）。
+    _orig = common.EVAL_ARTIFACTS_DIR
     image_dir = tmp_path / "image-artifacts"
     image_dir.mkdir()
     common.EVAL_ARTIFACTS_DIR = image_dir
@@ -52,5 +53,5 @@ def test_next_round_idx_uses_artifact_dir(tmp_path: Path) -> None:
         # 缺省仍走 EVAL_ARTIFACTS_DIR（保持 bootrun/report 等既有调用语义）。
         assert br._next_round_idx("H", learner_prefix="eval-single-model") == 1
     finally:
-        # 不污染同 session 里其他可能使用该常量的代码。
-        del common.EVAL_ARTIFACTS_DIR
+        # 恢复原值——不能用 del，否则永久删除共享模块属性，污染同一 pytest 会话。
+        common.EVAL_ARTIFACTS_DIR = _orig

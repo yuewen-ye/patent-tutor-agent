@@ -1882,40 +1882,50 @@ def _load_m14_factpoints(profile_id: str) -> list[dict[str, Any]] | None:
     record_dir = eval_dir / "results" / (
         "record" if prefix == "multi" else f"record_{prefix}"
     )
-    # 新格式（.json）候选 — 优先当前类别的 results/record_{前缀}，先新命名后旧命名
+    # 新格式（.json）候选 — 优先当前类别的 results/record_{前缀}，先新命名后旧命名。
+    # 共享旧目录（results/record、results/reports/record）仅对 multi 前缀回退，
+    # 非 multi 前缀绝不读共享池，避免把别的类别的事实点算进本类别。
     new_candidates = [
         record_dir / f"m1_factpoints_{profile_id}.json",
         record_dir / f"m1_factpoints_{prefix}-{profile_id}.json",
         record_dir / f"m14_factpoints_{profile_id}.json",
         record_dir / f"m14_factpoints_{prefix}-{profile_id}.json",
-        eval_dir / "results" / "record" / f"m1_factpoints_{profile_id}.json",
-        eval_dir / "results" / "record" / f"m1_factpoints_multi-{profile_id}.json",
-        eval_dir / "results" / "record" / f"m14_factpoints_{profile_id}.json",
-        eval_dir / "results" / "record" / f"m14_factpoints_multi-{profile_id}.json",
-        eval_dir / "results" / "reports" / "record" / f"m1_factpoints_{profile_id}.json",
-        eval_dir / "results" / "reports" / "record" / f"m1_factpoints_multi-{profile_id}.json",
-        eval_dir / "results" / "reports" / "record" / f"m14_factpoints_{profile_id}.json",
-        eval_dir / "results" / "reports" / "record" / f"m14_factpoints_multi-{profile_id}.json",
     ]
+    if prefix == "multi":
+        new_candidates += [
+            eval_dir / "results" / "record" / f"m1_factpoints_{profile_id}.json",
+            eval_dir / "results" / "record" / f"m1_factpoints_multi-{profile_id}.json",
+            eval_dir / "results" / "record" / f"m14_factpoints_{profile_id}.json",
+            eval_dir / "results" / "record" / f"m14_factpoints_multi-{profile_id}.json",
+            eval_dir / "results" / "reports" / "record" / f"m1_factpoints_{profile_id}.json",
+            eval_dir / "results" / "reports" / "record" / f"m1_factpoints_multi-{profile_id}.json",
+            eval_dir / "results" / "reports" / "record" / f"m14_factpoints_{profile_id}.json",
+            eval_dir / "results" / "reports" / "record" / f"m14_factpoints_multi-{profile_id}.json",
+        ]
     # 旧格式（.jsonl）候选 — 兼容旧路径，逐步废弃
     jsonl_candidates = [
         record_dir / f"m1_factpoints_{profile_id}.jsonl",
         record_dir / f"m1_factpoints_{prefix}-{profile_id}.jsonl",
         record_dir / f"m14_factpoints_{profile_id}.jsonl",
         record_dir / f"m14_factpoints_{prefix}-{profile_id}.jsonl",
-        eval_dir / "results" / "record" / f"m1_factpoints_{profile_id}.jsonl",
-        eval_dir / "results" / "record" / f"m1_factpoints_multi-{profile_id}.jsonl",
-        eval_dir / "results" / "record" / f"m14_factpoints_{profile_id}.jsonl",
-        eval_dir / "results" / "record" / f"m14_factpoints_multi-{profile_id}.jsonl",
-        eval_dir / "results" / "reports" / "record" / f"m1_factpoints_{profile_id}.jsonl",
-        eval_dir / "results" / "reports" / "record" / f"m1_factpoints_multi-{profile_id}.jsonl",
-        eval_dir / "results" / "reports" / "record" / f"m14_factpoints_{profile_id}.jsonl",
-        eval_dir / "results" / "reports" / "record" / f"m14_factpoints_multi-{profile_id}.jsonl",
-        eval_dir / "results" / "m14_factpoints" / f"m14_factpoints_{profile_id}.json",
-        eval_dir / "results" / "m14_factpoints" / f"m14_factpoints_{profile_id}.jsonl",
-        eval_dir / "results" / "raw" / f"m14_factpoints_{profile_id}.jsonl",
-        eval_dir / f"m14_factpoints_{profile_id}.jsonl",
     ]
+    if prefix == "multi":
+        jsonl_candidates += [
+            eval_dir / "results" / "record" / f"m1_factpoints_{profile_id}.jsonl",
+            eval_dir / "results" / "record" / f"m1_factpoints_multi-{profile_id}.jsonl",
+            eval_dir / "results" / "record" / f"m14_factpoints_{profile_id}.jsonl",
+            eval_dir / "results" / "record" / f"m14_factpoints_multi-{profile_id}.jsonl",
+            eval_dir / "results" / "reports" / "record" / f"m1_factpoints_{profile_id}.jsonl",
+            eval_dir / "results" / "reports" / "record" / f"m1_factpoints_multi-{profile_id}.jsonl",
+            eval_dir / "results" / "reports" / "record" / f"m14_factpoints_{profile_id}.jsonl",
+            eval_dir / "results" / "reports" / "record" / (
+                f"m14_factpoints_multi-{profile_id}.jsonl"
+            ),
+            eval_dir / "results" / "m14_factpoints" / f"m14_factpoints_{profile_id}.json",
+            eval_dir / "results" / "m14_factpoints" / f"m14_factpoints_{profile_id}.jsonl",
+            eval_dir / "results" / "raw" / f"m14_factpoints_{profile_id}.jsonl",
+            eval_dir / f"m14_factpoints_{profile_id}.jsonl",
+        ]
 
     # 优先加载新格式
     for path in new_candidates:

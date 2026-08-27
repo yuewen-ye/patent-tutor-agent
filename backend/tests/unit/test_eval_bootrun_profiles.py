@@ -31,6 +31,13 @@ _spec.loader.exec_module(br)
 @pytest.mark.unit
 def test_profiles_with_run_data_follows_learner_prefix(tmp_path: Path) -> None:
     """按 --learner-prefix 找画像，而不是硬编码 multi。"""
+    # 保存原值，结束时恢复——不能用 del，否则会永久删除共享模块属性，
+    # 污染同一次 pytest 会话里后续读取 common.EVAL_DIR 等常量的测试。
+    _orig = (
+        common.EVAL_ARTIFACTS_DIR,
+        common.SYS_ARTIFACTS_DIR,
+        common.EVAL_DIR,
+    )
     common.EVAL_ARTIFACTS_DIR = tmp_path
     common.SYS_ARTIFACTS_DIR = tmp_path
     common.EVAL_DIR = tmp_path
@@ -49,6 +56,8 @@ def test_profiles_with_run_data_follows_learner_prefix(tmp_path: Path) -> None:
         # 不存在的前缀 → 空列表，而不是误报 multi-*。
         assert br._profiles_with_run_data(learner_prefix="eval-no-rag") == []
     finally:
-        del common.EVAL_ARTIFACTS_DIR
-        del common.SYS_ARTIFACTS_DIR
-        del common.EVAL_DIR
+        (
+            common.EVAL_ARTIFACTS_DIR,
+            common.SYS_ARTIFACTS_DIR,
+            common.EVAL_DIR,
+        ) = _orig

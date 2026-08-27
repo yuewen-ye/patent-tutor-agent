@@ -45,9 +45,15 @@ def test_llm_results_dir_per_prefix() -> None:
     """结果目录按前缀隔离，multi 保持历史路径。"""
     assert common.llm_results_dir("multi") == _EVAL_DIR / "results" / "record"
     assert common.llm_results_dir("eval-normal") == _EVAL_DIR / "results" / "record_eval-normal"
-    assert br._resolve_llm_results_dir("eval-normal") == _EVAL_DIR / "results" / "record_eval-normal"
-    assert report._resolve_llm_results_dir("eval-normal") == _EVAL_DIR / "results" / "record_eval-normal"
-    assert calculate._resolve_llm_results_dir("eval-normal") == _EVAL_DIR / "results" / "record_eval-normal"
+    assert br._resolve_llm_results_dir("eval-normal") == (
+        _EVAL_DIR / "results" / "record_eval-normal"
+    )
+    assert report._resolve_llm_results_dir("eval-normal") == (
+        _EVAL_DIR / "results" / "record_eval-normal"
+    )
+    assert calculate._resolve_llm_results_dir("eval-normal") == (
+        _EVAL_DIR / "results" / "record_eval-normal"
+    )
 
 
 @pytest.mark.unit
@@ -72,11 +78,18 @@ def test_evaluator_follows_injected_learner_prefix(tmp_path: Path) -> None:
 
 
 @pytest.mark.unit
-def test_calculate_reads_per_prefix_external_result(tmp_path: Path) -> None:
-    """calculate_round 活动前缀下，外部 LLM 结果从 record_{前缀} 读取。"""
-    # 在真实的 results/ 下临时创建 record_eval-normal（_resolve_llm_results_dir 需真实存在）
-    per_prefix_dir = _EVAL_DIR / "results" / "record_eval-normal"
-    per_prefix_dir.mkdir(parents=True, exist_ok=True)
+def test_calculate_reads_per_prefix_external_result(tmp_path: Path, monkeypatch) -> None:
+    """calculate_round 活动前缀下，外部 LLM 结果从 record_{前缀} 读取（不碰真实仓库）。"""
+    # 把解析函数隔离到临时目录：prefix → tmp/results/record_{prefix}
+    def fake_resolve(learner_prefix: str | None = None) -> Path:
+        prefix = learner_prefix or calculate._ACTIVE_LEARNER_PREFIX
+        name = "record" if prefix == "multi" else f"record_{prefix}"
+        return tmp_path / "results" / name
+
+    monkeypatch.setattr(calculate, "_resolve_llm_results_dir", fake_resolve)
+
+    per_prefix_dir = tmp_path / "results" / "record_eval-normal"
+    per_prefix_dir.mkdir(parents=True)
     indicator = per_prefix_dir / "round_indicator_gpt-test_profile_H_01.json"
     indicator.write_text(json.dumps({
         "objection_loop": {
@@ -94,11 +107,33 @@ def test_calculate_reads_per_prefix_external_result(tmp_path: Path) -> None:
         assert m8.detail.get("评估方式") == "外部 LLM (round-indicator 异议闭环)"
         assert m8.value == 100.0
 
-        # 默认前缀 multi → 共享 record 下无文件 → None
+        # 默认前缀 multi → 对应 record 目录下无文件 → None
         calculate._ACTIVE_LEARNER_PREFIX = "multi"
         assert calculate.load_m8_external_result("H", 1) is None
     finally:
         calculate._ACTIVE_LEARNER_PREFIX = old_active
-        indicator.unlink(missing_ok=True)
-        if not any(per_prefix_dir.iterdir()):
-            per_prefix_dir.rmdir()
+
+
+@pytest.mark.unit
+def test_calculate_round_restores_active_prefix_on_error(tmp_path: Path) -> None:
+    """calculate_round 抛异常（FileNotFoundError）后必须恢复活动前缀，防止泄漏。"""
+    old_active = calculate._ACTIVE_LEARNER_PREFIX
+    try:
+        calculate._ACTIVE_LEARNER_PREFIX = "multi"
+        with pytest.raises(FileNotFoundError):
+            calculate.calculate_round(
+                "H", 5, session_dir=tmp_path / "missing", learner_prefix="eval-normal"
+            )
+        assert calculate._ACTIVE_LEARNER_PREFIX == "multi"
+    finally:
+        calculate._ACTIVE_LEARNER_PREFIX = old_active
+
+
+@pytest.mark.unit
+def test_calculate_round_session_dir_default_follows_prefix(tmp_path: Path, monkeypatch) -> None:
+    """session_dir 缺省时应按 learner_prefix 找 {前缀}-{画像}，而不是硬编码 multi-。"""
+    monkeypatch.setattr(calculate, "_EVAL_ARTIFACTS_DIR", tmp_path)
+    (tmp_path / "eval-normal-H" / "round-01").mkdir(parents=True)
+    # round 目录存在但无 course_package.md → 硬读取报错，错误路径应含 eval-normal-H。
+    with pytest.raises(FileNotFoundError, match="eval-normal-H"):
+        calculate.calculate_round("H", 1, learner_prefix="eval-normal")

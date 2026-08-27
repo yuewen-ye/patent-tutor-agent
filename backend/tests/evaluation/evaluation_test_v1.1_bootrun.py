@@ -393,7 +393,9 @@ def _exists_profile_result(model_name: str, profile_id: str, learner_prefix: str
     return any(d.glob(f"profile_indicator_{model_name}_{profile_id}.json"))
 
 
-def _exists_round_result(model_name: str, profile_id: str, round_num: int, learner_prefix: str = "multi") -> bool:
+def _exists_round_result(
+    model_name: str, profile_id: str, round_num: int, learner_prefix: str = "multi",
+) -> bool:
     """轮次级：是否已经存在 round_indicator_{model}_{profile}_{NN}.json。"""
     d = _resolve_llm_results_dir(learner_prefix)
     return any(d.glob(f"round_indicator_{model_name}_{profile_id}_{round_num:02d}.json"))
