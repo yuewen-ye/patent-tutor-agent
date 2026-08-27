@@ -42,9 +42,15 @@ tail -n 200 artifacts/evaluation/no-rag/compose.log   # 只看末尾
 ## 第三步：并行跑外部 LLM 评估（多容器）
 
 ```bash
-./scripts/run-llm-eval-matrix.sh          # 默认排除 eval-normal，留给正在跑的进程
+./scripts/run-llm-eval-matrix.sh          # 默认 4 类 = eval-no-rag / eval-no-rerank /
+                                          #   eval-single-model / eval-no-debate（含 no-debate；
+                                          #   仅排除正在跑的 eval-normal）
 ./scripts/run-llm-eval-matrix.sh --all    # 全部 5 类
 ```
+
+行为说明：跑的是菜单 4 → 画像评测（选项 2）的等价流程——自动选该类别下所有画像、
+所有轮次，无需交互输入；已成功完成的 section 会跳过（⏭️），不会重复调 LLM，
+只执行缺失或带失败标记的 section。
 
 **运行中看日志**——每个类别一个文件，实时跟踪：
 
