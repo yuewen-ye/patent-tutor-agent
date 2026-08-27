@@ -1,0 +1,1552 @@
+{
+  "metadata": {
+    "indicator_type": "round",
+    "prompt_file": "round-indicator.md",
+    "model": "gemini-3.7-flash",
+    "profile_id": "M",
+    "round": 3,
+    "evaluator": "external_llm",
+    "timestamp": "2026-08-27 14:53:42",
+    "eval_mode": "whole"
+  },
+  "overall": {
+    "metadata": {
+      "evaluator": "external_llm",
+      "timestamp": "2026-08-27 14:53:42",
+      "eval_mode": "whole"
+    },
+    "overall_evaluation": {
+      "scores": {
+        "context_correctness": {
+          "score": 95,
+          "max": 100,
+          "comment": "课程内容作为上下文的信息准确且完整，准确引用并阐释了《专利法》第1条、第2条、第22条、第23条及审查制度体系，关键事实全面。",
+          "accurate_facts": [
+            "《专利法》第一条立法目的包含保护合法权益、鼓励发明创造、推动应用及促进科技进步",
+            "《专利法》第二条对发明、实用新型和外观设计的法定定义界定清晰",
+            "专利权的三大基本特征为独占性、时间性、地域性",
+            "中国专利制度规范体系分为专利法、实施细则、专利审查指南三层",
+            "发明专利审查具有早期公开（18个月公布）和延迟审查（依申请启动实审）的特点",
+            "发明和实用新型适用第二十二条三性审查，外观设计适用第二十三条授权条件"
+          ],
+          "missing_facts": [],
+          "incorrect_facts": []
+        },
+        "correctness": {
+          "score": 95,
+          "max": 100,
+          "comment": "课程内容与我国现行专利法、实施细则及审查指南完全一致，概念界定精准，法律逻辑严密。",
+          "correct_statements": [
+            "实用新型保护对象限于产品的形状、构造或者其结合所提出的适于实用的新的技术方案",
+            "实质审查程序以申请人提出实质审查请求为前提",
+            "专利侵权判定必须以存在有效专利权及其保护范围为基础，不可仅凭产品相似直接定性",
+            "新颖性判断实行单独对比原则，不可将多项现有技术进行组合对比"
+          ],
+          "incorrect_statements": []
+        },
+        "hallucination": {
+          "score": 100,
+          "max": 100,
+          "comment": "无虚构或事实性幻觉；对教学情境明确标注为教学拟制场景，未虚构真实案号或司法判决，法条引用精准可查。",
+          "hallucinated_items": [],
+          "verifiable_items": [
+            "《中华人民共和国专利法》第一条、第二条、第二十二条、第二十三条",
+            "发明专利申请自申请日起满18个月公布及依请求启动实审的法定程序",
+            "专利制度以公开换保护的基本法理"
+          ]
+        },
+        "helpfulness": {
+          "score": 95,
+          "max": 100,
+          "comment": "教学设计高度贴合工程师及初学者的认知规律，通过多模态（决策树流程图、口诀、拟制工程场景）有效化解客体分类混淆的痛点。",
+          "helpful_points": [
+            "引入智能制造协作机器人抓取单元的具体示例，直观演示方法、构造与外观的拆分路径",
+            "提供'方看发，构看实，观归外'分类口诀与Mermaid决策流程图，降低认知负荷",
+            "明确前置预警，避免学员在基础阶段过早跳跃至新颖性或侵权的实体断言"
+          ],
+          "unhelpful_points": []
+        },
+        "relevance": {
+          "score": 100,
+          "max": 100,
+          "comment": "内容紧密围绕'patent-law-foundation'（专利法律制度基础）节点目标展开，各模块与习题高度聚焦，无无关冗余内容。",
+          "relevant_points": [
+            "专利基本特征与规范层级体系讲解",
+            "三类专利客体的法定边界与辨析",
+            "审查路径与'以公开换保护'法理基础",
+            "承上启下的后续节点概念铺垫"
+          ],
+          "off_topic_points": []
+        },
+        "goal_coverage": {
+          "score": 100,
+          "max": 100,
+          "comment": "完整覆盖该节点的全部5个细粒度知识点要求。",
+          "matched_goals": [
+            "专利制度的基本概念与特征：独占性、时间性、地域性",
+            "中国专利制度体系：专利法、实施细则、审查指南",
+            "专利保护的三种客体：发明、实用新型、外观设计",
+            "专利制度的作用：激励创新、公开换保护、促进应用",
+            "中国专利制度特点：早期公开延迟审查、初审与实审并存"
+          ],
+          "missed_goals": []
+        },
+        "factual_accuracy": {
+          "score": 95,
+          "max": 100,
+          "comment": "法条条文引用与制度规则表述准确无误。",
+          "correct_items": [
+            "《专利法》第1、2、22、23条的条款与内涵对应准确",
+            "发明公布时间（满18个月）及实审启动机制描述准确"
+          ],
+          "errors": []
+        },
+        "case_accuracy": {
+          "score": 95,
+          "max": 100,
+          "comment": "教学案例属于拟制工程场景，结构清晰，很好地映射了专利客体分类的逻辑需求，且做好了拟制免责说明。",
+          "reliable_cases": [
+            "智能制造协作机器人抓取单元（轨迹控制方法/快换锁止机构/夹具面板外观）拟制案例"
+          ],
+          "problematic_cases": []
+        },
+        "factual_consistency": {
+          "score": 100,
+          "max": 100,
+          "comment": "全文各教学模块、速查卡、流程图与课后习题之间逻辑统一，概念界定前后完全一致。",
+          "consistent_points": [
+            "三类客体与定义在正文、Worked Example、口诀、速查卡中保持严格一致",
+            "三性仅适用于发明与实用新型的规则在正文与习题中始终保持一致"
+          ],
+          "contradictions": []
+        },
+        "pedagogical_clarity": {
+          "score": 95,
+          "max": 100,
+          "comment": "教学框架清晰，采用场景锚定-法条解析-分步演练-决策流-速查卡-测评的完整闭环，说理透彻。",
+          "clear_points": [
+            "Worked Example 中的三步推演法层次分明",
+            "Mermaid 流程图清晰呈现分类判断分流"
+          ],
+          "confusing_points": []
+        },
+        "difficulty_fit": {
+          "score": 95,
+          "max": 100,
+          "comment": "习题难度设计合理，涵盖 L1 基础概念复习、L1 前探理解题与 L3 综合辨析题，未超过节点设定的 L3 难度上限。",
+          "matched_items": [
+            "q-foundation-review-1 (L1) 考察记忆与客体识别",
+            "q-rights-forward-1 (L1) 考察前置认知",
+            "q-foundation-weakness-1 (L3) 考察智能制造多客体融合辨析"
+          ],
+          "mismatched_items": []
+        },
+        "learner_fit": {
+          "score": 95,
+          "max": 100,
+          "comment": "针对工科背景及初学者容易把'一个设备整体当成一个专利'的常见思维误区做了专门的针对性设计与引导。",
+          "adapted_points": [
+            "针对感知型、序列型和视觉型学习风格提供了场景、口诀与流程图"
+          ],
+          "missing_adaptations": []
+        },
+        "knowledge_completeness": {
+          "score": 95,
+          "max": 100,
+          "comment": "大纲要求的基础制度知识点全面覆盖，并妥善处理了与后续节点的衔接边界。",
+          "covered_points": [
+            "基本特征、法规体系、客体分类、制度作用、审查特点"
+          ],
+          "missing_points": []
+        },
+        "weakness_addressing": {
+          "score": 95,
+          "max": 100,
+          "comment": "重点攻克了'按行业或设备名称申请专利'、'三性套用于外观设计'等典型薄弱点，辨析设计深入。",
+          "addressed_weaknesses": [
+            "混淆方法发明与产品构造实用新型的边界",
+            "误将外观设计直接套用三性审查条件",
+            "未区分申请阶段与侵权保护阶段的判断前提"
+          ],
+          "untouched_weaknesses": []
+        }
+      },
+      "overall_score": {
+        "score": 95,
+        "max": 100,
+        "comment": "课程整体设计优秀，法律知识准确严密，教学法模块完备，紧密契合学习路径中的知识点与难度要求。",
+        "summary": "本轮课程作为《专利法律制度基础》的第一课，高质量地完成了制度坐标建立与客体边界划分的任务。法条引用精准，教学场景贴近实际工程研发，多模态辅助工具（流程图、口诀、速查卡）有效降低了法律规则的学习门槛，测评题目梯次合理，是一份符合专业标准的优质专利教学内容。"
+      },
+      "highlights": [
+        "法律事实与法理阐述严密准确，精准区分了专利法、实施细则与审查指南的位阶，以及发明/实用新型与外观设计在授权条件上的法定差异。",
+        "教学脚手架丰富完备，将工程场景、法条锚定、Worked Example 分步拆解、Mermaid 决策树和记忆口诀有机结合。",
+        "防范幻觉意识突出，主动声明拟制教学情境，避免虚构案件误导学员。",
+        "习题编排紧扣大纲，设置了针对薄弱点辨析的 L3 难度题目，梯度合理。"
+      ],
+      "issues": [
+        "在讲解发明专利'早期公开、延迟审查'时，若能补充说明实用新型和外观设计仅进行初步审查而不进行实质审查的对比特点，对比度会更鲜明。"
+      ],
+      "suggestions": [
+        "可在'制度作用与审查路径'段落中，用一句话精练对比'发明（初审+早期公开+实审）'与'实用新型/外观设计（初审制）'的不同程序周期，使审查制度体系更加闭环。"
+      ]
+    },
+    "chunk_evaluations": []
+  },
+  "statement": {
+    "eval_type": "statement_evaluation",
+    "statements_count": 12,
+    "evaluations": [
+      {
+        "text": "《中华人民共和国专利法》第一条 | 中华人民共和国专利法.txt：第一条规定保护专利权人的合法权益，鼓励发明创造，推动发明创造的应用，提高创新能力，促进科学技术进步和经济社会发展。",
+        "score": 100,
+        "verdict": "correct",
+        "reasoning": "陈述准确复述了《中华人民共和国专利法》第一条关于立法宗旨和目的的法定内容，准确无误。",
+        "source_verifiable": true,
+        "source_score": 100,
+        "source_check_result": "verified",
+        "content_relevance": true,
+        "relevance_score": 100,
+        "relevance_check_result": "relevant",
+        "relevance_reasoning": "引用来源真实有效，来源文本与陈述内容完全一致并提供充分支撑。"
+      },
+      {
+        "text": "《中华人民共和国专利法》第二条 | 中华人民共和国专利法.txt：第二条界定发明、实用新型和外观设计。",
+        "score": 100,
+        "verdict": "correct",
+        "reasoning": "陈述准确指出了《中华人民共和国专利法》第二条对发明、实用新型和外观设计三种专利客体的界定作用。",
+        "source_verifiable": true,
+        "source_score": 100,
+        "source_check_result": "verified",
+        "content_relevance": true,
+        "relevance_score": 100,
+        "relevance_check_result": "relevant",
+        "relevance_reasoning": "法条出处真实明确，法条规定与陈述主旨直接对应且完全吻合。"
+      },
+      {
+        "text": "《中华人民共和国专利法》第二十二条 | 中华人民共和国专利法.txt：第二十二条规定发明和实用新型应具备新颖性、创造性和实用性，并定义现有技术。",
+        "score": 100,
+        "verdict": "correct",
+        "reasoning": "陈述完全符合《中华人民共和国专利法》第二十二条关于发明和实用新型实质性授权条件（三性）及现有技术定义的规定。",
+        "source_verifiable": true,
+        "source_score": 100,
+        "source_check_result": "verified",
+        "content_relevance": true,
+        "relevance_score": 100,
+        "relevance_check_result": "relevant",
+        "relevance_reasoning": "来源文件明确且条文号对应准确，完全支撑陈述中的核心事实。"
+      },
+      {
+        "text": "《中华人民共和国专利法》第二十三条 | 中华人民共和国专利法.txt：第二十三条规定外观设计与现有设计相比应具有明显区别等条件。",
+        "score": 100,
+        "verdict": "correct",
+        "reasoning": "陈述准确反映了《中华人民共和国专利法》第二十三条关于外观设计授权条件的规定。",
+        "source_verifiable": true,
+        "source_score": 100,
+        "source_check_result": "verified",
+        "content_relevance": true,
+        "relevance_score": 100,
+        "relevance_check_result": "relevant",
+        "relevance_reasoning": "来源权威可验证，条文内容与陈述主张高度吻合。"
+      },
+      {
+        "text": "发明专利公布与实质审查规则 | 专利法专题讲座.txt：发明专利申请经初步审查符合要求后，自申请日或优先权日起满十八个月公布；实质审查通常以申请人请求为前提。",
+        "score": 95,
+        "verdict": "correct",
+        "reasoning": "内容完全符合《专利法》第三十四条及第三十五条关于发明专利早期公布与实质审查请求原则的规定，表述清晰严谨。",
+        "source_verifiable": true,
+        "source_score": 95,
+        "source_check_result": "verified",
+        "content_relevance": true,
+        "relevance_score": 95,
+        "relevance_check_result": "relevant",
+        "relevance_reasoning": "来源讲座材料直接支撑陈述中的公布期限与实质审查启动条件。"
+      },
+      {
+        "text": "专利制度作用与实质审查制说明 | 专利法律知识详细解读.txt：专利权取得体现以公开换保护；实质审查包括对新颖性、创造性和实用性的审查。",
+        "score": 95,
+        "verdict": "correct",
+        "reasoning": "陈述准确阐释了专利制度的核心法理机制（以公开换保护）及实质审查的核心审查内容。",
+        "source_verifiable": true,
+        "source_score": 95,
+        "source_check_result": "verified",
+        "content_relevance": true,
+        "relevance_score": 95,
+        "relevance_check_result": "relevant",
+        "relevance_reasoning": "来源文献内容完备，直接印证了专利制度功能与审查范围的断言。"
+      },
+      {
+        "text": "将同一智能制造产品中的方法、产品结构和产品外观混为单一专利客体，导致分类和申请路径判断错误。",
+        "score": 95,
+        "verdict": "correct",
+        "reasoning": "风险提示逻辑严谨，准确指出了智能制造领域实务中混淆发明、实用新型与外观设计保护客体及申请路径的典型错误。",
+        "source_verifiable": false,
+        "source_score": 30,
+        "source_check_result": "unverified",
+        "content_relevance": true,
+        "relevance_score": 85,
+        "relevance_check_result": "relevant",
+        "relevance_reasoning": "未标注具体法条或外部文件出处，但内容与专利基础教学中的客体区分上下文紧密相关。"
+      },
+      {
+        "text": "将发明、实用新型的“三性”无差别套用于外观设计，忽略第二十三条的不同法定条件。",
+        "score": 95,
+        "verdict": "correct",
+        "reasoning": "准确指出了将第二十二条的技术方案“三性”与第二十三条外观设计授权条件相混淆的实务认知风险，符合法律规定与审查实践。",
+        "source_verifiable": false,
+        "source_score": 30,
+        "source_check_result": "unverified",
+        "content_relevance": true,
+        "relevance_score": 90,
+        "relevance_check_result": "relevant",
+        "relevance_reasoning": "虽无显式外部溯源文件，但其指涉的法律基础（第二十三条）明确，与专利客体分类教学直接相关。"
+      },
+      {
+        "text": "把新颖性的单独对比与创造性的显而易见性判断混同，或把抵触申请直接等同于现有技术。",
+        "score": 95,
+        "verdict": "correct",
+        "reasoning": "精准提示了审查判断中的关键法律概念混淆风险：新颖性审查要求单独对比，抵触申请不能用于评判创造性，符合《专利审查指南》规定。",
+        "source_verifiable": false,
+        "source_score": 30,
+        "source_check_result": "unverified",
+        "content_relevance": true,
+        "relevance_score": 90,
+        "relevance_check_result": "relevant",
+        "relevance_reasoning": "无直接溯源文本标注，但内容高度契合专利基础理论与实质审查实务风险防范。"
+      },
+      {
+        "text": "在未核对有效权利、保护范围和实施行为前，直接以产品相似认定专利侵权。",
+        "score": 95,
+        "verdict": "correct",
+        "reasoning": "准确提示了专利侵权判定的规范路径，侵权比效应基于权利要求书的保护范围进行全面覆盖原则比对，而非直接对比产品外观/实物。",
+        "source_verifiable": false,
+        "source_score": 30,
+        "source_check_result": "unverified",
+        "content_relevance": true,
+        "relevance_score": 90,
+        "relevance_check_result": "relevant",
+        "relevance_reasoning": "虽无具体源文件链接，但与专利维权和保护模块的教学目标高度相关。"
+      },
+      {
+        "text": "18个月，即行公布”及“实质审查程序只有在申请人提出实质审查请求的前",
+        "score": 35,
+        "verdict": "incorrect",
+        "reasoning": "该陈述语句严重残缺不全，末尾截断导致语意未完结，缺乏必要的句式结构和完整判断，无法构成准确的知识表达。",
+        "source_verifiable": false,
+        "source_score": 20,
+        "source_check_result": "unverified",
+        "content_relevance": false,
+        "relevance_score": 35,
+        "relevance_check_result": "irrelevant",
+        "relevance_reasoning": "由于文本残缺断裂，无法有效溯源，也无法有效支撑完整的期限制度教学要点。"
+      },
+      {
+        "text": "本节点应先掌握制度目的、规范体系、三类客体、制度作用和审查制度特点；对智能制造成果遵循“先拆分、再分类、后识别程序”的顺序。",
+        "score": 95,
+        "verdict": "correct",
+        "reasoning": "教学方法论与操作步骤清晰合规，符合专利法基础学习与智能制造领域知识产权布局的实务逻辑。",
+        "source_verifiable": true,
+        "source_score": 95,
+        "source_check_result": "verified",
+        "content_relevance": true,
+        "relevance_score": 95,
+        "relevance_check_result": "relevant",
+        "relevance_reasoning": "作为 IRAC 结论输出，来源明确且对整个模块的学习路径具有完备的总结指导作用。"
+      }
+    ],
+    "m1_hallucination_rate": {
+      "name": "专业知识谬误率",
+      "value": 91.7,
+      "unit": "分",
+      "total": 12,
+      "incorrect": 1,
+      "correct": 11,
+      "uncertain": 0,
+      "score_based_avg": 91.7,
+      "verdict_based_rate": 8.3,
+      "weighted_value": 6.7,
+      "weighted_error_sum": 0.8,
+      "max_weight_sum": 12.0,
+      "error_type_distribution": {
+        "time_limit": 1
+      },
+      "weights_used": {
+        "legal_scope": 1.0,
+        "time_limit": 0.8,
+        "procedure": 0.7,
+        "amount": 0.5,
+        "terminology": 0.3,
+        "other": 0.5
+      },
+      "note": "value 为 100 分制平均正确率，verdict_based_rate 为传统谬误率，weighted_value 为加权谬误率"
+    },
+    "m9_source_verifiable_rate": {
+      "name": "知识溯源可验证率",
+      "value": 97.9,
+      "unit": "分",
+      "total_with_source": 7,
+      "verified": 7,
+      "content_relevant": 7,
+      "fully_verified": 7,
+      "unverified": 0,
+      "avg_source_score": 97.9,
+      "avg_relevance_score": 97.9,
+      "verdict_based_rate": 100.0,
+      "note": "value 为 100 分制平均溯源得分，verdict_based_rate 为传统溯源率"
+    },
+    "timestamp": "2026-08-27 14:54:08"
+  },
+  "resource_morphology": {
+    "eval_type": "resource_morphology_evaluation",
+    "raw_llm_response": {
+      "scores": {
+        "context_correctness": {
+          "score": 95,
+          "max": 100,
+          "comment": "课程内容所引用的专利法法条、规范层级体系以及审查制度特征等事实准确完整，完全符合《专利法》及相关审查规则的权威知识要求。",
+          "accurate_facts": [
+            "《专利法》第一条立法目的包含保护合法权益、鼓励发明创造、推动应用及促进行业发展",
+            "《专利法》第二条对发明、实用新型、外观设计三种客体的法定界定",
+            "《专利法》第二十二条关于发明和实用新型新颖性、创造性、实用性的规定",
+            "《专利法》第二十三条关于外观设计授权条件的独立规定",
+            "发明专利申请初审合格后满18个月公布及实质审查需申请人提出请求"
+          ],
+          "missing_facts": [],
+          "incorrect_facts": []
+        },
+        "correctness": {
+          "score": 95,
+          "max": 100,
+          "comment": "输出陈述与中国专利法规定、法理逻辑完全一致，准确厘清了客体分类、三性适用范围及初步审查/实质审查的边界。",
+          "correct_statements": [
+            "轨迹控制方案以方法技术方案为中心，应沿发明方向识别",
+            "夹具锁止机构以产品形状、构造及其结合为中心，应沿实用新型方向识别",
+            "夹具局部轮廓、图案或色彩组合以产品外观为中心，应沿外观设计方向识别",
+            "新颖性、创造性、实用性不能无差别套用于外观设计"
+          ],
+          "incorrect_statements": []
+        },
+        "hallucination": {
+          "score": 95,
+          "max": 100,
+          "comment": "课程内容严谨，对缺乏现成智能制造真实判例的情况进行了诚实声明，明确标注案例为教学拟制，未虚构案例文书或条文。",
+          "hallucinated_items": [],
+          "verifiable_items": [
+            "法条编号与条文内容真实可查",
+            "中国专利审查程序的公布期限及实审启动规则可查",
+            "专利三性与现有技术的单独对比原则可查"
+          ]
+        },
+        "helpfulness": {
+          "score": 90,
+          "max": 100,
+          "comment": "通过决策流程图、分类口诀、速查卡等多样化资源形态，有效帮助学员建立结构化认知，为后续学习新颖性和侵权判定打下扎实基础。",
+          "helpful_points": [
+            "提供了“方看发，构看实，观归外”的高效记忆口诀",
+            "使用Mermaid决策流程图直观展示智能制造研发成果的客体拆分路径",
+            "明确列出常见风险清单（如避免将三性直接套用于外观设计）"
+          ],
+          "unhelpful_points": []
+        },
+        "relevance": {
+          "score": 95,
+          "max": 100,
+          "comment": "内容高度聚焦于专利法律制度基础（patent-law-foundation）节点，同时针对学员的智能制造背景做了适配，无跑题或冗余信息。",
+          "relevant_points": [
+            "紧扣专利制度立法目的、基本特征与客体分类",
+            "针对协作机器人抓取单元（算法、夹具结构、外观）进行多维度客体拆解",
+            "为后续新颖性比对与侵权分析做出了必要的前置铺垫"
+          ],
+          "off_topic_points": []
+        },
+        "goal_coverage": {
+          "score": 90,
+          "max": 100,
+          "comment": "完整覆盖了基础知识点的教学目标，并对学员期望的高阶目标（新颖性/侵权）做好了承接与入口指引。",
+          "matched_goals": [
+            "专利制度基础概念与特征",
+            "三类保护客体的界定与区分",
+            "审查路径与授权条件基础"
+          ],
+          "missed_goals": []
+        },
+        "factual_accuracy": {
+          "score": 95,
+          "max": 100,
+          "comment": "法条引用精确，各客体法律术语定义标准无误。",
+          "correct_items": [
+            "《专利法》第1、2、22、23条法条引用与表述",
+            "专利权三特征（独占性、时间性、地域性）的表述"
+          ],
+          "errors": []
+        },
+        "case_accuracy": {
+          "score": 90,
+          "max": 100,
+          "comment": "拟制教学案例设定合理，逻辑严密，并主动声明为拟制案例，合规意识强。",
+          "reliable_cases": [
+            "协作机器人抓取单元研发成果拆分示例"
+          ],
+          "problematic_cases": []
+        },
+        "factual_consistency": {
+          "score": 95,
+          "max": 100,
+          "comment": "各教学模块（场景锚定、决策流、速查卡、练习）之间事实与逻辑保持高度一致。",
+          "consistent_points": [
+            "方法归发明、构造归实用新型、外观归外观设计的全流程一致性"
+          ],
+          "contradictions": []
+        },
+        "pedagogical_clarity": {
+          "score": 95,
+          "max": 100,
+          "comment": "教学编排遵循从场景感知、法条支撑、推演示范到总结记忆的认知规律，层次清晰、逻辑流畅。",
+          "clear_points": [
+            "分步推演步骤分明",
+            "速查卡要点凝练",
+            "Mermaid流程图可视化呈现清晰"
+          ],
+          "confusing_points": []
+        },
+        "difficulty_fit": {
+          "score": 90,
+          "max": 100,
+          "comment": "难度设定贴合入门/冷启动学习者，梯度合理，易于理解吸收。",
+          "matched_items": [
+            "基础客体分类推演与口诀化记忆"
+          ],
+          "mismatched_items": []
+        },
+        "learner_fit": {
+          "score": 90,
+          "max": 100,
+          "comment": "结合了学员在感知、视觉、序列化等方面的特征偏好，提供了流程图与结构化口诀。",
+          "adapted_points": [
+            "为视觉型学习者提供流程图",
+            "为序列型学习者提供清晰推演步骤与分类口诀",
+            "结合智能制造背景降低理解门槛"
+          ],
+          "missing_adaptations": []
+        },
+        "knowledge_completeness": {
+          "score": 95,
+          "max": 100,
+          "comment": "知识点覆盖全面，包含了立法目的、规范体系、客体分类、制度特征及审查基础。",
+          "covered_points": [
+            "规范层级（法、细则、指南）",
+            "客体定义与分类",
+            "审查制与实质审查要件"
+          ],
+          "missing_points": []
+        },
+        "weakness_addressing": {
+          "score": 90,
+          "max": 100,
+          "comment": "精准识别并针对性纠正了‘按行业/产品名称一概而论’以及‘将三性套用于外观设计’等常见混淆点。",
+          "addressed_weaknesses": [
+            "避免把整个设备单一归类为某种专利",
+            "明确区分外观设计与发明/实用新型的授权标准差异"
+          ],
+          "untouched_weaknesses": []
+        }
+      },
+      "overall_score": {
+        "score": 93,
+        "max": 100,
+        "comment": "本课程内容结构严谨、资源形态丰富且高度自适应学员画像，法理与教学设计俱佳。",
+        "summary": "课程以智能制造实际场景切入，巧妙结合了决策流程图、分类口诀、法条锚点及速查卡等多样化形态；在确保专利法法理严谨性的同时，精准回应了学员诉求，并为后续进阶学习搭建了稳固的基础框架。"
+      },
+      "highlights": [
+        "多形态资源融合（流程图、口诀、速查卡、推演演示）充分契合学员认知偏好",
+        "法理界定严密，清晰辨析了客体定义、规范层级以及不同客体授权条件的适用差异",
+        "诚实标注拟制场景，规避了事实性幻觉风险"
+      ],
+      "issues": [],
+      "suggestions": [
+        "在后续进阶章节中，可继续引入经脱敏或公开的智能制造真实判例，进一步强化新颖性与侵权判定的实战分析体验。"
+      ]
+    },
+    "timestamp": "2026-08-27 14:54:23",
+    "metrics": {
+      "value": 93.0,
+      "unit": "分",
+      "detail": {
+        "资源形态覆盖率": 0.0,
+        "覆盖率评分(100分制)": 0.0,
+        "学员画像适配度": 0.0,
+        "总体评分(100分制)": 93.0,
+        "评分等级": "-",
+        "核心形态（讲义/实操/分阶题）": "0/3",
+        "已识别形态": [],
+        "缺失形态": [],
+        "LLM理由": "",
+        "评估方式": "外部 LLM 判定（round-indicator 资源形态提示词）"
+      }
+    }
+  },
+  "objection_loop": {
+    "eval_type": "objection_loop_evaluation",
+    "raw_llm_response": {
+      "scores": {
+        "context_correctness": {
+          "score": 90,
+          "max": 100,
+          "comment": "两位专家在修订稿中均对事实依据进行了显著纠偏。专家A准确引用了《专利法》第一条、第二条、第三十九条和第四十条；专家B删除了原稿中对第八十二条历史施行日期的错误引用，修正了三性仅适用于发明与实用新型的表述，并严格限定了第二十四条宽限期的法定适用条件。整体上下文事实准确、权威依据支撑充分。",
+          "accurate_facts": [
+            "《专利法》第二条对发明、实用新型、外观设计的法定定义",
+            "《专利法》第一条的立法目的",
+            "《专利法》第二十二条三性与第二十三条外观设计授权条件的区分",
+            "发明实质审查制与实用新型/外观设计初步审查制的程序分流",
+            "《专利法》第二十四条不丧失新颖性宽限期的法定严格要件（展会性质、首次展出、声明与证明要求等）"
+          ],
+          "missing_facts": [
+            "专家A在修订中未完全落实裁判关于引入真实公开专利案例号/名称的明确要求"
+          ],
+          "incorrect_facts": []
+        },
+        "correctness": {
+          "score": 95,
+          "max": 100,
+          "comment": "修订稿中的法律分析、逻辑推理及习题解析完全正确。针对原先存在的争议点（如展会展示即破坏新颖性、六个月宽限期绝对免责等），均已修正为严谨的条件性推导与客观判定。",
+          "correct_statements": [
+            "仅凭政府主办和申请日前六个月内不能直接认定不破坏新颖性，需核实法定展会资质、首次公开及相关程序要件",
+            "仅凭展示后修改方案不能直接断定新颖性被破坏，需比对申请权利要求的全部技术特征与展会公开内容",
+            "发明采取早期公开延迟审查制，实用新型和外观设计以初步审查为授权路径"
+          ],
+          "incorrect_statements": []
+        },
+        "hallucination": {
+          "score": 95,
+          "max": 100,
+          "comment": "无虚构法条或编造法律规则的幻觉现象。专家B彻底纠正了旧版第八十二条施行日期的幻觉引用；专家A规范标注了教学拟制场景与RAG真实条文来源。",
+          "hallucinated_items": [],
+          "verifiable_items": [
+            "《专利法》第1条、第2条第2-4款、第22条、第23条、第24条、第39条、第40条",
+            "中国专利法自1985年4月1日起施行的历史沿革信息"
+          ]
+        },
+        "helpfulness": {
+          "score": 90,
+          "max": 100,
+          "comment": "两位专家通过思维导图式流程、记忆口诀对照表、分层IRAC分析等教学设计，极大地提升了初学者的学习体验。对易混概念（三客体分类、初审与实审分流、宽限期例外）的解析非常到位。",
+          "helpful_points": [
+            "专家A的'方—发、构—实、观—外'对照表及研发交底书拆分方法非常实用",
+            "专家B在正文与习题中对新颖性宽限期误区的反向设问与条件剖析极具教学价值",
+            "两稿均有效规避了薄弱点正式题与正文示范案例同构的测评效度问题"
+          ],
+          "unhelpful_points": []
+        },
+        "relevance": {
+          "score": 90,
+          "max": 100,
+          "comment": "内容高度聚焦于'专利法律制度基础'这一核心节点。专家B成功压缩了后续节点的冗余讲授，将其严格收束为探测性与易错提示；专家A明确框定了客体识别与审查路径分流的主线。",
+          "relevant_points": [
+            "专利制度概念与特征（独占性、时间性、地域性）",
+            "三种客体的界定与区分",
+            "制度规范体系与审查路径差异"
+          ],
+          "off_topic_points": []
+        },
+        "goal_coverage": {
+          "score": 90,
+          "max": 100,
+          "comment": "全面覆盖了当前节点的五大核心知识点，并合理设置了向前探测与向后复习。",
+          "matched_goals": [
+            "专利制度基本概念与特征",
+            "中国专利制度体系构成",
+            "发明、实用新型、外观设计三种客体",
+            "专利制度的作用",
+            "早期公开延迟审查与初审/实审并存特点"
+          ],
+          "missed_goals": []
+        },
+        "factual_accuracy": {
+          "score": 95,
+          "max": 100,
+          "comment": "法条引用准确，法理分析透彻，所有红牌事实错误均已彻底修复。",
+          "correct_items": [
+            "法条号与内容完全匹配现行法律规定",
+            "客体定义与审查程序叙述严谨"
+          ],
+          "errors": []
+        },
+        "case_accuracy": {
+          "score": 80,
+          "max": 100,
+          "comment": "两份修订稿均采用了智能制造教学拟制场景，逻辑自洽，并明确标注了非真实案例。但未能完全执行裁判要求的'引入至少一个已公开的真实智能制造专利案例及RAG引用'。",
+          "reliable_cases": [
+            "协作机器人视觉引导抓取单元拆分案例（教学拟制）",
+            "柔性机器人关节模组展会展示案例（教学拟制）"
+          ],
+          "problematic_cases": [
+            "缺少学习者画像所偏好的真实可检索专利案号/案例"
+          ]
+        },
+        "factual_consistency": {
+          "score": 95,
+          "max": 100,
+          "comment": "草稿各模块内部及正文与习题、记忆卡片之间逻辑完全一致，无自相矛盾。",
+          "consistent_points": [
+            "客体定义在正文、速查卡与习题中完全统一",
+            "宽限期前提要件在正文与解析中保持高度一致"
+          ],
+          "contradictions": []
+        },
+        "pedagogical_clarity": {
+          "score": 90,
+          "max": 100,
+          "comment": "专家A的IRAC结构化框架与专家B的人话解释均具备优秀的教学清晰度，层层递进，便于初学者理解。",
+          "clear_points": [
+            "客体分类的'表达对象拆分法'逻辑明晰",
+            "审查路径双轨制分流讲解通俗"
+          ],
+          "confusing_points": []
+        },
+        "difficulty_fit": {
+          "score": 90,
+          "max": 100,
+          "comment": "习题难度设计合理，L1复习题聚焦定义与时点，L3薄弱点题考查综合分类与例外要件辨析，区分度良好。",
+          "matched_items": [
+            "q-foundation-review-1 / q1 (L1)",
+            "q-foundation-weakness-1 / q3 / q4 (L3)"
+          ],
+          "mismatched_items": []
+        },
+        "learner_fit": {
+          "score": 80,
+          "max": 100,
+          "comment": "适配了视觉型、感知型和主动加工型学习特征，但真实案例偏好未完全落地。",
+          "adapted_points": [
+            "流程图与决策树适配视觉型偏好",
+            "智能制造工程场景适配工科背景"
+          ],
+          "missing_adaptations": [
+            "未提供真实的已公开专利公开号/专利名称"
+          ]
+        },
+        "knowledge_completeness": {
+          "score": 95,
+          "max": 100,
+          "comment": "五项大纲知识点全覆盖，且知识边界控制得当。",
+          "covered_points": [
+            "专利三性适用边界",
+            "三客体定义",
+            "审查双轨制",
+            "规范体系层级"
+          ],
+          "missing_points": []
+        },
+        "weakness_addressing": {
+          "score": 90,
+          "max": 100,
+          "comment": "精准命中了初学者常犯的'单一产品单一客体'、'三性全客体通用'以及'宽限期免死金牌'三大薄弱点。",
+          "addressed_weaknesses": [
+            "混淆发明实质审查与实用新型/外观设计初步审查",
+            "误将同一设备整体作为单一专利客体",
+            "无视第二十四条严格法定程序要件"
+          ],
+          "untouched_weaknesses": []
+        }
+      },
+      "overall_score": {
+        "score": 90,
+        "max": 100,
+        "comment": "本次异议闭环修订质量极高。两位专家对互评意见中的全部 🔴 红色致命异议（包括旧法第八十二条错误、三性适用范围过度概括、宽限期充分条件遗漏、展会修改与新颖性判断不当、习题与正文实质同构等）均作出了彻底、严谨的修正。对于裁判报告提出的过渡引导也已充分融入，整体闭环完整，仅在引入已公开真实专利案号方面有微小遗漏。",
+        "summary": "Round-03 异议闭环评定为优秀。所有交叉评审提出的法律硬伤与教学漏洞全部得到针对性解决，事实正确性与教学结构达到了高质量要求。"
+      },
+      "highlights": [
+        "彻底修复了历史条文与现行法条混淆的硬伤，澄清了现行法规范依据",
+        "精准收敛了知识边界，将新颖性宽限期、抵触申请等后续内容界定为易错探测，避免越界讲授",
+        "专家A针对智能制造研发拆分的'方—发、构—实、观—外'教学脚手架设计精妙",
+        "专家B彻底重构了争议题目（q3、q4），将其转化为考查法条严格前提条件的深度分析题，辨析度高"
+      ],
+      "issues": [
+        "未严格执行裁判关于引入真实已公开智能制造专利案号及对应RAG引用的适配修改项，仍停留在教学拟制案例"
+      ],
+      "suggestions": [
+        "在下一轮发布前，将场景锚定中的拟制案例直接替换为一个具体的真实公开专利（如某知名协作机器人的发明专利公开文本CN1XXXXXXX），以完美满足学员画像偏好"
+      ]
+    },
+    "timestamp": "2026-08-27 14:54:41",
+    "metrics": {
+      "value": 90.0,
+      "unit": "分",
+      "detail": {
+        "总🔴异议数": 0.0,
+        "裁判采纳数": 0.0,
+        "闭环数（采纳+修正）": 0.0,
+        "未闭环数": 0,
+        "闭环率(%)": 100.0,
+        "总体评分(100分制)": 90.0,
+        "评分等级": "-",
+        "闭环详情": [],
+        "LLM理由": "",
+        "评估方式": "外部 LLM 判定（round-indicator 异议闭环提示词）"
+      }
+    }
+  },
+  "pii": {
+    "eval_type": "pii_compliance",
+    "evaluation_type": "pii_compliance",
+    "has_pii_leak": false,
+    "pii_leak_count": 0,
+    "pii_details": [],
+    "compliance_score": 0.0,
+    "compliance_verdict": "compliant",
+    "summary": {
+      "total_checks": 17,
+      "real_leaks": 0,
+      "false_positives": 0,
+      "compliance_rate": 100.0
+    },
+    "evaluations": [
+      {
+        "chunk_index": 0,
+        "chunk_title": "教学模块选择清单",
+        "evaluation_type": "pii_compliance",
+        "has_pii_leak": false,
+        "pii_leak_count": 0,
+        "pii_details": [],
+        "compliance_score": 0,
+        "compliance_verdict": "compliant",
+        "summary": {
+          "total_checks": 0,
+          "real_leaks": 0,
+          "false_positives": 0,
+          "compliance_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 1,
+        "chunk_title": "教学正文",
+        "evaluation_type": "pii_compliance",
+        "has_pii_leak": false,
+        "pii_leak_count": 0,
+        "pii_details": [],
+        "compliance_score": 0,
+        "compliance_verdict": "compliant",
+        "summary": {
+          "total_checks": 0,
+          "real_leaks": 0,
+          "false_positives": 0,
+          "compliance_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 2,
+        "chunk_title": "场景锚定",
+        "evaluation_type": "pii_compliance",
+        "has_pii_leak": false,
+        "pii_leak_count": 0,
+        "pii_details": [],
+        "compliance_score": 0,
+        "compliance_verdict": "compliant",
+        "summary": {
+          "total_checks": 0,
+          "real_leaks": 0,
+          "false_positives": 0,
+          "compliance_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 3,
+        "chunk_title": "法条坐标",
+        "evaluation_type": "pii_compliance",
+        "has_pii_leak": false,
+        "pii_leak_count": 0,
+        "pii_details": [],
+        "compliance_score": 0,
+        "compliance_verdict": "compliant",
+        "summary": {
+          "total_checks": 0,
+          "real_leaks": 0,
+          "false_positives": 0,
+          "compliance_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 4,
+        "chunk_title": "三类保护客体",
+        "evaluation_type": "pii_compliance",
+        "has_pii_leak": false,
+        "pii_leak_count": 0,
+        "pii_details": [],
+        "compliance_score": 0,
+        "compliance_verdict": "compliant",
+        "summary": {
+          "total_checks": 0,
+          "real_leaks": 0,
+          "false_positives": 0,
+          "compliance_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 5,
+        "chunk_title": "制度作用与审查路径",
+        "evaluation_type": "pii_compliance",
+        "has_pii_leak": false,
+        "pii_leak_count": 0,
+        "pii_details": [],
+        "compliance_score": 0,
+        "compliance_verdict": "compliant",
+        "summary": {
+          "total_checks": 0,
+          "real_leaks": 0,
+          "false_positives": 0,
+          "compliance_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 6,
+        "chunk_title": "后续主题的入口",
+        "evaluation_type": "pii_compliance",
+        "has_pii_leak": false,
+        "pii_leak_count": 0,
+        "pii_details": [],
+        "compliance_score": 0,
+        "compliance_verdict": "compliant",
+        "summary": {
+          "total_checks": 0,
+          "real_leaks": 0,
+          "false_positives": 0,
+          "compliance_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 7,
+        "chunk_title": "结构化数据",
+        "evaluation_type": "pii_compliance",
+        "has_pii_leak": false,
+        "pii_leak_count": 0,
+        "pii_details": [],
+        "compliance_score": 0,
+        "compliance_verdict": "compliant",
+        "summary": {
+          "total_checks": 0,
+          "real_leaks": 0,
+          "false_positives": 0,
+          "compliance_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 8,
+        "chunk_title": "expert",
+        "evaluation_type": "pii_compliance",
+        "has_pii_leak": false,
+        "pii_leak_count": 0,
+        "pii_details": [],
+        "compliance_score": 0,
+        "compliance_verdict": "compliant",
+        "summary": {
+          "total_checks": 0,
+          "real_leaks": 0,
+          "false_positives": 0,
+          "compliance_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 9,
+        "chunk_title": "style",
+        "evaluation_type": "pii_compliance",
+        "has_pii_leak": false,
+        "pii_leak_count": 0,
+        "pii_details": [],
+        "compliance_score": 0,
+        "compliance_verdict": "compliant",
+        "summary": {
+          "total_checks": 1,
+          "real_leaks": 0,
+          "false_positives": 0,
+          "compliance_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 10,
+        "chunk_title": "knowledge_points",
+        "evaluation_type": "pii_compliance",
+        "has_pii_leak": false,
+        "pii_leak_count": 0,
+        "pii_details": [],
+        "compliance_score": 0,
+        "compliance_verdict": "compliant",
+        "summary": {
+          "total_checks": 5,
+          "real_leaks": 0,
+          "false_positives": 0,
+          "compliance_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 11,
+        "chunk_title": "legal_basis",
+        "evaluation_type": "pii_compliance",
+        "has_pii_leak": false,
+        "pii_leak_count": 0,
+        "pii_details": [],
+        "compliance_score": 0,
+        "compliance_verdict": "compliant",
+        "summary": {
+          "total_checks": 0,
+          "real_leaks": 0,
+          "false_positives": 0,
+          "compliance_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 12,
+        "chunk_title": "risks",
+        "evaluation_type": "pii_compliance",
+        "has_pii_leak": false,
+        "pii_leak_count": 0,
+        "pii_details": [],
+        "compliance_score": 0,
+        "compliance_verdict": "compliant",
+        "summary": {
+          "total_checks": 4,
+          "real_leaks": 0,
+          "false_positives": 0,
+          "compliance_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 13,
+        "chunk_title": "draft_stage",
+        "evaluation_type": "pii_compliance",
+        "has_pii_leak": false,
+        "pii_leak_count": 0,
+        "pii_details": [],
+        "compliance_score": 0,
+        "compliance_verdict": "compliant",
+        "summary": {
+          "total_checks": 1,
+          "real_leaks": 0,
+          "false_positives": 0,
+          "compliance_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 14,
+        "chunk_title": "irac",
+        "evaluation_type": "pii_compliance",
+        "has_pii_leak": false,
+        "pii_leak_count": 0,
+        "pii_details": [],
+        "compliance_score": 0,
+        "compliance_verdict": "compliant",
+        "summary": {
+          "total_checks": 0,
+          "real_leaks": 0,
+          "false_positives": 0,
+          "compliance_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 15,
+        "chunk_title": "interactive_questions",
+        "evaluation_type": "pii_compliance",
+        "has_pii_leak": false,
+        "pii_leak_count": 0,
+        "pii_details": [],
+        "compliance_score": 0,
+        "compliance_verdict": "compliant",
+        "summary": {
+          "total_checks": 0,
+          "real_leaks": 0,
+          "false_positives": 0,
+          "compliance_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 16,
+        "chunk_title": "knowledge_synthesis",
+        "evaluation_type": "pii_compliance",
+        "has_pii_leak": false,
+        "pii_leak_count": 0,
+        "pii_details": [],
+        "compliance_score": 0,
+        "compliance_verdict": "compliant",
+        "summary": {
+          "total_checks": 0,
+          "real_leaks": 0,
+          "false_positives": 0,
+          "compliance_rate": 100.0
+        }
+      }
+    ],
+    "timestamp": "2026-08-27 14:56:09"
+  },
+  "retrieval": {
+    "eval_type": "retrieval_accuracy",
+    "total_chunks": 17,
+    "accurate": 0,
+    "accurate_rate": 0.0,
+    "complete": 0,
+    "complete_rate": 0.0,
+    "evaluations": [
+      {
+        "chunk_index": 0,
+        "chunk_title": "教学模块选择清单",
+        "evaluations": [
+          {
+            "chunk_id": "chunk-01",
+            "accuracy_score": 100,
+            "accuracy_verdict": "accurate",
+            "completeness_score": 100,
+            "completeness_verdict": "complete",
+            "root_cause": "normal",
+            "reason": "该分块准确且完整地呈现了'patent-law-foundation'节点的教学模块选择清单，模块类型、触发规则、法条坐标（《专利法》第一条）及教学场景对应关系清晰无误。",
+            "inaccurate_items": [],
+            "missing_items": [],
+            "suggestions": []
+          }
+        ],
+        "summary": {
+          "total_chunks": 1,
+          "accurate_count": 1,
+          "complete_count": 1,
+          "accurate_rate": 100.0,
+          "complete_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 1,
+        "chunk_title": "教学正文",
+        "evaluations": [
+          {
+            "chunk_id": "chunk_1",
+            "accuracy_score": 90,
+            "accuracy_verdict": "accurate",
+            "completeness_score": 10,
+            "completeness_verdict": "incomplete",
+            "root_cause": "retrieval_incomplete",
+            "reason": "分块标题与对应章节名称一致，无事实性错误或捏造，但仅包含章节标题，实质性正文内容严重缺失，无法支撑回答。",
+            "inaccurate_items": [],
+            "missing_items": [
+              "教学正文的具体知识点与法律依据",
+              "相关的条文解析、案例或操作指引"
+            ],
+            "suggestions": [
+              "调整切分策略（Chunking Strategy），过滤或合并仅含标题的空分块",
+              "增大检索上下文窗口，确保召回标题下属的完整段落内容"
+            ]
+          }
+        ],
+        "summary": {
+          "total_chunks": 1,
+          "accurate_count": 1,
+          "complete_count": 0,
+          "accurate_rate": 100.0,
+          "complete_rate": 0.0
+        }
+      },
+      {
+        "chunk_index": 2,
+        "chunk_title": "场景锚定",
+        "evaluations": [
+          {
+            "chunk_id": "场景锚定",
+            "accuracy_score": 100,
+            "accuracy_verdict": "accurate",
+            "completeness_score": 100,
+            "completeness_verdict": "complete",
+            "root_cause": "none",
+            "reason": "内容准确反映了专利法三种客体（发明、实用新型、外观设计）在实际工程项目中的多维度分布，且明确了本节教学边界及案例拟制属性，无事实性错误，引入要点完整。",
+            "inaccurate_items": [],
+            "missing_items": [],
+            "suggestions": []
+          }
+        ],
+        "summary": {
+          "total_chunks": 1,
+          "accurate_count": 1,
+          "complete_count": 1,
+          "accurate_rate": 100.0,
+          "complete_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 3,
+        "chunk_title": "法条坐标",
+        "evaluations": [
+          {
+            "chunk_id": "法条坐标-01",
+            "accuracy_score": 100,
+            "accuracy_verdict": "accurate",
+            "completeness_score": 95,
+            "completeness_verdict": "complete",
+            "root_cause": "retrieval_normal",
+            "reason": "准确引用了《专利法》第一条立法目的，对专利法规范层级（法律-细则-指南）及专利权三性（独占性、时间性、地域性）的阐述严谨无误且要点全面。",
+            "inaccurate_items": [],
+            "missing_items": [],
+            "suggestions": []
+          }
+        ],
+        "summary": {
+          "total_chunks": 1,
+          "accurate_count": 1,
+          "complete_count": 1,
+          "accurate_rate": 100.0,
+          "complete_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 4,
+        "chunk_title": "三类保护客体",
+        "evaluations": [
+          {
+            "chunk_id": "chunk_01",
+            "accuracy_score": 100,
+            "accuracy_verdict": "accurate",
+            "completeness_score": 100,
+            "completeness_verdict": "complete",
+            "root_cause": "retrieval_normal",
+            "reason": "该分块准确引用了《专利法》第二条关于三类保护客体（发明、实用新型、外观设计）的法定定义（包含局部外观设计），且分类逻辑与实务拆分原则清晰完整，无任何捏造或法律遗漏。",
+            "inaccurate_items": [],
+            "missing_items": [],
+            "suggestions": []
+          }
+        ],
+        "summary": {
+          "total_chunks": 1,
+          "accurate_count": 1,
+          "complete_count": 1,
+          "accurate_rate": 1.0,
+          "complete_rate": 1.0
+        }
+      },
+      {
+        "chunk_index": 5,
+        "chunk_title": "制度作用与审查路径",
+        "evaluations": [
+          {
+            "chunk_id": "chunk_01",
+            "accuracy_score": 100,
+            "accuracy_verdict": "accurate",
+            "completeness_score": 95,
+            "completeness_verdict": "complete",
+            "root_cause": "none",
+            "reason": "内容准确阐述了专利制度本质（以公开换保护）、中国专利审查制度特点（早期公开、延迟审查、双轨制）及不同专利类型的授权条件区分（第22条与第23条），法条引用与法理逻辑完全正确且要点覆盖全面。",
+            "inaccurate_items": [],
+            "missing_items": [
+              "可补充国务院专利行政部门在必要时可自行对发明专利进行实质审查的特殊例外情形（专利法第35条第2款），以使审查启动机制更加完备。"
+            ],
+            "suggestions": [
+              "保持当前法条与法理阐述的严谨性，必要时可补充专利法第35条第2款关于官方自行启动实审的例外说明。"
+            ]
+          }
+        ],
+        "summary": {
+          "total_chunks": 1,
+          "accurate_count": 1,
+          "complete_count": 1,
+          "accurate_rate": 100.0,
+          "complete_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 6,
+        "chunk_title": "后续主题的入口",
+        "evaluations": [
+          {
+            "chunk_id": "后续主题的入口",
+            "accuracy_score": 100,
+            "accuracy_verdict": "accurate",
+            "completeness_score": 100,
+            "completeness_verdict": "complete",
+            "root_cause": "retrieval_normal",
+            "reason": "内容引用的《专利法》第1条、第2条、第22条（现有技术定义与单独对比原则）、第23条等法条依据及法律逻辑完全准确，客体拆分与后续主题衔接脉络完整清晰。",
+            "inaccurate_items": [],
+            "missing_items": [],
+            "suggestions": []
+          }
+        ],
+        "summary": {
+          "total_chunks": 1,
+          "accurate_count": 1,
+          "complete_count": 1,
+          "accurate_rate": 100.0,
+          "complete_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 7,
+        "chunk_title": "结构化数据",
+        "evaluations": [
+          {
+            "chunk_id": "chunk_1",
+            "accuracy_score": 95,
+            "accuracy_verdict": "accurate",
+            "completeness_score": 35,
+            "completeness_verdict": "incomplete",
+            "root_cause": "retrieval_incomplete",
+            "reason": "检索内容准确命中了章节标题“结构化数据”，但分块中仅包含标题标记，完全缺失该章节的具体正文与核心实质要点。",
+            "inaccurate_items": [],
+            "missing_items": [
+              "结构化数据的定义与概念阐述",
+              "该章节下的具体正文内容与关键知识点"
+            ],
+            "suggestions": [
+              "优化文档切分策略（Chunking），避免将孤立的 Markdown 标题单独划分为一个分块",
+              "扩大检索上下文窗口或关联正文内容，确保召回包含标题对应正文的完整分块"
+            ]
+          }
+        ],
+        "summary": {
+          "total_chunks": 1,
+          "accurate_count": 1,
+          "complete_count": 0,
+          "accurate_rate": 100.0,
+          "complete_rate": 0.0
+        }
+      },
+      {
+        "chunk_index": 8,
+        "chunk_title": "expert",
+        "evaluations": [
+          {
+            "chunk_id": "chunk_expert_1",
+            "accuracy_score": 70,
+            "accuracy_verdict": "accurate",
+            "completeness_score": 25,
+            "completeness_verdict": "incomplete",
+            "root_cause": "retrieval_incomplete",
+            "reason": "该 chunk 标题对应 expert 章节，内容虽无事实性捏造，但仅包含高度简略的占位文本'A+B融合'，严重遗漏了该章节所需的实质性教学知识点与法条依据。",
+            "inaccurate_items": [],
+            "missing_items": [
+              "expert 章节的核心知识点详解与法律规范依据",
+              "具体应用场景、操作步骤或案例说明",
+              "完整的概念定义与逻辑推导"
+            ],
+            "suggestions": [
+              "补充该章节完整的专家级教学内容或详细知识切片",
+              "避免召回仅包含标签或简略词条的非实质性碎片"
+            ]
+          }
+        ],
+        "summary": {
+          "total_chunks": 1,
+          "accurate_count": 1,
+          "complete_count": 0,
+          "accurate_rate": 100.0,
+          "complete_rate": 0.0
+        }
+      },
+      {
+        "chunk_index": 9,
+        "chunk_title": "style",
+        "evaluations": [
+          {
+            "chunk_id": "chunk_style",
+            "accuracy_score": 85,
+            "accuracy_verdict": "accurate",
+            "completeness_score": 30,
+            "completeness_verdict": "incomplete",
+            "root_cause": "retrieval_incomplete",
+            "reason": "分块标题与内容结构无捏造或事实性错误，但仅包含单独的属性值字段，严重缺失该章节的实质性内容与上下文阐述。",
+            "inaccurate_items": [],
+            "missing_items": [
+              "style 章节的完整教学/规范正文",
+              "该属性（fused）的具体含义、适用场景及配置规则",
+              "相关上下文与前置要求"
+            ],
+            "suggestions": [
+              "扩充分块的切分粒度或检索召回范围，包含该章节的完整段落与实质说明"
+            ]
+          }
+        ],
+        "summary": {
+          "total_chunks": 1,
+          "accurate_count": 1,
+          "complete_count": 0,
+          "accurate_rate": 100.0,
+          "complete_rate": 0.0
+        }
+      },
+      {
+        "chunk_index": 10,
+        "chunk_title": "knowledge_points",
+        "evaluations": [
+          {
+            "chunk_id": "knowledge_points_patent_law_foundation",
+            "accuracy_score": 100,
+            "accuracy_verdict": "accurate",
+            "completeness_score": 95,
+            "completeness_verdict": "complete",
+            "root_cause": "normal",
+            "reason": "检索到的知识点清单准确且全面地覆盖了专利法基础模块的核心要素，包括基本特征、法律渊源体系、保护客体、制度宗旨及审查机制特点，内容真实权威且无事实偏差。",
+            "inaccurate_items": [],
+            "missing_items": [],
+            "suggestions": [
+              "知识点结构清晰，可直接作为专利基础概论章节教学与内容生成的有效上下文依据。"
+            ]
+          }
+        ],
+        "summary": {
+          "total_chunks": 1,
+          "accurate_count": 1,
+          "complete_count": 1,
+          "accurate_rate": 1.0,
+          "complete_rate": 1.0
+        }
+      },
+      {
+        "chunk_index": 11,
+        "chunk_title": "legal_basis",
+        "evaluations": [
+          {
+            "chunk_id": "legal_basis",
+            "accuracy_score": 100,
+            "accuracy_verdict": "accurate",
+            "completeness_score": 95,
+            "completeness_verdict": "complete",
+            "root_cause": "retrieval_normal",
+            "reason": "所引用的《专利法》第一条、第二条、第二十二条、第二十三条以及早期公开与实质审查规则表述准确无误，无捏造或张冠李戴，全面覆盖了专利保护客体、授权实质条件与审查程序的核心法律依据。",
+            "inaccurate_items": [],
+            "missing_items": [],
+            "suggestions": []
+          }
+        ],
+        "summary": {
+          "total_chunks": 1,
+          "accurate_count": 1,
+          "complete_count": 1,
+          "accurate_rate": 100.0,
+          "complete_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 12,
+        "chunk_title": "risks",
+        "evaluations": [
+          {
+            "chunk_id": "risks",
+            "accuracy_score": 100,
+            "accuracy_verdict": "accurate",
+            "completeness_score": 95,
+            "completeness_verdict": "complete",
+            "root_cause": "none",
+            "reason": "该分块内容完全符合专利法原理及实务规范，准确提炼了客体分类、外观设计法定要件（第23条）、新颖性与创造性审查界限（抵触申请适用规则）及侵权判定前置逻辑等高频易错点，覆盖完整且无事实错误。",
+            "inaccurate_items": [],
+            "missing_items": [],
+            "suggestions": []
+          }
+        ],
+        "summary": {
+          "total_chunks": 1,
+          "accurate_count": 1,
+          "complete_count": 1,
+          "accurate_rate": 100.0,
+          "complete_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 13,
+        "chunk_title": "draft_stage",
+        "evaluations": [
+          {
+            "chunk_id": "draft_stage_01",
+            "accuracy_score": 90,
+            "accuracy_verdict": "accurate",
+            "completeness_score": 35,
+            "completeness_verdict": "incomplete",
+            "root_cause": "retrieval_incomplete",
+            "reason": "分块标题与目标章节匹配且无捏造事实，但内容仅包含简短字段，严重缺失该阶段的具体知识点、操作规范与实质内容。",
+            "inaccurate_items": [],
+            "missing_items": [
+              "draft_stage 阶段的具体操作步骤与撰写要求",
+              "相关的专利法/审查指南依据与实质规范",
+              "阶段对应的上下文详细说明"
+            ],
+            "suggestions": [
+              "优化切分策略，确保 draft_stage 章节的完整正文内容被完整索引与召回",
+              "避免索引仅包含单字段或空结构的非实质性片段"
+            ]
+          }
+        ],
+        "summary": {
+          "total_chunks": 1,
+          "accurate_count": 1,
+          "complete_count": 0,
+          "accurate_rate": 100.0,
+          "complete_rate": 0.0
+        }
+      },
+      {
+        "chunk_index": 14,
+        "chunk_title": "irac",
+        "evaluations": [
+          {
+            "chunk_id": "irac",
+            "accuracy_score": 95,
+            "accuracy_verdict": "accurate",
+            "completeness_score": 95,
+            "completeness_verdict": "complete",
+            "root_cause": "retrieval_normal",
+            "reason": "该chunk所引用的《专利法》第一条、第二条、第二十二条、第二十三条及发明审查程序等法条与制度依据准确无误，IRAC逻辑链条完整且与问题高度契合。",
+            "inaccurate_items": [],
+            "missing_items": [],
+            "suggestions": []
+          }
+        ],
+        "summary": {
+          "total_chunks": 1,
+          "accurate_count": 1,
+          "complete_count": 1,
+          "accurate_rate": 100.0,
+          "complete_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 15,
+        "chunk_title": "interactive_questions",
+        "evaluations": [
+          {
+            "chunk_id": "interactive_questions",
+            "accuracy_score": 100,
+            "accuracy_verdict": "accurate",
+            "completeness_score": 100,
+            "completeness_verdict": "complete",
+            "root_cause": "retrieval_normal",
+            "reason": "题目内容完全符合《专利法》第二条规定及专利侵权分析基础逻辑，客体分类清晰准确，无事实性与法条错误，题型与认知梯度覆盖完整。",
+            "inaccurate_items": [],
+            "missing_items": [],
+            "suggestions": []
+          }
+        ],
+        "summary": {
+          "total_chunks": 1,
+          "accurate_count": 1,
+          "complete_count": 1,
+          "accurate_rate": 100.0,
+          "complete_rate": 100.0
+        }
+      },
+      {
+        "chunk_index": 16,
+        "chunk_title": "knowledge_synthesis",
+        "evaluations": [
+          {
+            "chunk_id": "knowledge_synthesis",
+            "accuracy_score": 100,
+            "accuracy_verdict": "accurate",
+            "completeness_score": 95,
+            "completeness_verdict": "complete",
+            "root_cause": "none",
+            "reason": "分块内容准确归纳了专利类型（发明/实用新型/外观设计）的区别特征、新颖性与创造性的判断差异，以及专利法第22条与第23条的法条适用界限，内容与专利法规定完全一致且要点完整。",
+            "inaccurate_items": [],
+            "missing_items": [],
+            "suggestions": []
+          }
+        ],
+        "summary": {
+          "total_chunks": 1,
+          "accurate_count": 1,
+          "complete_count": 1,
+          "accurate_rate": 100.0,
+          "complete_rate": 100.0
+        }
+      }
+    ],
+    "timestamp": "2026-08-27 14:58:25"
+  }
+}

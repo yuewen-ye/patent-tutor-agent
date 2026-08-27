@@ -1,0 +1,97 @@
+{
+  "session_id": "477c9ba272fc4135b3231041b44ea714",
+  "status": "completed",
+  "artifacts": [
+    {
+      "artifact_id": "477c9ba272fc4135b3231041b44ea714-round-01-learner_profile",
+      "kind": "learner_profile_report",
+      "path": "artifacts/sessions/477c9ba272fc4135b3231041b44ea714/profile/learner_profile.md",
+      "created_by": "diagnosis_feedback",
+      "title": "学习者画像报告",
+      "mime_type": "text/markdown",
+      "sha256": "c75727f789e2da9f5fda521db66988fad98501113dd92025ec388c8acf5e9a82",
+      "created_at": "2026-08-26T07:26:26.815153+00:00"
+    },
+    {
+      "artifact_id": "477c9ba272fc4135b3231041b44ea714-round-01-learning_path",
+      "kind": "learning_path_plan",
+      "path": "artifacts/sessions/477c9ba272fc4135b3231041b44ea714/path/learning_path.md",
+      "created_by": "planner",
+      "title": "学习路径规划",
+      "mime_type": "text/markdown",
+      "sha256": "e87ef9afd4194de87cb877ecf400baebaa5cba64739894b1e09daa19173e32a7",
+      "created_at": "2026-08-26T07:26:44.289664+00:00"
+    },
+    {
+      "artifact_id": "477c9ba272fc4135b3231041b44ea714-round-01-path_decision",
+      "kind": "learning_path_plan",
+      "path": "artifacts/sessions/477c9ba272fc4135b3231041b44ea714/path/path_decision.md",
+      "created_by": "planner",
+      "title": "学习路径决策指令",
+      "mime_type": "text/markdown",
+      "sha256": "ffe4a8f1dbe97d8cdf2d00b00efd80b78b63afd84df5ce9a95c880647212365b",
+      "created_at": "2026-08-26T07:26:44.290919+00:00"
+    },
+    {
+      "artifact_id": "477c9ba272fc4135b3231041b44ea714-round-01-dual_axis_snapshot",
+      "kind": "dual_axis_snapshot",
+      "path": "artifacts/sessions/477c9ba272fc4135b3231041b44ea714/path/dual_axis_snapshot.md",
+      "created_by": "planner",
+      "title": "双知识轴快照",
+      "mime_type": "text/markdown",
+      "sha256": "28034896b966ffe8399740fce0ca345a91db93fc0eb7ef5e04c20f2ff83190b1",
+      "created_at": "2026-08-26T07:26:44.291907+00:00"
+    },
+    {
+      "artifact_id": "477c9ba272fc4135b3231041b44ea714-round-01-retrieval_context",
+      "kind": "retrieval_context",
+      "path": "artifacts/sessions/477c9ba272fc4135b3231041b44ea714/round-01/retrieval_context.md",
+      "created_by": "retrieve_context",
+      "title": "RAG 检索上下文",
+      "mime_type": "text/markdown",
+      "sha256": "77f793628933b0bc54ba2fab31e730c76a72de2157eef0e311c5c71df5a0962e",
+      "created_at": "2026-08-26T07:28:18.817460+00:00"
+    },
+    {
+      "artifact_id": "477c9ba272fc4135b3231041b44ea714-round-01-course_package",
+      "kind": "course_package",
+      "path": "artifacts/sessions/477c9ba272fc4135b3231041b44ea714/round-01/course_package.md",
+      "created_by": "expert_a",
+      "title": "整合后的课程完整内容与习题",
+      "mime_type": "text/markdown",
+      "sha256": "b0a9ed329465b3ac21c0469b9abcb186f75976c10e966973473bb519d80b79e0",
+      "created_at": "2026-08-26T07:28:18.819921+00:00"
+    },
+    {
+      "artifact_id": "477c9ba272fc4135b3231041b44ea714-round-01-judge_report",
+      "kind": "judge_report",
+      "path": "artifacts/sessions/477c9ba272fc4135b3231041b44ea714/round-01/judge_report.md",
+      "created_by": "judge",
+      "title": "审核裁判报告",
+      "mime_type": "text/markdown",
+      "sha256": "247d0b29a93995d3206a3062fbae3709a7b746fbf5cd961ecef0c36e8495361a",
+      "created_at": "2026-08-26T07:28:49.659052+00:00"
+    },
+    {
+      "artifact_id": "477c9ba272fc4135b3231041b44ea714-questionnaire",
+      "kind": "questionnaire",
+      "path": "artifacts/sessions/477c9ba272fc4135b3231041b44ea714/onboarding/questionnaire.md",
+      "created_by": "diagnosis_feedback",
+      "title": "新学员初始诊断问卷",
+      "mime_type": "text/markdown",
+      "sha256": "1a9bf683df3555fb6dfa1a4ef545285d84f5f842c608bbdcab9643bf6d5664d6",
+      "created_at": "2026-08-26T07:26:11.002840+00:00"
+    },
+    {
+      "artifact_id": "477c9ba272fc4135b3231041b44ea714-submission",
+      "kind": "questionnaire_submission",
+      "path": "artifacts/sessions/477c9ba272fc4135b3231041b44ea714/onboarding/submission.md",
+      "created_by": "learner",
+      "title": "新学员问卷提交",
+      "mime_type": "text/markdown",
+      "sha256": "35910d489e63fd416330c8d5fbfd8aab4a6183f0d7e4056c4b5c9e614bdb646b",
+      "created_at": "2026-08-26T07:26:11.004556+00:00"
+    }
+  ],
+  "updated_at": "2026-08-26T07:28:49.827675+00:00"
+}

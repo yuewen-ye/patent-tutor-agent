@@ -1,0 +1,1722 @@
+{
+  "session_id": "afab73c8e10d4ab2b40cde3a33c63e82",
+  "status": "completed",
+  "learner_id": "multi-N",
+  "state": {
+    "session_id": "afab73c8e10d4ab2b40cde3a33c63e82",
+    "user_input": "[{\"question_id\": \"q1\", \"answer\": \"D\", \"selected_option\": null, \"response_ms\": null, \"idempotency_key\": null, \"observed_correct\": null, \"skill_id\": \"patent-law-foundation\", \"skill_ids\": null, \"is_subjective\": false}, {\"question_id\": \"q2\", \"answer\": \"B\", \"selected_option\": null, \"response_ms\": null, \"idempotency_key\": null, \"observed_correct\": null, \"skill_id\": \"related-laws\", \"skill_ids\": null, \"is_subjective\": false}, {\"question_id\": \"q3\", \"answer\": \"C\", \"selected_option\": null, \"response_ms\": null, \"idempotency_key\": null, \"observed_correct\": null, \"skill_id\": \"patent-law-foundation\", \"skill_ids\": null, \"is_subjective\": false}]",
+    "events": [
+      {
+        "node": "route",
+        "status": "completed",
+        "message": "rag_tool_enabled=true (deployment setting)",
+        "timestamp": null,
+        "error_code": null,
+        "duration_ms": null
+      },
+      {
+        "node": "diagnosis_feedback",
+        "status": "completed",
+        "message": "updated profile from backend BKT and LLM non-knowledge feedback",
+        "timestamp": "2026-08-26T07:29:38.110689+00:00",
+        "error_code": null,
+        "duration_ms": 29416
+      }
+    ],
+    "artifacts": [
+      {
+        "artifact_id": "afab73c8e10d4ab2b40cde3a33c63e82-round-01-feedback_result",
+        "kind": "feedback_report",
+        "path": "artifacts/sessions/afab73c8e10d4ab2b40cde3a33c63e82/feedback/feedback_report.md",
+        "created_by": "diagnosis_feedback",
+        "title": "反馈分析报告",
+        "mime_type": "text/markdown",
+        "sha256": "6cddd5f36c7cb81039346323434167e20403f5239fc46045b6a3e75acc62de31",
+        "created_at": "2026-08-26T07:29:38.112909+00:00"
+      },
+      {
+        "artifact_id": "afab73c8e10d4ab2b40cde3a33c63e82-round-01-learner_profile_update",
+        "kind": "feedback_report",
+        "path": "artifacts/sessions/afab73c8e10d4ab2b40cde3a33c63e82/feedback/learner_profile_update.md",
+        "created_by": "diagnosis_feedback",
+        "title": "学情画像更新",
+        "mime_type": "text/markdown",
+        "sha256": "24fdce4e583b3fa79f2e4b5793078d597e6cc78fc2276418ac8e48fe1cc4c1ee",
+        "created_at": "2026-08-26T07:29:38.115181+00:00"
+      },
+      {
+        "artifact_id": "afab73c8e10d4ab2b40cde3a33c63e82-round-01-grading_report",
+        "kind": "feedback_report",
+        "path": "artifacts/sessions/afab73c8e10d4ab2b40cde3a33c63e82/feedback/grading_report.md",
+        "created_by": "diagnosis_feedback",
+        "title": "练习评分报告",
+        "mime_type": "text/markdown",
+        "sha256": "90930040b0f6626ddca0e7d33c63b2e4dcc2f260be22ca3734f3528fa9cab875",
+        "created_at": "2026-08-26T07:29:38.117005+00:00"
+      },
+      {
+        "artifact_id": "afab73c8e10d4ab2b40cde3a33c63e82-exercise_submission",
+        "kind": "exercise_submission",
+        "path": "artifacts/sessions/afab73c8e10d4ab2b40cde3a33c63e82/feedback/exercise_submission.md",
+        "created_by": "learner",
+        "title": "练习提交",
+        "mime_type": "text/markdown",
+        "sha256": "7d00d1dd6c25355527cacc0e79925d5f9f164b0bb3d340060179b49391ab6615",
+        "created_at": "2026-08-26T07:29:08.580964+00:00"
+      }
+    ],
+    "learner_profile_update": {
+      "education_background": "法学背景+系统学过程序法",
+      "knowledge_level": "intermediate",
+      "learning_style": "偏好从法条原文出发、系统化递进学习，喜欢文字表述与严谨推理框架",
+      "weak_points": [],
+      "learning_goal": "以审查与代理双视角复盘专利实务，并跟踪审查实践与跨法域新动向",
+      "error_pattern": null,
+      "confidence": 0.2315,
+      "five_dimensions": {
+        "knowledge": {
+          "patent-law-foundation": {
+            "pl": 0.9981,
+            "ci_low": 0.2914,
+            "ci_high": 0.9915,
+            "observations": 2,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "patent-system-overview": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "patent-law-framework": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "patent-rights-nature": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "patentability-substantive": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "novelty": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "prior-art-definition": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "conflicting-application": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "grace-period": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "inventive-step": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "three-step-method": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "person-skilled-in-art": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "practical-applicability": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "design-patentability": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "non-patentable-subject": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "scientific-discovery-vs-invention": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "medical-method-exclusion": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "public-order-morality": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "patent-application-process": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "application-documents": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "specification-requirements": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "claims-drafting-basics": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "priority-right": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "filing-date": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "divisional-application": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "patent-examination": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "preliminary-examination": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "substantive-examination": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "office-action-response": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "amendment-limits": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "patent-reexamination": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "reexamination-request": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "collegial-review": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "patent-invalidation": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "invalidation-grounds": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "oral-proceeding": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "patent-rights-protection": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "protection-scope": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "doctrine-of-equivalents": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "claim-interpretation": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "infringement-types": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "infringement-defenses": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "bolar-exemption": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "prior-use-right": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "remedies": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "patent-agency-practice": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "claims-drafting-advanced": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "oa-response-practice": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "invalidation-practice": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "related-laws": {
+            "pl": 0.9602,
+            "ci_low": 0.1482,
+            "ci_high": 0.9851,
+            "observations": 1,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "civil-law-basics": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "contract-law-tech": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "administrative-procedure": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "civil-procedure": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "trips-agreement": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "pct-system": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "pct-filing": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "pct-national-phase": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "foreign-priority": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "domestic-priority": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "scientific-research-exemption": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "direct-infringement": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "indirect-infringement": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "independent-claim": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "dependent-claim": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "employee-invention": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "exhaustion-of-rights": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "implied-license": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "general-consumer": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          }
+        },
+        "cognition": {
+          "remember": 0.85,
+          "understand": 0.72,
+          "apply": 0.52,
+          "analyze": 0.38,
+          "evaluate": 0.22,
+          "create": 0.12,
+          "method": "根据本轮全部正确作答与历史画像综合推断，样本量小，置信度有限"
+        },
+        "style": {
+          "perception": {
+            "chosen": "sensing",
+            "strength": 0.65
+          },
+          "input": {
+            "chosen": "verbal",
+            "strength": 0.72
+          },
+          "processing": {
+            "chosen": "reflective",
+            "strength": 0.62
+          },
+          "understanding": {
+            "chosen": "sequential",
+            "strength": 0.75
+          }
+        },
+        "progress": {
+          "completed_nodes": [],
+          "current_node": "patent-law-foundation",
+          "pending_nodes": [
+            "related-laws",
+            "civil-law-basics"
+          ],
+          "avg_time_per_node_min": null,
+          "overall_completion_ratio": 0.0
+        },
+        "affect": {
+          "primary_state": "focused",
+          "confidence": 0.6,
+          "signals": [
+            "问卷显示对自己信心较强",
+            "偏好客观反馈，情感需求低",
+            "当前阶段为已通过部分科目冲刺期，学习动机明确",
+            "连续三题正确作答"
+          ]
+        }
+      },
+      "markdown_artifact": {
+        "artifact_id": "afab73c8e10d4ab2b40cde3a33c63e82-round-01-learner_profile_update",
+        "kind": "feedback_report",
+        "path": "artifacts/sessions/afab73c8e10d4ab2b40cde3a33c63e82/feedback/learner_profile_update.md",
+        "created_by": "diagnosis_feedback",
+        "title": "学情画像更新",
+        "mime_type": "text/markdown",
+        "sha256": "24fdce4e583b3fa79f2e4b5793078d597e6cc78fc2276418ac8e48fe1cc4c1ee",
+        "created_at": "2026-08-26T07:29:38.115181+00:00"
+      },
+      "profile_update_hint": "本轮三题全部正确，patent-law-foundation 与 related-laws 的后端掌握度显著提升，但观测次数有限，需通过后续变式题验证稳定性；非知识维度中学习风格保持稳定，情感状态聚焦。"
+    },
+    "grading_report": [
+      {
+        "question_id": "q1",
+        "observed_correct": true,
+        "result": "correct"
+      },
+      {
+        "question_id": "q2",
+        "observed_correct": true,
+        "result": "correct"
+      },
+      {
+        "question_id": "q3",
+        "observed_correct": true,
+        "result": "correct"
+      }
+    ],
+    "retrieval_context": [],
+    "rag_tool_enabled": true,
+    "revision_round": 0,
+    "feedback_result": {
+      "questionnaire": [
+        "在专利法基础中，判断新颖性时，若对比文件公开了与申请完全相同的技术方案，但该对比文件申请日早于申请日、公开日晚于申请日，该对比文件属于何种现有技术？请简要说明理由。",
+        "你认为'相关法'中与专利实务最紧密的法律规范主要涉及哪些方面？请列举并解释其与专利审查的关联。"
+      ],
+      "teaching_evaluation": {
+        "questions": [
+          "本轮练习的难度是否适中？",
+          "讲解或题目的表述是否清晰？",
+          "您希望下一轮是继续强化基础还是进入新知识点？"
+        ],
+        "evaluation_signals": [
+          "等待学习者反馈"
+        ],
+        "feeds": "用于调整下一轮教学节奏与内容适配"
+      },
+      "next_action": "继续强化当前节点 patent-law-foundation",
+      "profile_update_hint": "本轮三题全部正确，patent-law-foundation 与 related-laws 的后端掌握度显著提升，但观测次数有限，需通过后续变式题验证稳定性；非知识维度中学习风格保持稳定，情感状态聚焦。",
+      "five_dimensions": {
+        "knowledge": {
+          "patent-law-foundation": {
+            "pl": 0.9981,
+            "ci_low": 0.2914,
+            "ci_high": 0.9915,
+            "observations": 2,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "patent-system-overview": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "patent-law-framework": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "patent-rights-nature": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "patentability-substantive": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "novelty": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "prior-art-definition": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "conflicting-application": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "grace-period": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "inventive-step": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "three-step-method": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "person-skilled-in-art": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "practical-applicability": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "design-patentability": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "non-patentable-subject": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "scientific-discovery-vs-invention": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "medical-method-exclusion": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "public-order-morality": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "patent-application-process": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "application-documents": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "specification-requirements": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "claims-drafting-basics": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "priority-right": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "filing-date": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "divisional-application": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "patent-examination": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "preliminary-examination": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "substantive-examination": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "office-action-response": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "amendment-limits": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "patent-reexamination": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "reexamination-request": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "collegial-review": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "patent-invalidation": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "invalidation-grounds": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "oral-proceeding": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "patent-rights-protection": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "protection-scope": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "doctrine-of-equivalents": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "claim-interpretation": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "infringement-types": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "infringement-defenses": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "bolar-exemption": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "prior-use-right": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "remedies": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "patent-agency-practice": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "claims-drafting-advanced": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "oa-response-practice": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "invalidation-practice": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "related-laws": {
+            "pl": 0.9602,
+            "ci_low": 0.1482,
+            "ci_high": 0.9851,
+            "observations": 1,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "civil-law-basics": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "contract-law-tech": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "administrative-procedure": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "civil-procedure": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "trips-agreement": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "pct-system": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "pct-filing": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "pct-national-phase": {
+            "pl": 0.4,
+            "ci_low": 0.1,
+            "ci_high": 0.7,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": true
+          },
+          "foreign-priority": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "domestic-priority": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "scientific-research-exemption": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "direct-infringement": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "indirect-infringement": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "independent-claim": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "dependent-claim": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "employee-invention": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "exhaustion-of-rights": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "implied-license": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          },
+          "general-consumer": {
+            "pl": 0.15,
+            "ci_low": 0.02,
+            "ci_high": 0.4,
+            "observations": 0,
+            "low_confidence": true,
+            "inferred": false
+          }
+        },
+        "cognition": {
+          "remember": 0.85,
+          "understand": 0.72,
+          "apply": 0.52,
+          "analyze": 0.38,
+          "evaluate": 0.22,
+          "create": 0.12,
+          "method": "根据本轮全部正确作答与历史画像综合推断，样本量小，置信度有限"
+        },
+        "style": {
+          "perception": {
+            "chosen": "sensing",
+            "strength": 0.65
+          },
+          "input": {
+            "chosen": "verbal",
+            "strength": 0.72
+          },
+          "processing": {
+            "chosen": "reflective",
+            "strength": 0.62
+          },
+          "understanding": {
+            "chosen": "sequential",
+            "strength": 0.75
+          }
+        },
+        "progress": {
+          "completed_nodes": [],
+          "current_node": "patent-law-foundation",
+          "pending_nodes": [
+            "related-laws",
+            "civil-law-basics"
+          ],
+          "avg_time_per_node_min": null,
+          "overall_completion_ratio": 0.0
+        },
+        "affect": {
+          "primary_state": "focused",
+          "confidence": 0.6,
+          "signals": [
+            "问卷显示对自己信心较强",
+            "偏好客观反馈，情感需求低",
+            "当前阶段为已通过部分科目冲刺期，学习动机明确",
+            "连续三题正确作答"
+          ]
+        }
+      },
+      "bkt_update": {
+        "skill_id": "patent-law-foundation",
+        "observed_correct": true,
+        "error_pattern": null,
+        "confidence": 0.55
+      },
+      "learning_progress": {
+        "current_node_before": "patent-law-foundation",
+        "current_node_after": "patent-law-foundation",
+        "completed_node_id": null,
+        "advanced": false,
+        "path_completed": false,
+        "reason": "service-verified course-feedback provenance is missing",
+        "plan_id": "fa2009e830e54cd7b2d90a79b95c2787",
+        "plan_version": 1
+      },
+      "markdown_artifact": {
+        "artifact_id": "afab73c8e10d4ab2b40cde3a33c63e82-round-01-feedback_result",
+        "kind": "feedback_report",
+        "path": "artifacts/sessions/afab73c8e10d4ab2b40cde3a33c63e82/feedback/feedback_report.md",
+        "created_by": "diagnosis_feedback",
+        "title": "反馈分析报告",
+        "mime_type": "text/markdown",
+        "sha256": "6cddd5f36c7cb81039346323434167e20403f5239fc46045b6a3e75acc62de31",
+        "created_at": "2026-08-26T07:29:38.112909+00:00"
+      }
+    },
+    "teach_phase": "single_agent",
+    "workflow_mode": "feedback",
+    "input_payload": {
+      "course_session_id": "477c9ba272fc4135b3231041b44ea714",
+      "exercise_responses": [
+        {
+          "question_id": "q1",
+          "answer": "D",
+          "selected_option": null,
+          "response_ms": null,
+          "idempotency_key": null,
+          "observed_correct": true,
+          "skill_id": "patent-law-foundation",
+          "skill_ids": [
+            "patent-law-foundation"
+          ],
+          "is_subjective": false
+        },
+        {
+          "question_id": "q2",
+          "answer": "B",
+          "selected_option": null,
+          "response_ms": null,
+          "idempotency_key": null,
+          "observed_correct": true,
+          "skill_id": "related-laws",
+          "skill_ids": [
+            "related-laws"
+          ],
+          "is_subjective": false
+        },
+        {
+          "question_id": "q3",
+          "answer": "C",
+          "selected_option": null,
+          "response_ms": null,
+          "idempotency_key": null,
+          "observed_correct": true,
+          "skill_id": "patent-law-foundation",
+          "skill_ids": [
+            "patent-law-foundation"
+          ],
+          "is_subjective": false
+        }
+      ],
+      "bkt_updates": [
+        {
+          "skill_id": "patent-law-foundation",
+          "observed_correct": true,
+          "prior_pl": 0.4,
+          "predicted_pl": 0.6699999999999999,
+          "posterior_pl": 0.9601749886860763,
+          "updated_pl": 0.9601749886860763,
+          "observations": 1,
+          "correct_count": 1,
+          "incorrect_count": 0,
+          "p_init": 0.4,
+          "p_transit": 0.44999999999999996,
+          "p_guess": 0.08,
+          "p_slip": 0.05,
+          "model_version": "bkt-cat-v1",
+          "knowledge_state": {
+            "pl": 0.9602,
+            "ci_low": 0.1482,
+            "ci_high": 0.9851,
+            "observations": 1,
+            "low_confidence": true,
+            "inferred": false
+          }
+        },
+        {
+          "skill_id": "related-laws",
+          "observed_correct": true,
+          "prior_pl": 0.4,
+          "predicted_pl": 0.6699999999999999,
+          "posterior_pl": 0.9601749886860763,
+          "updated_pl": 0.9601749886860763,
+          "observations": 1,
+          "correct_count": 1,
+          "incorrect_count": 0,
+          "p_init": 0.4,
+          "p_transit": 0.44999999999999996,
+          "p_guess": 0.08,
+          "p_slip": 0.05,
+          "model_version": "bkt-cat-v1",
+          "knowledge_state": {
+            "pl": 0.9602,
+            "ci_low": 0.1482,
+            "ci_high": 0.9851,
+            "observations": 1,
+            "low_confidence": true,
+            "inferred": false
+          }
+        },
+        {
+          "skill_id": "patent-law-foundation",
+          "observed_correct": true,
+          "prior_pl": 0.9601749886860763,
+          "predicted_pl": 0.978096243777342,
+          "posterior_pl": 0.9981177159935481,
+          "updated_pl": 0.9981177159935481,
+          "observations": 2,
+          "correct_count": 2,
+          "incorrect_count": 0,
+          "p_init": 0.4,
+          "p_transit": 0.44999999999999996,
+          "p_guess": 0.08,
+          "p_slip": 0.05,
+          "model_version": "bkt-cat-v1",
+          "knowledge_state": {
+            "pl": 0.9981,
+            "ci_low": 0.2914,
+            "ci_high": 0.9915,
+            "observations": 2,
+            "low_confidence": true,
+            "inferred": false
+          }
+        }
+      ],
+      "mastery_snapshot": {
+        "administrative-procedure": {
+          "pl": 0.4,
+          "ci_low": 0.1,
+          "ci_high": 0.7,
+          "observations": 0,
+          "low_confidence": true,
+          "inferred": true
+        },
+        "amendment-limits": {
+          "pl": 0.4,
+          "ci_low": 0.1,
+          "ci_high": 0.7,
+          "observations": 0,
+          "low_confidence": true,
+          "inferred": true
+        },
+        "bolar-exemption": {
+          "pl": 0.4,
+          "ci_low": 0.1,
+          "ci_high": 0.7,
+          "observations": 0,
+          "low_confidence": true,
+          "inferred": true
+        },
+        "civil-law-basics": {
+          "pl": 0.4,
+          "ci_low": 0.1,
+          "ci_high": 0.7,
+          "observations": 0,
+          "low_confidence": true,
+          "inferred": true
+        },
+        "civil-procedure": {
+          "pl": 0.4,
+          "ci_low": 0.1,
+          "ci_high": 0.7,
+          "observations": 0,
+          "low_confidence": true,
+          "inferred": true
+        },
+        "claims-drafting-basics": {
+          "pl": 0.4,
+          "ci_low": 0.1,
+          "ci_high": 0.7,
+          "observations": 0,
+          "low_confidence": true,
+          "inferred": true
+        },
+        "conflicting-application": {
+          "pl": 0.4,
+          "ci_low": 0.1,
+          "ci_high": 0.7,
+          "observations": 0,
+          "low_confidence": true,
+          "inferred": true
+        },
+        "divisional-application": {
+          "pl": 0.4,
+          "ci_low": 0.1,
+          "ci_high": 0.7,
+          "observations": 0,
+          "low_confidence": true,
+          "inferred": true
+        },
+        "doctrine-of-equivalents": {
+          "pl": 0.4,
+          "ci_low": 0.1,
+          "ci_high": 0.7,
+          "observations": 0,
+          "low_confidence": true,
+          "inferred": true
+        },
+        "non-patentable-subject": {
+          "pl": 0.4,
+          "ci_low": 0.1,
+          "ci_high": 0.7,
+          "observations": 0,
+          "low_confidence": true,
+          "inferred": true
+        },
+        "office-action-response": {
+          "pl": 0.4,
+          "ci_low": 0.1,
+          "ci_high": 0.7,
+          "observations": 0,
+          "low_confidence": true,
+          "inferred": true
+        },
+        "patent-agency-practice": {
+          "pl": 0.4,
+          "ci_low": 0.1,
+          "ci_high": 0.7,
+          "observations": 0,
+          "low_confidence": true,
+          "inferred": true
+        },
+        "patent-invalidation": {
+          "pl": 0.4,
+          "ci_low": 0.1,
+          "ci_high": 0.7,
+          "observations": 0,
+          "low_confidence": true,
+          "inferred": true
+        },
+        "patent-law-foundation": {
+          "pl": 0.9981,
+          "ci_low": 0.2914,
+          "ci_high": 0.9915,
+          "observations": 2,
+          "low_confidence": true,
+          "inferred": false
+        },
+        "patent-rights-nature": {
+          "pl": 0.4,
+          "ci_low": 0.1,
+          "ci_high": 0.7,
+          "observations": 0,
+          "low_confidence": true,
+          "inferred": true
+        },
+        "pct-national-phase": {
+          "pl": 0.4,
+          "ci_low": 0.1,
+          "ci_high": 0.7,
+          "observations": 0,
+          "low_confidence": true,
+          "inferred": true
+        },
+        "priority-right": {
+          "pl": 0.4,
+          "ci_low": 0.1,
+          "ci_high": 0.7,
+          "observations": 0,
+          "low_confidence": true,
+          "inferred": true
+        },
+        "related-laws": {
+          "pl": 0.9602,
+          "ci_low": 0.1482,
+          "ci_high": 0.9851,
+          "observations": 1,
+          "low_confidence": true,
+          "inferred": false
+        },
+        "trips-agreement": {
+          "pl": 0.4,
+          "ci_low": 0.1,
+          "ci_high": 0.7,
+          "observations": 0,
+          "low_confidence": true,
+          "inferred": true
+        }
+      },
+      "learning_path": [
+        {
+          "node_id": "patent-law-foundation",
+          "node_name": "专利法律制度基础",
+          "duration_min": 180,
+          "strategy": "按知识依赖学习，完成节点练习后再进入下一节点",
+          "prerequisites": [],
+          "difficulty_cap": "L2",
+          "target_ability": null,
+          "assessment": null,
+          "markdown_artifact": null,
+          "knowledge_points": [
+            "专利制度的基本概念与特征：独占性、时间性、地域性（详见子节点 patent-rights-nature）",
+            "中国专利制度体系：专利法、专利法实施细则、专利审查指南（详见子节点 patent-law-framework）",
+            "专利保护的三种客体：发明、实用新型、外观设计（专利法第2条）",
+            "专利制度的作用：激励发明创造、促进技术公开、推动技术应用和经济发展（详见子节点 patent-system-overview）",
+            "中国专利制度发展历程与特点：早期公开延迟审查、初步审查制与实质审查制并存（详见子节点 patent-system-overview）"
+          ]
+        },
+        {
+          "node_id": "related-laws",
+          "node_name": "相关法律知识",
+          "duration_min": 240,
+          "strategy": "按知识依赖学习，完成节点练习后再进入下一节点",
+          "prerequisites": [
+            "patent-law-foundation"
+          ],
+          "difficulty_cap": "L3",
+          "target_ability": null,
+          "assessment": null,
+          "markdown_artifact": null,
+          "knowledge_points": [
+            "相关法律知识的考查范围：民法、合同法、民事诉讼法、行政法与行政诉讼、TRIPS协定等（专利代理师资格考试科目）",
+            "与专利法的关系：相关法律为专利代理执业提供基础法律框架",
+            "常见考点：民事法律行为效力、合同违约责任、诉讼时效、行政复议与行政诉讼程序（详见子节点 civil-law-basics、contract-law-tech、civil-procedure、administrative-procedure、trips-agreement）"
+          ]
+        },
+        {
+          "node_id": "civil-law-basics",
+          "node_name": "民法基础",
+          "duration_min": 60,
+          "strategy": "按知识依赖学习，完成节点练习后再进入下一节点",
+          "prerequisites": [
+            "related-laws"
+          ],
+          "difficulty_cap": "L3",
+          "target_ability": null,
+          "assessment": null,
+          "markdown_artifact": null,
+          "knowledge_points": [
+            "民法调整的范围：平等主体之间的人身关系和财产关系（民法典）",
+            "民事权利能力与行为能力：自然人自出生具有权利能力；行为能力分完全、限制、无民事行为能力",
+            "民事法律行为的效力：有效、无效、可撤销、效力待定的区分",
+            "代理制度：委托代理、法定代理，无权代理与表见代理的效力",
+            "民事责任：违约责任与侵权责任的构成和承担",
+            "诉讼时效：一般诉讼时效为三年，自权利人知道或应当知道权利受损及义务人之日起计算",
+            "宣告失踪和宣告死亡制度的基本规则"
+          ]
+        }
+      ],
+      "learning_progress_update": {
+        "completed_nodes": [],
+        "completion_sessions": {},
+        "current_node": "patent-law-foundation",
+        "pending_nodes": [
+          "related-laws",
+          "civil-law-basics"
+        ],
+        "avg_time_per_node_min": null,
+        "overall_completion_ratio": 0.0
+      },
+      "learning_progress_decision": {
+        "current_node_before": "patent-law-foundation",
+        "current_node_after": "patent-law-foundation",
+        "completed_node_id": null,
+        "advanced": false,
+        "path_completed": false,
+        "reason": "service-verified course-feedback provenance is missing",
+        "plan_id": "fa2009e830e54cd7b2d90a79b95c2787",
+        "plan_version": 1
+      }
+    },
+    "parent_session_id": "477c9ba272fc4135b3231041b44ea714",
+    "diagnosis_feedback_phase": "feedback",
+    "expert_phase": "draft",
+    "workflow_status": "completed"
+  },
+  "error": null,
+  "created_at": "2026-08-26T07:29:08.511465+00:00",
+  "updated_at": "2026-08-26T07:29:38.188291+00:00"
+}
