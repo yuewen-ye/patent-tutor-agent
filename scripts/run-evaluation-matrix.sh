@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 并行运行 normal、no-rag、no-rerank、single-model 四个完全隔离的 Docker Compose 评测栈。
+# 并行运行 normal、no-rag、no-rerank、single-model、no-debate 五个完全隔离的 Docker Compose 评测栈。
 #
 # 用法（Linux/macOS，需 docker compose v2 插件）：
 #   ./scripts/run-evaluation-matrix.sh
@@ -13,7 +13,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-EXPERIMENTS=(normal no-rag no-rerank single-model)
+EXPERIMENTS=(normal no-rag no-rerank single-model no-debate)
 PROFILES=""
 TARGET_ROUND=""
 KEEP_STACKS=0
@@ -22,7 +22,7 @@ usage() {
     cat <<'EOF'
 用法: run-evaluation-matrix.sh [选项]
 
-  --experiments normal,no-rag   要运行的实验组（逗号分隔，默认: normal,no-rag,no-rerank,single-model）
+  --experiments normal,no-rag   要运行的实验组（逗号分隔，默认: normal,no-rag,no-rerank,single-model,no-debate）
   --profiles 6-9-10-13-15       画像编号（覆盖 env 文件中的 EVAL_PROFILES）
   --round 3                     目标轮次（覆盖 env 文件中的 EVAL_TARGET_ROUND）
   --keep-stacks                 运行结束后保留容器/网络，便于排障
@@ -92,7 +92,7 @@ for exp in "${EXPERIMENTS[@]}"; do
         exit 1
     fi
 
-    LOG_DIR="$ROOT/artifacts/evaluation/$exp"
+    LOG_DIR="$ROOT/artifacts/evaluation/$exp/results"
     mkdir -p "$LOG_DIR"
 
     echo "启动 $exp ..."
@@ -105,6 +105,9 @@ for exp in "${EXPERIMENTS[@]}"; do
         set -a
         . "$ENV_FILE"
         set +a
+        # compose 文件含 bootrun 服务（外部 LLM 评估用），其 LEARNER_PREFIX 是
+        # 必填插值变量；课程矩阵不跑 bootrun，但解析整份文件时需要它，从组前缀同步。
+        export LEARNER_PREFIX="$EVAL_LEARNER_PREFIX"
         # CLI 参数优先级最高（在 source 之后导出，覆盖组 env 默认值）。
         if [[ -n "$PROFILES" ]]; then
             export EVAL_PROFILES="$PROFILES"
@@ -127,9 +130,9 @@ for entry in "${PIDS[@]}"; do
     exp="${entry%%:*}"
     pid="${entry##*:}"
     if wait "$pid"; then
-        echo "完成 $exp；日志: artifacts/evaluation/$exp/compose.log"
+        echo "完成 $exp；日志: artifacts/evaluation/$exp/results/compose.log"
     else
-        echo "失败 $exp；日志: artifacts/evaluation/$exp/compose.log" >&2
+        echo "失败 $exp；日志: artifacts/evaluation/$exp/results/compose.log" >&2
         FAILED+=("$exp")
     fi
 done

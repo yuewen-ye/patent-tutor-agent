@@ -1,14 +1,14 @@
 # Docker 并行评测操作指南
 
-四组评测（`normal` / `no-rag` / `no-rerank` / `single-model`）并行运行，每组一套独立的
-`MySQL + backend + evaluator` 容器，互不干扰。所有组已统一：画像 `6-9-10-13-15`、跑 3 轮、
+五组评测（`normal` / `no-rag` / `no-rerank` / `single-model` / `no-debate`）并行运行，每组一套独立的
+`MySQL + backend + evaluator` 容器，互不干扰。所有组已统一：画像 `6-9-10`、跑 5 轮、
 关闭 PPT/课件节点。下面按步骤照做即可。
 
 ## 第一步：准备
 
 1. 确认 Docker 可用：`docker compose version`（需要 compose v2 插件）。
 2. 仓库根目录 `.env` 已配置 LLM key，`config/agents.yaml` 存在。
-3. 想改画像/轮次：编辑 `docker/evaluation/*.env` 里的 `EVAL_PROFILES` 和 `EVAL_TARGET_ROUND`（默认已是 `6-9-10-13-15` / `3`）。
+3. 想改画像/轮次：编辑 `docker/evaluation/*.env` 里的 `EVAL_PROFILES` 和 `EVAL_TARGET_ROUND`（默认已是 `6-9-10` / `5`）。
 
 ## 第二步：准备模型卷（只做一次）
 
@@ -30,7 +30,7 @@ docker compose -p evaluation-bootstrap --env-file .env --env-file docker/evaluat
 
 成功后再跑完整矩阵。
 
-## 第四步：并行运行全部四组
+## 第四步：并行运行全部五组
 
 ```bash
 ./scripts/run-evaluation-matrix.sh
@@ -42,7 +42,7 @@ docker compose -p evaluation-bootstrap --env-file .env --env-file docker/evaluat
 ./scripts/run-evaluation-matrix.sh --experiments normal,no-rag --profiles 6-9-10-13-15 --round 3
 ```
 
-脚本行为：每组日志写入 `artifacts/evaluation/<组>/compose.log`，全部结束后自动清理容器
+脚本行为：每组日志写入 `artifacts/evaluation/<组>/results/compose.log`（与评测产物同目录），全部结束后自动清理容器
 （保留数据卷，方便复查）。
 
 ## 第五步：运行中/运行后查看容器日志
@@ -86,6 +86,14 @@ docker logs -f evaluation-single-model-evaluator-1
 docker logs -f evaluation-single-model-mysql-1
 ```
 
+**no-debate 组**
+
+```bash
+docker logs -f evaluation-no-debate-backend-1
+docker logs -f evaluation-no-debate-evaluator-1
+docker logs -f evaluation-no-debate-mysql-1
+```
+
 只看最近 N 行、不跟随：把 `-f` 换成 `--tail 200`，例如
 
 ```bash
@@ -122,6 +130,13 @@ docker compose -p evaluation-single-model --env-file .env --env-file docker/eval
   -f docker-compose.evaluation.yml logs -f backend evaluator
 ```
 
+**no-debate 组**
+
+```bash
+docker compose -p evaluation-no-debate --env-file .env --env-file docker/evaluation/no-debate.env \
+  -f docker-compose.evaluation.yml logs -f backend evaluator
+```
+
 想连 MySQL 一起看，把末尾的 `backend evaluator` 换成 `backend evaluator mysql`。
 
 ### 容器状态一览（只看评测相关）
@@ -132,14 +147,15 @@ docker ps -a --filter name=evaluation- --format '{{.Names}}\t{{.Status}}'
 
 ### 运行结束后（容器已被清理）看落盘日志
 
-每组运行全过程写入 `artifacts/evaluation/<组>/compose.log`（构建输出、容器生命周期、
+每组运行全过程写入 `artifacts/evaluation/<组>/results/compose.log`（构建输出、容器生命周期、
 evaluator 进度；backend 自己的 stdout 需在运行中及时用 `docker logs` 看）：
 
 ```bash
-tail -f artifacts/evaluation/normal/compose.log
-tail -f artifacts/evaluation/no-rag/compose.log
-tail -f artifacts/evaluation/no-rerank/compose.log
-tail -f artifacts/evaluation/single-model/compose.log
+tail -f artifacts/evaluation/normal/results/compose.log
+tail -f artifacts/evaluation/no-rag/results/compose.log
+tail -f artifacts/evaluation/no-rerank/results/compose.log
+tail -f artifacts/evaluation/single-model/results/compose.log
+tail -f artifacts/evaluation/no-debate/results/compose.log
 ```
 
 想保留容器以便事后用 `docker logs` 排障：运行矩阵加 `--keep-stacks`，结束手动清理：
@@ -153,9 +169,10 @@ docker compose -p evaluation-normal --env-file .env --env-file docker/evaluation
 
 ```text
 artifacts/evaluation/<组>/
-├── compose.log                       # 整组运行日志
 ├── system/sessions/<session-id>/     # 后端原始产物（LLM 调用明细等）
-└── results/<learner>/round-XX/       # 每轮评测快照
+└── results/                          # 评测结果与整组运行日志
+    ├── compose.log                   # 整组运行日志（构建、生命周期、evaluator 进度）
+    └── <learner>/round-XX/           # 每轮评测快照
 ```
 
 `results/` 下每个 learner（如 `eval-normal-6`）的 `round-XX/` 里看：
