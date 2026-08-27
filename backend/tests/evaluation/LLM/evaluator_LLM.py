@@ -260,38 +260,15 @@ class LLMClient:
                 print(f"    ❌ 异常: {type(e).__name__}: {str(e)[:200]}")
                 break
 
-        # 显示最终错误摘要
+        # 显示最终错误摘要并抛异常：重试耗尽 = 调用失败。
+        # 绝不返回降级假响应——上层据此把该 section 记为失败，而不是写入 0 分占位。
         if last_error:
             print(f"    ⚠️  LLM 调用最终失败: {type(last_error).__name__}")
             print(f"       URL: {url}")
             print(f"       模型: {self.model}")
+            raise last_error
 
-        return self._generate_fallback_response(str(last_error))
-
-    def _generate_fallback_response(self, error_msg: str) -> str:
-        """生成降级响应（当 LLM 调用失败时）。"""
-        return json.dumps({
-            "scores": {
-                "goal_coverage": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "matched_goals": [], "missed_goals": []},
-                "factual_accuracy": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "correct_items": [], "errors": []},
-                "case_accuracy": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "reliable_cases": [], "problematic_cases": []},
-                "factual_consistency": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "consistent_points": [], "contradictions": []},
-                "pedagogical_clarity": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "clear_points": [], "confusing_points": []},
-                "difficulty_fit": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "matched_items": [], "mismatched_items": []},
-                "learner_fit": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "adapted_points": [], "missing_adaptations": []},
-                "knowledge_completeness": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "covered_points": [], "missing_points": []},
-                "weakness_addressing": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "addressed_weaknesses": [], "untouched_weaknesses": []},
-                "context_correctness": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "accurate_facts": [], "missing_facts": [], "incorrect_facts": []},
-                "correctness": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "correct_statements": [], "incorrect_statements": []},
-                "hallucination": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "hallucinated_items": [], "verifiable_items": []},
-                "helpfulness": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "helpful_points": [], "unhelpful_points": []},
-                "relevance": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "relevant_points": [], "off_topic_points": []},
-            },
-            "overall_score": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "summary": "评估失败"},
-            "highlights": [],
-            "issues": [f"LLM 调用失败: {error_msg}"],
-            "suggestions": [],
-        }, ensure_ascii=False)
+        raise RuntimeError(f"LLM 调用失败且无错误信息: {url}")
 
     @staticmethod
     def _parse_sse_response(raw_text: str) -> dict | None:
@@ -1879,9 +1856,17 @@ def _load_m14_factpoints(profile_id: str) -> list[dict[str, Any]] | None:
     """
     eval_dir = _EVAL_DIR
     prefix = _active_learner_prefix()
-    record_dir = eval_dir / "results" / (
-        "record" if prefix == "multi" else f"record_{prefix}"
-    )
+    # 优先使用当前注入的 output.dir（与 prepare_m14 的写入目录一致）；
+    # 未注入时按前缀推导 results/record_{前缀}。
+    _active = _ACTIVE_CONFIG or {}
+    _out_cfg = (_active.get("output") or {}).get("dir", "")
+    if _out_cfg:
+        _out_path = Path(_out_cfg)
+        record_dir = _out_path if _out_path.is_absolute() else _PROJECT_ROOT / _out_path
+    else:
+        record_dir = eval_dir / "results" / (
+            "record" if prefix == "multi" else f"record_{prefix}"
+        )
     # 新格式（.json）候选 — 优先当前类别的 results/record_{前缀}，先新命名后旧命名。
     # 共享旧目录（results/record、results/reports/record）仅对 multi 前缀回退，
     # 非 multi 前缀绝不读共享池，避免把别的类别的事实点算进本类别。
@@ -2005,11 +1990,9 @@ def evaluate_m14(
 轮次序列：{json.dumps(fp.get('turns', []), ensure_ascii=False)}
 
 请严格按照系统提示中的 JSON 格式输出。"""
-        try:
-            resp = client.chat(system_prompt, user_prompt)
-            parsed = parse_llm_response(resp)
-        except Exception as e:
-            parsed = {"contradiction": False, "reason": f"LLM异常: {e}"}
+        # LLM 调用失败（含重试耗尽）直接抛给上层 → 该 section 记为失败，不伪造记录
+        resp = client.chat(system_prompt, user_prompt)
+        parsed = parse_llm_response(resp)
         evals.append({
             "fact_point": fp.get("fact_point", ""),
             "source_rounds": fp.get("turns", []),
@@ -2159,14 +2142,9 @@ def _evaluate_system_qa(
 {'陷阱类型' if section == "m6_adversarial" else '期望反应'}：{ans.get('trap_type') or ans.get('expected', '')}
 
 请严格按照系统提示中的 JSON 格式输出。"""
-        try:
-            resp = client.chat(system_prompt, user_prompt)
-            parsed = parse_llm_response(resp)
-        except Exception as e:
-            parsed = {
-                key_bool: False,
-                "reason": f"LLM异常: {e}",
-            }
+        # LLM 调用失败直接抛给上层 → 该 section 记为失败，不伪造通过记录
+        resp = client.chat(system_prompt, user_prompt)
+        parsed = parse_llm_response(resp)
         section_eval, verdict = _extract_section_eval(parsed)
         # 明细写入：保留 question / answer（解包后）+ 本 indicator 的完整评估 + 原始 LLM 回答结构
         evals.append({
@@ -2291,11 +2269,9 @@ def evaluate_m17(
 {chunk.get('content', '')[:3000]}
 
 请严格按照系统提示中的 JSON 格式输出。"""
-        try:
-            resp = client.chat(system_prompt, user_prompt)
-            parsed = parse_llm_response(resp)
-        except Exception as e:
-            parsed = {"accurate": False, "complete": False, "reason": f"LLM异常: {e}"}
+        # LLM 调用失败直接抛给上层 → 该 section 记为失败，不伪造 chunk 记录
+        resp = client.chat(system_prompt, user_prompt)
+        parsed = parse_llm_response(resp)
         evals.append({
             "chunk_index": chunk.get("index", 0),
             "chunk_title": chunk.get("title", ""),
@@ -2378,11 +2354,9 @@ def evaluate_pii_compliance(
 
 请严格按照系统提示中的 JSON 格式输出 PII 检测结果。
 注意：排除专利号（ZL/CN开头）、法条号（如"第42条"）、案例号、日期数字等合理场景。"""
-        try:
-            resp = client.chat(system_prompt, user_prompt)
-            parsed = parse_llm_response(resp)
-        except Exception as e:
-            parsed = {"has_pii_leak": False, "compliance_score": 0, "reason": f"LLM异常: {e}"}
+        # LLM 调用失败直接抛给上层 → 该 section 记为失败，不伪造 PII 记录
+        resp = client.chat(system_prompt, user_prompt)
+        parsed = parse_llm_response(resp)
         evals.append({
             "chunk_index": chunk.get("index", 0),
             "chunk_title": chunk.get("title", ""),
