@@ -78,6 +78,13 @@ def ensure_dotenv() -> None:
     if not _ENV_LOADED:
         load_dotenv(PROJECT_ROOT / ".env")
         _ENV_LOADED = True
+    # Windows 默认 GBK 控制台无法编码 ✅/🔴 等 emoji 输出（UnicodeEncodeError），
+    # 统一把 stdout/stderr 切到 UTF-8，保证各评测脚本在 Windows 上可运行。
+    for _stream in (sys.stdout, sys.stderr):
+        try:
+            _stream.reconfigure(encoding="utf-8")
+        except (AttributeError, ValueError):
+            pass
     if not _AGENT_CONFIG_PINNED:
         import os as _os
         from pathlib import Path as _Path

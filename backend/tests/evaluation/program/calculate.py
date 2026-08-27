@@ -118,9 +118,21 @@ class RoundMetrics:
 def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
-def _parse_cross_review(text: str) -> dict[str, int]:
-    """解析互评表格，统计 🔴/🟡/🟢/🔵 数量。"""
+def _read_text_optional(path: Path) -> str | None:
+    """读取可选产物文件；缺失或编码损坏时返回 None（调用方按空处理）。"""
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+
+def _parse_cross_review(text: str | None) -> dict[str, int]:
+    """解析互评表格，统计 🔴/🟡/🟢/🔵 数量。
+
+    no-debate 模式没有互评文件（text=None），按"无批注"处理。
+    """
     counts = {"🔴": 0, "🟡": 0, "🟢": 0, "🔵": 0}
+    if not text:
+        return counts
     for line in text.splitlines():
         if not line.startswith("|") or "---" in line or "类别" in line:
             continue
@@ -346,7 +358,7 @@ def _load_knowledge_dag() -> dict[str, Any]:
 
 # ── 幻觉率相关计算 ──────────────────────────────────────────────────────────
 
-def calc_objection_loop(judge_text: str, review_a_text: str, review_b_text: str) -> MetricResult:
+def calc_objection_loop(judge_text: str, review_a_text: str | None, review_b_text: str | None) -> MetricResult:
     """1.1 闭环率 — 占位指标。
 
     闭环率 = 闭环条数 / 总🔴条数 × 100%。
@@ -369,7 +381,7 @@ def calc_objection_loop(judge_text: str, review_a_text: str, review_b_text: str)
     )
 
 
-def calc_hallucination_expert_review(review_a_text: str, review_b_text: str) -> MetricResult:
+def calc_hallucination_expert_review(review_a_text: str | None, review_b_text: str | None) -> MetricResult:
     """5.4 异议率 — (🔴 + 🟡) / 总批注数 × 100%。"""
     counts_a = _parse_cross_review(review_a_text)
     counts_b = _parse_cross_review(review_b_text)
@@ -689,12 +701,22 @@ def _file_exists_in_round(round_dir: Path, filename: str) -> bool:
 
 
 def check_artifact_completeness(round_dir: Path, round_num: int, is_final_round: bool = False) -> MetricResult:
-    """M6 产物完整率。"""
-    required_files = ["course_package.md", "judge_report.md", "expert_a_cross_review.md", "expert_b_cross_review.md"]
+    """M6 产物完整率。
+
+    cross_review / revision 仅当该轮实际存在辩论产物时才计入"应有文件"：
+    no-debate 模式（无 cross_review 文件）不因缺少辩论文件而被扣分。
+    """
+    required_files = ["course_package.md", "judge_report.md"]
     if round_num > 1:
         required_files.append("learner_profile_update.md")
-    if is_final_round:
-        required_files.extend(["expert_a_revision.md", "expert_b_revision.md"])
+    debate_mode = (
+        _file_exists_in_round(round_dir, "expert_a_cross_review.md")
+        or _file_exists_in_round(round_dir, "expert_b_cross_review.md")
+    )
+    if debate_mode:
+        required_files.extend(["expert_a_cross_review.md", "expert_b_cross_review.md"])
+        if is_final_round:
+            required_files.extend(["expert_a_revision.md", "expert_b_revision.md"])
 
     present = sum(1 for f in required_files if _file_exists_in_round(round_dir, f))
     total = len(required_files)
@@ -1206,8 +1228,8 @@ def calculate_round(
 
     course_text = _read_text(round_dir / "course_package.md")
     judge_text = _read_text(round_dir / "judge_report.md")
-    review_a_text = _read_text(round_dir / "expert_a_cross_review.md")
-    review_b_text = _read_text(round_dir / "expert_b_cross_review.md")
+    review_a_text = _read_text_optional(round_dir / "expert_a_cross_review.md")
+    review_b_text = _read_text_optional(round_dir / "expert_b_cross_review.md")
     path_text = _read_text(round_dir / "learning_path.md")
 
     revision_a_text = None
@@ -1236,9 +1258,16 @@ def calculate_round(
                 expected_path = candidate
                 break
     if expected_path is None or not expected_path.exists():
-        raise FileNotFoundError(f"找不到 expected 文件")
-
-    expected_data = json.loads(expected_path.read_text(encoding="utf-8"))
+        # round >= 5 通常没有 expected_{letter}_{NN}.json：覆盖率类指标降级为 0
+        # （各 calc_coverage_* 对空 expected 返回"无预期知识点"等 note），不阻断整体计算。
+        expected_data: dict[str, Any] = {}
+        print(
+            f"  ⚠️ expected 文件缺失（{profile_letter} round-{round_num:02d}），"
+            "覆盖率类指标按 0 计",
+            file=sys.stderr,
+        )
+    else:
+        expected_data = json.loads(expected_path.read_text(encoding="utf-8"))
     expected_content = expected_data.get("expected_course_content", {})
     node_name_map = _load_node_name_map()
 
@@ -1454,6 +1483,7 @@ def _build_parser() -> argparse.ArgumentParser:
     return p
 
 def main(argv: list[str] | None = None) -> int:
+    common.ensure_dotenv()
     args = _build_parser().parse_args(argv)
 
     try:
