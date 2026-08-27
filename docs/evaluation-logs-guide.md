@@ -1,56 +1,59 @@
 # 评测运行日志查看指南
 
-覆盖两种运行方式的日志：**交互式 bootrun**（外部 LLM 评估）和 **Docker 并行运行**。
-命令可直接复制；除标注 PowerShell 的以外都是 Linux/bash。
+按实际运行顺序一步步来，每一步告诉你**这一步做什么、日志怎么看**。命令可直接复制；
+除标注 PowerShell 的以外都是 Linux/bash。
 
-## 日志符号含义
+## 第一步：准备
 
-| 符号 | 含义 |
-|---|---|
-| ✅ | 该步骤成功完成 |
-| ❌ | 失败（LLM 调用失败等；外部评估的失败 section 会在产物里写入失败标记） |
-| ⏭️ | 跳过（已有结果 / 无数据） |
-| ⚠️ | 警告（不阻断运行） |
+1. 仓库根目录 `.env` 已配置 LLM key，`config/agents.yaml` 存在。
+2. `backend/tests/evaluation/LLM/config/external_llm.yaml` 存在（外部 LLM 评估用；
+   没有就从 `external_llm.example.yaml` 复制并填 key）。
+3. 确认 Docker 可用：`docker compose version`。
 
-## 1. 交互式 bootrun：输出就在终端
+日志符号：✅ 成功 / ❌ 失败 / ⏭️ 跳过（已有结果或无数据）/ ⚠️ 警告（不阻断）。
 
-启动后所有输出直接打印在当前终端，**不需要任何额外命令**：
+## 第二步：跑四组 batch 评测（可选，产物已跑过可跳过）
 
-```powershell
-uv run python backend\tests\evaluation\evaluation_test_v1.1_bootrun.py --learner-prefix eval-normal
+```bash
+./scripts/run-evaluation-matrix.sh
 ```
 
-下次运行想让输出同时落盘，启动时加管道（bash 版把 `Tee-Object` 换成 `tee`）：
+**运行中看日志**——按容器名实时跟踪（命名固定 `evaluation-<组>-<服务>-1`）：
 
-```powershell
-uv run python backend\tests\evaluation\evaluation_test_v1.1_bootrun.py --learner-prefix eval-normal 2>&1 |
-  Tee-Object -FilePath artifacts\eval-normal-terminal.log
+```bash
+docker logs -f evaluation-normal-evaluator-1   # 评测脚本进度（画像/轮次推进）
+docker logs -f evaluation-normal-backend-1     # 后端工作流
+docker logs -f evaluation-normal-mysql-1       # MySQL
 ```
 
-## 2. Docker 并行 LLM 评估：每类一个日志文件
+其他组把 `normal` 换成 `no-rag` / `no-rerank` / `single-model`。容器状态一览：
 
-启动：`./scripts/run-llm-eval-matrix.sh`。每个类别的完整输出实时写入
-`artifacts/evaluation/<类别>/llm-eval.log`。
+```bash
+docker ps -a --filter name=evaluation- --format '{{.Names}}\t{{.Status}}'
+```
 
-实时跟踪某一类：
+**运行后看日志**——每组完整输出落盘（容器清理后 `docker logs` 会失效，看这个）：
+
+```bash
+tail -f artifacts/evaluation/normal/compose.log
+tail -n 200 artifacts/evaluation/no-rag/compose.log   # 只看末尾
+```
+
+## 第三步：并行跑外部 LLM 评估（多容器）
+
+```bash
+./scripts/run-llm-eval-matrix.sh          # 默认排除 eval-normal，留给正在跑的进程
+./scripts/run-llm-eval-matrix.sh --all    # 全部 5 类
+```
+
+**运行中看日志**——每个类别一个文件，实时跟踪：
 
 ```bash
 tail -f artifacts/evaluation/eval-no-rag/llm-eval.log
+tail -f artifacts/evaluation/*/llm-eval.log        # 全部类别一起看
 ```
 
-同时看全部类别：
-
-```bash
-tail -f artifacts/evaluation/*/llm-eval.log
-```
-
-只看末尾 N 行：
-
-```bash
-tail -n 200 artifacts/evaluation/eval-no-rag/llm-eval.log
-```
-
-快速看各类别失败数量（退出码 1 = 有失败 section，重跑自动重试）：
+**跑完看结果**——各类别失败数量（❌ = 失败 section，重跑会自动重试）：
 
 ```bash
 for f in artifacts/evaluation/*/llm-eval.log; do
@@ -58,41 +61,27 @@ for f in artifacts/evaluation/*/llm-eval.log; do
 done
 ```
 
-## 3. 四组 batchrun 的 Docker 日志
+## 第四步：交互式跑 bootrun（当前正在用的方式）
 
-运行 `./scripts/run-evaluation-matrix.sh` 时，每组的完整日志实时写入
-`artifacts/evaluation/<组>/compose.log`（构建输出 + 容器生命周期 + evaluator 进度）：
-
-```bash
-tail -f artifacts/evaluation/normal/compose.log
+```powershell
+uv run python backend\tests\evaluation\evaluation_test_v1.1_bootrun.py --learner-prefix eval-normal
 ```
 
-容器还在跑时，按容器名实时看单个服务（命名固定为 `evaluation-<组>-<服务>-1`）：
+**怎么看日志**：所有输出（✅/❌/⏭️/⚠️）直接打印在当前终端，**不需要任何额外命令**；
+你启动它的那个终端就是日志。
 
-```bash
-docker logs -f evaluation-normal-evaluator-1   # 评测脚本进度（画像/轮次）
-docker logs -f evaluation-normal-backend-1     # 后端工作流
-docker logs -f evaluation-normal-mysql-1       # MySQL
+下次想让输出同时落盘，启动时加管道：
+
+```powershell
+uv run python backend\tests\evaluation\evaluation_test_v1.1_bootrun.py --learner-prefix eval-normal 2>&1 |
+  Tee-Object -FilePath artifacts\eval-normal-terminal.log
 ```
 
-按服务看（不用记容器名）：
+（Linux 把 `Tee-Object` 换成 `tee`。）
 
-```bash
-docker compose -p evaluation-normal --env-file .env --env-file docker/evaluation/normal.env \
-  -f docker-compose.evaluation.yml logs -f backend evaluator
-```
+## 第五步：看产物里的明细日志
 
-容器状态一览：
-
-```bash
-docker ps -a --filter name=evaluation- --format '{{.Names}}\t{{.Status}}'
-```
-
-注意：容器被清理后 `docker logs` 失效，只能看落盘的 `compose.log`。
-
-## 4. 产物目录里的日志文件
-
-每轮课程生成的明细日志在 `artifacts/evaluation/<组>/system/sessions/<session-id>/`：
+每轮课程生成的明细在 `artifacts/evaluation/<组>/system/sessions/<session-id>/`：
 
 | 文件 | 内容 |
 |---|---|
@@ -100,15 +89,16 @@ docker ps -a --filter name=evaluation- --format '{{.Names}}\t{{.Status}}'
 | `llm_calls.log.jsonl` | 每次 LLM 调用：模型、token、耗时 |
 | `llm_payloads.log.jsonl` | 请求/响应原文（体积大） |
 
-查看示例：
-
 ```bash
 tail -n 50 artifacts/evaluation/normal/system/sessions/*/llm_calls.log.jsonl
 ```
 
-外部 LLM 评估结果（菜单 4 / 并行容器）不在上述目录，在
-`backend/tests/evaluation/results/record_<前缀>/` 下；失败 section 的排查：
+## 第六步：失败排查
+
+外部 LLM 评估失败时，产物里会写入失败标记（`status: "failed"`），直接查：
 
 ```bash
 grep -l '"status": "failed"' backend/tests/evaluation/results/record_*/round_indicator_*.json
 ```
+
+命中的文件就是失败轮次；对相应类别重跑第二步/第三步的命令，只会自动重试失败项。
