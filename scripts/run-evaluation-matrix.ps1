@@ -52,13 +52,24 @@ foreach ($experiment in $Experiments) {
 
     Write-Host "Starting $experiment ..."
     $job = Start-Job -Name $experiment -ScriptBlock {
-        param($ProjectRoot, $Command, $OutputPath, $Profiles, $TargetRound)
+        param($ProjectRoot, $Command, $OutputPath, $Profiles, $TargetRound, $EnvFile)
         Set-Location $ProjectRoot
+        # 组 env 文件是评测条件的唯一权威来源：解析后显式注入进程环境
+        # （优先级高于 --env-file），覆盖终端/用户环境里残留的同名导出。
+        Get-Content $EnvFile | ForEach-Object {
+            if ($_ -match '^([A-Za-z_][A-Za-z0-9_]*)=(.*)$') {
+                [Environment]::SetEnvironmentVariable($Matches[1], $Matches[2], 'Process')
+            }
+        }
         if ($Profiles) { $env:EVAL_PROFILES = $Profiles }
         if ($TargetRound) { $env:EVAL_TARGET_ROUND = "$TargetRound" }
+        # 评测栈强制关闭结构化课件/PPT 节点（进程环境优先级高于 --env-file，
+        # 避免终端导出过 true 时 slide_deck/generate_pptx 意外运行）。
+        $env:PATENT_TUTOR_SLIDE_DECK_ENABLED = 'false'
+        $env:PATENT_TUTOR_PPTX_ENABLED = 'false'
         & docker @Command 2>&1 | Tee-Object -FilePath $OutputPath
         return $LASTEXITCODE
-    } -ArgumentList $ProjectRoot, $command, $outputPath, $Profiles, $TargetRound
+    } -ArgumentList $ProjectRoot, $command, $outputPath, $Profiles, $TargetRound, $envFile
     $jobs += $job
     $jobMetadata[$job.Id] = @{ Experiment = $experiment; OutputPath = $outputPath }
 }

@@ -78,6 +78,12 @@ if ! docker volume inspect "$MODEL_VOLUME" >/dev/null 2>&1; then
     docker volume create "$MODEL_VOLUME" >/dev/null
 fi
 
+# 评测栈强制关闭结构化课件/PPT 节点。环境 override 优先级为
+# shell/脚本导出 > --env-file：.env 默认开启这两个开关，若不在这里锁定，
+# 终端里 export 过 true（如 source 过 .env）会让 slide_deck/generate_pptx 意外运行。
+export PATENT_TUTOR_SLIDE_DECK_ENABLED=false
+export PATENT_TUTOR_PPTX_ENABLED=false
+
 PIDS=()
 for exp in "${EXPERIMENTS[@]}"; do
     ENV_FILE="$ROOT/docker/evaluation/$exp.env"
@@ -92,7 +98,14 @@ for exp in "${EXPERIMENTS[@]}"; do
     echo "启动 $exp ..."
     (
         cd "$ROOT"
-        # CLI 参数优先级高于 env 文件（Compose 插值时 shell 变量优先于 --env-file）。
+        # 组 env 文件是评测条件的唯一权威来源：source 后所有变量进入进程
+        # 环境（优先级高于 --env-file），覆盖终端里任何残留导出（例如 source
+        # 过 .env 会把 RAG_RETRIEVAL_MODE/RAG_RERANK_ENABLED 等 shell 值带进来，
+        # 使 no-rag / no-rerank 组的条件被意外改写）。
+        set -a
+        . "$ENV_FILE"
+        set +a
+        # CLI 参数优先级最高（在 source 之后导出，覆盖组 env 默认值）。
         if [[ -n "$PROFILES" ]]; then
             export EVAL_PROFILES="$PROFILES"
         fi

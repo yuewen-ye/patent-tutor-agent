@@ -37,7 +37,7 @@ services:
     environment:
       PATENT_TUTOR_MYSQL_URL: mysql://patent_tutor:${MYSQL_PASSWORD:-patent_tutor_pw}@mysql:3306/patent_tutor
       PATENT_TUTOR_MYSQL_AUTO_MIGRATE: "true"
-      PATENT_TUTOR_ENV: evaluation
+      PATENT_TUTOR_ENV: production
       RAG_EMBEDDING_MODEL_PATH: /app/models/bge-m3
       RAG_RERANKER_MODEL_PATH: /app/models/bge-reranker-v2-m3
       ARTIFACT_ROOT: /app/artifacts
