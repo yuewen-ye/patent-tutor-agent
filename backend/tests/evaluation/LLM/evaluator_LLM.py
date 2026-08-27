@@ -22,6 +22,7 @@
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import os
 import re
@@ -581,6 +582,78 @@ def merge_profile_section(
     return path
 
 
+def _section_done(data: dict[str, Any], section: str) -> bool:
+    """该 section 是否已成功完成。
+
+    失败标记（status == "failed"）视为未完成：重跑会重新评估，而不是被跳过。
+    """
+    value = data.get(section)
+    if value is None:
+        return False
+    if isinstance(value, dict) and value.get("status") == "failed":
+        return False
+    return True
+
+
+def _mark_eval_failure(
+    config: dict[str, Any], model_name: str, profile_id: str,
+    round_num: int | None, section: str, exc: BaseException,
+    *, level: str = "round",
+) -> None:
+    """LLM 评估重试耗尽失败后，在聚合产物中写入失败标记。
+
+    标记本身不算"已有结果"（_section_done 视为未完成），因此重跑会重试该 section。
+    """
+    marker: dict[str, Any] = {
+        "status": "failed",
+        "error": f"{type(exc).__name__}: {exc}",
+        "failed_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
+    if level == "profile":
+        merge_profile_section(config, model_name, profile_id, section=section, value=marker)
+    elif level == "system":
+        merge_system_section(config, model_name, section=section, value=marker)
+    else:
+        merge_round_section(config, model_name, profile_id, round_num, section=section, value=marker)
+
+
+def _mark_failed_section(section: str, *, level: str = "round"):
+    """装饰器：评估函数抛异常时先写入失败标记，再重新抛出。
+
+    按评估函数的调用约定从位置参数提取身份：
+      round:   (profile_id, round_num, config, ...)
+      profile: (profile_id, config, ...)
+      system:  (config, ...)
+    """
+
+    def _decorate(fn):
+        @functools.wraps(fn)
+        def _wrapper(*args: Any, **kwargs: Any) -> Any:
+            try:
+                return fn(*args, **kwargs)
+            except Exception as exc:  # 必须标记任何评估失败
+                try:
+                    if level == "round":
+                        profile_id, round_num, config = args[0], args[1], args[2]
+                    elif level == "profile":
+                        profile_id, config = args[0], args[1]
+                        round_num = None
+                    else:  # system
+                        profile_id, config, round_num = "system", args[0], None
+                    model_name = config.get("llm", {}).get("model", "unknown")
+                    _mark_eval_failure(
+                        config, model_name, profile_id, round_num,
+                        section, exc, level=level,
+                    )
+                except Exception:  # noqa: BLE001 - 标记失败不影响原始异常传播
+                    pass
+                raise
+
+        return _wrapper
+
+    return _decorate
+
+
 def build_chunk_prompt(
     chunk: dict[str, Any],
     learning_path: str,
@@ -635,6 +708,7 @@ def build_whole_prompt(
 
 # ── 评估流程 ──────────────────────────────────────────────────────────────────
 
+@_mark_failed_section("overall")
 def evaluate_profile_round(
     profile_id: str,
     round_num: int,
@@ -662,7 +736,7 @@ def evaluate_profile_round(
 
     if output_path.exists() and not force:
         existing = _load_json_safe(output_path)
-        if "overall" in existing:
+        if _section_done(existing, "overall"):
             print(f"  ⏭️  跳过：round_indicator overall 评估已存在")
             return None
 
@@ -1455,6 +1529,7 @@ def calc_source_verifiable_rate(eval_results: list[dict[str, Any]]) -> dict[str,
     }
 
 
+@_mark_failed_section("statement")
 def evaluate_m1_m9(
     profile_id: str,
     round_num: int,
@@ -1471,7 +1546,7 @@ def evaluate_m1_m9(
 
     if output_path.exists() and not force:
         existing = _load_json_safe(output_path)
-        if "statement" in existing:
+        if _section_done(existing, "statement"):
             print(f"  ⏭️  跳过：round_indicator statement 评估已存在")
             return None
 
@@ -1542,6 +1617,7 @@ def evaluate_m1_m9(
 
 # ── M8 异议闭环率（外部 LLM 评估） ────────────────────────────────────────────
 
+@_mark_failed_section("objection_loop")
 def evaluate_m8_objection_loop(
     profile_id: str,
     round_num: int,
@@ -1562,7 +1638,7 @@ def evaluate_m8_objection_loop(
 
     if output_path.exists() and not force:
         existing = _load_json_safe(output_path)
-        if "objection_loop" in existing:
+        if _section_done(existing, "objection_loop"):
             print(f"  ⏭️  跳过：round_indicator objection_loop 评估已存在")
             return None
 
@@ -1685,6 +1761,7 @@ def evaluate_m8_objection_loop(
 
 # ── M7 资源形态（外部 LLM 评估） ────────────────────────────────────────────
 
+@_mark_failed_section("resource_morphology")
 def evaluate_m7_resource_morphology(
     profile_id: str,
     round_num: int,
@@ -1704,7 +1781,7 @@ def evaluate_m7_resource_morphology(
 
     if output_path.exists() and not force:
         existing = _load_json_safe(output_path)
-        if "resource_morphology" in existing:
+        if _section_done(existing, "resource_morphology"):
             print(f"  ⏭️  跳过：round_indicator resource_morphology 评估已存在")
             return None
 
@@ -1952,6 +2029,7 @@ def _load_m14_factpoints(profile_id: str) -> list[dict[str, Any]] | None:
     return None
 
 
+@_mark_failed_section("cross_round", level="profile")
 def evaluate_m14(
     profile_id: str,
     config: dict[str, Any],
@@ -1969,7 +2047,7 @@ def evaluate_m14(
 
     if output_path.exists() and not force:
         existing = _load_json_safe(output_path)
-        if "cross_round" in existing:
+        if _section_done(existing, "cross_round"):
             print(f"  ⏭️  跳过：profile_indicator cross_round 评估已存在")
             return None
 
@@ -2065,7 +2143,7 @@ def _evaluate_system_qa(
 
     if output_path.exists() and not force:
         existing = _load_json_safe(output_path)
-        if section in existing:
+        if _section_done(existing, section):
             print(f"  ⏭️  跳过：system_indicator {section} 已存在")
             return None
 
@@ -2179,6 +2257,7 @@ def _evaluate_system_qa(
     return result
 
 
+@_mark_failed_section("m6_adversarial", level="system")
 def evaluate_m15(config: dict[str, Any], force: bool = False) -> dict[str, Any] | None:
     """M6.1 对抗稳健率（系统级）。结果合并到 system_indicator_{model}.json 的 m6_adversarial section。"""
     llm_config = config.get("llm", {})
@@ -2204,6 +2283,7 @@ def evaluate_m15(config: dict[str, Any], force: bool = False) -> dict[str, Any] 
     )
 
 
+@_mark_failed_section("m6_boundary", level="system")
 def evaluate_m16(config: dict[str, Any], force: bool = False) -> dict[str, Any] | None:
     """M6.2 边界拒答恰当率（系统级）。结果合并到 system_indicator_{model}.json 的 m6_boundary section。"""
     llm_config = config.get("llm", {})
@@ -2230,6 +2310,7 @@ def evaluate_m16(config: dict[str, Any], force: bool = False) -> dict[str, Any] 
 
 # ── M17 检索正确性（外部 LLM 评估） ────────────────────────────────────────────
 
+@_mark_failed_section("retrieval")
 def evaluate_m17(
     profile_id: str,
     round_num: int,
@@ -2244,7 +2325,7 @@ def evaluate_m17(
 
     if output_path.exists() and not force:
         existing = _load_json_safe(output_path)
-        if "retrieval" in existing:
+        if _section_done(existing, "retrieval"):
             print(f"  ⏭️  跳过：round_indicator retrieval 评估已存在")
             return None
 
@@ -2306,6 +2387,7 @@ def evaluate_m17(
 
 # ── M5.3 PII 合规检测（外部 LLM 评估） ────────────────────────────────────────
 
+@_mark_failed_section("pii")
 def evaluate_pii_compliance(
     profile_id: str,
     round_num: int,
@@ -2323,7 +2405,7 @@ def evaluate_pii_compliance(
 
     if output_path.exists() and not force:
         existing = _load_json_safe(output_path)
-        if "pii" in existing:
+        if _section_done(existing, "pii"):
             print(f"  ⏭️  跳过：round_indicator pii 评估已存在")
             return None
 

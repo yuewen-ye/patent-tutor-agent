@@ -393,6 +393,11 @@ class FullReportContext:
 # ── 外部 LLM 评估结果读取 ─────────────────────────────────────────────────────
 
 
+def _is_failed_marker(section_data: Any) -> bool:
+    """LLM 评估失败写入的失败标记（status=failed）→ 报告按无结果处理。"""
+    return isinstance(section_data, dict) and section_data.get("status") == "failed"
+
+
 def _load_llm_eval_results(learner_prefix: str = "multi") -> dict[str, Any]:
     """从新的聚合产物目录加载评估结果。
 
@@ -440,27 +445,27 @@ def _load_llm_eval_results(learner_prefix: str = "multi") -> dict[str, Any]:
         if not profile_id or not round_num:
             continue
         # overall → judge_eval
-        if "overall" in data:
+        if "overall" in data and not _is_failed_marker(data["overall"]):
             _store(profile_id, round_num, "judge_eval",
                    {"metadata": metadata, "overall_evaluation": data["overall"]})
         # statement → statement_eval
-        if "statement" in data:
+        if "statement" in data and not _is_failed_marker(data["statement"]):
             _store(profile_id, round_num, "statement_eval",
                    {"metadata": metadata, **data["statement"]})
         # resource_morphology → m7_resource
-        if "resource_morphology" in data:
+        if "resource_morphology" in data and not _is_failed_marker(data["resource_morphology"]):
             _store(profile_id, round_num, "m7_resource",
                    {"metadata": metadata, "raw_llm_response": data["resource_morphology"]})
         # retrieval → m2_retrieval
-        if "retrieval" in data:
+        if "retrieval" in data and not _is_failed_marker(data["retrieval"]):
             _store(profile_id, round_num, "m2_retrieval",
                    {"metadata": metadata, **data["retrieval"]})
         # pii → pii_compliance
-        if "pii" in data:
+        if "pii" in data and not _is_failed_marker(data["pii"]):
             _store(profile_id, round_num, "pii_compliance",
                    {"metadata": metadata, **data["pii"]})
         # objection_loop → objection_eval（用于 1.1 闭环率，若 calculate.py 需要）
-        if "objection_loop" in data:
+        if "objection_loop" in data and not _is_failed_marker(data["objection_loop"]):
             _store(profile_id, round_num, "objection_eval",
                    {"metadata": metadata, **data["objection_loop"]})
 
@@ -481,7 +486,7 @@ def _load_llm_eval_results(learner_prefix: str = "multi") -> dict[str, Any]:
         profile_id = metadata.get("profile_id", "") or parts[3]
         if not profile_id:
             continue
-        if "cross_round" in data:
+        if "cross_round" in data and not _is_failed_marker(data["cross_round"]):
             if profile_id not in results:
                 results[profile_id] = {}
             results[profile_id]["_m14"] = {"metadata": metadata, **data["cross_round"]}
@@ -502,9 +507,9 @@ def _load_llm_eval_results(learner_prefix: str = "multi") -> dict[str, Any]:
             continue
         if "system" not in results:
             results["system"] = {}
-        if "m6_adversarial" in data:
+        if "m6_adversarial" in data and not _is_failed_marker(data["m6_adversarial"]):
             results["system"]["_m15"] = data["m6_adversarial"]
-        if "m6_boundary" in data:
+        if "m6_boundary" in data and not _is_failed_marker(data["m6_boundary"]):
             results["system"]["_m16"] = data["m6_boundary"]
 
     return results

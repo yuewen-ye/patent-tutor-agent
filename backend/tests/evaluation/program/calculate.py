@@ -873,7 +873,11 @@ def _load_round_section(
         return None, path
     # 兼容两种：新的 section 聚合 或 旧的独立文件
     if section in data:
-        return data[section], path
+        section_data = data[section]
+        # 失败标记（LLM 评估失败写入的 status=failed）：按"无结果"处理，不参与指标合并
+        if isinstance(section_data, dict) and section_data.get("status") == "failed":
+            return None, path
+        return section_data, path
     # 回退：旧独立文件格式（例如整体 JSON 就是该 section 内容）
     return data, path
 
@@ -890,7 +894,11 @@ def _load_profile_section(
     if data is None:
         return None, path
     if section in data:
-        return data[section], path
+        section_data = data[section]
+        # 失败标记按"无结果"处理
+        if isinstance(section_data, dict) and section_data.get("status") == "failed":
+            return None, path
+        return section_data, path
     return data, path
 
 
@@ -906,7 +914,11 @@ def _load_system_section(
     if data is None:
         return None, path
     if section in data:
-        return data[section], path
+        section_data = data[section]
+        # 失败标记按"无结果"处理
+        if isinstance(section_data, dict) and section_data.get("status") == "failed":
+            return None, path
+        return section_data, path
     return data, path
 
 
