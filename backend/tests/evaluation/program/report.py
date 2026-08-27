@@ -45,9 +45,9 @@ import calculate  # noqa: E402
 
 REPORTS_DIR = _EVAL_DIR / "results" / "reports"
 
-def _resolve_llm_results_dir() -> Path:
-    """解析外部 LLM 结果目录：优先 results/record，回退 results/reports/record 和 LLM/results。"""
-    new_dir = _EVAL_DIR / "results" / "record"
+def _resolve_llm_results_dir(learner_prefix: str = "multi") -> Path:
+    """解析外部 LLM 结果目录：按类别隔离（record_{前缀}），回退旧目录。"""
+    new_dir = common.llm_results_dir(learner_prefix)
     if new_dir.exists():
         return new_dir
     alt_dir = _EVAL_DIR / "results" / "reports" / "record"
@@ -390,7 +390,7 @@ class FullReportContext:
 # ── 外部 LLM 评估结果读取 ─────────────────────────────────────────────────────
 
 
-def _load_llm_eval_results() -> dict[str, Any]:
+def _load_llm_eval_results(learner_prefix: str = "multi") -> dict[str, Any]:
     """从新的聚合产物目录加载评估结果。
 
     统一文件体系（每个提示词对应一份聚合 JSON）：
@@ -402,7 +402,7 @@ def _load_llm_eval_results() -> dict[str, Any]:
       内含 section：m6_adversarial / m6_boundary
     """
     results: dict[str, Any] = {}
-    llm_dir = _resolve_llm_results_dir()
+    llm_dir = _resolve_llm_results_dir(learner_prefix)
     if not llm_dir.exists():
         return results
 
@@ -507,9 +507,9 @@ def _load_llm_eval_results() -> dict[str, Any]:
     return results
 
 
-def _load_profile_level_metrics(profile_letter: str | None = None) -> list[calculate.MetricResult]:
+def _load_profile_level_metrics(profile_letter: str | None = None, learner_prefix: str = "multi") -> list[calculate.MetricResult]:
     """加载系统级指标（M6 问答质量测试），独立于画像。"""
-    return calculate.calculate_system_level_metrics()
+    return calculate.calculate_system_level_metrics(learner_prefix=learner_prefix)
 
 
 def _has_llm_eval_for(profile_letter: str, round_num: int,
@@ -1310,6 +1310,7 @@ def _calculate_profile(
     profile_letter: str,
     session_dir: Path,
     max_round: int | None = None,
+    learner_prefix: str = "multi",
 ) -> ProfileReport:
     pr = ProfileReport(
         profile_letter=profile_letter,
@@ -1327,6 +1328,7 @@ def _calculate_profile(
                 round_num=r,
                 session_dir=session_dir,
                 prev_profile_update=prev_profile_update,
+                learner_prefix=learner_prefix,
             )
             pr.rounds.append(rm)
 
@@ -1357,13 +1359,13 @@ def generate_report(
         print(f"  ❌ 找不到画像 {profile_letter} 的测试快照目录")
         return None
 
-    pr = _calculate_profile(profile_letter, session_dir)
+    pr = _calculate_profile(profile_letter, session_dir, learner_prefix=learner_prefix)
     if not pr.rounds:
         print(f"  ❌ 画像 {profile_letter} 无可用的指标数据")
         return None
 
-    llm_results = _load_llm_eval_results()
-    profile_level_metrics = _load_profile_level_metrics()
+    llm_results = _load_llm_eval_results(learner_prefix)
+    profile_level_metrics = _load_profile_level_metrics(learner_prefix=learner_prefix)
 
     ctx = ReportContext(
         profile_letter=profile_letter,
@@ -1420,7 +1422,7 @@ def generate_full_report(
             print(f"  [profile_{letter}] ⚠️ 无符合条件的轮次数据，已跳过")
             continue
         print(f"  [profile_{letter}] 计算 {len(rounds)} 个轮次...")
-        pr = _calculate_profile(letter, session_dir, max_round=max_round)
+        pr = _calculate_profile(letter, session_dir, max_round=max_round, learner_prefix=learner_prefix)
         if pr.rounds:
             profiles.append(pr)
         else:
@@ -1430,8 +1432,8 @@ def generate_full_report(
         print("  ❌ 所有画像均无可用数据")
         return None
 
-    llm_eval_results = _load_llm_eval_results()
-    profile_level_metrics = _load_profile_level_metrics()
+    llm_eval_results = _load_llm_eval_results(learner_prefix)
+    profile_level_metrics = _load_profile_level_metrics(learner_prefix=learner_prefix)
 
     ctx = FullReportContext(
         profiles=profiles,

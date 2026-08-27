@@ -67,6 +67,10 @@ if ENV_PATH.exists():
 
 import re
 
+# 最近一次 load_config 的结果（含 bootrun 注入的 learner_prefix）。
+# 供 get_profile_dir / list_profiles 等不接收 config 参数的辅助函数读取。
+_ACTIVE_CONFIG: dict[str, Any] | None = None
+
 
 def _resolve_env_vars(value: str) -> str:
     """解析 ${ENV_VAR} 格式的环境变量占位符。"""
@@ -81,7 +85,10 @@ def _resolve_env_vars(value: str) -> str:
 
 
 def load_config() -> dict[str, Any]:
-    """加载外部 LLM 配置文件。"""
+    """加载外部 LLM 配置文件（进程内单例，含 bootrun 注入的 learner_prefix）。"""
+    global _ACTIVE_CONFIG
+    if _ACTIVE_CONFIG is not None:
+        return _ACTIVE_CONFIG
     config_path = _THIS_DIR / "config" / "external_llm.yaml"
     if not config_path.exists():
         raise FileNotFoundError(f"配置文件不存在: {config_path}")
@@ -117,7 +124,17 @@ def load_config() -> dict[str, Any]:
     llm_config["api_key"] = api_key
     config["llm"] = llm_config
 
+    # 默认前缀 multi（与历史行为一致）；bootrun 注入类别前缀（eval-normal 等）
+    config.setdefault("learner_prefix", "multi")
+    _ACTIVE_CONFIG = config
     return config
+
+
+def _active_learner_prefix() -> str:
+    """当前生效的 learner 前缀（来自最近一次 load_config 的注入）。"""
+    if _ACTIVE_CONFIG is not None:
+        return str(_ACTIVE_CONFIG.get("learner_prefix") or "multi")
+    return "multi"
 
 
 # ── LLM 客户端 ────────────────────────────────────────────────────────────────
@@ -332,9 +349,9 @@ def get_artifacts_dir() -> Path:
 
 
 def get_profile_dir(profile_id: str) -> Path:
-    """获取画像的产物目录。"""
+    """获取画像的产物目录（按当前 learner 前缀）。"""
     artifacts_dir = get_artifacts_dir()
-    return artifacts_dir / f"multi-{profile_id}"
+    return artifacts_dir / f"{_active_learner_prefix()}-{profile_id}"
 
 
 def get_round_dir(profile_id: str, round_num: int) -> Path:
@@ -355,15 +372,16 @@ def read_file(path: Path) -> str | None:
 
 
 def list_profiles() -> list[str]:
-    """列出所有可用画像。"""
+    """列出所有可用画像（按当前 learner 前缀）。"""
     artifacts_dir = get_artifacts_dir()
     if not artifacts_dir.exists():
         return []
 
+    prefix = _active_learner_prefix()
     profiles = []
     for d in sorted(artifacts_dir.iterdir()):
-        if d.is_dir() and d.name.startswith("multi-"):
-            letter = d.name.replace("multi-", "")
+        if d.is_dir() and d.name.startswith(f"{prefix}-"):
+            letter = d.name[len(prefix) + 1:]
             profiles.append(letter)
     return profiles
 
@@ -1860,8 +1878,16 @@ def _load_m14_factpoints(profile_id: str) -> list[dict[str, Any]] | None:
          （本仓库 prepare_m14 产物，输出 ``m1_factpoints_*.json``）
     """
     eval_dir = _EVAL_DIR
-    # 新格式（.json）候选 — 优先 results/record，先新命名后旧命名
+    prefix = _active_learner_prefix()
+    record_dir = eval_dir / "results" / (
+        "record" if prefix == "multi" else f"record_{prefix}"
+    )
+    # 新格式（.json）候选 — 优先当前类别的 results/record_{前缀}，先新命名后旧命名
     new_candidates = [
+        record_dir / f"m1_factpoints_{profile_id}.json",
+        record_dir / f"m1_factpoints_{prefix}-{profile_id}.json",
+        record_dir / f"m14_factpoints_{profile_id}.json",
+        record_dir / f"m14_factpoints_{prefix}-{profile_id}.json",
         eval_dir / "results" / "record" / f"m1_factpoints_{profile_id}.json",
         eval_dir / "results" / "record" / f"m1_factpoints_multi-{profile_id}.json",
         eval_dir / "results" / "record" / f"m14_factpoints_{profile_id}.json",
@@ -1873,6 +1899,10 @@ def _load_m14_factpoints(profile_id: str) -> list[dict[str, Any]] | None:
     ]
     # 旧格式（.jsonl）候选 — 兼容旧路径，逐步废弃
     jsonl_candidates = [
+        record_dir / f"m1_factpoints_{profile_id}.jsonl",
+        record_dir / f"m1_factpoints_{prefix}-{profile_id}.jsonl",
+        record_dir / f"m14_factpoints_{profile_id}.jsonl",
+        record_dir / f"m14_factpoints_{prefix}-{profile_id}.jsonl",
         eval_dir / "results" / "record" / f"m1_factpoints_{profile_id}.jsonl",
         eval_dir / "results" / "record" / f"m1_factpoints_multi-{profile_id}.jsonl",
         eval_dir / "results" / "record" / f"m14_factpoints_{profile_id}.jsonl",
