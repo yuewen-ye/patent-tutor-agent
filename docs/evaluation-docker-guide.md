@@ -172,14 +172,14 @@ artifacts/evaluation/<组>/
 
 | 类别 | 数据位置 | learner 前缀 |
 |---|---|---|
-| no-debate（原产物，无辩论） | `backend/tests/evaluation/artifacts/multi-*` | `multi` |
+| no-debate（无辩论，原产物） | `backend/tests/evaluation/artifacts/eval-no-debate-*` | `eval-no-debate` |
 | normal | `artifacts/evaluation/normal/results/eval-normal-*` | `eval-normal` |
 | no-rag | `artifacts/evaluation/no-rag/results/eval-no-rag-*` | `eval-no-rag` |
 | no-rerank | `artifacts/evaluation/no-rerank/results/eval-no-rerank-*` | `eval-no-rerank` |
 | single-model | `artifacts/evaluation/single-model/results/eval-single-model-*` | `eval-single-model` |
 
 ```bash
-uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix multi
+uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-no-debate
 uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-normal
 uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-no-rag
 uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-no-rerank
@@ -196,7 +196,7 @@ uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner
 注意：
 
 1. 报告固定写到 `backend/tests/evaluation/results/reports/report_full.md`，每组跑完会被覆盖，跑完一组立即改名存档（如 `report_no-debate.md`）。
-2. **不要选菜单 `3`（运行系统）**：会启动新一轮真实运行并写回 `backend/tests/evaluation/artifacts/`，默认前缀 `multi`，误选会污染无辩论组产物。
+2. **不要选菜单 `3`（运行系统）**：会启动新一轮真实运行并写回 `backend/tests/evaluation/artifacts/`，误选会污染现有产物。
 3. 指标不落盘，只打印终端；外部 LLM 评估结果在 `backend/tests/evaluation/results/record/*.json`。
 
 ## 第八步：清理
