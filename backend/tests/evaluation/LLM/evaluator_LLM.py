@@ -2029,6 +2029,41 @@ def _load_m14_factpoints(profile_id: str) -> list[dict[str, Any]] | None:
     return None
 
 
+# M14 跨轮自洽评估的批量大小：一次 LLM 调用评估多个事实点，大幅减少调用次数
+# （350 个事实点从 350 次调用降到约 14 次）。
+_M14_BATCH_SIZE = 25
+
+
+def _parse_m14_batch_response(
+    batch: list[dict[str, Any]], parsed: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[int]]:
+    """把一次批量响应的 evaluations 按 index 映射回事实点。
+
+    返回 (batch_evals, missing_indices)：batch_evals 与 batch 等长，缺失的 index
+    先用占位条目填充（由调用方单条补查后覆盖），missing_indices 列出需要补查的下标。
+    """
+    by_index: dict[int, dict[str, Any]] = {}
+    for item in parsed.get("evaluations") or []:
+        if isinstance(item, dict) and "index" in item:
+            try:
+                by_index[int(item["index"])] = item
+            except (TypeError, ValueError):
+                continue
+    batch_evals: list[dict[str, Any]] = []
+    missing: list[int] = []
+    for j, fp in enumerate(batch):
+        item = by_index.get(j)
+        if item is None:
+            missing.append(j)
+            item = {"contradiction": False, "reason": "批量响应缺失该条目"}
+        batch_evals.append({
+            "fact_point": fp.get("fact_point", ""),
+            "source_rounds": fp.get("turns", []),
+            **item,
+        })
+    return batch_evals, missing
+
+
 @_mark_failed_section("cross_round", level="profile")
 def evaluate_m14(
     profile_id: str,
@@ -2059,23 +2094,62 @@ def evaluate_m14(
     system_prompt = load_system_prompt("m1_cross_round")
 
     client = LLMClient(llm_config)
+    total_fps = len(factpoints)
+    batches = (total_fps + _M14_BATCH_SIZE - 1) // _M14_BATCH_SIZE
+    print(
+        f"  🔍 评估 {total_fps} 个事实点的跨轮自洽性"
+        f"（每批 {_M14_BATCH_SIZE} 个，约 {batches} 次调用）..."
+    )
+
     evals: list[dict[str, Any]] = []
-    print(f"  🔍 评估 {len(factpoints)} 个事实点的跨轮自洽性...")
-    for fp in factpoints:
-        user_prompt = f"""请判断以下事实点跨轮是否自相矛盾：
+    for batch_no, start in enumerate(
+        range(0, total_fps, _M14_BATCH_SIZE), start=1
+    ):
+        batch = factpoints[start:start + _M14_BATCH_SIZE]
+        # 批量提示词：一次返回全部条目的判定结果
+        batch_payload = [
+            {
+                "index": j,
+                "fact_point": fp.get("fact_point", ""),
+                "turns": fp.get("turns", []),
+            }
+            for j, fp in enumerate(batch)
+        ]
+        user_prompt = f"""请逐条判断以下 {len(batch)} 个事实点跨轮是否自相矛盾。
 
-事实点：{fp.get('fact_point', '')}
-轮次序列：{json.dumps(fp.get('turns', []), ensure_ascii=False)}
+{json.dumps(batch_payload, ensure_ascii=False, indent=2)}
 
-请严格按照系统提示中的 JSON 格式输出。"""
+请严格按照 JSON 格式输出，不要添加任何额外文本：
+{{"evaluations": [{{"index": 0, "contradiction": true/false, "reason": "简要理由"}}, ...]}}
+必须覆盖上面给出的每一个 index，逐条给出判定。"""
         # LLM 调用失败（含重试耗尽）直接抛给上层 → 该 section 记为失败，不伪造记录
         resp = client.chat(system_prompt, user_prompt)
         parsed = parse_llm_response(resp)
-        evals.append({
-            "fact_point": fp.get("fact_point", ""),
-            "source_rounds": fp.get("turns", []),
-            **parsed,
-        })
+        batch_evals, missing = _parse_m14_batch_response(batch, parsed)
+
+        # 批量响应缺失的 index 单条补查（应极少；补查失败同样抛给上层）
+        for j in missing:
+            item_prompt = f"""请判断以下事实点跨轮是否自相矛盾：
+
+事实点：{batch[j].get('fact_point', '')}
+轮次序列：{json.dumps(batch[j].get('turns', []), ensure_ascii=False)}
+
+请严格按照系统提示中的 JSON 格式输出。"""
+            item_parsed = parse_llm_response(
+                client.chat(system_prompt, item_prompt)
+            )
+            batch_evals[j] = {
+                "fact_point": batch[j].get("fact_point", ""),
+                "source_rounds": batch[j].get("turns", []),
+                **item_parsed,
+            }
+
+        evals.extend(batch_evals)
+        print(
+            f"    ✅ 已评估 {min(start + _M14_BATCH_SIZE, total_fps)}/{total_fps}"
+            f" 个事实点（批次 {batch_no}/{batches}"
+            f"{f'，补查 {len(missing)} 条' if missing else ''}）"
+        )
 
     total = len(evals)
     contradicted = sum(1 for e in evals if e.get("contradiction") is True)
