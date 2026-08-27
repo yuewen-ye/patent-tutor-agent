@@ -1,0 +1,56 @@
+{
+  "session_id": "977da4d76d744cdba73a66b2b0db8904",
+  "provider": "edge",
+  "slides": [
+    {
+      "slide_id": "slide_001",
+      "audio_url": "audio/bb68c8653ea7.mp3",
+      "duration_sec": 23.8
+    },
+    {
+      "slide_id": "slide_002",
+      "audio_url": "audio/64bbd82bba14.mp3",
+      "duration_sec": 25.2
+    },
+    {
+      "slide_id": "slide_003",
+      "audio_url": "audio/66f4e8a1e65e.mp3",
+      "duration_sec": 25.8
+    },
+    {
+      "slide_id": "slide_004",
+      "audio_url": "audio/5725cb3f28f4.mp3",
+      "duration_sec": 27.2
+    },
+    {
+      "slide_id": "slide_005",
+      "audio_url": "audio/3805e0c3f46c.mp3",
+      "duration_sec": 24.8
+    },
+    {
+      "slide_id": "slide_006",
+      "audio_url": "audio/f69883a3b4fe.mp3",
+      "duration_sec": 28.2
+    },
+    {
+      "slide_id": "slide_007",
+      "audio_url": "audio/d4b28139b9b6.mp3",
+      "duration_sec": 28.0
+    },
+    {
+      "slide_id": "slide_008",
+      "audio_url": "audio/e3724d0fbd79.mp3",
+      "duration_sec": 24.2
+    },
+    {
+      "slide_id": "slide_009",
+      "audio_url": "audio/70a3f64681b3.mp3",
+      "duration_sec": 31.5
+    },
+    {
+      "slide_id": "slide_010",
+      "audio_url": "audio/4780718fd7c6.mp3",
+      "duration_sec": 32.5
+    }
+  ]
+}

@@ -34,11 +34,11 @@ models/
 *.bak
 temp_clone/
 
-# 评估产物：默认不入库；但 eval-no-debate-*（本机单独跑的真实快照）与
-# results/record_*（外部 LLM 评估进度）需要同步到远程，故取消忽略。
-# 其余 eval-* 是 Junction 链接（指向 artifacts/evaluation/ 的 Docker 产物），保持忽略。
+# 评估产物：默认不入库；但 backend/tests/evaluation/artifacts/eval-*（五类评测的
+# 轮次快照，已从 Junction 换成真实目录）与 results/record_*（外部 LLM 评估进度）
+# 需要同步到远程，故取消忽略。
 backend/tests/evaluation/artifacts/*
-!backend/tests/evaluation/artifacts/eval-no-debate-*/
+!backend/tests/evaluation/artifacts/eval-*/
 backend/tests/evaluation/doc/reference/*
 backend/tests/evaluation/LLM/config/external_llm.yaml
 backend/tests/evaluation/results/*
