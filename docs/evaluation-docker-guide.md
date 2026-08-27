@@ -211,9 +211,9 @@ bootrun 菜单 4 是交互式的，容器里无法无人值守；用非交互驱
 uv run python backend/tests/evaluation/run_llm_eval_noninteractive.py \
   --learner-prefix eval-no-rag --dry-run
 
-# Docker 并行跑（默认排除 eval-normal，留给正在跑的进程；--all 包含全部 5 类）
+# Docker 并行跑（默认全部 5 类：eval-normal / no-rag / no-rerank / single-model / no-debate；
+# 已完成的 section 自动跳过，只补缺失或失败的）
 ./scripts/run-llm-eval-matrix.sh
-./scripts/run-llm-eval-matrix.sh --all
 ./scripts/run-llm-eval-matrix.sh eval-no-rag eval-no-rerank   # 只跑指定类别
 ```
 

@@ -3,11 +3,12 @@
 # 每个类别一个 Compose project，容器并行跑 run_llm_eval_noninteractive.py，
 # 输出写入各自独立的 backend/tests/evaluation/results/record_<类别>/。
 #
-# 默认排除 eval-normal（留给正在运行的进程）；--all 包含全部 5 类。
+# 默认并行全部 5 类（eval-normal / eval-no-rag / eval-no-rerank /
+# eval-single-model / eval-no-debate）；已完成的 section 会自动跳过（⏭️），
+# 只补缺失或失败的。
 #
 # 用法：
 #   ./scripts/run-llm-eval-matrix.sh
-#   ./scripts/run-llm-eval-matrix.sh --all
 #   ./scripts/run-llm-eval-matrix.sh eval-no-rag eval-no-rerank
 #   LEARNER_PREFIX=eval-no-rag LLM_EVAL_ROUNDS=3 ./scripts/run-llm-eval-matrix.sh
 
@@ -26,16 +27,18 @@ if ! command -v docker >/dev/null 2>&1; then
     exit 1
 fi
 
-# 解析参数：默认排除正在跑的 eval-normal
+ALL_CATEGORIES=(eval-normal eval-no-rag eval-no-rerank eval-single-model eval-no-debate)
+
+# 解析参数：默认全部 5 类；可指定类别子集
 CATEGORIES=()
 if [[ "$#" -eq 0 ]]; then
-    CATEGORIES=(eval-no-rag eval-no-rerank eval-single-model eval-no-debate)
+    CATEGORIES=("${ALL_CATEGORIES[@]}")
 else
     for a in "$@"; do
         case "$a" in
-            --all) CATEGORIES=(eval-normal eval-no-rag eval-no-rerank eval-single-model eval-no-debate) ;;
+            --all) CATEGORIES=("${ALL_CATEGORIES[@]}") ;;
             -h|--help)
-                echo "用法: $0 [--all] [类别...]"; exit 0 ;;
+                echo "用法: $0 [类别...]   （默认全部 5 类）"; exit 0 ;;
             *) CATEGORIES+=("$a") ;;
         esac
     done
