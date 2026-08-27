@@ -14,6 +14,8 @@
 ## 第二步：四组 batch 评测的日志
 
 对应 `./scripts/run-evaluation-matrix.sh`（跑 normal / no-rag / no-rerank / single-model 四组课程评测）。
+注意：**这里的"四组"不含 no-debate**——no-debate 的课程评测更早在本机单独跑完了（产物在
+`eval-no-debate-*`），batch 矩阵不需要再跑它；但**外部 LLM 评分（第三步）默认包含 no-debate**。
 
 **运行中，按容器实时跟踪**（命名固定 `evaluation-<组>-<服务>-1`）：
 
@@ -58,7 +60,7 @@ tail -f artifacts/evaluation/single-model/compose.log
 
 ## 第三步：并行外部 LLM 评估的日志
 
-对应 `./scripts/run-llm-eval-matrix.sh`（默认 4 类 = no-rag / no-rerank / single-model / **no-debate**；`--all` 才含正在跑的 eval-normal）。每个类别一个日志文件，实时跟踪：
+对应 `./scripts/run-llm-eval-matrix.sh`（默认 4 类 = no-rag / no-rerank / single-model / **no-debate**，no-debate 已包含；`--all` 才加正在跑的 eval-normal）。每个类别一个日志文件，实时跟踪：
 
 ```bash
 tail -f artifacts/evaluation/eval-normal/llm-eval.log          # 主机进程跑完后容器跑时用
