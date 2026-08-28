@@ -5,7 +5,7 @@ import { DifficultyCurve } from "@/components/learning-path/DifficultyCurve";
 import { ConfusionRiskPanel } from "@/components/learning-path/ConfusionRiskPanel";
 import { Badge } from "@/components/ui/badge";
 import type { LearningPathItem, DualAxisSnapshot } from "@/types";
-import { Route, TrendingUp, AlertTriangle } from "lucide-react";
+import { Route, TrendingUp, AlertTriangle, GitBranch } from "lucide-react";
 
 interface LearningPathSectionProps {
   path?: LearningPathItem[];
@@ -38,10 +38,14 @@ export function LearningPathSection({ path, pathDecision, dualAxisSnapshot, mast
               {path.length} 个节点
             </Badge>
             <Badge variant="secondary" className="text-xs">
-              总时长 {path.reduce((sum, p) => sum + p.duration_min, 0)} 分钟
+              总强度 {path.reduce((sum, p) => sum + p.duration_min, 0)} 分钟
             </Badge>
           </div>
         </div>
+        {/* 决策理由条 */}
+        {pathDecision && (
+          <DecisionReasonBar pathDecision={pathDecision} />
+        )}
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="graph" className="w-full">
@@ -78,5 +82,42 @@ export function LearningPathSection({ path, pathDecision, dualAxisSnapshot, mast
         </Tabs>
       </CardContent>
     </Card>
+  );
+}
+
+function DecisionReasonBar({ pathDecision }: { pathDecision: Record<string, unknown> }) {
+  const planAction = String(pathDecision.plan_action ?? "");
+  const decisionReason = String(pathDecision.decision_reason ?? "");
+  const directive = pathDecision.iteration_directive as Record<string, unknown> | undefined;
+  const directiveType = String(directive?.type ?? "");
+
+  if (!decisionReason) return null;
+
+  const directiveLabelMap: Record<string, { label: string; color: string }> = {
+    "降维": { label: "降维解释", color: "text-orange-700 bg-orange-100 border-orange-300" },
+    "进阶": { label: "进阶挑战", color: "text-emerald-700 bg-emerald-100 border-emerald-300" },
+    "薄弱点跟进": { label: "薄弱点跟进", color: "text-amber-700 bg-amber-100 border-amber-300" },
+    "无": { label: "无特殊指令", color: "text-slate-600 bg-slate-100 border-slate-300" },
+  };
+
+  const dirConfig = directiveLabelMap[directiveType];
+
+  return (
+    <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2 px-3 py-2 rounded-lg bg-indigo-500/5 border border-indigo-500/20">
+      <div className="flex items-center gap-2 shrink-0">
+        <GitBranch className="w-4 h-4 text-indigo-500" />
+        <span className="text-xs text-muted-foreground">
+          {planAction === "keep" ? "保持路径" : "重新规划"}
+        </span>
+        {dirConfig && (
+          <span className={`inline-flex items-center px-1.5 py-0.5 text-[11px] font-medium rounded border ${dirConfig.color}`}>
+            {dirConfig.label}
+          </span>
+        )}
+      </div>
+      <span className="text-xs text-[#5C3A26] leading-relaxed">
+        {decisionReason}
+      </span>
+    </div>
   );
 }

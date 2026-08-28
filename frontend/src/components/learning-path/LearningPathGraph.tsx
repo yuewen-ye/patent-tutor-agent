@@ -71,6 +71,11 @@ export function LearningPathGraph({ path, pathDecision }: LearningPathGraphProps
   const { nodes, edges } = useMemo(() => {
     const currentIdx = path.findIndex((p) => p.node_id === currentNodeId);
 
+    const canBeCompleted = (nodeId: string) => {
+      const itemIdx = path.findIndex((p) => p.node_id === nodeId);
+      return currentIdx >= 0 && itemIdx >= 0 && itemIdx < currentIdx;
+    };
+
     let generatedNodes: Node[];
     let generatedEdges: Edge[];
 
@@ -81,7 +86,7 @@ export function LearningPathGraph({ path, pathDecision }: LearningPathGraphProps
       generatedNodes = displayPath.map((item, index) => {
         let state: "completed" | "current" | "pending" = "pending";
         if (item.node_id === currentNodeId) state = "current";
-        else if (completedIds.has(item.node_id)) state = "completed";
+        else if (canBeCompleted(item.node_id) && completedIds.has(item.node_id)) state = "completed";
 
         const row = Math.floor(index / COLS);
         const orderCol = index % COLS;
@@ -130,7 +135,7 @@ export function LearningPathGraph({ path, pathDecision }: LearningPathGraphProps
       generatedNodes = displayPath.map((item, index) => {
         let state: "completed" | "current" | "pending" = "pending";
         if (item.node_id === currentNodeId) state = "current";
-        else if (completedIds.has(item.node_id)) state = "completed";
+        else if (canBeCompleted(item.node_id) && completedIds.has(item.node_id)) state = "completed";
 
         return {
           id: item.node_id,

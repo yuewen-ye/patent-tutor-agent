@@ -1,0 +1,77 @@
+{
+  "session_id": "0fa0e11e644847ac9f1a093398553ac3",
+  "status": "completed",
+  "artifacts": [
+    {
+      "artifact_id": "0fa0e11e644847ac9f1a093398553ac3-round-01-learner_profile",
+      "kind": "learner_profile_report",
+      "path": "artifacts/sessions/0fa0e11e644847ac9f1a093398553ac3/profile/learner_profile.md",
+      "created_by": "diagnosis_feedback",
+      "title": "学习者画像报告",
+      "mime_type": "text/markdown",
+      "sha256": "d9b3bb8b198fa695b171b6868dc6beafd8417fa60bd2556716b1bac7c2eb6357",
+      "created_at": "2026-08-26T08:13:42.492204+00:00"
+    },
+    {
+      "artifact_id": "0fa0e11e644847ac9f1a093398553ac3-round-01-learning_path",
+      "kind": "learning_path_plan",
+      "path": "artifacts/sessions/0fa0e11e644847ac9f1a093398553ac3/path/learning_path.md",
+      "created_by": "planner",
+      "title": "学习路径规划",
+      "mime_type": "text/markdown",
+      "sha256": "a38250006dc75ac2ccdf680d6f43ea720992d07a5e1d8b41a345708208a09a51",
+      "created_at": "2026-08-26T08:14:01.142857+00:00"
+    },
+    {
+      "artifact_id": "0fa0e11e644847ac9f1a093398553ac3-round-01-path_decision",
+      "kind": "learning_path_plan",
+      "path": "artifacts/sessions/0fa0e11e644847ac9f1a093398553ac3/path/path_decision.md",
+      "created_by": "planner",
+      "title": "学习路径决策指令",
+      "mime_type": "text/markdown",
+      "sha256": "fc0be8c719a7feb9d3abcdec83c3c844c64eaa0b11a7f841acc52c30dadca6ae",
+      "created_at": "2026-08-26T08:14:01.143903+00:00"
+    },
+    {
+      "artifact_id": "0fa0e11e644847ac9f1a093398553ac3-round-01-dual_axis_snapshot",
+      "kind": "dual_axis_snapshot",
+      "path": "artifacts/sessions/0fa0e11e644847ac9f1a093398553ac3/path/dual_axis_snapshot.md",
+      "created_by": "planner",
+      "title": "双知识轴快照",
+      "mime_type": "text/markdown",
+      "sha256": "df5487b050fa74d34a2c097f9e26e1ae4ce0e96c271ae14481e6fd3da3c41303",
+      "created_at": "2026-08-26T08:14:01.144730+00:00"
+    },
+    {
+      "artifact_id": "0fa0e11e644847ac9f1a093398553ac3-round-01-retrieval_context",
+      "kind": "retrieval_context",
+      "path": "artifacts/sessions/0fa0e11e644847ac9f1a093398553ac3/round-01/retrieval_context.md",
+      "created_by": "retrieve_context",
+      "title": "RAG 检索上下文",
+      "mime_type": "text/markdown",
+      "sha256": "fb8b657787504f17c4e1e33490b451b6d5865c79a6487c9f2b45d2b5b0c943e3",
+      "created_at": "2026-08-26T08:15:29.867379+00:00"
+    },
+    {
+      "artifact_id": "0fa0e11e644847ac9f1a093398553ac3-round-01-course_package",
+      "kind": "course_package",
+      "path": "artifacts/sessions/0fa0e11e644847ac9f1a093398553ac3/round-01/course_package.md",
+      "created_by": "expert_a",
+      "title": "整合后的课程完整内容与习题",
+      "mime_type": "text/markdown",
+      "sha256": "a9682a4599fb37f3631a33319e89cf458ef5315037928a8671b453fa74496799",
+      "created_at": "2026-08-26T08:15:29.870206+00:00"
+    },
+    {
+      "artifact_id": "0fa0e11e644847ac9f1a093398553ac3-round-01-judge_report",
+      "kind": "judge_report",
+      "path": "artifacts/sessions/0fa0e11e644847ac9f1a093398553ac3/round-01/judge_report.md",
+      "created_by": "judge",
+      "title": "审核裁判报告",
+      "mime_type": "text/markdown",
+      "sha256": "ad8ad181ae8ff80ab4eaf4532df5400cb6378ca5949fac292e29455683b8c8b1",
+      "created_at": "2026-08-26T08:15:47.314620+00:00"
+    }
+  ],
+  "updated_at": "2026-08-26T08:15:47.476687+00:00"
+}

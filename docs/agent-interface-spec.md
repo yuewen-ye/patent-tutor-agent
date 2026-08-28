@@ -49,6 +49,7 @@ CAT/BKT 诊断引擎也不是 LLM Agent 或 LangGraph 节点。它位于 FastAPI
 | `workflow_mode` | auto/teach/chat/diagnose/feedback | 显式入口 |
 | `workflow_status` | running/completed/failed/canceled | 会话状态 |
 | `input_payload` | object | 问卷或练习提交 |
+| `rag_tool_enabled` | boolean | 部署是否向 Expert A/B/Judge 暴露 `rag_retrieve` 工具；缺省为 true，Chat 固定检索不受影响 |
 
 业务字段：`intent`、`learner_profile`、`learning_path`、`dual_axis_snapshot`、`path_decision`、
 `teaching_context`、`retrieval_context`、`expert_a_draft`、`expert_b_draft`、

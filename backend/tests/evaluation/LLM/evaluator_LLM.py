@@ -22,6 +22,7 @@
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import os
 import re
@@ -67,6 +68,10 @@ if ENV_PATH.exists():
 
 import re
 
+# 最近一次 load_config 的结果（含 bootrun 注入的 learner_prefix）。
+# 供 get_profile_dir / list_profiles 等不接收 config 参数的辅助函数读取。
+_ACTIVE_CONFIG: dict[str, Any] | None = None
+
 
 def _resolve_env_vars(value: str) -> str:
     """解析 ${ENV_VAR} 格式的环境变量占位符。"""
@@ -81,7 +86,10 @@ def _resolve_env_vars(value: str) -> str:
 
 
 def load_config() -> dict[str, Any]:
-    """加载外部 LLM 配置文件。"""
+    """加载外部 LLM 配置文件（进程内单例，含 bootrun 注入的 learner_prefix）。"""
+    global _ACTIVE_CONFIG
+    if _ACTIVE_CONFIG is not None:
+        return _ACTIVE_CONFIG
     config_path = _THIS_DIR / "config" / "external_llm.yaml"
     if not config_path.exists():
         raise FileNotFoundError(f"配置文件不存在: {config_path}")
@@ -117,7 +125,17 @@ def load_config() -> dict[str, Any]:
     llm_config["api_key"] = api_key
     config["llm"] = llm_config
 
+    # 默认前缀 multi（与历史行为一致）；bootrun 注入类别前缀（eval-normal 等）
+    config.setdefault("learner_prefix", "multi")
+    _ACTIVE_CONFIG = config
     return config
+
+
+def _active_learner_prefix() -> str:
+    """当前生效的 learner 前缀（来自最近一次 load_config 的注入）。"""
+    if _ACTIVE_CONFIG is not None:
+        return str(_ACTIVE_CONFIG.get("learner_prefix") or "multi")
+    return "multi"
 
 
 # ── LLM 客户端 ────────────────────────────────────────────────────────────────
@@ -243,38 +261,15 @@ class LLMClient:
                 print(f"    ❌ 异常: {type(e).__name__}: {str(e)[:200]}")
                 break
 
-        # 显示最终错误摘要
+        # 显示最终错误摘要并抛异常：重试耗尽 = 调用失败。
+        # 绝不返回降级假响应——上层据此把该 section 记为失败，而不是写入 0 分占位。
         if last_error:
             print(f"    ⚠️  LLM 调用最终失败: {type(last_error).__name__}")
             print(f"       URL: {url}")
             print(f"       模型: {self.model}")
+            raise last_error
 
-        return self._generate_fallback_response(str(last_error))
-
-    def _generate_fallback_response(self, error_msg: str) -> str:
-        """生成降级响应（当 LLM 调用失败时）。"""
-        return json.dumps({
-            "scores": {
-                "goal_coverage": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "matched_goals": [], "missed_goals": []},
-                "factual_accuracy": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "correct_items": [], "errors": []},
-                "case_accuracy": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "reliable_cases": [], "problematic_cases": []},
-                "factual_consistency": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "consistent_points": [], "contradictions": []},
-                "pedagogical_clarity": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "clear_points": [], "confusing_points": []},
-                "difficulty_fit": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "matched_items": [], "mismatched_items": []},
-                "learner_fit": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "adapted_points": [], "missing_adaptations": []},
-                "knowledge_completeness": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "covered_points": [], "missing_points": []},
-                "weakness_addressing": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "addressed_weaknesses": [], "untouched_weaknesses": []},
-                "context_correctness": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "accurate_facts": [], "missing_facts": [], "incorrect_facts": []},
-                "correctness": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "correct_statements": [], "incorrect_statements": []},
-                "hallucination": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "hallucinated_items": [], "verifiable_items": []},
-                "helpfulness": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "helpful_points": [], "unhelpful_points": []},
-                "relevance": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "relevant_points": [], "off_topic_points": []},
-            },
-            "overall_score": {"score": 0, "max": 100, "comment": f"LLM 调用失败: {error_msg}", "summary": "评估失败"},
-            "highlights": [],
-            "issues": [f"LLM 调用失败: {error_msg}"],
-            "suggestions": [],
-        }, ensure_ascii=False)
+        raise RuntimeError(f"LLM 调用失败且无错误信息: {url}")
 
     @staticmethod
     def _parse_sse_response(raw_text: str) -> dict | None:
@@ -332,9 +327,9 @@ def get_artifacts_dir() -> Path:
 
 
 def get_profile_dir(profile_id: str) -> Path:
-    """获取画像的产物目录。"""
+    """获取画像的产物目录（按当前 learner 前缀）。"""
     artifacts_dir = get_artifacts_dir()
-    return artifacts_dir / f"multi-{profile_id}"
+    return artifacts_dir / f"{_active_learner_prefix()}-{profile_id}"
 
 
 def get_round_dir(profile_id: str, round_num: int) -> Path:
@@ -355,15 +350,16 @@ def read_file(path: Path) -> str | None:
 
 
 def list_profiles() -> list[str]:
-    """列出所有可用画像。"""
+    """列出所有可用画像（按当前 learner 前缀）。"""
     artifacts_dir = get_artifacts_dir()
     if not artifacts_dir.exists():
         return []
 
+    prefix = _active_learner_prefix()
     profiles = []
     for d in sorted(artifacts_dir.iterdir()):
-        if d.is_dir() and d.name.startswith("multi-"):
-            letter = d.name.replace("multi-", "")
+        if d.is_dir() and d.name.startswith(f"{prefix}-"):
+            letter = d.name[len(prefix) + 1:]
             profiles.append(letter)
     return profiles
 
@@ -587,6 +583,78 @@ def merge_profile_section(
     return path
 
 
+def _section_done(data: dict[str, Any], section: str) -> bool:
+    """该 section 是否已成功完成。
+
+    失败标记（status == "failed"）视为未完成：重跑会重新评估，而不是被跳过。
+    """
+    value = data.get(section)
+    if value is None:
+        return False
+    if isinstance(value, dict) and value.get("status") == "failed":
+        return False
+    return True
+
+
+def _mark_eval_failure(
+    config: dict[str, Any], model_name: str, profile_id: str,
+    round_num: int | None, section: str, exc: BaseException,
+    *, level: str = "round",
+) -> None:
+    """LLM 评估重试耗尽失败后，在聚合产物中写入失败标记。
+
+    标记本身不算"已有结果"（_section_done 视为未完成），因此重跑会重试该 section。
+    """
+    marker: dict[str, Any] = {
+        "status": "failed",
+        "error": f"{type(exc).__name__}: {exc}",
+        "failed_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
+    if level == "profile":
+        merge_profile_section(config, model_name, profile_id, section=section, value=marker)
+    elif level == "system":
+        merge_system_section(config, model_name, section=section, value=marker)
+    else:
+        merge_round_section(config, model_name, profile_id, round_num, section=section, value=marker)
+
+
+def _mark_failed_section(section: str, *, level: str = "round"):
+    """装饰器：评估函数抛异常时先写入失败标记，再重新抛出。
+
+    按评估函数的调用约定从位置参数提取身份：
+      round:   (profile_id, round_num, config, ...)
+      profile: (profile_id, config, ...)
+      system:  (config, ...)
+    """
+
+    def _decorate(fn):
+        @functools.wraps(fn)
+        def _wrapper(*args: Any, **kwargs: Any) -> Any:
+            try:
+                return fn(*args, **kwargs)
+            except Exception as exc:  # 必须标记任何评估失败
+                try:
+                    if level == "round":
+                        profile_id, round_num, config = args[0], args[1], args[2]
+                    elif level == "profile":
+                        profile_id, config = args[0], args[1]
+                        round_num = None
+                    else:  # system
+                        profile_id, config, round_num = "system", args[0], None
+                    model_name = config.get("llm", {}).get("model", "unknown")
+                    _mark_eval_failure(
+                        config, model_name, profile_id, round_num,
+                        section, exc, level=level,
+                    )
+                except Exception:  # noqa: BLE001 - 标记失败不影响原始异常传播
+                    pass
+                raise
+
+        return _wrapper
+
+    return _decorate
+
+
 def build_chunk_prompt(
     chunk: dict[str, Any],
     learning_path: str,
@@ -641,6 +709,7 @@ def build_whole_prompt(
 
 # ── 评估流程 ──────────────────────────────────────────────────────────────────
 
+@_mark_failed_section("overall")
 def evaluate_profile_round(
     profile_id: str,
     round_num: int,
@@ -668,7 +737,7 @@ def evaluate_profile_round(
 
     if output_path.exists() and not force:
         existing = _load_json_safe(output_path)
-        if "overall" in existing:
+        if _section_done(existing, "overall"):
             print(f"  ⏭️  跳过：round_indicator overall 评估已存在")
             return None
 
@@ -1466,6 +1535,7 @@ def calc_source_verifiable_rate(eval_results: list[dict[str, Any]]) -> dict[str,
     }
 
 
+@_mark_failed_section("statement")
 def evaluate_m1_m9(
     profile_id: str,
     round_num: int,
@@ -1482,7 +1552,7 @@ def evaluate_m1_m9(
 
     if output_path.exists() and not force:
         existing = _load_json_safe(output_path)
-        if "statement" in existing:
+        if _section_done(existing, "statement"):
             print(f"  ⏭️  跳过：round_indicator statement 评估已存在")
             return None
 
@@ -1553,6 +1623,7 @@ def evaluate_m1_m9(
 
 # ── M8 异议闭环率（外部 LLM 评估） ────────────────────────────────────────────
 
+@_mark_failed_section("objection_loop")
 def evaluate_m8_objection_loop(
     profile_id: str,
     round_num: int,
@@ -1573,7 +1644,7 @@ def evaluate_m8_objection_loop(
 
     if output_path.exists() and not force:
         existing = _load_json_safe(output_path)
-        if "objection_loop" in existing:
+        if _section_done(existing, "objection_loop"):
             print(f"  ⏭️  跳过：round_indicator objection_loop 评估已存在")
             return None
 
@@ -1696,6 +1767,7 @@ def evaluate_m8_objection_loop(
 
 # ── M7 资源形态（外部 LLM 评估） ────────────────────────────────────────────
 
+@_mark_failed_section("resource_morphology")
 def evaluate_m7_resource_morphology(
     profile_id: str,
     round_num: int,
@@ -1715,7 +1787,7 @@ def evaluate_m7_resource_morphology(
 
     if output_path.exists() and not force:
         existing = _load_json_safe(output_path)
-        if "resource_morphology" in existing:
+        if _section_done(existing, "resource_morphology"):
             print(f"  ⏭️  跳过：round_indicator resource_morphology 评估已存在")
             return None
 
@@ -1866,32 +1938,62 @@ def _load_m14_factpoints(profile_id: str) -> list[dict[str, Any]] | None:
          （本仓库 prepare_m14 产物，输出 ``m1_factpoints_*.json``）
     """
     eval_dir = _EVAL_DIR
-    # 新格式（.json）候选 — 优先 results/record，先新命名后旧命名
+    prefix = _active_learner_prefix()
+    # 优先使用当前注入的 output.dir（与 prepare_m14 的写入目录一致）；
+    # 未注入时按前缀推导 results/record_{前缀}。
+    _active = _ACTIVE_CONFIG or {}
+    _out_cfg = (_active.get("output") or {}).get("dir", "")
+    if _out_cfg:
+        _out_path = Path(_out_cfg)
+        record_dir = _out_path if _out_path.is_absolute() else _PROJECT_ROOT / _out_path
+    else:
+        record_dir = eval_dir / "results" / (
+            "record" if prefix == "multi" else f"record_{prefix}"
+        )
+    # 新格式（.json）候选 — 优先当前类别的 results/record_{前缀}，先新命名后旧命名。
+    # 共享旧目录（results/record、results/reports/record）仅对 multi 前缀回退，
+    # 非 multi 前缀绝不读共享池，避免把别的类别的事实点算进本类别。
     new_candidates = [
-        eval_dir / "results" / "record" / f"m1_factpoints_{profile_id}.json",
-        eval_dir / "results" / "record" / f"m1_factpoints_multi-{profile_id}.json",
-        eval_dir / "results" / "record" / f"m14_factpoints_{profile_id}.json",
-        eval_dir / "results" / "record" / f"m14_factpoints_multi-{profile_id}.json",
-        eval_dir / "results" / "reports" / "record" / f"m1_factpoints_{profile_id}.json",
-        eval_dir / "results" / "reports" / "record" / f"m1_factpoints_multi-{profile_id}.json",
-        eval_dir / "results" / "reports" / "record" / f"m14_factpoints_{profile_id}.json",
-        eval_dir / "results" / "reports" / "record" / f"m14_factpoints_multi-{profile_id}.json",
+        record_dir / f"m1_factpoints_{profile_id}.json",
+        record_dir / f"m1_factpoints_{prefix}-{profile_id}.json",
+        record_dir / f"m14_factpoints_{profile_id}.json",
+        record_dir / f"m14_factpoints_{prefix}-{profile_id}.json",
     ]
+    if prefix == "multi":
+        new_candidates += [
+            eval_dir / "results" / "record" / f"m1_factpoints_{profile_id}.json",
+            eval_dir / "results" / "record" / f"m1_factpoints_multi-{profile_id}.json",
+            eval_dir / "results" / "record" / f"m14_factpoints_{profile_id}.json",
+            eval_dir / "results" / "record" / f"m14_factpoints_multi-{profile_id}.json",
+            eval_dir / "results" / "reports" / "record" / f"m1_factpoints_{profile_id}.json",
+            eval_dir / "results" / "reports" / "record" / f"m1_factpoints_multi-{profile_id}.json",
+            eval_dir / "results" / "reports" / "record" / f"m14_factpoints_{profile_id}.json",
+            eval_dir / "results" / "reports" / "record" / f"m14_factpoints_multi-{profile_id}.json",
+        ]
     # 旧格式（.jsonl）候选 — 兼容旧路径，逐步废弃
     jsonl_candidates = [
-        eval_dir / "results" / "record" / f"m1_factpoints_{profile_id}.jsonl",
-        eval_dir / "results" / "record" / f"m1_factpoints_multi-{profile_id}.jsonl",
-        eval_dir / "results" / "record" / f"m14_factpoints_{profile_id}.jsonl",
-        eval_dir / "results" / "record" / f"m14_factpoints_multi-{profile_id}.jsonl",
-        eval_dir / "results" / "reports" / "record" / f"m1_factpoints_{profile_id}.jsonl",
-        eval_dir / "results" / "reports" / "record" / f"m1_factpoints_multi-{profile_id}.jsonl",
-        eval_dir / "results" / "reports" / "record" / f"m14_factpoints_{profile_id}.jsonl",
-        eval_dir / "results" / "reports" / "record" / f"m14_factpoints_multi-{profile_id}.jsonl",
-        eval_dir / "results" / "m14_factpoints" / f"m14_factpoints_{profile_id}.json",
-        eval_dir / "results" / "m14_factpoints" / f"m14_factpoints_{profile_id}.jsonl",
-        eval_dir / "results" / "raw" / f"m14_factpoints_{profile_id}.jsonl",
-        eval_dir / f"m14_factpoints_{profile_id}.jsonl",
+        record_dir / f"m1_factpoints_{profile_id}.jsonl",
+        record_dir / f"m1_factpoints_{prefix}-{profile_id}.jsonl",
+        record_dir / f"m14_factpoints_{profile_id}.jsonl",
+        record_dir / f"m14_factpoints_{prefix}-{profile_id}.jsonl",
     ]
+    if prefix == "multi":
+        jsonl_candidates += [
+            eval_dir / "results" / "record" / f"m1_factpoints_{profile_id}.jsonl",
+            eval_dir / "results" / "record" / f"m1_factpoints_multi-{profile_id}.jsonl",
+            eval_dir / "results" / "record" / f"m14_factpoints_{profile_id}.jsonl",
+            eval_dir / "results" / "record" / f"m14_factpoints_multi-{profile_id}.jsonl",
+            eval_dir / "results" / "reports" / "record" / f"m1_factpoints_{profile_id}.jsonl",
+            eval_dir / "results" / "reports" / "record" / f"m1_factpoints_multi-{profile_id}.jsonl",
+            eval_dir / "results" / "reports" / "record" / f"m14_factpoints_{profile_id}.jsonl",
+            eval_dir / "results" / "reports" / "record" / (
+                f"m14_factpoints_multi-{profile_id}.jsonl"
+            ),
+            eval_dir / "results" / "m14_factpoints" / f"m14_factpoints_{profile_id}.json",
+            eval_dir / "results" / "m14_factpoints" / f"m14_factpoints_{profile_id}.jsonl",
+            eval_dir / "results" / "raw" / f"m14_factpoints_{profile_id}.jsonl",
+            eval_dir / f"m14_factpoints_{profile_id}.jsonl",
+        ]
 
     # 优先加载新格式
     for path in new_candidates:
@@ -1933,6 +2035,42 @@ def _load_m14_factpoints(profile_id: str) -> list[dict[str, Any]] | None:
     return None
 
 
+# M14 跨轮自洽评估的批量大小：一次 LLM 调用评估多个事实点，大幅减少调用次数
+# （350 个事实点从 350 次调用降到约 14 次）。
+_M14_BATCH_SIZE = 25
+
+
+def _parse_m14_batch_response(
+    batch: list[dict[str, Any]], parsed: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[int]]:
+    """把一次批量响应的 evaluations 按 index 映射回事实点。
+
+    返回 (batch_evals, missing_indices)：batch_evals 与 batch 等长，缺失的 index
+    先用占位条目填充（由调用方单条补查后覆盖），missing_indices 列出需要补查的下标。
+    """
+    by_index: dict[int, dict[str, Any]] = {}
+    for item in parsed.get("evaluations") or []:
+        if isinstance(item, dict) and "index" in item:
+            try:
+                by_index[int(item["index"])] = item
+            except (TypeError, ValueError):
+                continue
+    batch_evals: list[dict[str, Any]] = []
+    missing: list[int] = []
+    for j, fp in enumerate(batch):
+        item = by_index.get(j)
+        if item is None:
+            missing.append(j)
+            item = {"contradiction": False, "reason": "批量响应缺失该条目"}
+        batch_evals.append({
+            "fact_point": fp.get("fact_point", ""),
+            "source_rounds": fp.get("turns", []),
+            **item,
+        })
+    return batch_evals, missing
+
+
+@_mark_failed_section("cross_round", level="profile")
 def evaluate_m14(
     profile_id: str,
     config: dict[str, Any],
@@ -1950,7 +2088,7 @@ def evaluate_m14(
 
     if output_path.exists() and not force:
         existing = _load_json_safe(output_path)
-        if "cross_round" in existing:
+        if _section_done(existing, "cross_round"):
             print(f"  ⏭️  跳过：profile_indicator cross_round 评估已存在")
             return None
 
@@ -1962,25 +2100,62 @@ def evaluate_m14(
     system_prompt = load_system_prompt("m1_cross_round")
 
     client = LLMClient(llm_config)
-    evals: list[dict[str, Any]] = []
-    print(f"  🔍 评估 {len(factpoints)} 个事实点的跨轮自洽性...")
-    for fp in factpoints:
-        user_prompt = f"""请判断以下事实点跨轮是否自相矛盾：
+    total_fps = len(factpoints)
+    batches = (total_fps + _M14_BATCH_SIZE - 1) // _M14_BATCH_SIZE
+    print(
+        f"  🔍 评估 {total_fps} 个事实点的跨轮自洽性"
+        f"（每批 {_M14_BATCH_SIZE} 个，约 {batches} 次调用）..."
+    )
 
-事实点：{fp.get('fact_point', '')}
-轮次序列：{json.dumps(fp.get('turns', []), ensure_ascii=False)}
+    evals: list[dict[str, Any]] = []
+    for batch_no, start in enumerate(
+        range(0, total_fps, _M14_BATCH_SIZE), start=1
+    ):
+        batch = factpoints[start:start + _M14_BATCH_SIZE]
+        # 批量提示词：一次返回全部条目的判定结果
+        batch_payload = [
+            {
+                "index": j,
+                "fact_point": fp.get("fact_point", ""),
+                "turns": fp.get("turns", []),
+            }
+            for j, fp in enumerate(batch)
+        ]
+        user_prompt = f"""请逐条判断以下 {len(batch)} 个事实点跨轮是否自相矛盾。
+
+{json.dumps(batch_payload, ensure_ascii=False, indent=2)}
+
+请严格按照 JSON 格式输出，不要添加任何额外文本：
+{{"evaluations": [{{"index": 0, "contradiction": true/false, "reason": "简要理由"}}, ...]}}
+必须覆盖上面给出的每一个 index，逐条给出判定。"""
+        # LLM 调用失败（含重试耗尽）直接抛给上层 → 该 section 记为失败，不伪造记录
+        resp = client.chat(system_prompt, user_prompt)
+        parsed = parse_llm_response(resp)
+        batch_evals, missing = _parse_m14_batch_response(batch, parsed)
+
+        # 批量响应缺失的 index 单条补查（应极少；补查失败同样抛给上层）
+        for j in missing:
+            item_prompt = f"""请判断以下事实点跨轮是否自相矛盾：
+
+事实点：{batch[j].get('fact_point', '')}
+轮次序列：{json.dumps(batch[j].get('turns', []), ensure_ascii=False)}
 
 请严格按照系统提示中的 JSON 格式输出。"""
-        try:
-            resp = client.chat(system_prompt, user_prompt)
-            parsed = parse_llm_response(resp)
-        except Exception as e:
-            parsed = {"contradiction": False, "reason": f"LLM异常: {e}"}
-        evals.append({
-            "fact_point": fp.get("fact_point", ""),
-            "source_rounds": fp.get("turns", []),
-            **parsed,
-        })
+            item_parsed = parse_llm_response(
+                client.chat(system_prompt, item_prompt)
+            )
+            batch_evals[j] = {
+                "fact_point": batch[j].get("fact_point", ""),
+                "source_rounds": batch[j].get("turns", []),
+                **item_parsed,
+            }
+
+        evals.extend(batch_evals)
+        print(
+            f"    ✅ 已评估 {min(start + _M14_BATCH_SIZE, total_fps)}/{total_fps}"
+            f" 个事实点（批次 {batch_no}/{batches}"
+            f"{f'，补查 {len(missing)} 条' if missing else ''}）"
+        )
 
     total = len(evals)
     contradicted = sum(1 for e in evals if e.get("contradiction") is True)
@@ -2048,7 +2223,7 @@ def _evaluate_system_qa(
 
     if output_path.exists() and not force:
         existing = _load_json_safe(output_path)
-        if section in existing:
+        if _section_done(existing, section):
             print(f"  ⏭️  跳过：system_indicator {section} 已存在")
             return None
 
@@ -2125,14 +2300,9 @@ def _evaluate_system_qa(
 {'陷阱类型' if section == "m6_adversarial" else '期望反应'}：{ans.get('trap_type') or ans.get('expected', '')}
 
 请严格按照系统提示中的 JSON 格式输出。"""
-        try:
-            resp = client.chat(system_prompt, user_prompt)
-            parsed = parse_llm_response(resp)
-        except Exception as e:
-            parsed = {
-                key_bool: False,
-                "reason": f"LLM异常: {e}",
-            }
+        # LLM 调用失败直接抛给上层 → 该 section 记为失败，不伪造通过记录
+        resp = client.chat(system_prompt, user_prompt)
+        parsed = parse_llm_response(resp)
         section_eval, verdict = _extract_section_eval(parsed)
         # 明细写入：保留 question / answer（解包后）+ 本 indicator 的完整评估 + 原始 LLM 回答结构
         evals.append({
@@ -2167,6 +2337,7 @@ def _evaluate_system_qa(
     return result
 
 
+@_mark_failed_section("m6_adversarial", level="system")
 def evaluate_m15(config: dict[str, Any], force: bool = False) -> dict[str, Any] | None:
     """M6.1 对抗稳健率（系统级）。结果合并到 system_indicator_{model}.json 的 m6_adversarial section。"""
     llm_config = config.get("llm", {})
@@ -2192,6 +2363,7 @@ def evaluate_m15(config: dict[str, Any], force: bool = False) -> dict[str, Any] 
     )
 
 
+@_mark_failed_section("m6_boundary", level="system")
 def evaluate_m16(config: dict[str, Any], force: bool = False) -> dict[str, Any] | None:
     """M6.2 边界拒答恰当率（系统级）。结果合并到 system_indicator_{model}.json 的 m6_boundary section。"""
     llm_config = config.get("llm", {})
@@ -2218,6 +2390,7 @@ def evaluate_m16(config: dict[str, Any], force: bool = False) -> dict[str, Any] 
 
 # ── M17 检索正确性（外部 LLM 评估） ────────────────────────────────────────────
 
+@_mark_failed_section("retrieval")
 def evaluate_m17(
     profile_id: str,
     round_num: int,
@@ -2232,7 +2405,7 @@ def evaluate_m17(
 
     if output_path.exists() and not force:
         existing = _load_json_safe(output_path)
-        if "retrieval" in existing:
+        if _section_done(existing, "retrieval"):
             print(f"  ⏭️  跳过：round_indicator retrieval 评估已存在")
             return None
 
@@ -2257,11 +2430,9 @@ def evaluate_m17(
 {chunk.get('content', '')[:3000]}
 
 请严格按照系统提示中的 JSON 格式输出。"""
-        try:
-            resp = client.chat(system_prompt, user_prompt)
-            parsed = parse_llm_response(resp)
-        except Exception as e:
-            parsed = {"accurate": False, "complete": False, "reason": f"LLM异常: {e}"}
+        # LLM 调用失败直接抛给上层 → 该 section 记为失败，不伪造 chunk 记录
+        resp = client.chat(system_prompt, user_prompt)
+        parsed = parse_llm_response(resp)
         evals.append({
             "chunk_index": chunk.get("index", 0),
             "chunk_title": chunk.get("title", ""),
@@ -2296,6 +2467,7 @@ def evaluate_m17(
 
 # ── M5.3 PII 合规检测（外部 LLM 评估） ────────────────────────────────────────
 
+@_mark_failed_section("pii")
 def evaluate_pii_compliance(
     profile_id: str,
     round_num: int,
@@ -2313,7 +2485,7 @@ def evaluate_pii_compliance(
 
     if output_path.exists() and not force:
         existing = _load_json_safe(output_path)
-        if "pii" in existing:
+        if _section_done(existing, "pii"):
             print(f"  ⏭️  跳过：round_indicator pii 评估已存在")
             return None
 
@@ -2344,11 +2516,9 @@ def evaluate_pii_compliance(
 
 请严格按照系统提示中的 JSON 格式输出 PII 检测结果。
 注意：排除专利号（ZL/CN开头）、法条号（如"第42条"）、案例号、日期数字等合理场景。"""
-        try:
-            resp = client.chat(system_prompt, user_prompt)
-            parsed = parse_llm_response(resp)
-        except Exception as e:
-            parsed = {"has_pii_leak": False, "compliance_score": 0, "reason": f"LLM异常: {e}"}
+        # LLM 调用失败直接抛给上层 → 该 section 记为失败，不伪造 PII 记录
+        resp = client.chat(system_prompt, user_prompt)
+        parsed = parse_llm_response(resp)
         evals.append({
             "chunk_index": chunk.get("index", 0),
             "chunk_title": chunk.get("title", ""),

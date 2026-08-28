@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, AlertCircle, TrendingUp, BookOpen, Target, Award } from "lucide-react";
+import { CheckCircle2, XCircle, AlertCircle, TrendingUp, BookOpen, Target, Award, GitBranch, Lightbulb, Forward, Rewind, Zap } from "lucide-react";
 
 interface GradingItem {
   question_id?: string;
@@ -22,12 +22,14 @@ interface FeedbackResultCardProps {
   gradingReport?: GradingItem[];
   feedbackResult?: Record<string, unknown>;
   inputPayload?: Record<string, unknown>;
+  pathDecision?: Record<string, unknown>;
 }
 
 export function FeedbackResultCard({
   gradingReport,
   feedbackResult,
   inputPayload,
+  pathDecision,
 }: FeedbackResultCardProps) {
   const responses = (inputPayload?.exercise_responses as Array<Record<string, unknown>>) || [];
   const bktUpdates = (inputPayload?.bkt_updates as Array<Record<string, unknown>>) || [];
@@ -248,6 +250,9 @@ export function FeedbackResultCard({
           </div>
         )}
 
+        {/* 决策解释卡 */}
+        {pathDecision && <DecisionExplanationCard pathDecision={pathDecision} />}
+
         {/* 反馈建议 */}
         {suggestions.length > 0 && (
           <div className="rounded-lg border border-border/30 bg-secondary/20 p-4">
@@ -323,4 +328,150 @@ function renderProgressSummary(progress: Record<string, unknown>): string {
     parts.push(`游标：${cursor.slice(-20)}`);
   }
   return parts.length > 0 ? parts.join("；") : "学习路径已更新";
+}
+
+function DecisionExplanationCard({ pathDecision }: { pathDecision: Record<string, unknown> }) {
+  const planAction = String(pathDecision.plan_action ?? "");
+  const decisionReason = String(pathDecision.decision_reason ?? "");
+  const directive = pathDecision.iteration_directive as Record<string, unknown> | undefined;
+  const questionScope = pathDecision.question_scope as Record<string, unknown> | undefined;
+
+  const isKeep = planAction === "keep";
+  const directiveType = String(directive?.type ?? "");
+  const directiveTrigger = String(directive?.trigger ?? "");
+  const directiveAction = String(directive?.action ?? "");
+
+  const directiveLabelMap: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
+    "降维": {
+      label: "降维解释",
+      color: "text-orange-700",
+      bg: "bg-orange-100 border-orange-300",
+      icon: <Rewind className="w-3.5 h-3.5" />,
+    },
+    "进阶": {
+      label: "进阶挑战",
+      color: "text-emerald-700",
+      bg: "bg-emerald-100 border-emerald-300",
+      icon: <Forward className="w-3.5 h-3.5" />,
+    },
+    "薄弱点跟进": {
+      label: "薄弱点跟进",
+      color: "text-amber-700",
+      bg: "bg-amber-100 border-amber-300",
+      icon: <Zap className="w-3.5 h-3.5" />,
+    },
+    "无": {
+      label: "无特殊指令",
+      color: "text-slate-600",
+      bg: "bg-slate-100 border-slate-300",
+      icon: <Lightbulb className="w-3.5 h-3.5" />,
+    },
+  };
+
+  const dirConfig = directiveLabelMap[directiveType] || directiveLabelMap["无"];
+
+  const backwardReview = (questionScope?.backward_review as Array<Record<string, unknown>>) || [];
+  const forwardProbe = (questionScope?.forward_probe as Array<Record<string, unknown>>) || [];
+  const weaknessProbe = (questionScope?.weakness_probe as Array<Record<string, unknown>>) || [];
+
+  return (
+    <div className="rounded-lg border border-indigo-500/30 bg-indigo-500/5 p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <GitBranch className="h-4 w-4 text-indigo-600" />
+        <span className="text-sm font-medium">本轮决策解释</span>
+      </div>
+
+      {/* 顶部结论 */}
+      <div className="mb-3">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-xs text-muted-foreground">本轮决策：</span>
+          <span
+            className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ${
+              isKeep
+                ? "bg-blue-100 text-blue-700 border border-blue-300"
+                : "bg-purple-100 text-purple-700 border border-purple-300"
+            }`}
+          >
+            {isKeep ? "保持路径" : "重新规划"}
+          </span>
+        </div>
+        {/* 触发原因 */}
+        {decisionReason && (
+          <p className="text-xs text-[#5C3A26] leading-relaxed bg-white/60 rounded border border-indigo-500/20 px-3 py-2">
+            {decisionReason}
+          </p>
+        )}
+      </div>
+
+      {/* 指令标签 */}
+      {directiveType && (
+        <div className="mb-3">
+          <span className="text-xs text-muted-foreground block mb-1.5">触发指令：</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded border ${dirConfig.bg} ${dirConfig.color}`}
+            >
+              {dirConfig.icon}
+              {dirConfig.label}
+            </span>
+            {directiveTrigger && (
+              <span className="text-xs text-muted-foreground">
+                触发条件：{directiveTrigger}
+              </span>
+            )}
+          </div>
+          {directiveAction && (
+            <p className="text-xs text-muted-foreground mt-1.5">
+              执行动作：{directiveAction}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* 复习/探测点 */}
+      {(backwardReview.length > 0 || forwardProbe.length > 0 || weaknessProbe.length > 0) && (
+        <div className="space-y-2">
+          {backwardReview.length > 0 && (
+            <div>
+              <span className="text-xs text-muted-foreground block mb-1">复习点：</span>
+              <div className="flex flex-wrap gap-1">
+                {backwardReview.map((item, i) => (
+                  <Badge key={`br-${i}`} variant="outline" className="text-[11px] bg-blue-50">
+                    {String(item.goal || item.node_id || "")}
+                    {item.difficulty ? ` · ${String(item.difficulty)}` : ""}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          {forwardProbe.length > 0 && (
+            <div>
+              <span className="text-xs text-muted-foreground block mb-1">探测点：</span>
+              <div className="flex flex-wrap gap-1">
+                {forwardProbe.map((item, i) => (
+                  <Badge key={`fp-${i}`} variant="outline" className="text-[11px] bg-green-50">
+                    {String(item.goal || item.node_id || "")}
+                    {item.difficulty ? ` · ${String(item.difficulty)}` : ""}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          {weaknessProbe.length > 0 && (
+            <div>
+              <span className="text-xs text-muted-foreground block mb-1">薄弱探测：</span>
+              <div className="flex flex-wrap gap-1">
+                {weaknessProbe.map((item, i) => (
+                  <Badge key={`wp-${i}`} variant="outline" className="text-[11px] bg-amber-50">
+                    {String(item.goal || item.node_id || "")}
+                    {item.difficulty ? ` · ${String(item.difficulty)}` : ""}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }

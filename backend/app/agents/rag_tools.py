@@ -55,7 +55,10 @@ def collect_expert_retrieval_context(
     messages: list[LLMMessage],
     temperature: float,
     agent: AgentName,
+    enabled: bool = True,
 ) -> list[dict[str, object]]:
+    if not enabled:
+        return []
     def collect(response):
         chunks: list[dict[str, object]] = []
         if not response.tool_calls:
@@ -112,6 +115,7 @@ def collect_judge_retrieval_context(
     messages: list[LLMMessage],
     temperature: float,
     agent: AgentName = "judge",
+    enabled: bool = True,
 ) -> list[dict[str, object]]:
     """judge 裁决前的 RAG 预检：复用与专家同构的探针方式，补一次检索。
 
@@ -120,7 +124,11 @@ def collect_judge_retrieval_context(
     ``generate_validated_json``。
     """
     return collect_expert_retrieval_context(
-        llm_client, messages=messages, temperature=temperature, agent=agent
+        llm_client,
+        messages=messages,
+        temperature=temperature,
+        agent=agent,
+        enabled=enabled,
     )
 
 

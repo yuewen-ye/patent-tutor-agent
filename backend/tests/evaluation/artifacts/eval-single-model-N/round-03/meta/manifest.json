@@ -1,0 +1,47 @@
+{
+  "session_id": "36f877d72c6c49778cb13da68635891a",
+  "status": "failed",
+  "artifacts": [
+    {
+      "artifact_id": "36f877d72c6c49778cb13da68635891a-round-01-learner_profile",
+      "kind": "learner_profile_report",
+      "path": "artifacts/sessions/36f877d72c6c49778cb13da68635891a/profile/learner_profile.md",
+      "created_by": "diagnosis_feedback",
+      "title": "学习者画像报告",
+      "mime_type": "text/markdown",
+      "sha256": "75720e64ed4ca6a4186941f6c4ffe8b252017c1490477c07ed5b926bc207a57b",
+      "created_at": "2026-08-26T19:54:29.406174+00:00"
+    },
+    {
+      "artifact_id": "36f877d72c6c49778cb13da68635891a-round-01-learning_path",
+      "kind": "learning_path_plan",
+      "path": "artifacts/sessions/36f877d72c6c49778cb13da68635891a/path/learning_path.md",
+      "created_by": "planner",
+      "title": "学习路径规划",
+      "mime_type": "text/markdown",
+      "sha256": "a4bb4ab374dd0e8605ec5a24646a465878fc66b856a98a676f5ace2165523070",
+      "created_at": "2026-08-26T19:56:36.081394+00:00"
+    },
+    {
+      "artifact_id": "36f877d72c6c49778cb13da68635891a-round-01-path_decision",
+      "kind": "learning_path_plan",
+      "path": "artifacts/sessions/36f877d72c6c49778cb13da68635891a/path/path_decision.md",
+      "created_by": "planner",
+      "title": "学习路径决策指令",
+      "mime_type": "text/markdown",
+      "sha256": "da7a9527c6bdc41ac0cc48c7594bab432ac00596ba834d2f80bcddbe9b283da9",
+      "created_at": "2026-08-26T19:56:36.082131+00:00"
+    },
+    {
+      "artifact_id": "36f877d72c6c49778cb13da68635891a-round-01-dual_axis_snapshot",
+      "kind": "dual_axis_snapshot",
+      "path": "artifacts/sessions/36f877d72c6c49778cb13da68635891a/path/dual_axis_snapshot.md",
+      "created_by": "planner",
+      "title": "双知识轴快照",
+      "mime_type": "text/markdown",
+      "sha256": "28034896b966ffe8399740fce0ca345a91db93fc0eb7ef5e04c20f2ff83190b1",
+      "created_at": "2026-08-26T19:56:36.082759+00:00"
+    }
+  ],
+  "updated_at": "2026-08-26T20:08:34.079731+00:00"
+}

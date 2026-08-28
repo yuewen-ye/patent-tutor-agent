@@ -465,17 +465,30 @@ def _cross_review_markdown(title: str, value: dict[str, Any]) -> str:
         "",
         f"## 总体评价\n\n{value.get('overall_assessment', '')}",
         "",
+    ]
+    positive = value.get("positive_confirmation")
+    if positive:
+        lines.append(f"## 肯定确认\n\n{positive}")
+        lines.append("")
+    lines.extend([
         "## 批改意见",
         "",
         "| 类别 | 位置 | 问题 | 修改建议 |",
         "|---|---|---|---|",
-    ]
+    ])
     for opinion in value.get("review_opinions", []):
         if isinstance(opinion, dict):
             lines.append(
                 f"| {opinion.get('category', '')} | {opinion.get('location', '')} | "
                 f"{opinion.get('problem', '')} | {opinion.get('suggestion', '')} |"
             )
+    legal_basis = value.get("legal_basis")
+    if isinstance(legal_basis, list) and legal_basis:
+        lines.append("")
+        lines.append("## 法条依据")
+        lines.append("")
+        for lb in legal_basis:
+            lines.append(f"- {lb}")
     return "\n".join(lines) + "\n"
 
 

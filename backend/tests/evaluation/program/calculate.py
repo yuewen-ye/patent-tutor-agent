@@ -65,10 +65,20 @@ _EVAL_ARTIFACTS_DIR = common.EVAL_ARTIFACTS_DIR
 _PROFILES_DIR = common.PROFILES_DIR
 _KNOWLEDGE_DAG = _PROJECT_ROOT / "backend" / "app" / "curriculum" / "data" / "knowledge-dag.json"
 
-def _resolve_llm_results_dir() -> Path:
-    """解析外部 LLM 结果目录：优先 results/record，回退 results/reports/record 和 LLM/results。"""
-    new_dir = _EVAL_DIR / "results" / "record"
-    if new_dir.exists():
+# calculate_round 执行期间的活动 learner 前缀：外部 LLM 结果按类别目录读取。
+_ACTIVE_LEARNER_PREFIX: str = "multi"
+
+def _resolve_llm_results_dir(learner_prefix: str | None = None) -> Path:
+    """解析外部 LLM 结果目录：按类别隔离（record_{前缀}）。
+
+    learner_prefix 缺省时使用 calculate_round 的活动前缀（_ACTIVE_LEARNER_PREFIX）。
+    旧共享目录（results/reports/record、LLM/results）仅作为 multi 前缀的回退；
+    非 multi 前缀绝不读共享池，避免类别间串数据。
+    """
+    if learner_prefix is None:
+        learner_prefix = _ACTIVE_LEARNER_PREFIX
+    new_dir = common.llm_results_dir(learner_prefix)
+    if learner_prefix != "multi" or new_dir.exists():
         return new_dir
     alt_dir = _EVAL_DIR / "results" / "reports" / "record"
     if alt_dir.exists():
@@ -847,12 +857,14 @@ def _read_json(path: Path) -> dict[str, Any] | None:
         return None
 
 
-def _load_round_section(profile_letter: str, round_num: int, section: str) -> tuple[dict[str, Any] | None, Path | None]:
+def _load_round_section(
+    profile_letter: str, round_num: int, section: str, learner_prefix: str | None = None,
+) -> tuple[dict[str, Any] | None, Path | None]:
     """从 round_indicator_{model}_{profile}_{round:02d}.json 的指定 section 读取数据。
 
     Returns: (section_data, file_path) — 若文件不存在或无该 section 则 section_data 为 None。
     """
-    llm_dir = _resolve_llm_results_dir()
+    llm_dir = _resolve_llm_results_dir(learner_prefix)
     path = _glob_one(llm_dir, f"round_indicator_*_{profile_letter}_{round_num:02d}.json")
     if path is None:
         return None, None
@@ -861,14 +873,20 @@ def _load_round_section(profile_letter: str, round_num: int, section: str) -> tu
         return None, path
     # 兼容两种：新的 section 聚合 或 旧的独立文件
     if section in data:
-        return data[section], path
+        section_data = data[section]
+        # 失败标记（LLM 评估失败写入的 status=failed）：按"无结果"处理，不参与指标合并
+        if isinstance(section_data, dict) and section_data.get("status") == "failed":
+            return None, path
+        return section_data, path
     # 回退：旧独立文件格式（例如整体 JSON 就是该 section 内容）
     return data, path
 
 
-def _load_profile_section(profile_letter: str, section: str) -> tuple[dict[str, Any] | None, Path | None]:
+def _load_profile_section(
+    profile_letter: str, section: str, learner_prefix: str | None = None,
+) -> tuple[dict[str, Any] | None, Path | None]:
     """从 profile_indicator_{model}_{profile}.json 的指定 section 读取数据。"""
-    llm_dir = _resolve_llm_results_dir()
+    llm_dir = _resolve_llm_results_dir(learner_prefix)
     path = _glob_one(llm_dir, f"profile_indicator_*_{profile_letter}.json")
     if path is None:
         return None, None
@@ -876,13 +894,19 @@ def _load_profile_section(profile_letter: str, section: str) -> tuple[dict[str, 
     if data is None:
         return None, path
     if section in data:
-        return data[section], path
+        section_data = data[section]
+        # 失败标记按"无结果"处理
+        if isinstance(section_data, dict) and section_data.get("status") == "failed":
+            return None, path
+        return section_data, path
     return data, path
 
 
-def _load_system_section(section: str) -> tuple[dict[str, Any] | None, Path | None]:
+def _load_system_section(
+    section: str, learner_prefix: str | None = None,
+) -> tuple[dict[str, Any] | None, Path | None]:
     """从 system_indicator_{model}.json 的指定 section 读取数据（全局唯一）。"""
-    llm_dir = _resolve_llm_results_dir()
+    llm_dir = _resolve_llm_results_dir(learner_prefix)
     path = _glob_one(llm_dir, "system_indicator_*.json")
     if path is None:
         return None, None
@@ -890,7 +914,11 @@ def _load_system_section(section: str) -> tuple[dict[str, Any] | None, Path | No
     if data is None:
         return None, path
     if section in data:
-        return data[section], path
+        section_data = data[section]
+        # 失败标记按"无结果"处理
+        if isinstance(section_data, dict) and section_data.get("status") == "failed":
+            return None, path
+        return section_data, path
     return data, path
 
 
@@ -1062,15 +1090,19 @@ def load_m14_external_result(profile_letter: str) -> dict[str, Any] | None:
     return section
 
 
-def load_m15_external_result(profile_letter: str) -> dict[str, Any] | None:
+def load_m15_external_result(
+    profile_letter: str, learner_prefix: str = "multi",
+) -> dict[str, Any] | None:
     """加载 6.1 对抗稳健率结果（system_indicator > m6_adversarial section）。"""
-    section, _path = _load_system_section("m6_adversarial")
+    section, _path = _load_system_section("m6_adversarial", learner_prefix)
     return section
 
 
-def load_m16_external_result(profile_letter: str) -> dict[str, Any] | None:
+def load_m16_external_result(
+    profile_letter: str, learner_prefix: str = "multi",
+) -> dict[str, Any] | None:
     """加载 6.2 边界拒答恰当率结果（system_indicator > m6_boundary section）。"""
-    section, _path = _load_system_section("m6_boundary")
+    section, _path = _load_system_section("m6_boundary", learner_prefix)
     return section
 
 
@@ -1168,15 +1200,15 @@ def calc_m17(data: dict[str, Any] | None, profile_letter: str, round_num: int) -
         MetricResult(name="2.5 检索完整率", value=complete_rate, unit="%", detail={"computed": True, "chunk数": total, "完整数": complete}),
     ]
 
-def calculate_system_level_metrics() -> list[MetricResult]:
+def calculate_system_level_metrics(learner_prefix: str = "multi") -> list[MetricResult]:
     """计算系统级探针指标：M15 对抗稳健率 / M16 边界拒答恰当率。
 
     这两个指标独立于画像，所有画像共享同一数值。
     """
     metrics: list[MetricResult] = []
     try:
-        metrics.append(calc_m15(load_m15_external_result("system"), "system"))
-        metrics.append(calc_m16(load_m16_external_result("system"), "system"))
+        metrics.append(calc_m15(load_m15_external_result("system", learner_prefix), "system"))
+        metrics.append(calc_m16(load_m16_external_result("system", learner_prefix), "system"))
     except Exception as e:
         print(f"  ⚠️ M15/M16 系统级计算异常: {e}")
     return metrics
@@ -1221,10 +1253,36 @@ def calculate_round(
     profile_letter: str, round_num: int,
     session_dir: Path | None = None, expected_path: Path | None = None,
     history_nodes: set[str] | None = None, prev_profile_update: str | None = None,
+    learner_prefix: str = "multi",
 ) -> RoundMetrics:
-    """计算指定画像指定轮次的全部指标。"""
+    """计算指定画像指定轮次的全部指标（设置并恢复活动 learner 前缀）。"""
+    global _ACTIVE_LEARNER_PREFIX
+    _prev_active_prefix = _ACTIVE_LEARNER_PREFIX
+    _ACTIVE_LEARNER_PREFIX = learner_prefix
+    try:
+        return _calculate_round_impl(
+            profile_letter=profile_letter,
+            round_num=round_num,
+            session_dir=session_dir,
+            expected_path=expected_path,
+            history_nodes=history_nodes,
+            prev_profile_update=prev_profile_update,
+            learner_prefix=learner_prefix,
+        )
+    finally:
+        # 异常（含 FileNotFoundError）也必须恢复，避免前缀泄漏到后续调用。
+        _ACTIVE_LEARNER_PREFIX = _prev_active_prefix
+
+
+def _calculate_round_impl(
+    profile_letter: str, round_num: int,
+    session_dir: Path | None = None, expected_path: Path | None = None,
+    history_nodes: set[str] | None = None, prev_profile_update: str | None = None,
+    learner_prefix: str = "multi",
+) -> RoundMetrics:
+    """计算指定画像指定轮次的全部指标（实现体）。"""
     if session_dir is None:
-        session_dir = _EVAL_ARTIFACTS_DIR / f"multi-{profile_letter}"
+        session_dir = _EVAL_ARTIFACTS_DIR / f"{learner_prefix}-{profile_letter}"
     if not session_dir.exists():
         raise FileNotFoundError(f"找不到画像 {profile_letter} 的测试快照目录: {session_dir}")
 
@@ -1491,6 +1549,8 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--round", type=int, default=1, help="轮次编号（如 1，默认 1）")
     p.add_argument("--session-dir", type=Path, default=None, help="系统产物目录（可选）")
     p.add_argument("--expected", type=Path, default=None, help="expected 文件路径（可选）")
+    p.add_argument("--learner-prefix", default="multi",
+                   help="学习者前缀（默认 multi；决定外部LLM结果目录 record_{前缀}）")
     p.add_argument("--json", action="store_true", help="输出 JSON 格式")
     return p
 
@@ -1503,6 +1563,7 @@ def main(argv: list[str] | None = None) -> int:
             round_num=args.round,
             session_dir=args.session_dir,
             expected_path=args.expected,
+            learner_prefix=args.learner_prefix,
         )
     except FileNotFoundError as exc:
         print(f"❌ {exc}")

@@ -11,16 +11,18 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ArtifactViewer } from "@/components/ArtifactViewer";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { PresentationPlayer } from "@/components/course/PresentationPlayer";
+import { CitationPopover, type CitationReference } from "@/components/course/CitationPopover";
 import { sessionsApi } from "@/api/sessions";
 import { getAuth } from "@/api/auth";
-import { BookOpen, Wrench, ListChecks, FileText, Scale, Lightbulb, CheckCircle2, XCircle, Loader2, Send, RefreshCw, ArrowRight, Presentation as PresentationIcon, Database, ArrowUpRight } from "lucide-react";
-import type { MarkdownArtifact, ExerciseSubmission, ExerciseResponseItem, SessionsListResponse, SessionStatus } from "@/types";
+import { BookOpen, Wrench, ListChecks, FileText, Scale, Lightbulb, CheckCircle2, XCircle, Loader2, Send, RefreshCw, ArrowRight, Presentation as PresentationIcon, Database, ArrowUpRight, ChevronRight } from "lucide-react";
+import type { MarkdownArtifact, ExerciseSubmission, ExerciseResponseItem, SessionsListResponse, SessionStatus, RetrievalChunk } from "@/types";
 import { ApiError } from "@/api/client";
 
 interface CourseResourceTabsProps {
   sessionId: string;
   coursePackage?: Record<string, unknown>;
   artifacts: MarkdownArtifact[];
+  retrievalContext: Array<Record<string, unknown>>;
   /** 会话状态；用于提前告知"课程生成中暂不可提交习题" */
   sessionStatus?: SessionStatus | null;
 }
@@ -79,8 +81,107 @@ const BLOCK_TYPE_ICONS: Record<string, typeof BookOpen> = {
   summary_card: FileText,
 };
 
-export function CourseResourceTabs({ sessionId, coursePackage, artifacts, sessionStatus }: CourseResourceTabsProps) {
+function normalizeChunk(raw: Record<string, unknown>): RetrievalChunk {
+  return {
+    chunk_id: String(raw.chunk_id ?? raw.id ?? ""),
+    source: String(raw.source ?? raw.source_file ?? ""),
+    citation: String(raw.citation ?? ""),
+    text: String(raw.text ?? raw.content ?? ""),
+    score: typeof raw.score === "number" ? raw.score : null,
+    rerank_score: typeof raw.rerank_score === "number" ? raw.rerank_score : null,
+    metadata: raw.metadata && typeof raw.metadata === "object"
+      ? (raw.metadata as RetrievalChunk["metadata"])
+      : null,
+  };
+}
+
+/** 从文件名中提取不含扩展名的短名，用于模糊匹配 */
+function shortSourceName(source: string): string {
+  return source.replace(/\.[^.]+$/, "").trim();
+}
+
+/**
+ * 多策略匹配：在 RetrievalChunk 列表中找到与法条条目匹配的 chunk。
+ * 优先级：source 精确匹配 > source 子串匹配 > text 内容关键词匹配 > citation 匹配
+ */
+function matchLegalBasisToChunk(
+  source: string | null,
+  article: string,
+  chunks: RetrievalChunk[]
+): CitationReference {
+  if (chunks.length === 0) {
+    return {
+      id: "",
+      source: source || "",
+      title: source || "法条引用",
+      content: article,
+      chunk: null,
+    };
+  }
+
+  // 构建 source 索引，支持文件名模糊匹配
+  const sourceIndex = source ? shortSourceName(source) : "";
+
+  // 策略1: source 精确匹配
+  let matched = chunks.find(
+    (c) => c.source === source || shortSourceName(c.source) === sourceIndex
+  );
+
+  // 策略2: source 子串互相包含
+  if (!matched && source) {
+    matched = chunks.find(
+      (c) => c.source.includes(source) || source.includes(c.source)
+    );
+  }
+
+  // 策略3: citation 字段匹配（citation = "source: text[:30]..."）
+  if (!matched && source) {
+    matched = chunks.find((c) => c.citation.startsWith(source));
+  }
+
+  // 策略4: text 内容关键词匹配（取 article 前 15 字在 chunk.text 中搜索）
+  if (!matched) {
+    const keyword = article.replace(/[《》\s]/g, "").slice(0, 15);
+    if (keyword.length >= 4) {
+      matched = chunks.find((c) => c.text.includes(keyword));
+    }
+  }
+
+  if (matched) {
+    const lawArticle = matched.metadata?.law_article;
+    return {
+      id: matched.chunk_id,
+      source: matched.source,
+      title: lawArticle ? `${matched.source} · ${lawArticle}` : matched.source,
+      content: matched.text,
+      chunk: matched,
+    };
+  }
+
+  // 策略5: 兜底 — 使用第一个 law 类型的 chunk
+  const lawChunk = chunks.find((c) => c.metadata?.doc_type === "law");
+  if (lawChunk) {
+    return {
+      id: lawChunk.chunk_id,
+      source: lawChunk.source,
+      title: lawChunk.source,
+      content: lawChunk.text,
+      chunk: lawChunk,
+    };
+  }
+
+  return {
+    id: "",
+    source: source || "",
+    title: source || "法条引用",
+    content: article,
+    chunk: null,
+  };
+}
+
+export function CourseResourceTabs({ sessionId, coursePackage, artifacts, retrievalContext, sessionStatus }: CourseResourceTabsProps) {
   const [activeTab, setActiveTab] = useState<string>("lecture");
+  const [showStructure, setShowStructure] = useState(false);
   const packageArtifact = useMemo(
     () => artifacts.find((a) => a.kind === "course_package"),
     [artifacts]
@@ -109,232 +210,295 @@ export function CourseResourceTabs({ sessionId, coursePackage, artifacts, sessio
     || (coursePackage?.teaching_content as string)
     || "";
   const legalBasis = (coursePackage?.legal_basis as Array<Record<string, unknown>>) || [];
+  const retrievalChunks = useMemo(
+    () => retrievalContext.map(normalizeChunk),
+    [retrievalContext]
+  );
 
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-      <TabsList className="grid w-full grid-cols-3 bg-slate-100 text-slate-600 border border-slate-200 p-1 rounded-lg">
-        <TabsTrigger
-          value="lecture"
-          className="gap-2 data-[state=active]:bg-[#D9773E] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md"
-        >
-          <BookOpen className="h-4 w-4" />
-          定制化讲义
-        </TabsTrigger>
-        <TabsTrigger
-          value="presentation"
-          className="gap-2 data-[state=active]:bg-[#D9773E] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md"
-        >
-          <PresentationIcon className="h-4 w-4" />
-          PPT 同步学习
-        </TabsTrigger>
-        <TabsTrigger
-          value="exercises"
-          className="gap-2 data-[state=active]:bg-[#D9773E] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md"
-        >
-          <ListChecks className="h-4 w-4" />
-          分级习题
-        </TabsTrigger>
-      </TabsList>
+    <div className={`flex gap-5 ${showStructure ? "flex-col xl:flex-row" : ""}`}>
+      {/* 左侧：Tabs 内容 */}
+      <div className={`flex-1 min-w-0 ${showStructure ? "xl:max-w-[62%]" : ""}`}>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3 bg-slate-100 text-slate-600 border border-slate-200 p-1 rounded-lg">
+            <TabsTrigger
+              value="lecture"
+              className="gap-2 data-[state=active]:bg-[#D9773E] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md"
+            >
+              <BookOpen className="h-4 w-4" />
+              定制化讲义
+            </TabsTrigger>
+            <TabsTrigger
+              value="presentation"
+              className="gap-2 data-[state=active]:bg-[#D9773E] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md"
+            >
+              <PresentationIcon className="h-4 w-4" />
+              PPT 同步学习
+            </TabsTrigger>
+            <TabsTrigger
+              value="exercises"
+              className="gap-2 data-[state=active]:bg-[#D9773E] data-[state=active]:text-white data-[state=active]:shadow-sm rounded-md"
+            >
+              <ListChecks className="h-4 w-4" />
+              分级习题
+            </TabsTrigger>
+          </TabsList>
 
-      {/* ── 定制化讲义 ── */}
-      <TabsContent value="lecture" className="mt-4 space-y-4">
-        {teachingContent ? (
-          <Card className="border-border/40 bg-card shadow-soft">
-            <CardHeader className="pb-3 flex flex-row items-center justify-between">
-              <CardTitle className="text-base font-medium flex items-center gap-2">
-                <BookOpen className="h-4 w-4 text-primary" />
-                课程讲义
-              </CardTitle>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={() => setActiveTab("guide")}
-                    >
-                      <Wrench className="h-3.5 w-3.5 mr-1.5" />
-                      课程产出结构
-                      <ArrowRight className="h-3 w-3 ml-1" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>跳转至课程产出结构（IRAC 框架、法条依据）</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </CardHeader>
-            <CardContent>
-              <div className="max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
-                <MarkdownRenderer content={cleanTeachingContent(teachingContent)} />
-              </div>
-            </CardContent>
-          </Card>
-        ) : packageArtifact ? (
-          <ArtifactViewer
-            sessionId={sessionId}
-            artifactPath={packageArtifact.path.replace(/^artifacts\/sessions\/[^/]+\//, "")}
-            title="课程内容"
-          />
-        ) : (
-          <EmptyResource title="讲义内容" />
-        )}
-      </TabsContent>
+          {/* ── 定制化讲义 ── */}
+          <TabsContent value="lecture" className="mt-4 space-y-4">
+            {teachingContent ? (
+              <Card className="border-border/40 bg-card shadow-soft">
+                <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                  <CardTitle className="text-base font-medium flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 text-primary" />
+                    课程讲义
+                  </CardTitle>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant={showStructure ? "secondary" : "outline"}
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => setShowStructure((v) => !v)}
+                        >
+                          {showStructure ? <ChevronRight className="h-3.5 w-3.5 mr-1.5 rotate-90" /> : <Wrench className="h-3.5 w-3.5 mr-1.5" />}
+                          {showStructure ? "收起指南" : "实操指南"}
+                          {!showStructure && <ArrowRight className="h-3 w-3 ml-1" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{showStructure ? "收起实操指南侧栏" : "在右侧展开实操指南（IRAC 框架、法条依据等），方便与讲义比对"}</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </CardHeader>
+                <CardContent>
+                  <div className="max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
+                    <MarkdownRenderer content={cleanTeachingContent(teachingContent)} retrievalContext={retrievalContext} />
+                  </div>
+                </CardContent>
+              </Card>
+            ) : packageArtifact ? (
+              <ArtifactViewer
+                sessionId={sessionId}
+                artifactPath={packageArtifact.path.replace(/^artifacts\/sessions\/[^/]+\//, "")}
+                title="课程内容"
+              />
+            ) : (
+              <EmptyResource title="讲义内容" />
+            )}
+          </TabsContent>
 
-      {/* ── 课程产出结构 ── */}
-      <TabsContent value="guide" className="mt-4">
-        <div className="space-y-4 max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
-        {/* IRAC 法律分析框架 */}
-        {irac && (
-          <Card className="border-border/40 bg-card shadow-soft">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-medium flex items-center gap-2">
-                <Scale className="h-4 w-4 text-primary" />
-                IRAC 法律分析框架
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <IracRow label="Issue (争议焦点)" content={irac.issue} />
-              <IracRow label="Rule (适用规则)" content={irac.rule} />
-              <IracRow label="Application (法律适用)" content={irac.application} />
-              <IracRow label="Conclusion (结论)" content={irac.conclusion} />
-            </CardContent>
-          </Card>
-        )}
+          {/* ── PPT 同步学习 ── */}
+          <TabsContent value="presentation" className="mt-4">
+            <div className="max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
+              <PresentationPlayer sessionId={sessionId} />
+            </div>
+          </TabsContent>
 
-        {/* 法条依据 */}
-        {legalBasis.length > 0 && (
-          <Card className="border-border/40 bg-card shadow-soft">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-medium flex items-center gap-2">
-                <Scale className="h-4 w-4 text-amber-500" />
-                法条依据
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {legalBasis.map((lb, i) => {
-                  const article = typeof lb === "string" ? lb : (lb.article as string) || String(lb);
-                  const source = typeof lb === "string" ? null : (lb.source as string) || null;
-                  return (
-                    <div key={i} className="rounded-lg border border-border/30 bg-secondary/20 p-3">
-                      <p className="text-sm font-medium">{article}</p>
-                      {source && <p className="text-xs text-muted-foreground mt-1">来源：{source}</p>}
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+          {/* ── 分级习题 ── */}
+          <TabsContent value="exercises" className="mt-4">
+            <div className="space-y-4 h-[calc(100vh-280px)]">
+            {allQuestions.length > 0 ? (
+              <ExercisePanel sessionId={sessionId} questions={allQuestions} sessionStatus={sessionStatus} />
+            ) : (
+              <EmptyResource title="习题" />
+            )}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
 
-        {/* 教学板块规划 */}
-        {blocks.length > 0 && (
-          <Card className="border-border/40 bg-card shadow-soft">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-medium flex items-center gap-2">
-                <Wrench className="h-4 w-4 text-primary" />
-                教学板块规划
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {blocks.map((blk, idx) => {
-                const Icon = BLOCK_TYPE_ICONS[blk.block_type] || FileText;
-                const label = BLOCK_TYPE_LABELS[blk.block_type] || blk.block_type;
+      {/* 右侧：课程产出结构（可展开侧栏） */}
+      {showStructure && (
+        <div className="xl:w-[38%] xl:min-w-[340px] flex-shrink-0">
+          <div className="sticky top-0 max-h-[calc(100vh-220px)] overflow-y-auto">
+            {renderStructureContent({
+              irac,
+              legalBasis,
+              legalBasisChunks: retrievalChunks,
+              blocks,
+              knowledgeSynthesis,
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── 课程产出结构侧栏内容 ──
+
+interface StructureContentProps {
+  irac: IracStructure | null;
+  legalBasis: Array<Record<string, unknown>>;
+  legalBasisChunks: RetrievalChunk[];
+  blocks: BlockItem[];
+  knowledgeSynthesis: {
+    coverage?: Array<{ node_id?: string }>;
+    confusable_pairs?: Array<{
+      pair?: string;
+      pair_id?: string;
+      title?: string;
+      node_a?: string;
+      node_b?: string;
+    }>;
+  };
+}
+
+function renderStructureContent({
+  irac,
+  legalBasis,
+  legalBasisChunks,
+  blocks,
+  knowledgeSynthesis,
+}: StructureContentProps) {
+  return (
+    <div className="space-y-4 pr-1">
+      {/* IRAC 法律分析框架 */}
+      {irac && (
+        <Card className="border-border/40 bg-card shadow-soft">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <Scale className="h-4 w-4 text-primary" />
+              IRAC 法律分析框架
+            </CardTitle>
+            <p className="text-[10px] leading-relaxed text-muted-foreground mt-1">
+              IRAC 是 Issue、Rule、Analysis、Conclusion 的缩写，为法律问题研究提供基本框架，广泛用于法学院作业、律师备忘录和法庭简报，可为论证性教学提供思考范式。
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <IracRow label="Issue (争议焦点)" content={irac.issue} />
+            <IracRow label="Rule (适用规则)" content={irac.rule} />
+            <IracRow label="Application (法律适用)" content={irac.application} />
+            <IracRow label="Conclusion (结论)" content={irac.conclusion} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 法条依据 */}
+      {legalBasis.length > 0 && (
+        <Card className="border-border/40 bg-card shadow-soft">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <Scale className="h-4 w-4 text-amber-500" />
+              法条依据
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {legalBasis.map((lb, i) => {
+                const article = typeof lb === "string" ? lb : (lb.article as string) || String(lb);
+                const source = typeof lb === "string" ? null : (lb.source as string) || null;
+                const citation = matchLegalBasisToChunk(source, article, legalBasisChunks);
                 return (
-                  <div
-                    key={blk.block_id || idx}
-                    className="rounded-lg border border-border/30 bg-secondary/20 p-3 hover:border-border/50 hover:bg-secondary/30 transition-all duration-200"
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <Icon className="h-4 w-4 text-primary flex-shrink-0" />
-                      <span className="text-sm font-medium">{label}</span>
-                      {blk.chosen_by && (
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 ml-auto">
-                          {blk.chosen_by}
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {blk.title || blk.rationale || "—"}
-                    </p>
-                    {blk.trigger && (
-                      <p className="text-[11px] text-muted-foreground/70 mt-1">
-                        触发条件：{blk.trigger}
-                      </p>
+                  <div key={i} className="rounded-lg border border-border/30 bg-secondary/20 p-3">
+                    <p className="text-sm font-medium">{article}</p>
+                    {source && (
+                      <div className="mt-1.5">
+                        <CitationPopover reference={citation}>
+                          <span className="inline-flex items-center gap-0.5 text-[#D9773E] bg-[#FFE8D0] border border-[#D9773E]/30 rounded-sm px-1.5 py-0.5 text-[11px] font-medium cursor-pointer align-baseline hover:bg-[#FFD4B0] transition-colors">
+                            RAG溯源
+                          </span>
+                        </CitationPopover>
+                        <span className="text-xs text-muted-foreground ml-2">来源：{source}</span>
+                      </div>
                     )}
                   </div>
                 );
               })}
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-        {/* 知识综合 */}
-        {knowledgeSynthesis.coverage && knowledgeSynthesis.coverage.length > 0 && (
-          <Card className="border-border/40 bg-card shadow-soft">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-medium flex items-center gap-2">
-                <FileText className="h-4 w-4 text-primary" />
-                知识综合
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div>
-                <span className="text-xs text-muted-foreground mb-1.5 block">覆盖知识点</span>
+      {/* 教学板块规划 */}
+      {blocks.length > 0 && (
+        <Card className="border-border/40 bg-card shadow-soft">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <Wrench className="h-4 w-4 text-primary" />
+              教学板块规划
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {blocks.map((blk, idx) => {
+              const Icon = BLOCK_TYPE_ICONS[blk.block_type] || FileText;
+              const label = BLOCK_TYPE_LABELS[blk.block_type] || blk.block_type;
+              return (
+                <div
+                  key={blk.block_id || idx}
+                  className="rounded-lg border border-border/30 bg-secondary/20 p-3 hover:border-border/50 hover:bg-secondary/30 transition-all duration-200"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Icon className="h-4 w-4 text-primary flex-shrink-0" />
+                    <span className="text-sm font-medium">{label}</span>
+                    {blk.chosen_by && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 ml-auto">
+                        {blk.chosen_by}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {blk.title || blk.rationale || "—"}
+                  </p>
+                  {blk.trigger && (
+                    <p className="text-[11px] text-muted-foreground/70 mt-1">
+                      触发条件：{blk.trigger}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 知识综合 */}
+      {knowledgeSynthesis.coverage && knowledgeSynthesis.coverage.length > 0 && (
+        <Card className="border-border/40 bg-card shadow-soft">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <FileText className="h-4 w-4 text-primary" />
+              知识综合
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div>
+              <span className="text-xs text-muted-foreground mb-1.5 block">覆盖知识点</span>
+              <div className="flex flex-wrap gap-1.5">
+                {knowledgeSynthesis.coverage.map((c, i) => (
+                  <Badge key={i} variant="secondary" className="text-xs">
+                    {c.node_id || String(c)}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            {knowledgeSynthesis.confusable_pairs && knowledgeSynthesis.confusable_pairs.length > 0 && (
+              <div className="mt-3">
+                <span className="text-xs text-muted-foreground mb-1.5 block">易混淆概念</span>
                 <div className="flex flex-wrap gap-1.5">
-                  {knowledgeSynthesis.coverage.map((c, i) => (
-                    <Badge key={i} variant="secondary" className="text-xs">
-                      {c.node_id || String(c)}
-                    </Badge>
-                  ))}
+                  {knowledgeSynthesis.confusable_pairs.map((cp, i) => {
+                    const pair = cp.pair || cp.title;
+                    const label = pair
+                      ? String(pair)
+                      : cp.node_a && cp.node_b
+                      ? `${cp.node_a} ⇄ ${cp.node_b}`
+                      : cp.pair_id
+                      ? String(cp.pair_id)
+                      : String(cp);
+                    return (
+                      <Badge key={i} variant="outline" className="text-xs text-amber-600">
+                        {label}
+                      </Badge>
+                    );
+                  })}
                 </div>
               </div>
-              {knowledgeSynthesis.confusable_pairs && knowledgeSynthesis.confusable_pairs.length > 0 && (
-                <div className="mt-3">
-                  <span className="text-xs text-muted-foreground mb-1.5 block">易混淆概念</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {knowledgeSynthesis.confusable_pairs.map((cp, i) => {
-                      const pair = cp.pair || cp.title;
-                      const label = pair
-                        ? String(pair)
-                        : cp.node_a && cp.node_b
-                        ? `${cp.node_a} ⇄ ${cp.node_b}`
-                        : cp.pair_id
-                        ? String(cp.pair_id)
-                        : String(cp);
-                      return (
-                        <Badge key={i} variant="outline" className="text-xs text-amber-600">
-                          {label}
-                        </Badge>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-        </div>
-      </TabsContent>
-
-      {/* ── PPT 同步学习 ── */}
-      <TabsContent value="presentation" className="mt-4">
-        <div className="max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
-          <PresentationPlayer sessionId={sessionId} />
-        </div>
-      </TabsContent>
-
-      {/* ── 分级习题 ── */}
-      <TabsContent value="exercises" className="mt-4">
-        <div className="space-y-4 h-[calc(100vh-280px)]">
-        {allQuestions.length > 0 ? (
-          <ExercisePanel sessionId={sessionId} questions={allQuestions} sessionStatus={sessionStatus} />
-        ) : (
-          <EmptyResource title="习题" />
-        )}
-        </div>
-      </TabsContent>
-    </Tabs>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }
 
@@ -439,13 +603,14 @@ function ExercisePanel({
     onSuccess: (resp) => {
       // 简单前端判分（后端也会判分，这里仅用于即时反馈）
       const newResults: Record<string, SubmissionResult> = {};
-      questions.forEach((q) => {
-        const userAnswer = (answers[q.qid] || "").trim();
+      questions.forEach((q, idx) => {
+        const stableKey = q.qid || `q-${idx}`;
+        const userAnswer = (answers[stableKey] || "").trim();
         if (!userAnswer) return;
         const correctAnswer = q.answer || "";
         const isCorrect = answersMatch(userAnswer, correctAnswer);
-        newResults[q.qid] = {
-          question_id: q.qid,
+        newResults[stableKey] = {
+          question_id: stableKey,
           is_correct: isCorrect,
           correct_answer: correctAnswer,
           user_answer: userAnswer,
@@ -490,20 +655,28 @@ function ExercisePanel({
   const handleSubmit = () => {
     if (!learnerId) return;
     // 客观题必须至少一题已答；纯主观文本允许全部空（只提交讲义建议）
-    const requiredAnswered = requiredQuestions.filter((q) => (answers[q.qid] || "").trim());
+    const requiredAnswered = requiredQuestions.filter((q) => {
+      const idx = questions.indexOf(q);
+      const stableKey = q.qid || `q-${idx}`;
+      return (answers[stableKey] || "").trim();
+    });
     const hasAnyAnswer =
       requiredAnswered.length > 0 ||
-      questions.some((q) => (answers[q.qid] || "").trim()) ||
+      questions.some((q, idx) => {
+        const stableKey = q.qid || `q-${idx}`;
+        return (answers[stableKey] || "").trim();
+      }) ||
       feedback.trim().length > 0;
 
     const responses: ExerciseResponseItem[] = questions
-      .map((q) => {
-        const raw = answers[q.qid] || "";
+      .map((q, idx) => {
+        const stableKey = q.qid || `q-${idx}`;
+        const raw = answers[stableKey] || "";
         const value = typeof raw === "string" ? raw : String(raw ?? "");
-        const required = !!requiredQuestions.find((r) => r.qid === q.qid);
+        const required = !!requiredQuestions.find((r) => r === q || (q.qid && r.qid === q.qid));
         if (!value.trim() && !required) return null;
         return {
-          question_id: q.qid,
+          question_id: q.qid || stableKey,
           question_text: q.question ?? "",
           options: (q.options && q.options.length > 0) ? q.options : undefined,
           correct_answer: (q.answer && String(q.answer).trim()) || undefined,
@@ -511,7 +684,7 @@ function ExercisePanel({
           category: q.category ?? undefined,
           skills: q.skills,
           answer: value,
-          selected_option: value, // 保持与历史一致：未作答时传空串""，避免MySQL legacy去重hash不一致
+          selected_option: value,
           skill_id: q.kc_node_id || null,
           kc_node_id: q.kc_node_id || null,
         } as ExerciseResponseItem;
@@ -556,7 +729,11 @@ function ExercisePanel({
     if (latest) navigate(`/session/${latest.session_id}`);
   };
 
-  const answeredCount = requiredQuestions.filter((q) => (answers[q.qid] || "").trim()).length;
+  const answeredCount = requiredQuestions.filter((q) => {
+    const idx = questions.indexOf(q);
+    const stableKey = q.qid || `q-${idx}`;
+    return (answers[stableKey] || "").trim();
+  }).length;
   const allRequiredAnswered = requiredQuestions.length > 0 ? answeredCount === requiredQuestions.length : true;
   const isSubmitted = results !== null;
   const correctCount = results ? Object.values(results).filter((r) => r.is_correct).length : 0;
@@ -565,7 +742,10 @@ function ExercisePanel({
   const needsWaitForSession = sessionStatus != null && sessionStatus !== "completed" && sessionStatus !== "failed";
   const atLeastOneAnswer =
     answeredCount > 0 ||
-    questions.some((q) => (answers[q.qid] || "").trim()) ||
+    questions.some((q, idx) => {
+      const stableKey = q.qid || `q-${idx}`;
+      return (answers[stableKey] || "").trim();
+    }) ||
     feedback.trim().length > 0;
 
   const disabledReason = (() => {
@@ -755,17 +935,20 @@ function ExercisePanel({
         )}
       </CardHeader>
       <CardContent className="space-y-4 overflow-y-auto flex-1 min-h-0 pt-4">
-        {questions.map((q, idx) => (
-          <ExerciseCard
-            key={q.qid || idx}
-            question={q}
-            index={idx + 1}
-            selectedAnswer={answers[q.qid] || ""}
-            onSelect={(value) => handleSelect(q.qid, value)}
-            result={results?.[q.qid]}
-            disabled={isSubmitted}
-          />
-        ))}
+        {questions.map((q, idx) => {
+          const stableKey = q.qid || `q-${idx}`;
+          return (
+            <ExerciseCard
+              key={stableKey}
+              question={q}
+              index={idx + 1}
+              selectedAnswer={answers[stableKey] || ""}
+              onSelect={(value) => handleSelect(stableKey, value)}
+              result={results?.[stableKey]}
+              disabled={isSubmitted}
+            />
+          );
+        })}
 
         {/* 固定主观题：讲义建议 */}
         <div className={`rounded-lg border p-4 transition-all duration-200 ${
@@ -811,6 +994,7 @@ function ExerciseCard({
   result?: SubmissionResult;
   disabled: boolean;
 }) {
+  const groupId = question.qid || `q-${index}`;
   const difficultyColors: Record<string, string> = {
     L1: "text-green-600 border-green-500/30 bg-green-500/10",
     L2: "text-amber-600 border-amber-500/30 bg-amber-500/10",
@@ -919,7 +1103,7 @@ function ExerciseCard({
               >
                 <input
                   type={multi ? "checkbox" : "radio"}
-                  name={`q-${question.qid}`}
+                  name={`q-${groupId}`}
                   value={letter}
                   checked={selected}
                   onChange={() => toggleOption(letter)}
@@ -985,11 +1169,9 @@ function EmptyResource({ title }: { title: string }) {
   );
 }
 
-/** 清理教学正文：去掉 RAG 引用标记，格式化 Markdown */
+/** 清理教学正文：格式化 Markdown（保留 RAG 引用标记以供渲染） */
 function cleanTeachingContent(content: string): string {
   const cleaned = content
-    // Remove 〔RAG: ...〕citations
-    .replace(/〔RAG:[^〕]*〕/g, "")
     // Convert escaped newlines to real newlines
     .replace(/\\n/g, "\n")
     // Remove leading/trailing whitespace on each line

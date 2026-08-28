@@ -366,6 +366,18 @@ def _is_debate_enabled() -> bool:
     raise ValueError("PATENT_TUTOR_DEBATE_ENABLED must be exactly true or false")
 
 
+def _is_rag_tool_enabled() -> bool:
+    """Read the strict deployment flag for optional Agent RAG tool calls."""
+    raw = os.environ.get("PATENT_TUTOR_RAG_TOOL_ENABLED")
+    if raw is None:
+        return True
+    if raw == "true":
+        return True
+    if raw == "false":
+        return False
+    raise ValueError("PATENT_TUTOR_RAG_TOOL_ENABLED must be exactly true or false")
+
+
 def _is_pptx_enabled() -> bool:
     """读取环境变量控制是否启用 generate_pptx 节点；默认为开启。"""
     raw = os.environ.get("PATENT_TUTOR_PPTX_ENABLED", "").strip()
@@ -495,6 +507,7 @@ def build_workflow(
     workflow_log_root: str | Path | None = None,
     slide_deck_enabled: bool | None = None,
     debate_enabled: bool | None = None,
+    rag_tool_enabled: bool | None = None,
 ) -> Any:
     builder = StateGraph(StateDict, context_schema=WorkflowContext)
     active_llm_client = llm_client or AgentLLMRouter.from_env()
@@ -506,6 +519,7 @@ def build_workflow(
     )
     debate_enabled = _is_debate_enabled() if debate_enabled is None else debate_enabled
     pptx_enabled = slide_deck_enabled and _is_pptx_enabled()
+    rag_tool_enabled = _is_rag_tool_enabled() if rag_tool_enabled is None else rag_tool_enabled
 
     def _ensure_session_id(state: StateDict) -> dict[str, Any]:
         """Auto-generate session_id if not provided (e.g. from LangGraph Studio)."""
@@ -521,6 +535,13 @@ def build_workflow(
         updates["teach_phase"] = "debate" if debate_enabled else "single_agent"
         updates["workflow_status"] = "running"
         updates["revision_round"] = 0
+        updates["rag_tool_enabled"] = rag_tool_enabled
+        updates["events"] = [
+            completed_event(
+                "route",
+                f"rag_tool_enabled={str(rag_tool_enabled).lower()} (deployment setting)",
+            )
+        ]
         return updates
 
     def _wrap(name: str, artifact: bool = True, node_label: str | None = None) -> Any:
@@ -702,6 +723,7 @@ def run_workflow(
     parent_session_id: str | None = None,
     slide_deck_enabled: bool | None = None,
     debate_enabled: bool | None = None,
+    rag_tool_enabled: bool | None = None,
 ) -> StateDict:
     print(f"\n{'='*60}", file=sys.stderr)
     print(f"工作流启动  session={session_id}  learner={learner_id or 'N/A'}", file=sys.stderr)
@@ -715,6 +737,7 @@ def run_workflow(
         store=store,
         slide_deck_enabled=slide_deck_enabled,
         debate_enabled=debate_enabled,
+        rag_tool_enabled=rag_tool_enabled,
     )
     result = workflow.invoke(
         {
@@ -753,6 +776,7 @@ async def arun_workflow(
     parent_session_id: str | None = None,
     slide_deck_enabled: bool | None = None,
     debate_enabled: bool | None = None,
+    rag_tool_enabled: bool | None = None,
 ) -> StateDict:
     workflow = build_workflow(
         llm_client=llm_client,
@@ -763,6 +787,7 @@ async def arun_workflow(
         event_sink=event_sink,
         slide_deck_enabled=slide_deck_enabled,
         debate_enabled=debate_enabled,
+        rag_tool_enabled=rag_tool_enabled,
     )
     result = await workflow.ainvoke(
         {

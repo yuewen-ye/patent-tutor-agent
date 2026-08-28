@@ -2,15 +2,18 @@
 # 独立配置
 
 # LLM 配置
+# 对应 config/agents.yaml 中的 shkg-gpt3 通道：https://api.sh.kg/v1 + gpt-5.6-terra
 llm:
-  provider: "Provider"  # deepseek/qwen/glm/gpt/luna/terra/grok/yangmao/mistral/minimax
-  model: "Model"  # 支持的模型
-  base_url: "Base_url"
-  api_key: "API_key"
+  provider: "gemini"  # deepseek/qwen/glm/gpt/luna/terra/grok/yangmao/mistral/minimax
+  model: "gemini-3.7-flash"  # 支持的模型
+  base_url: "https://api.sh.kg/v1"
+  # api_key 支持 ${ENV_VAR} 占位符：此处读取仓库 .env 中的 SHKG_API_KEY；
+  # 也可直接填明文，或用环境变量 EXTERNAL_LLM_API_KEY 覆盖。
+  api_key: "${SHKG_API_KEY}"
   temperature: 0.0
   max_tokens: 4096
-  timeout: 120  # 秒
-  retry: 2      # 失败重试次数
+  timeout: 240  # 秒
+  retry: 5      # 失败重试次数
 
 # 分块配置
 chunking:

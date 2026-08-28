@@ -1,0 +1,17 @@
+{
+  "session_id": "4bac45e9be0a492d84605e05b9e50066",
+  "status": "failed",
+  "artifacts": [
+    {
+      "artifact_id": "4bac45e9be0a492d84605e05b9e50066-exercise_submission",
+      "kind": "exercise_submission",
+      "path": "artifacts/sessions/4bac45e9be0a492d84605e05b9e50066/feedback/exercise_submission.md",
+      "created_by": "learner",
+      "title": "练习提交",
+      "mime_type": "text/markdown",
+      "sha256": "3d31188ca2a4596da6b83a9695130978a953cefffbdd390d4edaeef9d9aadf8a",
+      "created_at": "2026-08-26T05:51:20.510787+00:00"
+    }
+  ],
+  "updated_at": "2026-08-26T05:52:17.794166+00:00"
+}

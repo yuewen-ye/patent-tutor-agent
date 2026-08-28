@@ -2,7 +2,6 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { sessionsApi } from "@/api/sessions";
 import { CourseResourceTabs } from "@/components/course/CourseResourceTabs";
-import { LearnerProfileCard } from "@/components/profile/LearnerProfileCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft } from "lucide-react";
@@ -47,20 +46,13 @@ export function CoursePage() {
         )}
 
         {session && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            <div className="lg:col-span-2 space-y-5">
-              <CourseResourceTabs
-                sessionId={sessionId!}
-                coursePackage={state?.course_package}
-                artifacts={state?.artifacts || []}
-                sessionStatus={session?.status}
-              />
-            </div>
-
-            <div className="space-y-5">
-              <LearnerProfileCard profile={state?.learner_profile} />
-            </div>
-          </div>
+          <CourseResourceTabs
+            sessionId={sessionId!}
+            coursePackage={state?.course_package}
+            artifacts={state?.artifacts || []}
+            retrievalContext={(state?.retrieval_context as Array<Record<string, unknown>>) || []}
+            sessionStatus={session?.status}
+          />
         )}
       </div>
     </div>

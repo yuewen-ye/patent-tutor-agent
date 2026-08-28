@@ -74,6 +74,8 @@ POST /sessions/{course_session_id}/exercise-responses
   → _init → diagnosis_feedback[feedback] → END
 ```
 
+`PATENT_TUTOR_RAG_TOOL_ENABLED` 未设置或为严格真值时，Expert A、Expert B 和 Judge 可通过 `rag_retrieve` 工具按需查询知识库；设为严格假值时，不向这些 Agent 暴露工具，也不会执行对应查询。该开关状态写入 `StateDict.rag_tool_enabled` 并记录在初始化事件中。Chat 路径的固定 `retrieve_context` 不受影响。修改该环境变量后必须重启后端。
+
 `diagnosis_feedback` 是一个多阶段 Agent 节点，通过 `diagnosis_feedback_phase` 在诊断和反馈阶段重入。`PATENT_TUTOR_DEBATE_ENABLED` 未设置或为严格真值时，专家 A、B 各自通过 `expert_phase` 在草稿、互评和修订阶段重入；三个阶段都并行执行，由 `_experts_barrier` 等待双方完成并推进阶段，整合阶段只运行专家 A。设为严格假值时，后端在建图时省略 Expert B、汇合、互评、修订与整合节点，路径为 `planner → expert_a[draft] → judge`；该唯一草稿同时写入 `course_package`，`teach_phase` 为 `single_agent`。单专家 Judge 不通过时保留当前课程并进入现有收尾路径，不重跑 Expert A。修改该环境变量后必须重启后端。学员反馈只在提交练习后创建的独立 feedback 会话中生成。
 
 推荐流程中，服务层把已完成 CAT/BKT 诊断的 69 节点快照注入课程会话。诊断和反馈 Agent 的

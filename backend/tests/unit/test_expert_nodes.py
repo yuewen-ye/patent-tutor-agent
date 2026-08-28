@@ -184,6 +184,42 @@ def test_expert_b_accepts_known_provider_camel_case_keys_as_contract_fields() ->
     assert client.calls == ["generate_with_tools", "generate_json"]
 
 
+def test_disabled_rag_tool_skips_expert_a_draft_tool_call() -> None:
+    client = ToolCallingExpertLLMClient()
+    node = build_expert_a_node(client)
+
+    result = node(
+        {
+            "session_id": "rag-off-a",
+            "user_input": "我想学习专利新颖性",
+            "events": [],
+            "teaching_context": _teaching_context(),
+            "rag_tool_enabled": False,
+        }
+    )
+
+    assert client.calls == ["generate_json"]
+    assert "retrieval_context" not in result
+
+
+def test_disabled_rag_tool_skips_expert_b_tool_call() -> None:
+    client = ToolCallingExpertLLMClient()
+    node = build_expert_b_node(client)
+
+    result = node(
+        {
+            "session_id": "rag-off",
+            "user_input": "我想学习专利新颖性",
+            "events": [],
+            "teaching_context": _teaching_context(),
+            "rag_tool_enabled": False,
+        }
+    )
+
+    assert client.calls == ["generate_json"]
+    assert "retrieval_context" not in result
+
+
 def test_expert_b_runs_requested_rag_tool_and_returns_retrieval_context(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

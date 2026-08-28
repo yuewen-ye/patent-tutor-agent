@@ -1,0 +1,208 @@
+# 新学员问卷提交
+
+## 学习目标
+
+我想了解算法专利性和开源协议对专利的影响，厘清软著与专利的边界
+
+## 回答
+
+```json
+[
+  {
+    "question_id": "Q0",
+    "answer": "C"
+  },
+  {
+    "question_id": "Q1",
+    "answer": "B"
+  },
+  {
+    "question_id": "Q2",
+    "answer": "D"
+  },
+  {
+    "question_id": "Q3",
+    "answer": "D"
+  },
+  {
+    "question_id": "Q4",
+    "answer": "A"
+  },
+  {
+    "question_id": "Q5",
+    "answer": "B"
+  },
+  {
+    "question_id": "Q6",
+    "answer": "B"
+  },
+  {
+    "question_id": "Q7",
+    "answer": "B"
+  },
+  {
+    "question_id": "Q8",
+    "answer": "C"
+  },
+  {
+    "question_id": "Q9",
+    "answer": "D"
+  },
+  {
+    "question_id": "Q10",
+    "answer": "B"
+  },
+  {
+    "question_id": "Q11",
+    "answer": "A"
+  },
+  {
+    "question_id": "Q12",
+    "answer": "A"
+  },
+  {
+    "question_id": "Q13",
+    "answer": "A"
+  },
+  {
+    "question_id": "Q14",
+    "answer": "A"
+  },
+  {
+    "question_id": "Q15",
+    "answer": "A"
+  },
+  {
+    "question_id": "Q16",
+    "answer": "B"
+  },
+  {
+    "question_id": "Q17",
+    "answer": "B"
+  },
+  {
+    "question_id": "Q18",
+    "answer": "B"
+  },
+  {
+    "question_id": "Q19",
+    "answer": "D"
+  },
+  {
+    "question_id": "Q20",
+    "answer": "A"
+  },
+  {
+    "question_id": "Q21",
+    "answer": "B"
+  },
+  {
+    "question_id": "Q22",
+    "answer": "B"
+  },
+  {
+    "question_id": "Q23",
+    "answer": "D"
+  },
+  {
+    "question_id": "Q24",
+    "answer": "B"
+  },
+  {
+    "question_id": "Q25",
+    "answer": "D"
+  },
+  {
+    "question_id": "Q26",
+    "answer": "B"
+  },
+  {
+    "question_id": "Q27",
+    "answer": "A"
+  },
+  {
+    "question_id": "Q28",
+    "answer": "B"
+  },
+  {
+    "question_id": "Q29",
+    "answer": "B"
+  },
+  {
+    "question_id": "Q30",
+    "answer": "D"
+  },
+  {
+    "question_id": "Q31",
+    "answer": "B"
+  },
+  {
+    "question_id": "Q32",
+    "answer": "B"
+  },
+  {
+    "question_id": "Q33",
+    "answer": "B"
+  },
+  {
+    "question_id": "Q34",
+    "answer": "D"
+  },
+  {
+    "question_id": "Q35",
+    "answer": "B"
+  },
+  {
+    "question_id": "Q36",
+    "answer": "B"
+  },
+  {
+    "question_id": "Q37",
+    "answer": "A"
+  },
+  {
+    "question_id": "Q38",
+    "answer": "C"
+  },
+  {
+    "question_id": "Q39",
+    "answer": "B"
+  },
+  {
+    "question_id": "Q40",
+    "answer": "A"
+  },
+  {
+    "question_id": "Q41",
+    "answer": "B"
+  },
+  {
+    "question_id": "Q42",
+    "answer": "C"
+  },
+  {
+    "question_id": "Q43",
+    "answer": "B"
+  },
+  {
+    "question_id": "Q44",
+    "answer": "D"
+  },
+  {
+    "question_id": "Q45",
+    "answer": "C"
+  },
+  {
+    "question_id": "Q46",
+    "answer": "B"
+  },
+  {
+    "question_id": "Q47",
+    "answer": "我是做算法平台的，对专利几乎没系统学过，但软著和开源协议接触得多。最困惑的是：一个算法或模型改进到底算不算可专利的'技术方案'、开源发布会不会破坏专利申请的新颖性、软著和专利到底该选哪个保护。"
+  },
+  {
+    "question_id": "Q48",
+    "answer": "希望结合 AI/软件领域的真实案例讲，比如一个推荐算法或模型结构改进在申请专利时要注意什么、哪些公开动作会导致无法授权，最好能厘清软著与专利的边界。"
+  }
+]
+```

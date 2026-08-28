@@ -42,10 +42,26 @@ import program.run_learning_sim as learn_sim  # noqa: E402
 _RETRY_DELAY = 3  # 秒，重试前等待
 
 
-def _next_round_idx(letter: str, *, learner_prefix: str = "multi") -> int:
-    """根据已有 artifact 目录计算下一个教学轮次编号。"""
+def _next_round_idx(
+    letter: str,
+    *,
+    learner_prefix: str = "multi",
+    artifact_dir: str | Path | None = None,
+) -> int:
+    """根据已有 artifact 目录计算下一个教学轮次编号。
+
+    ``artifact_dir`` 是调用方传入的真实结果目录（batchrun 的 --artifact-dir，
+    容器内为挂载的 /app/evaluation-artifacts）；缺省回退到模块常量
+    ``EVAL_ARTIFACTS_DIR``，保持 bootrun/report 等既有调用语义。
+    之前只扫常量目录：在容器里它解析为镜像内路径（无轮次目录），导致
+    ``_next_round_idx`` 永远返回 1，后续每轮课程都被标成 round-01 落盘、
+    覆盖首轮产物（用户实测 R02 课程写进了 round-01）。
+    """
     learner_id = f"{learner_prefix}-{letter}"
-    learner_dir = common.EVAL_ARTIFACTS_DIR / learner_id
+    base_dir = (
+        Path(artifact_dir) if artifact_dir is not None else common.EVAL_ARTIFACTS_DIR
+    )
+    learner_dir = base_dir / learner_id
     if not learner_dir.exists():
         return 1
     existing: list[int] = []
@@ -173,7 +189,9 @@ def _run_course_gen(
             return 0
         round_idx = 1
     else:
-        round_idx = _next_round_idx(letter, learner_prefix=learner_prefix)
+        round_idx = _next_round_idx(
+            letter, learner_prefix=learner_prefix, artifact_dir=artifact_dir
+        )
         print(f"[course_gen/{letter}] 后续课程生成 R{round_idx:02d}...")
         try:
             result = course_gen.run_subsequent_round(
@@ -305,7 +323,12 @@ def _run_profile_batch(
         "finished_at": None,
     }
 
-    current_max = _next_round_idx(letter, learner_prefix=learner_prefix) - 1
+    current_max = (
+        _next_round_idx(
+            letter, learner_prefix=learner_prefix, artifact_dir=artifact_dir
+        )
+        - 1
+    )
     need_init = current_max < 1
 
     if need_init:

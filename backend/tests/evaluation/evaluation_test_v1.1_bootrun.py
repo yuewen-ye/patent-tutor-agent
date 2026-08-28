@@ -39,12 +39,12 @@ import program.report as report  # noqa: E402
 
 # ── helpers ─────────────────────────────────────────────────────────────────
 
-def _profiles_with_run_data() -> list[str]:
-    """列出磁盘上有运行痕迹的画像 ID。"""
+def _profiles_with_run_data(learner_prefix: str = "multi") -> list[str]:
+    """列出磁盘上有运行痕迹的画像 ID（跟随 --learner-prefix）。"""
     result: list[str] = []
     for pid in common.list_profile_ids():
         letter = common.profile_letter_from_id(pid)
-        learner_id = f"multi-{letter}"
+        learner_id = f"{learner_prefix}-{letter}"
         paths = [
             common.EVAL_ARTIFACTS_DIR / learner_id,
             common.EVAL_ARTIFACTS_DIR / pid,
@@ -256,7 +256,7 @@ def _do_metrics_one(profile_id: str, learner_prefix: str = "multi") -> None:
 def _do_report(learner_prefix: str = "multi") -> None:
     """④-3 生成报告：选择最大轮次，只计算有 ≤ 该轮次产物的画像。"""
     # 1. 先列出所有有数据的画像及其最大轮次
-    profiles_with_data = _profiles_with_run_data()
+    profiles_with_data = _profiles_with_run_data(learner_prefix)
     if not profiles_with_data:
         print("  ❌ 没有找到任何有运行数据的画像")
         return
@@ -360,10 +360,13 @@ def _run_prepare_probe() -> None:
         print(f"    ⚠️  prepare_probe.py 返回非 0 退出码（{r.returncode}），继续后续步骤")
 
 
-def _run_prepare_m14() -> None:
+def _run_prepare_m14(learner_prefix: str = "multi") -> None:
     """执行画像级前置：prepare_m14.py（跨轮事实点抽取，用于 1.6 跨轮自洽率）。"""
     import subprocess
-    cmd = [sys.executable, str(_PROGRAM_DIR / "prepare_m14.py")]
+    cmd = [
+        sys.executable, str(_PROGRAM_DIR / "prepare_m14.py"),
+        "--learner-prefix", learner_prefix,
+    ]
     print(f"    ▶ 命令: {' '.join(cmd)}")
     r = subprocess.run(cmd, cwd=str(_PROJECT_ROOT))
     if r.returncode == 0:
@@ -374,25 +377,27 @@ def _run_prepare_m14() -> None:
 
 # 检查已有结果（用于决定是否要询问“强制重跑”）
 
-def _resolve_llm_results_dir() -> Path:
-    return _EVAL_DIR / "results" / "record"
+def _resolve_llm_results_dir(learner_prefix: str = "multi") -> Path:
+    return common.llm_results_dir(learner_prefix)
 
 
-def _exists_system_result(model_name: str) -> bool:
+def _exists_system_result(model_name: str, learner_prefix: str = "multi") -> bool:
     """系统级：是否已经存在 system_indicator_{model}.json。"""
-    d = _resolve_llm_results_dir()
+    d = _resolve_llm_results_dir(learner_prefix)
     return any(d.glob(f"system_indicator_{model_name}.json"))
 
 
-def _exists_profile_result(model_name: str, profile_id: str) -> bool:
+def _exists_profile_result(model_name: str, profile_id: str, learner_prefix: str = "multi") -> bool:
     """画像级：是否已经存在 profile_indicator_{model}_{profile}.json。"""
-    d = _resolve_llm_results_dir()
+    d = _resolve_llm_results_dir(learner_prefix)
     return any(d.glob(f"profile_indicator_{model_name}_{profile_id}.json"))
 
 
-def _exists_round_result(model_name: str, profile_id: str, round_num: int) -> bool:
+def _exists_round_result(
+    model_name: str, profile_id: str, round_num: int, learner_prefix: str = "multi",
+) -> bool:
     """轮次级：是否已经存在 round_indicator_{model}_{profile}_{NN}.json。"""
-    d = _resolve_llm_results_dir()
+    d = _resolve_llm_results_dir(learner_prefix)
     return any(d.glob(f"round_indicator_{model_name}_{profile_id}_{round_num:02d}.json"))
 
 
@@ -417,10 +422,11 @@ def _case_system_eval(
     *,
     force: bool,
     default_force: bool,
+    learner_prefix: str = "multi",
 ) -> tuple[int, int, int]:
     """Case 1：系统评测（system-indicator.md）→ evaluate_m15 + evaluate_m16。"""
     model = config.get("llm", {}).get("model", "unknown")
-    exists = _exists_system_result(model)
+    exists = _exists_system_result(model, learner_prefix)
     force = force or _prompt_force_if_exists(exists, default_force)
 
     print("\n" + "=" * 60)
@@ -506,7 +512,7 @@ def _case_profile_eval(
     model = config.get("llm", {}).get("model", "unknown")
 
     # 1. 选画像
-    profiles = _profiles_with_run_data()
+    profiles = _profiles_with_run_data(learner_prefix)
     if not profiles:
         print("  ❌ 没有找到有运行数据的画像")
         return 0, 0, 0
@@ -540,11 +546,11 @@ def _case_profile_eval(
     # 4. 检查已有结果（轮次级 + 画像级）
     exists_any = False
     for pid in selected:
-        if _exists_profile_result(model, pid):
+        if _exists_profile_result(model, pid, learner_prefix):
             exists_any = True
             break
         for r in _eligible_rounds(pid):
-            if _exists_round_result(model, pid, r):
+            if _exists_round_result(model, pid, r, learner_prefix):
                 exists_any = True
                 break
         if exists_any:
@@ -646,7 +652,7 @@ def _case_profile_eval(
         # 每个画像的最后：profile-indicator.md (1.6 跨轮自洽率)
         print(f"\n    📌 {pid} — profile-indicator.md（1.6 跨轮自洽率，每画像一次）")
         print("      前置准备：prepare_m14.py")
-        _run_prepare_m14()
+        _run_prepare_m14(learner_prefix)
         try:
             res = llm_evaluator.evaluate_m14(letter, config, force=force)
             if res is None:
@@ -663,7 +669,7 @@ def _case_profile_eval(
     return success, skip, fail
 
 
-def _do_llm_evaluate(*, default_force: bool = False) -> None:
+def _do_llm_evaluate(*, default_force: bool = False, learner_prefix: str = "multi") -> None:
     """⑤ 外部 LLM 评估——按三提示词体系分类（系统/画像/全部），子菜单循环直到选 0。"""
     # 初始化模块加载（整个函数周期内只加载一次）
     try:
@@ -679,6 +685,17 @@ def _do_llm_evaluate(*, default_force: bool = False) -> None:
 
     try:
         config = llm_evaluator.load_config()
+        # 按类别注入前缀与结果目录：评估结果写入 results/record_{learner_prefix}，
+        # evaluator 读产物时使用 {learner_prefix}-{画像} 目录，互不串类别。
+        config["learner_prefix"] = learner_prefix
+        _output_base = config.get("output", {}).get(
+            "dir", "backend/tests/evaluation/results/record"
+        )
+        config.setdefault("output", {})["dir"] = (
+            _output_base
+            if learner_prefix == "multi"
+            else f"{_output_base}_{learner_prefix}"
+        )
     except Exception as exc:  # noqa: BLE001
         print(f"  ❌ 加载配置失败: {exc}")
         print("  请检查 config/external_llm.yaml 配置文件")
@@ -706,6 +723,7 @@ def _do_llm_evaluate(*, default_force: bool = False) -> None:
         if case == "1":
             s, k, f = _case_system_eval(
                 llm_evaluator, config, force=False, default_force=default_force,
+                learner_prefix=learner_prefix,
             )
             total_success += s
             total_skip += k
@@ -713,6 +731,7 @@ def _do_llm_evaluate(*, default_force: bool = False) -> None:
         elif case == "2":
             s, k, f = _case_profile_eval(
                 llm_evaluator, config, force=False, default_force=default_force,
+                learner_prefix=learner_prefix,
             )
             total_success += s
             total_skip += k
@@ -722,12 +741,14 @@ def _do_llm_evaluate(*, default_force: bool = False) -> None:
             print("\n  ▌ 全部评测 = 系统评测 + 画像评测，两部分各自独立判断是否已有结果")
             s, k, f = _case_system_eval(
                 llm_evaluator, config, force=False, default_force=default_force,
+                learner_prefix=learner_prefix,
             )
             total_success += s
             total_skip += k
             total_fail += f
             s, k, f = _case_profile_eval(
                 llm_evaluator, config, force=False, default_force=default_force,
+                learner_prefix=learner_prefix,
             )
             total_success += s
             total_skip += k
@@ -738,7 +759,7 @@ def _do_llm_evaluate(*, default_force: bool = False) -> None:
 
         print(f"\n{'=' * 60}")
         print(f"本次评测汇总：✅ 成功 {total_success}  / ⏭️  跳过 {total_skip}  / ❌ 失败 {total_fail}")
-        print(f"📁 结果目录: {_resolve_llm_results_dir()}")
+        print(f"📁 结果目录: {_resolve_llm_results_dir(learner_prefix)}")
         print(f"{'=' * 60}")
 
 
@@ -1065,7 +1086,7 @@ def main(argv: list[str] | None = None) -> int:
             print("\n报告生成完成，返回主菜单。")
             continue
         if choice == "4":
-            _do_llm_evaluate(default_force=args.force)
+            _do_llm_evaluate(default_force=args.force, learner_prefix=args.learner_prefix)
             print("\n外部 LLM 评估完成，返回主菜单。")
             continue
 
@@ -1073,7 +1094,7 @@ def main(argv: list[str] | None = None) -> int:
         # 3=运行系统 → 列全部画像，单选
         multi_select = choice == "1"
         if choice == "1":
-            profiles = _profiles_with_run_data()
+            profiles = _profiles_with_run_data(args.learner_prefix)
             print(f"\n有运行数据的画像（{len(profiles)} 个）：")
         else:
             profiles = common.list_profile_ids()

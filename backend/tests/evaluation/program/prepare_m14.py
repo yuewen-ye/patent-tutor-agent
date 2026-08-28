@@ -277,7 +277,7 @@ def run_extract(
     learner_prefix: str = "multi",
 ) -> list[Path]:
     artifacts_dir = artifacts_dir or common.EVAL_ARTIFACTS_DIR
-    output_dir = output_dir or (_EVAL_DIR / "results" / "record")
+    output_dir = output_dir or common.llm_results_dir(learner_prefix)
 
     profiles: list[str]
     if profile:

@@ -1,0 +1,47 @@
+{
+  "session_id": "c38bf05738124a9794b00a90d4a95228",
+  "status": "completed",
+  "artifacts": [
+    {
+      "artifact_id": "c38bf05738124a9794b00a90d4a95228-round-01-feedback_result",
+      "kind": "feedback_report",
+      "path": "artifacts/sessions/c38bf05738124a9794b00a90d4a95228/feedback/feedback_report.md",
+      "created_by": "diagnosis_feedback",
+      "title": "反馈分析报告",
+      "mime_type": "text/markdown",
+      "sha256": "375f3702ce160a191643d864f7fd009c875a4f912a3a89b00d51e842fd0020bb",
+      "created_at": "2026-08-26T08:03:59.135892+00:00"
+    },
+    {
+      "artifact_id": "c38bf05738124a9794b00a90d4a95228-round-01-learner_profile_update",
+      "kind": "feedback_report",
+      "path": "artifacts/sessions/c38bf05738124a9794b00a90d4a95228/feedback/learner_profile_update.md",
+      "created_by": "diagnosis_feedback",
+      "title": "学情画像更新",
+      "mime_type": "text/markdown",
+      "sha256": "ddbbdc323e5102bd7569bf1058093d96b6def4fe1ee662d75978775d2708bba6",
+      "created_at": "2026-08-26T08:03:59.136849+00:00"
+    },
+    {
+      "artifact_id": "c38bf05738124a9794b00a90d4a95228-round-01-grading_report",
+      "kind": "feedback_report",
+      "path": "artifacts/sessions/c38bf05738124a9794b00a90d4a95228/feedback/grading_report.md",
+      "created_by": "diagnosis_feedback",
+      "title": "练习评分报告",
+      "mime_type": "text/markdown",
+      "sha256": "fef69009165bd5c29d41bfe3fd415587c4400262d660dd06ce7a0b99aeca5439",
+      "created_at": "2026-08-26T08:03:59.137393+00:00"
+    },
+    {
+      "artifact_id": "c38bf05738124a9794b00a90d4a95228-exercise_submission",
+      "kind": "exercise_submission",
+      "path": "artifacts/sessions/c38bf05738124a9794b00a90d4a95228/feedback/exercise_submission.md",
+      "created_by": "learner",
+      "title": "练习提交",
+      "mime_type": "text/markdown",
+      "sha256": "3e755c65108263d0c10879ef8339b007d301147a6446cbd4b504ee6cda52ed3a",
+      "created_at": "2026-08-26T08:03:35.739570+00:00"
+    }
+  ],
+  "updated_at": "2026-08-26T08:03:59.198143+00:00"
+}

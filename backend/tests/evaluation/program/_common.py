@@ -51,7 +51,21 @@ EVAL_ARTIFACTS_DIR = EVAL_DIR / "artifacts"
 SYS_ARTIFACTS_DIR = PROJECT_ROOT / "artifacts" / "sessions"
 DEFAULT_BASE_URL = "http://localhost:8000"
 POLL_INTERVAL_SEC = 10.0
-POLL_TIMEOUT_SEC = 60 * 50  # 50 minutes (完整 teach 流程含 slide_deck/PPTX/audio 实测 ~43 分钟)
+POLL_TIMEOUT_SEC = 60 * 120  # 120 minutes（网关慢时单轮 teach 会话可达 60-90 分钟，50 分钟会误杀）
+
+
+def llm_results_dir(learner_prefix: str = "multi") -> Path:
+    """外部 LLM 评估结果目录。
+
+    非默认前缀按类别隔离：``results/record_{前缀}``（如 eval-normal →
+    ``results/record_eval-normal``），避免多个类别（normal/no-rag/...）共用
+    同一个 record 目录导致 round_indicator 等文件互相覆盖。
+    """
+    base = EVAL_DIR / "results" / "record"
+    if learner_prefix == "multi":
+        return base
+    return EVAL_DIR / "results" / f"record_{learner_prefix}"
+
 
 if str(EVAL_DIR) not in sys.path:
     sys.path.insert(0, str(EVAL_DIR))

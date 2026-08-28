@@ -45,10 +45,13 @@ import calculate  # noqa: E402
 
 REPORTS_DIR = _EVAL_DIR / "results" / "reports"
 
-def _resolve_llm_results_dir() -> Path:
-    """解析外部 LLM 结果目录：优先 results/record，回退 results/reports/record 和 LLM/results。"""
-    new_dir = _EVAL_DIR / "results" / "record"
-    if new_dir.exists():
+def _resolve_llm_results_dir(learner_prefix: str = "multi") -> Path:
+    """解析外部 LLM 结果目录：按类别隔离（record_{前缀}）。
+
+    旧共享目录仅作为 multi 前缀的回退；非 multi 前缀绝不读共享池。
+    """
+    new_dir = common.llm_results_dir(learner_prefix)
+    if learner_prefix != "multi" or new_dir.exists():
         return new_dir
     alt_dir = _EVAL_DIR / "results" / "reports" / "record"
     if alt_dir.exists():
@@ -390,7 +393,12 @@ class FullReportContext:
 # ── 外部 LLM 评估结果读取 ─────────────────────────────────────────────────────
 
 
-def _load_llm_eval_results() -> dict[str, Any]:
+def _is_failed_marker(section_data: Any) -> bool:
+    """LLM 评估失败写入的失败标记（status=failed）→ 报告按无结果处理。"""
+    return isinstance(section_data, dict) and section_data.get("status") == "failed"
+
+
+def _load_llm_eval_results(learner_prefix: str = "multi") -> dict[str, Any]:
     """从新的聚合产物目录加载评估结果。
 
     统一文件体系（每个提示词对应一份聚合 JSON）：
@@ -402,7 +410,7 @@ def _load_llm_eval_results() -> dict[str, Any]:
       内含 section：m6_adversarial / m6_boundary
     """
     results: dict[str, Any] = {}
-    llm_dir = _resolve_llm_results_dir()
+    llm_dir = _resolve_llm_results_dir(learner_prefix)
     if not llm_dir.exists():
         return results
 
@@ -437,27 +445,27 @@ def _load_llm_eval_results() -> dict[str, Any]:
         if not profile_id or not round_num:
             continue
         # overall → judge_eval
-        if "overall" in data:
+        if "overall" in data and not _is_failed_marker(data["overall"]):
             _store(profile_id, round_num, "judge_eval",
                    {"metadata": metadata, "overall_evaluation": data["overall"]})
         # statement → statement_eval
-        if "statement" in data:
+        if "statement" in data and not _is_failed_marker(data["statement"]):
             _store(profile_id, round_num, "statement_eval",
                    {"metadata": metadata, **data["statement"]})
         # resource_morphology → m7_resource
-        if "resource_morphology" in data:
+        if "resource_morphology" in data and not _is_failed_marker(data["resource_morphology"]):
             _store(profile_id, round_num, "m7_resource",
                    {"metadata": metadata, "raw_llm_response": data["resource_morphology"]})
         # retrieval → m2_retrieval
-        if "retrieval" in data:
+        if "retrieval" in data and not _is_failed_marker(data["retrieval"]):
             _store(profile_id, round_num, "m2_retrieval",
                    {"metadata": metadata, **data["retrieval"]})
         # pii → pii_compliance
-        if "pii" in data:
+        if "pii" in data and not _is_failed_marker(data["pii"]):
             _store(profile_id, round_num, "pii_compliance",
                    {"metadata": metadata, **data["pii"]})
         # objection_loop → objection_eval（用于 1.1 闭环率，若 calculate.py 需要）
-        if "objection_loop" in data:
+        if "objection_loop" in data and not _is_failed_marker(data["objection_loop"]):
             _store(profile_id, round_num, "objection_eval",
                    {"metadata": metadata, **data["objection_loop"]})
 
@@ -478,7 +486,7 @@ def _load_llm_eval_results() -> dict[str, Any]:
         profile_id = metadata.get("profile_id", "") or parts[3]
         if not profile_id:
             continue
-        if "cross_round" in data:
+        if "cross_round" in data and not _is_failed_marker(data["cross_round"]):
             if profile_id not in results:
                 results[profile_id] = {}
             results[profile_id]["_m14"] = {"metadata": metadata, **data["cross_round"]}
@@ -499,17 +507,19 @@ def _load_llm_eval_results() -> dict[str, Any]:
             continue
         if "system" not in results:
             results["system"] = {}
-        if "m6_adversarial" in data:
+        if "m6_adversarial" in data and not _is_failed_marker(data["m6_adversarial"]):
             results["system"]["_m15"] = data["m6_adversarial"]
-        if "m6_boundary" in data:
+        if "m6_boundary" in data and not _is_failed_marker(data["m6_boundary"]):
             results["system"]["_m16"] = data["m6_boundary"]
 
     return results
 
 
-def _load_profile_level_metrics(profile_letter: str | None = None) -> list[calculate.MetricResult]:
+def _load_profile_level_metrics(
+    profile_letter: str | None = None, learner_prefix: str = "multi",
+) -> list[calculate.MetricResult]:
     """加载系统级指标（M6 问答质量测试），独立于画像。"""
-    return calculate.calculate_system_level_metrics()
+    return calculate.calculate_system_level_metrics(learner_prefix=learner_prefix)
 
 
 def _has_llm_eval_for(profile_letter: str, round_num: int,
@@ -1310,6 +1320,7 @@ def _calculate_profile(
     profile_letter: str,
     session_dir: Path,
     max_round: int | None = None,
+    learner_prefix: str = "multi",
 ) -> ProfileReport:
     pr = ProfileReport(
         profile_letter=profile_letter,
@@ -1327,6 +1338,7 @@ def _calculate_profile(
                 round_num=r,
                 session_dir=session_dir,
                 prev_profile_update=prev_profile_update,
+                learner_prefix=learner_prefix,
             )
             pr.rounds.append(rm)
 
@@ -1357,13 +1369,13 @@ def generate_report(
         print(f"  ❌ 找不到画像 {profile_letter} 的测试快照目录")
         return None
 
-    pr = _calculate_profile(profile_letter, session_dir)
+    pr = _calculate_profile(profile_letter, session_dir, learner_prefix=learner_prefix)
     if not pr.rounds:
         print(f"  ❌ 画像 {profile_letter} 无可用的指标数据")
         return None
 
-    llm_results = _load_llm_eval_results()
-    profile_level_metrics = _load_profile_level_metrics()
+    llm_results = _load_llm_eval_results(learner_prefix)
+    profile_level_metrics = _load_profile_level_metrics(learner_prefix=learner_prefix)
 
     ctx = ReportContext(
         profile_letter=profile_letter,
@@ -1420,7 +1432,9 @@ def generate_full_report(
             print(f"  [profile_{letter}] ⚠️ 无符合条件的轮次数据，已跳过")
             continue
         print(f"  [profile_{letter}] 计算 {len(rounds)} 个轮次...")
-        pr = _calculate_profile(letter, session_dir, max_round=max_round)
+        pr = _calculate_profile(
+            letter, session_dir, max_round=max_round, learner_prefix=learner_prefix,
+        )
         if pr.rounds:
             profiles.append(pr)
         else:
@@ -1430,8 +1444,8 @@ def generate_full_report(
         print("  ❌ 所有画像均无可用数据")
         return None
 
-    llm_eval_results = _load_llm_eval_results()
-    profile_level_metrics = _load_profile_level_metrics()
+    llm_eval_results = _load_llm_eval_results(learner_prefix)
+    profile_level_metrics = _load_profile_level_metrics(learner_prefix=learner_prefix)
 
     ctx = FullReportContext(
         profiles=profiles,

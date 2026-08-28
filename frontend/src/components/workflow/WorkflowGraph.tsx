@@ -164,9 +164,7 @@ export function WorkflowGraph({
   // 是否已结束
   const isFinished = Boolean(status && ["completed", "failed", "canceled"].includes(status));
 
-  // 并行阶段判断：draft/cross_review/revision 中专家 A/B 同时运行。
-  // 兜底：当 expert_phase 缺失（旧会话 / state 没推到前端），但 currentNode 是 expert_a 或 expert_b，
-  //      则按图结构视为"draft 并行阶段"（planner→expert_a/b→barrier），避免只高亮一个节点。
+  // 并行阶段判断：draft/cross_review/revision 中专家 A/B 同时运行
   const effectiveExpertPhase: string = expertPhase
     || ((!isFinished && (currentNode === "expert_a" || currentNode === "expert_b")) ? "draft" : "");
 
@@ -194,15 +192,12 @@ export function WorkflowGraph({
       if (isIntegration) {
         return nodeId === "expert_a_integration";
       }
-      // 并行阶段：两个专家同时高亮
+      // 并行阶段：两个专家同时运行，同时高亮
       if (isExpertParallel) {
         return nodeId === "expert_a" || nodeId === "expert_b";
       }
-      // barrier 节点
-      if (nodeId === "_experts_barrier" && currentNode === "_experts_barrier") return true;
-      // 默认：currentNode 匹配
-      if (nodeId === currentNode) return true;
-      return false;
+      // 串行阶段：只有 currentNode 匹配的节点高亮
+      return nodeId === currentNode;
     },
     [isFinished, isIntegration, isExpertParallel, currentNode]
   );
@@ -236,43 +231,43 @@ export function WorkflowGraph({
       { id: "planner", position: { x: 50, y: 270 }, data: { label: "路径规划" }, type: "default" },
       {
         id: "expert_a",
-        position: { x: -80, y: 370 },
+        position: { x: -120, y: 370 },
         data: { label: "专家 A", phase: expertPhase },
         type: "default",
       },
       {
         id: "expert_b",
-        position: { x: 180, y: 370 },
+        position: { x: 220, y: 370 },
         data: { label: "专家 B", phase: expertPhase },
         type: "default",
       },
       {
         id: "_experts_barrier",
-        position: { x: 50, y: 470 },
+        position: { x: 50, y: 480 },
         data: { label: "阶段汇合" },
         type: "default",
       },
       {
         id: "expert_a_integration",
-        position: { x: 50, y: 560 },
+        position: { x: 50, y: 570 },
         data: { label: "专家 A 整合" },
         type: "default",
       },
       {
         id: "judge",
-        position: { x: 50, y: 650 },
+        position: { x: 50, y: 660 },
         data: { label: "审核裁判" },
         type: "default",
       },
       {
         id: "slide_deck",
-        position: { x: -80, y: 730 },
+        position: { x: -120, y: 750 },
         data: { label: "课件生成" },
         type: "default",
       },
       {
         id: "generate_pptx",
-        position: { x: 180, y: 730 },
+        position: { x: 220, y: 750 },
         data: { label: "PPT 渲染" },
         type: "default",
       },
@@ -424,13 +419,34 @@ export function WorkflowGraph({
       const srcActive = isActive(e.source);
       const tgtActive = isActive(e.target);
       const isHot = srcActive || tgtActive;
+      // 回边：barrier → expert_a/b（下一阶段循环），用贝塞尔曲线向外弯出，
+      // 避免与正向 smoothstep 边交叉
+      const isBackward =
+        e.source === "_experts_barrier" &&
+        (e.target === "expert_a" || e.target === "expert_b");
+      if (isBackward) {
+        return {
+          ...e,
+          type: "default",
+          animated: false,
+          style: {
+            stroke: isHot ? "#94a3b8" : "#475569",
+            strokeWidth: isHot ? 2 : 1.5,
+            strokeDasharray: "5 5",
+            opacity: 0.5,
+          },
+          zIndex: isHot ? 10 : 0,
+        };
+      }
       return {
         ...e,
         type: "smoothstep",
+        pathOptions: { borderRadius: 16 },
         animated: false,
         style: isHot
-          ? { stroke: "#94a3b8", strokeWidth: 2.5 } // 激活边：更亮的灰蓝色粗实线
-          : { stroke: "#475569", strokeWidth: 1.5 }, // 普通边：清晰的深灰色实线
+          ? { stroke: "#94a3b8", strokeWidth: 2.5 }
+          : { stroke: "#475569", strokeWidth: 1.5 },
+        zIndex: isHot ? 10 : 0,
       };
     });
   }, [intent, workflowMode, isActive]);
