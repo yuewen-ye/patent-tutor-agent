@@ -1,39 +1,39 @@
 """评估指标计算脚本。
 
-计算 10+ 个指标（按单轮定义，多轮取算术平均值）：
+计算 M1~M6 六大类指标（按单轮定义，多轮取算术平均值）：
 
-M1 幻觉率（系统自评）：
-  ① 专家互评异议率 = (🔴+🟡) / 总批注数 × 100%
-  ② 裁判准确性评分 = 直接取 judge_report.md 中 准确性：X/5
+M1 幻觉率：
+  1.1 闭环率（脚本计算 + 外部LLM）
+  1.2 裁判Agent准确性评分（脚本计算，judge_report.md 准确性：X/5）
+  1.3.1 上下文正确性 / 1.3.2 答案正确性 / 1.3.3 幻觉评估（外部LLM overall）
+  1.4.1 事实性 / 1.4.2 逻辑性 / 1.4.3 指令性谬误率（外部LLM statement）
+  1.5.1 知识溯源可验证率 / 1.5.2 溯源内容支撑率（外部LLM statement）
+  1.6 跨轮自洽率（外部LLM profile）
 
 M2 匹配度：
-  ① 难度符合度 = L_low ≤ 题.difficulty ≤ L_high 的题数 / 总题数 × 100%
-     - L_low: pl < 0.30 → L1; pl ≥ 0.30 → L2; 再封顶 difficulty_cap
-     - 角色特例: weakness → L3, forward_probe → L1
-     - L_high: 节点难度上限 (difficulty_cap)
-  ② 资源形态评估（外部 LLM 优先，回退脚本计算）
+  2.1 难度符合度（脚本计算）
+  2.2 有用性 / 2.3 相关性（外部LLM overall）
+  2.4 动态迭代触发率（脚本计算）
+  2.5 检索准确率 / 检索完整率（外部LLM retrieval）
 
 M3 覆盖率：
-  ① 本节知识点覆盖率（累计路径 + 祖先匹配）
-  ② 薄弱点命中率
-  ③ 混淆对覆盖率
+  3.1 本节知识点覆盖率（脚本计算 + 外部LLM coverage 语义验证）
+  3.2 薄弱点命中率（脚本计算 + 外部LLM coverage 语义验证）
+  3.3 混淆对覆盖率（脚本计算 + 外部LLM coverage 语义验证）
 
-M8 对话质量：
-  异议闭环率（外部 LLM 判定）
+M4 执行完整性：
+  4.1 产物完整率（脚本计算）
+  4.2.1 资源大类数 / 4.2.2 资源小类数（脚本计算）
 
-M10 PII 合规：
-  learner_profile_update.md / session_snapshot.json 正则白名单扫描
+M5 其它指标：
+  5.1 测试差异化画像个数（仅保留概念）
+  5.2 知识库覆盖（仅保留概念）
+  5.3 PII合规检测（脚本计算 + 外部LLM）
+  5.4 异议率（脚本计算，(🔴+🟡)/总批注）
 
-M11 动态迭代：
-  动态迭代触发率（跨轮 pl 跃升判定）
-
-── 深化指标（外部 LLM 评估） ──
-M1 子分：事实性 / 逻辑性 / 指令性谬误率
-M9-b 溯源内容支撑率
-M14 跨轮自洽率
-M15 对抗稳健率（系统级）
-M16 边界拒答恰当率（系统级）
-M17 检索正确性
+M6 问答质量测试：
+  6.1 对抗稳健率（系统级外部LLM）
+  6.2 边界拒答恰当率（系统级外部LLM）
 
 CLI 用法：
   uv run python backend/tests/evaluation/program/calculate.py --profile B --round 1
@@ -958,6 +958,36 @@ def load_m9_external_result(profile_letter: str, round_num: int) -> MetricResult
     return MetricResult(name="1.5.1 知识溯源可验证率", value=0.0, unit="%", detail={"note": "无带来源陈述"})
 
 
+def load_coverage_external_result(profile_letter: str, round_num: int) -> list[MetricResult]:
+    """加载 3.1/3.2/3.3 覆盖率外部 LLM 评估结果（round_indicator > coverage）。
+
+    返回 3 个 MetricResult，分别对应 3.1 知识点覆盖率、3.2 薄弱点命中率、3.3 混淆对覆盖率。
+    若 LLM 结果不存在则返回空列表。
+    """
+    section, path = _load_round_section(profile_letter, round_num, "coverage")
+    if section is None:
+        return []
+
+    results: list[MetricResult] = []
+    mapping = [
+        ("section_coverage", "3.1 本节知识点覆盖率(LLM)"),
+        ("weakness_coverage", "3.2 薄弱点命中率(LLM)"),
+        ("confusion_coverage", "3.3 混淆对覆盖率(LLM)"),
+    ]
+    for key, name in mapping:
+        sub = section.get(key, {})
+        score = sub.get("score", 0)
+        results.append(MetricResult(
+            name=name, value=score, unit="分",
+            detail={
+                "评估方式": "外部 LLM (round-indicator coverage)",
+                "原始文件": path.name if path else "-",
+                "comment": sub.get("comment", ""),
+            }
+        ))
+    return results
+
+
 # ── 深化指标计算（M1 子分 / M9-b / M14-M17） ────────────────────────────
 
 def _heuristic_type(text: str) -> str:
@@ -1277,6 +1307,10 @@ def calculate_round(
     rm.metrics.append(calc_coverage_weakness(course_text, expected_content, history_nodes=history_nodes))
     rm.metrics.append(calc_coverage_confusable(course_text, expected_content, node_name_map, history_nodes=history_nodes))
 
+    # 覆盖率 LLM 评估（3.1/3.2/3.3 语义验证，补充脚本硬匹配）
+    for mr in load_coverage_external_result(profile_letter, round_num):
+        rm.metrics.append(mr)
+
     # M9 知识溯源可验证率
     m9_result = load_m9_external_result(profile_letter, round_num)
     if m9_result:
@@ -1421,6 +1455,13 @@ def format_result(rm: RoundMetrics, llm_results: dict[str, Any] | None = None) -
     _append_group("M2 匹配度 — 检索正确性", [
         "2.5 检索准确率",
         "2.5 检索完整率",
+    ])
+
+    # M3 覆盖率 — 外部LLM语义验证
+    _append_group("M3 覆盖率 — 外部LLM语义验证", [
+        "3.1 本节知识点覆盖率(LLM)",
+        "3.2 薄弱点命中率(LLM)",
+        "3.3 混淆对覆盖率(LLM)",
     ])
 
     # M4 执行完整性 — 资源形态

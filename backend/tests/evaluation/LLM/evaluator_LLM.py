@@ -472,6 +472,7 @@ _MODE_TO_PROMPT_CATEGORY: dict[str, str] = {
     "pii":           "round",
     "m1":            "round",        # 1.1 异议闭环率
     "m4":            "round",        # 4.2 资源形态
+    "coverage":      "round",        # 3.1/3.2/3.3 覆盖率
     "m1_cross_round": "profile",
 }
 
@@ -873,6 +874,7 @@ def cmd_evaluate(args) -> None:
         "m1_cross_round": "M1.6 跨轮自洽率",
         "m2_retrieval": "M2.5 检索正确性",
         "m4": "M4.2 资源形态评估",
+        "coverage": "M3 覆盖率评估（3.1/3.2/3.3）",
         "m6_adversarial": "M6.1 对抗稳健率",
         "m6_boundary": "M6.2 边界拒答恰当率",
     }.get(eval_mode, eval_mode)
@@ -958,6 +960,10 @@ def cmd_evaluate(args) -> None:
                     )
                 elif eval_mode == "m2_retrieval":
                     result = evaluate_m17(
+                        profile_id, round_num, config, force=args.force
+                    )
+                elif eval_mode == "coverage":
+                    result = evaluate_coverage(
                         profile_id, round_num, config, force=args.force
                     )
                 else:
@@ -2400,6 +2406,134 @@ def evaluate_pii_compliance(
     return result
 
 
+# ── M3 覆盖率评估（外部 LLM 评估 3.1/3.2/3.3） ────────────────────────────────
+
+def evaluate_coverage(
+    profile_id: str,
+    round_num: int,
+    config: dict[str, Any],
+    force: bool = False,
+) -> dict[str, Any] | None:
+    """M3.1/3.2/3.3 覆盖率评估 — 使用 LLM 从语义层面验证课程对知识点/薄弱点/混淆对的覆盖质量。
+
+    脚本计算（calculate.py）提供基于节点 ID 硬匹配的覆盖率，
+    本 LLM 评估提供语义层面的补充验证：内容是否真正讲解到位、是否有间接覆盖。
+
+    输入：course_package.md + learning_path.md + expected_content（预期知识点/薄弱点/混淆对）
+    结果合并到 round_indicator 的 coverage section。
+    """
+    llm_config = config.get("llm", {})
+    model_name = llm_config.get("model", "unknown")
+    output_path = output_round_indicator_path(config, model_name, profile_id, round_num)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if output_path.exists() and not force:
+        existing = _load_json_safe(output_path)
+        if "coverage" in existing:
+            print(f"  ⏭️  跳过：round_indicator coverage 评估已存在")
+            return None
+
+    # 1. 读取课程内容和学习路径
+    print(f"  📖 读取课程内容和预期数据...")
+    artifacts = read_artifacts(profile_id, round_num)
+    course_content = artifacts.get("course_package.md", "")
+    learning_path = artifacts.get("learning_path.md", "")
+
+    if not course_content:
+        print(f"  ❌ course_package.md 为空，跳过覆盖率评估")
+        return None
+
+    # 2. 读取 expected_content（预期知识点/薄弱点/混淆对）
+    expected_content: dict[str, Any] = {}
+    profiles_dir = _PROJECT_ROOT / "backend" / "tests" / "evaluation" / "profiles"
+    for candidate in (
+        profiles_dir / f"expected_{profile_id}_{round_num:02d}.json",
+        profiles_dir / f"expected_{profile_id}.json",
+    ):
+        if candidate.exists():
+            try:
+                raw = json.loads(candidate.read_text(encoding="utf-8"))
+                expected_content = raw.get("expected_course_content", {})
+                break
+            except (json.JSONDecodeError, OSError):
+                continue
+
+    if not expected_content:
+        print(f"  ⚠️  未找到 expected_content，使用空预期数据")
+        expected_content = {}
+
+    # 3. 加载系统提示词（round-indicator.md 第五部分 coverage 模式）
+    system_prompt = load_system_prompt("coverage")
+    client = LLMClient(llm_config)
+
+    # 4. 构造用户提示词
+    expected_kcs = expected_content.get("section_kcs") or expected_content.get("knowledge_nodes", [])
+    expected_wps = expected_content.get("weakness_kcs") or expected_content.get("weak_points", [])
+    expected_cps = expected_content.get("confusable_pairs") or expected_content.get("confusion_pairs", [])
+
+    user_prompt = f"""请评估以下课程内容对预期知识点、薄弱点和混淆对的覆盖情况。
+
+## 学习路径
+{learning_path[:3000]}
+
+## 预期知识点列表
+{json.dumps(expected_kcs, ensure_ascii=False, indent=2)[:2000] if expected_kcs else "（无）"}
+
+## 预期薄弱点列表
+{json.dumps(expected_wps, ensure_ascii=False, indent=2)[:2000] if expected_wps else "（无）"}
+
+## 预期混淆对列表
+{json.dumps(expected_cps, ensure_ascii=False, indent=2)[:2000] if expected_cps else "（无）"}
+
+## 课程内容
+{course_content[:8000]}
+
+请严格按照系统提示中的 JSON 格式输出覆盖率评估结果。
+注意：区分"名词提及"和"实质讲解"；混淆对要求"对比辨析"而非分别提及。"""
+
+    try:
+        resp = client.chat(system_prompt, user_prompt)
+        parsed = parse_llm_response(resp)
+    except Exception as e:
+        print(f"  ❌ LLM 评估异常: {e}")
+        parsed = {
+            "section_coverage": {"score": 0, "comment": f"LLM异常: {e}"},
+            "weakness_coverage": {"score": 0, "comment": f"LLM异常: {e}"},
+            "confusion_coverage": {"score": 0, "comment": f"LLM异常: {e}"},
+            "overall_coverage_score": {"score": 0, "comment": f"LLM异常: {e}"},
+        }
+
+    # 5. 提取三个覆盖率子指标
+    section_score = parsed.get("section_coverage", {}).get("score", 0)
+    weakness_score = parsed.get("weakness_coverage", {}).get("score", 0)
+    confusion_score = parsed.get("confusion_coverage", {}).get("score", 0)
+    overall_score = parsed.get("overall_coverage_score", {}).get("score", 0)
+
+    result = {
+        "eval_type": "coverage_evaluation",
+        "section_coverage": parsed.get("section_coverage", {}),
+        "weakness_coverage": parsed.get("weakness_coverage", {}),
+        "confusion_coverage": parsed.get("confusion_coverage", {}),
+        "overall_coverage_score": parsed.get("overall_coverage_score", {}),
+        "highlights": parsed.get("highlights", []),
+        "issues": parsed.get("issues", []),
+        "suggestions": parsed.get("suggestions", []),
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
+
+    merge_round_section(
+        config, model_name, profile_id, round_num,
+        section="coverage", value=result,
+    )
+
+    print(f"  ✅ 覆盖率评估完成: {output_path.name} > coverage")
+    print(f"     3.1 知识点覆盖率(LLM): {section_score}/100")
+    print(f"     3.2 薄弱点命中率(LLM): {weakness_score}/100")
+    print(f"     3.3 混淆对覆盖率(LLM): {confusion_score}/100")
+    print(f"     综合: {overall_score}/100")
+    return result
+
+
 # ── 主入口 ────────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -2418,8 +2552,8 @@ def main() -> None:
     eval_parser.add_argument("--round", type=int, help="指定轮次（如 1）")
     eval_parser.add_argument("--all-rounds", action="store_true", help="评估所有轮次")
     eval_parser.add_argument("--force", action="store_true", help="强制重跑（覆盖已有结果）")
-    eval_parser.add_argument("--mode", choices=["overall", "statement", "pii", "m1", "m1_cross_round", "m2_retrieval", "m4", "m6_adversarial", "m6_boundary"], default="overall", 
-                           help="评估模式：overall为整体评估；statement为陈述级评估；pii为PII合规检测；m1为异议闭环率；m1_cross_round为跨轮自洽率；m2_retrieval为检索正确性；m4为资源形态；m6_adversarial/m6_boundary为系统级单次")
+    eval_parser.add_argument("--mode", choices=["overall", "statement", "pii", "m1", "m1_cross_round", "m2_retrieval", "m4", "coverage", "m6_adversarial", "m6_boundary"], default="overall",
+                           help="评估模式：overall为整体评估；statement为陈述级评估；pii为PII合规检测；m1为异议闭环率；m1_cross_round为跨轮自洽率；m2_retrieval为检索正确性；m4为资源形态；coverage为覆盖率(3.1/3.2/3.3)；m6_adversarial/m6_boundary为系统级单次")
     eval_parser.add_argument("--system-only", action="store_true", help="仅运行系统级评估（m6_adversarial/m6_boundary）")
 
     args = parser.parse_args()
