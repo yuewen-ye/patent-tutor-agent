@@ -213,13 +213,16 @@ def _parse_planner_plan(
 
 
 def _route_fingerprint(path: list[dict[str, Any]]) -> str:
+    """Fingerprint the roadmap structure, not per-round teaching adaptation.
+
+    Difficulty caps and teaching strategies are recalculated from the latest BKT
+    snapshot on every teach session. They affect this lesson's presentation, but
+    changing them must not create a new persisted roadmap version. The fingerprint
+    therefore tracks only the ordered node/dependency structure that defines the
+    route itself.
+    """
     payload = [
-        {
-            key: item.get(key)
-            for key in (
-                "node_id", "node_name", "duration_min", "strategy", "prerequisites", "difficulty_cap"
-            )
-        }
+        {key: item.get(key) for key in ("node_id", "prerequisites")}
         for item in path
     ]
     encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
@@ -439,8 +442,8 @@ def build_planner_node(llm_client: LLMClient) -> Node:
         ]
         serialized_path = [item.model_dump() for item in path]
         route_fingerprint = _route_fingerprint(serialized_path)
-        active_fingerprint = str((active_plan or {}).get("route_fingerprint") or "")
-        if not active_fingerprint and isinstance(active_plan, dict):
+        active_fingerprint = ""
+        if isinstance(active_plan, dict):
             active_fingerprint = _route_fingerprint(
                 [item for item in active_plan.get("nodes", []) if isinstance(item, dict)]
             )

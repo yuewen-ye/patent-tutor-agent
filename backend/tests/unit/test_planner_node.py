@@ -8,6 +8,7 @@ from backend.app.agents.planner.node import (
     _confusion_review_risk,
     _knowledge_pl_map,
     _parse_planner_plan,
+    _route_fingerprint,
     build_planner_node,
 )
 from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinition
@@ -258,6 +259,19 @@ def test_planner_always_calls_llm_and_builds_enriched_context() -> None:
     assert len(first_path_node["knowledge_points"]) > 0
     assert any("专利制度" in point for point in first_path_node["knowledge_points"])
     assert context["knowledge_points"] == first_path_node["knowledge_points"]
+
+
+def test_route_fingerprint_ignores_adaptive_teaching_fields() -> None:
+    base = [{
+        "node_id": "novelty",
+        "node_name": "新颖性",
+        "duration_min": 30,
+        "strategy": "概念",
+        "prerequisites": ["patentability-substantive"],
+        "difficulty_cap": "L1",
+    }]
+    adapted = [{**base[0], "duration_min": 90, "strategy": "案例", "difficulty_cap": "L3"}]
+    assert _route_fingerprint(base) == _route_fingerprint(adapted)
 
 
 def test_planner_keep_calls_llm_and_preserves_plan_version() -> None:
