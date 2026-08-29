@@ -68,6 +68,33 @@ _FIELD_BY_FILE: dict[str, str] = {v: k for k, v in _FILE_BY_FIELD.items()}
 logger = logging.getLogger(__name__)
 
 
+def _feedback_progress_snapshot(
+    *,
+    store: Any,
+    learner_id: str,
+    profile_dimensions: object,
+) -> dict[str, Any] | None:
+    """Load feedback progress from the plan ledger, with profile fallback.
+
+    The learner profile intentionally exposes only a projection of progress and does
+    not contain completion-session provenance. The active learning plan is therefore
+    authoritative for feedback transitions; the fallback keeps lightweight stores
+    and legacy callers usable.
+    """
+    active_plan_reader = getattr(store, "active_learning_plan", None)
+    if callable(active_plan_reader):
+        active_plan = active_plan_reader(learner_id)
+        if isinstance(active_plan, dict):
+            plan_progress = active_plan.get("progress")
+            if isinstance(plan_progress, dict):
+                return plan_progress
+    return (
+        profile_dimensions.get("progress")
+        if isinstance(profile_dimensions, dict)
+        else None
+    )
+
+
 class SessionService:
     def __init__(
         self,
@@ -665,16 +692,19 @@ class SessionService:
             and isinstance(course_state.get("path_decision"), dict)
             else {}
         )
-        existing_progress = (
-            existing_dimensions.get("progress")
-            if isinstance(existing_dimensions, dict)
-            else None
+        existing_progress = _feedback_progress_snapshot(
+            store=self._store,
+            learner_id=learner_id,
+            profile_dimensions=existing_dimensions,
         )
         course_package = course_state.get("course_package", {}) if isinstance(course_state, dict) else {}
         has_generated_course = bool(
             course_record.status == "completed"
             and isinstance(course_package, dict)
-            and course_package.get("assessment")
+            and (
+                course_package.get("assessment")
+                or course_package.get("interactive_questions")
+            )
         )
         current_node_id = str(course_decision.get("current_node_id") or "")
         current_node_in_course = any(

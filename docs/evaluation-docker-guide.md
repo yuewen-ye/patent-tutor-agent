@@ -1,24 +1,44 @@
 # Docker 并行评测操作指南
 
-四组评测（`normal` / `no-rag` / `no-rerank` / `single-model`）并行运行，每组一套独立的
-`MySQL + backend + evaluator` 容器，互不干扰。所有组已统一：画像 `6-9-10-13-15`、跑 3 轮、
+五组评测（`normal` / `no-rag` / `no-rerank` / `single-model` / `no-debate`）并行运行，每组一套独立的
+`MySQL + backend + evaluator` 容器，互不干扰。所有组已统一：画像 `6-9-10`、跑 5 轮、
 关闭 PPT/课件节点。下面按步骤照做即可。
 
 ## 第一步：准备
 
 1. 确认 Docker 可用：`docker compose version`（需要 compose v2 插件）。
 2. 仓库根目录 `.env` 已配置 LLM key，`config/agents.yaml` 存在。
-3. 想改画像/轮次：编辑 `docker/evaluation/*.env` 里的 `EVAL_PROFILES` 和 `EVAL_TARGET_ROUND`（默认已是 `6-9-10-13-15` / `3`）。
+3. 想改画像/轮次：编辑 `docker/evaluation/*.env` 里的 `EVAL_PROFILES` 和 `EVAL_TARGET_ROUND`（默认已是 `6-9-10` / `5`）。
 
 ## 第二步：准备模型卷（只做一次）
 
 ```bash
-docker volume create patent-tutor-evaluation-models
-docker compose -p evaluation-bootstrap --env-file .env --env-file docker/evaluation/normal.env \
-  -f docker-compose.evaluation.yml run --rm --no-deps backend true
+docker volume inspect patent-tutor-evaluation-models >/dev/null 2>&1 || \
+  docker volume create patent-tutor-evaluation-models
+
+(
+  set -a
+  . .env
+  . docker/evaluation/normal.env
+  set +a
+  export LEARNER_PREFIX="$EVAL_LEARNER_PREFIX"
+
+  docker compose \
+    -p evaluation-bootstrap \
+    --env-file .env \
+    --env-file docker/evaluation/normal.env \
+    -f docker-compose.evaluation.yml \
+    run --build --rm --no-deps backend true
+)
 ```
 
-等待模型下载完成（首次较慢），之后再开始正式运行。
+这里的 `LEARNER_PREFIX` 是 Compose 解析整份配置时必须的变量，虽然本次只运行
+`backend` 服务。`--build` 确保模型初始化使用当前源码构建的镜像。
+
+首次运行会通过 `docker/entrypoint.sh` 下载 `bge-m3` 和
+`bge-reranker-v2-m3` 到共享模型卷，等待命令完成后再开始正式运行。之后五组评测栈
+复用该模型卷，不需要重复下载。该步骤不会初始化或复用评测业务数据库；每组 MySQL
+数据卷由正式评测栈单独管理。
 
 ## 第三步：先冒烟一组（可选但推荐）
 
@@ -30,7 +50,7 @@ docker compose -p evaluation-bootstrap --env-file .env --env-file docker/evaluat
 
 成功后再跑完整矩阵。
 
-## 第四步：并行运行全部四组
+## 第四步：并行运行全部五组
 
 ```bash
 ./scripts/run-evaluation-matrix.sh
@@ -42,8 +62,8 @@ docker compose -p evaluation-bootstrap --env-file .env --env-file docker/evaluat
 ./scripts/run-evaluation-matrix.sh --experiments normal,no-rag --profiles 6-9-10-13-15 --round 3
 ```
 
-脚本行为：每组日志写入 `artifacts/evaluation/<组>/compose.log`，全部结束后自动清理容器
-（保留数据卷，方便复查）。
+脚本行为：每组日志写入 `artifacts/evaluation/<组>/results/compose.log`（与评测产物同目录），五组并行完成后自动清理容器，但保留各组 MySQL 数据卷。
+如需完全从零开始，必须额外删除五组 MySQL 卷（见第八步）。
 
 ## 第五步：运行中/运行后查看容器日志
 
@@ -86,6 +106,14 @@ docker logs -f evaluation-single-model-evaluator-1
 docker logs -f evaluation-single-model-mysql-1
 ```
 
+**no-debate 组**
+
+```bash
+docker logs -f evaluation-no-debate-backend-1
+docker logs -f evaluation-no-debate-evaluator-1
+docker logs -f evaluation-no-debate-mysql-1
+```
+
 只看最近 N 行、不跟随：把 `-f` 换成 `--tail 200`，例如
 
 ```bash
@@ -122,6 +150,13 @@ docker compose -p evaluation-single-model --env-file .env --env-file docker/eval
   -f docker-compose.evaluation.yml logs -f backend evaluator
 ```
 
+**no-debate 组**
+
+```bash
+docker compose -p evaluation-no-debate --env-file .env --env-file docker/evaluation/no-debate.env \
+  -f docker-compose.evaluation.yml logs -f backend evaluator
+```
+
 想连 MySQL 一起看，把末尾的 `backend evaluator` 换成 `backend evaluator mysql`。
 
 ### 容器状态一览（只看评测相关）
@@ -132,14 +167,15 @@ docker ps -a --filter name=evaluation- --format '{{.Names}}\t{{.Status}}'
 
 ### 运行结束后（容器已被清理）看落盘日志
 
-每组运行全过程写入 `artifacts/evaluation/<组>/compose.log`（构建输出、容器生命周期、
+每组运行全过程写入 `artifacts/evaluation/<组>/results/compose.log`（构建输出、容器生命周期、
 evaluator 进度；backend 自己的 stdout 需在运行中及时用 `docker logs` 看）：
 
 ```bash
-tail -f artifacts/evaluation/normal/compose.log
-tail -f artifacts/evaluation/no-rag/compose.log
-tail -f artifacts/evaluation/no-rerank/compose.log
-tail -f artifacts/evaluation/single-model/compose.log
+tail -f artifacts/evaluation/normal/results/compose.log
+tail -f artifacts/evaluation/no-rag/results/compose.log
+tail -f artifacts/evaluation/no-rerank/results/compose.log
+tail -f artifacts/evaluation/single-model/results/compose.log
+tail -f artifacts/evaluation/no-debate/results/compose.log
 ```
 
 想保留容器以便事后用 `docker logs` 排障：运行矩阵加 `--keep-stacks`，结束手动清理：
@@ -153,9 +189,10 @@ docker compose -p evaluation-normal --env-file .env --env-file docker/evaluation
 
 ```text
 artifacts/evaluation/<组>/
-├── compose.log                       # 整组运行日志
 ├── system/sessions/<session-id>/     # 后端原始产物（LLM 调用明细等）
-└── results/<learner>/round-XX/       # 每轮评测快照
+└── results/                          # 评测结果与整组运行日志
+    ├── compose.log                   # 整组运行日志（构建、生命周期、evaluator 进度）
+    └── <learner>/round-XX/           # 每轮评测快照
 ```
 
 `results/` 下每个 learner（如 `eval-normal-6`）的 `round-XX/` 里看：
@@ -172,18 +209,18 @@ artifacts/evaluation/<组>/
 
 | 类别 | 数据位置 | learner 前缀 |
 |---|---|---|
-| no-debate（无辩论，原产物） | `backend/tests/evaluation/artifacts/eval-no-debate-*` | `eval-no-debate` |
+| no-debate（无辩论） | `artifacts/evaluation/no-debate/results/eval-no-debate-*` | `eval-no-debate` |
 | normal | `artifacts/evaluation/normal/results/eval-normal-*` | `eval-normal` |
 | no-rag | `artifacts/evaluation/no-rag/results/eval-no-rag-*` | `eval-no-rag` |
 | no-rerank | `artifacts/evaluation/no-rerank/results/eval-no-rerank-*` | `eval-no-rerank` |
 | single-model | `artifacts/evaluation/single-model/results/eval-single-model-*` | `eval-single-model` |
 
 ```bash
-uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-no-debate
-uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-normal
-uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-no-rag
-uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-no-rerank
-uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-single-model
+uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-no-debate --artifact-dir artifacts/evaluation/no-debate/results
+uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-normal --artifact-dir artifacts/evaluation/normal/results
+uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-no-rag --artifact-dir artifacts/evaluation/no-rag/results
+uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-no-rerank --artifact-dir artifacts/evaluation/no-rerank/results
+uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-single-model --artifact-dir artifacts/evaluation/single-model/results
 ```
 
 交互菜单：
@@ -196,7 +233,7 @@ uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner
 注意：
 
 1. 报告固定写到 `backend/tests/evaluation/results/reports/report_full.md`，每组跑完会被覆盖，跑完一组立即改名存档（如 `report_no-debate.md`）。
-2. **不要选菜单 `3`（运行系统）**：会启动新一轮真实运行并写回 `backend/tests/evaluation/artifacts/`，误选会污染现有产物。
+2. **不要选菜单 `3`（运行系统）**：会启动新一轮真实运行；五组 Docker 矩阵产物应以 `artifacts/evaluation/<组>/results/` 为准，避免把交互式运行结果混入本轮数据。
 3. 指标不落盘，只打印终端；外部 LLM 评估结果在 `backend/tests/evaluation/results/record_<前缀>/*.json`（按类别隔离）。
 
 ### 并行跑外部 LLM 评估（多容器，不影响正在跑的进程）
@@ -224,14 +261,40 @@ uv run python backend/tests/evaluation/run_llm_eval_noninteractive.py \
 
 ## 第八步：清理
 
-- 日常：脚本已自动清理容器；保留 MySQL 卷便于复查。
-- 想保留容器排障：加 `--keep-stacks` 运行，之后手动 `docker compose -p evaluation-<组> ... down --remove-orphans`。
-- 某组要完全重来（删数据卷 + 产物）：
+- 日常：脚本已自动清理容器，但保留五组 MySQL 卷。
+- 想保留容器排障：加 `--keep-stacks` 运行，之后用对应类别的 `.env` 手动执行 `down`。
+- 要完全重来（删除五组数据库、容器和运行产物）：
 
 ```bash
-docker compose -p evaluation-normal --env-file .env --env-file docker/evaluation/normal.env \
-  -f docker-compose.evaluation.yml down --remove-orphans
-docker volume ls | grep evaluation-normal          # 核对后删除对应卷
-docker volume rm <该组的mysql卷名>
-rm -rf artifacts/evaluation/normal
+for exp in normal no-rag no-rerank single-model no-debate; do
+  (set -a; . "docker/evaluation/$exp.env"; set +a
+   export LEARNER_PREFIX="$EVAL_LEARNER_PREFIX"
+   docker compose -p "evaluation-$exp" --env-file .env \
+     --env-file "docker/evaluation/$exp.env" -f docker-compose.evaluation.yml \
+     down --remove-orphans)
+done
+
+docker volume rm \
+  evaluation-normal_mysql-data \
+  evaluation-no-rag_mysql-data \
+  evaluation-no-rerank_mysql-data \
+  evaluation-single-model_mysql-data \
+  evaluation-no-debate_mysql-data
+
+# 清空课程生成产物内容，保留五组目录及 system/results 目录。
+# 评测容器默认以 root 写文件，使用临时 root 容器避免宿主机权限错误。
+docker run --rm --user 0:0 \
+  -v "$PWD/artifacts/evaluation:/target/evaluation" \
+  -v "$PWD/backend/tests/evaluation/results:/target/llm-results" \
+  --entrypoint /bin/sh patent-tutor-backend:evaluation -c '
+    for exp in normal no-rag no-rerank single-model no-debate; do
+      mkdir -p "/target/evaluation/$exp/system" "/target/evaluation/$exp/results"
+      find "/target/evaluation/$exp/system" -mindepth 1 -delete
+      find "/target/evaluation/$exp/results" -mindepth 1 -delete
+    done
+    mkdir -p /target/llm-results
+    find /target/llm-results -mindepth 1 -delete
+  '
 ```
+
+上述命令不会删除共享模型卷 `patent-tutor-evaluation-models`。如果某个卷不存在，`docker volume rm` 会报错；可先用 `docker volume ls | grep evaluation` 核对，或只删除实际存在的卷。

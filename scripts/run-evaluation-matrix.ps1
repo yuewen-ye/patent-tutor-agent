@@ -8,7 +8,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string[]]$Experiments = @('normal', 'no-rag', 'no-rerank', 'single-model'),
+    [string[]]$Experiments = @('normal', 'no-rag', 'no-rerank', 'single-model', 'no-debate'),
     [string]$Profiles,
     [int]$TargetRound,
     [switch]$KeepStacks
@@ -47,7 +47,7 @@ foreach ($experiment in $Experiments) {
         '-f', 'docker-compose.evaluation.yml',
         'up', '--build', '--abort-on-container-exit', '--exit-code-from', 'evaluator', 'evaluator'
     )
-    $outputPath = "artifacts/evaluation/$experiment/compose.log"
+    $outputPath = "artifacts/evaluation/$experiment/results/compose.log"
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $outputPath) | Out-Null
 
     Write-Host "Starting $experiment ..."
@@ -61,6 +61,9 @@ foreach ($experiment in $Experiments) {
                 [Environment]::SetEnvironmentVariable($Matches[1], $Matches[2], 'Process')
             }
         }
+        # compose 文件含 bootrun 服务（外部 LLM 评估用），其 LEARNER_PREFIX 是
+        # 必填插值变量；课程矩阵不跑 bootrun，但解析整份文件时需要它，从组前缀同步。
+        $env:LEARNER_PREFIX = $env:EVAL_LEARNER_PREFIX
         if ($Profiles) { $env:EVAL_PROFILES = $Profiles }
         if ($TargetRound) { $env:EVAL_TARGET_ROUND = "$TargetRound" }
         # 评测栈强制关闭结构化课件/PPT 节点（进程环境优先级高于 --env-file，

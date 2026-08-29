@@ -8,7 +8,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.app.core.llm import LLMMessage, LLMResponseWithTools, ToolDefinition
-from backend.app.services.session_service import SessionService
+from backend.app.services.session_service import (
+    SessionService,
+    _feedback_progress_snapshot,
+)
 from backend.main import create_app
 
 pytestmark = pytest.mark.unit
@@ -192,6 +195,36 @@ class EndToEndQueueLLM:
     ) -> LLMResponseWithTools:
         self.calls.append(agent)
         return LLMResponseWithTools(content=None, tool_calls=[])
+
+
+def test_feedback_progress_uses_active_plan_completion_ledger() -> None:
+    class PlanStore:
+        def active_learning_plan(self, learner_id: str) -> dict[str, Any]:
+            assert learner_id == "learner-1"
+            return {
+                "progress": {
+                    "completed_nodes": ["foundation"],
+                    "completion_sessions": {"foundation": "feedback-1"},
+                    "current_node": "novelty",
+                }
+            }
+
+    progress = _feedback_progress_snapshot(
+        store=PlanStore(),
+        learner_id="learner-1",
+        profile_dimensions={
+            "progress": {
+                "completed_nodes": [],
+                "current_node": "foundation",
+            }
+        },
+    )
+
+    assert progress == {
+        "completed_nodes": ["foundation"],
+        "completion_sessions": {"foundation": "feedback-1"},
+        "current_node": "novelty",
+    }
 
 
 def _client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[TestClient, SessionService]:

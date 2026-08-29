@@ -34,15 +34,12 @@ models/
 *.bak
 temp_clone/
 
-# 评估产物：默认不入库；但 backend/tests/evaluation/artifacts/eval-*（五类评测的
-# 轮次快照，已从 Junction 换成真实目录）与 results/record_*（外部 LLM 评估进度）
-# 需要同步到远程，故取消忽略。
+# 评估产物：不入库；
 backend/tests/evaluation/artifacts/*
-!backend/tests/evaluation/artifacts/eval-*/
 backend/tests/evaluation/doc/reference/*
 backend/tests/evaluation/LLM/config/external_llm.yaml
 backend/tests/evaluation/results/*
-!backend/tests/evaluation/results/**
+backend/tests/evaluation/results/record/*
 backend/tests/evaluation/export_data.sql
 backend/tests/evaluation/results/reports/*
 backend/tests/evaluation/clean_export_sql.py

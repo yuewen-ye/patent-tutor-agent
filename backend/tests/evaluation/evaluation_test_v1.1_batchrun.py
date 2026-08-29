@@ -32,10 +32,9 @@ for _p in (_EVAL_DIR, _PROGRAM_DIR):
     if _ps not in sys.path:
         sys.path.insert(0, _ps)
 
-import program._common as common  # noqa: E402
-import program.run_course_gen as course_gen  # noqa: E402
-import program.run_learning_sim as learn_sim  # noqa: E402
-
+import program._common as common
+import program.run_course_gen as course_gen
+import program.run_learning_sim as learn_sim
 
 # ── helpers ─────────────────────────────────────────────────────────────────
 
@@ -230,9 +229,12 @@ def _run_infuse(
     artifact_dir: Path,
     round_idx: int,
     learner_prefix: str,
+    correct_count: int | None = None,
 ) -> bool:
-    """灌输答案——自动全部答对，通过真实 API 提交。
+    """灌输答案——按配置提交前 N 道正确答案，通过真实 API 提交。
 
+    ``correct_count=None`` 保持原有行为，默认全部答对；显式传入较小值
+    可用于评估错误证据是否产生 weak_points，以及后续反馈是否恢复掌握度。
     返回 True 表示成功；False 表示失败或跳过。
     """
     if round_idx == 0:
@@ -263,9 +265,9 @@ def _run_infuse(
 
     learn_sim.print_questions(questions)
     total = len(questions)
-    count = total
+    count = total if correct_count is None else max(0, min(correct_count, total))
 
-    print(f"\n[learn_sim/{letter}] R{round_idx:02d} 全部答对 {count}/{total} 题，提交中...")
+    print(f"\n[learn_sim/{letter}] R{round_idx:02d} 答对 {count}/{total} 题，提交中...")
     try:
         results = learn_sim.infuse_learning_results(
             profile_letter=letter,
@@ -290,6 +292,14 @@ def _run_infuse(
     if r.status == "no-op":
         print(f"  ⚠️ 跳过: {r.error or 'no-op'}")
         return False
+    # 全部答对时，服务必须把当前教学节点写入完成账本；部分答错则
+    # 保留当前节点是预期行为，不能把弱项探测轮误判为反馈失败。
+    if count == total and target_node and target_node not in r.completed_after:
+        print(
+            f"  ❌ 全对反馈完成但当前节点未完成: {target_node}; "
+            f"completed_after={r.completed_after}"
+        )
+        return False
 
     print(
         f"  ✅ 反馈完成 — {r.correct_count}/{r.total_questions} 正确, "
@@ -307,6 +317,7 @@ def _run_profile_batch(
     artifact_dir: Path,
     learner_prefix: str,
     target_round: int,
+    correct_counts: list[int] | None = None,
 ) -> dict:
     """单个画像的批处理：初始化 + 多轮循环。
 
@@ -365,11 +376,24 @@ def _run_profile_batch(
         print(f"[{letter}] 开始 R{r:02d}（灌输 R{r - 1:02d} 答案 + 生成 R{r:02d} 课程）")
         print(f"{'━' * 60}")
 
-        # 步骤 1：灌输上一轮答案
-        print(f"\n▶ 步骤 1/2：灌输 R{r - 1:02d} 全对答案")
+        # 步骤 1：灌输上一轮答案。计数列表按课程轮次（R01、R02…）索引。
+        correct_count = (
+            correct_counts[r - 2]
+            if correct_counts is not None and r - 2 < len(correct_counts)
+            else None
+        )
+        answer_label = "全对答案" if correct_count is None else f"前 {correct_count} 题正确"
+        print(f"\n▶ 步骤 1/2：灌输 R{r - 1:02d} {answer_label}")
         infuse_ok = _run_with_retry(
             f"[infuse/{letter}/R{r:02d}]",
-            lambda: _run_infuse(letter, base_url, artifact_dir, r - 1, learner_prefix),
+            lambda round_number=r - 1, answer_count=correct_count: _run_infuse(
+                letter,
+                base_url,
+                artifact_dir,
+                round_number,
+                learner_prefix,
+                answer_count,
+            ),
         )
         if not infuse_ok:
             print(f"\n❌ R{r:02d} 灌输答案失败，停止后续运行")
@@ -409,17 +433,15 @@ def _do_init_round(
 
 def _run_with_retry(label: str, fn, max_retries: int = 1):
     """带重试的执行。成功返回 True，失败返回 False。"""
-    last_error = None
     for attempt in range(1 + max_retries):
         try:
             result = fn()
             if result is False:
                 raise RuntimeError("function returned False")
             if attempt > 0:
-                print(f"  ✅ 重试成功")
+                print("  ✅ 重试成功")
             return True
         except Exception as exc:  # noqa: BLE001
-            last_error = exc
             if attempt < max_retries:
                 print(f"  ⚠️ 第 {attempt + 1} 次失败: {exc}")
                 print(f"  等待 {_RETRY_DELAY}s 后重试...")
@@ -439,7 +461,7 @@ def _print_summary(results: list[dict]) -> None:
     skipped = sum(1 for r in results if r["status"] == "skipped")
 
     print(f"\n{'═' * 60}")
-    print(f"批处理结果汇总")
+    print("批处理结果汇总")
     print(f"{'═' * 60}")
     print(f"  总画像数: {total}")
     print(f"  ✅ 完成: {completed}")
@@ -471,6 +493,12 @@ def _build_parser() -> argparse.ArgumentParser:
                    help="非交互模式：指定画像编号，如 1-3-5")
     p.add_argument("--round", type=int,
                    help="非交互模式：指定每个画像运行到第几轮")
+    p.add_argument(
+        "--correct",
+        type=str,
+        default=None,
+        help="每轮答对题数，使用 '-' 分隔（例如 0-3-3）；省略则每轮全对",
+    )
     return p
 
 
@@ -493,7 +521,7 @@ def main(argv: list[str] | None = None) -> int:
                 if resp.status_code != 200 or not resp.json().get("ready"):
                     print("\n❌ FastAPI 后端未就绪，请先启动: uv run python backend/main.py")
                     return 1
-            except Exception:
+            except (httpx.HTTPError, ValueError, KeyError):
                 print("\n❌ FastAPI 后端未就绪，请先启动: uv run python backend/main.py")
                 return 1
         print()
@@ -524,11 +552,22 @@ def main(argv: list[str] | None = None) -> int:
     else:
         target_round = _target_rounds_prompt()
 
+    try:
+        correct_counts = (
+            learn_sim._parse_count_list(args.correct)
+            if args.correct is not None
+            else None
+        )
+    except ValueError as exc:
+        print(f"❌ --correct 参数格式错误: {exc}")
+        return 1
+
     # ── 确认执行 ──
     print(f"\n{'═' * 60}")
-    print(f"批处理配置:")
+    print("批处理配置:")
     print(f"  画像: {len(selected)} 个 — {', '.join(selected)}")
     print(f"  目标轮次: R{target_round:02d}")
+    print(f"  答题配置: {correct_counts if correct_counts is not None else '每轮全对'}")
     print(f"  Base URL: {args.base_url}")
     print(f"  Artifact 目录: {args.artifact_dir}")
     print(f"{'═' * 60}")
@@ -543,6 +582,7 @@ def main(argv: list[str] | None = None) -> int:
             artifact_dir=args.artifact_dir,
             learner_prefix=args.learner_prefix,
             target_round=target_round,
+            correct_counts=correct_counts,
         )
         results.append(profile_result)
 

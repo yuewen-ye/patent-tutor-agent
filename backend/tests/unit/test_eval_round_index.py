@@ -29,6 +29,13 @@ _spec.loader.exec_module(br)
 
 
 @pytest.mark.unit
+def test_batch_parser_accepts_per_round_correct_counts() -> None:
+    parser = br._build_parser()
+    args = parser.parse_args(["--round", "3", "--correct", "0-2-3"])
+    assert args.round == 3
+    assert br.learn_sim._parse_count_list(args.correct) == [0, 2, 3]
+
+
 def test_next_round_idx_uses_artifact_dir(tmp_path: Path) -> None:
     # 模拟容器：EVAL_ARTIFACTS_DIR 指向镜像内空目录（没有任何轮次）。
     _orig = common.EVAL_ARTIFACTS_DIR

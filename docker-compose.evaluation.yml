@@ -116,14 +116,15 @@ services:
       - .env
     environment:
       # 类别前缀与可选参数；也可用 -e LEARNER_PREFIX=... 覆盖。
-      LEARNER_PREFIX: ${LEARNER_PREFIX:?set LEARNER_PREFIX}
+      # 仅 bootrun 评分服务使用；默认值用于让 compose config/logs 等非 bootrun 命令可解析整份文件。
+      LEARNER_PREFIX: ${LEARNER_PREFIX:-eval-normal}
       LLM_EVAL_PROFILES: ${LLM_EVAL_PROFILES:-}
       LLM_EVAL_ROUNDS: ${LLM_EVAL_ROUNDS:-all}
       LLM_EVAL_SYSTEM: ${LLM_EVAL_SYSTEM:-false}
       LLM_EVAL_FORCE: ${LLM_EVAL_FORCE:-false}
     volumes:
-      # 镜像内路径即代码默认路径：artifacts/profiles 只读，results 可写（按前缀分目录）。
-      - ./backend/tests/evaluation/artifacts:/app/backend/tests/evaluation/artifacts:ro
+      # 将当前实验组的新课程产物挂到评分器的默认读取路径，避免评分旧样本。
+      - ${EVAL_RESULT_DIR:?set EVAL_RESULT_DIR}:/app/backend/tests/evaluation/artifacts:ro
       - ./backend/tests/evaluation/profiles:/app/backend/tests/evaluation/profiles:ro
       - ./backend/tests/evaluation/results:/app/backend/tests/evaluation/results
       - ./backend/tests/evaluation/LLM/config:/app/backend/tests/evaluation/LLM/config:ro

@@ -45,15 +45,33 @@ else
 fi
 
 echo "构建 bootrun 镜像（一次性）..."
-docker compose -f "$COMPOSE_FILE" build bootrun
+# compose 整文件插值需要 backend/evaluator 服务的 EVAL_* 必填变量和 bootrun 的
+# LEARNER_PREFIX；build 只构建镜像，用任一组的 env（normal）满足插值即可。
+(
+    set -a
+    . docker/evaluation/normal.env
+    set +a
+    export LEARNER_PREFIX=eval-normal
+    docker compose -f "$COMPOSE_FILE" build bootrun
+)
 
 PIDS=()
 for cat in "${CATEGORIES[@]}"; do
+    ENV_FILE="docker/evaluation/${cat#eval-}.env"
+    if [[ ! -f "$ENV_FILE" ]]; then
+        echo "未知类别 '$cat': $ENV_FILE 不存在" >&2
+        exit 1
+    fi
     LOG_DIR="$ROOT/artifacts/evaluation/$cat"
     mkdir -p "$LOG_DIR"
     echo "启动 $cat ..."
     (
+        set -a
+        . "$ENV_FILE"
+        set +a
+        export LEARNER_PREFIX="$cat"
         docker compose -p "llm-eval-$cat" --env-file .env \
+            --env-file "$ENV_FILE" \
             -f "$COMPOSE_FILE" \
             run --rm --no-deps \
             -e "LEARNER_PREFIX=$cat" \

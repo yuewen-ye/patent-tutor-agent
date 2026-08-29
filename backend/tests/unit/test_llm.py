@@ -23,6 +23,7 @@ from backend.app.core.llm import (
     ToolDefinition,
     _post_chat_completion_stream,
     _strict_schema_rejected,
+    _truncate_messages_for_token_limit,
     call_llm,
     call_llm_json,
     call_llm_json_stream,
@@ -63,6 +64,24 @@ def _sse_response(content: str, chunk_size: int = 8) -> httpx.Response:
 def _choices_null_response() -> httpx.Response:
     """Return a degenerate 200 response with choices:null (gateway bug)."""
     return httpx.Response(200, json={"choices": None})
+
+
+def test_truncation_preserves_non_system_message_prefix_and_suffix() -> None:
+    prefix = "前置事实-" * 30_000
+    suffix = "\n# 必须保留的尾部决策指令\n动态输入：画像、BKT、候选路线"
+
+    result = _truncate_messages_for_token_limit(
+        [
+            LLMMessage(role="system", content="系统约束"),
+            LLMMessage(role="user", content=prefix + suffix),
+        ],
+        max_tokens=3_000,
+    )
+
+    assert result[0].content == "系统约束"
+    assert result[1].content.startswith("前置事实-")
+    assert "...[truncated middle]" in result[1].content
+    assert result[1].content.endswith(suffix)
 
 
 def test_call_llm_omits_temperature_for_gpt56_model(monkeypatch) -> None:

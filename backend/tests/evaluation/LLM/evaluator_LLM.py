@@ -1101,8 +1101,8 @@ def extract_verifiable_statements(course_text: str) -> list[dict[str, Any]]:
     for item in _extract_json_section("legal_basis"):
         if not isinstance(item, dict):
             continue
-        article = item.get("article", "").strip()
-        source = item.get("source", "").strip()
+        article = (item.get("article") or "").strip()
+        source = (item.get("source") or "").strip()
         if not article:
             continue
         # 从 source 中提取文件名（如 "相关法律知识详细解读.txt：..."）
@@ -1136,8 +1136,8 @@ def extract_verifiable_statements(course_text: str) -> list[dict[str, Any]]:
         for cov in (ks_data.get("coverage") or []):
             if not isinstance(cov, dict):
                 continue
-            sub_concept = cov.get("sub_concept", "").strip()
-            explanation = cov.get("explanation", "").strip()
+            sub_concept = (cov.get("sub_concept") or "").strip()
+            explanation = (cov.get("explanation") or "").strip()
             if sub_concept:
                 statements.append({
                     "text": f"{sub_concept}: {explanation}",
@@ -1151,9 +1151,9 @@ def extract_verifiable_statements(course_text: str) -> list[dict[str, Any]]:
         for pair in (ks_data.get("confusable_pairs") or []):
             if not isinstance(pair, dict):
                 continue
-            left = pair.get("left", "").strip()
-            right = pair.get("right", "").strip()
-            distinguish = pair.get("distinguish", "").strip()
+            left = (pair.get("left") or "").strip()
+            right = (pair.get("right") or "").strip()
+            distinguish = (pair.get("distinguish") or "").strip()
             if left and right:
                 statements.append({
                     "text": f"{left} vs {right}: {distinguish}",
@@ -1168,8 +1168,8 @@ def extract_verifiable_statements(course_text: str) -> list[dict[str, Any]]:
     for item in _extract_json_section("risks"):
         if not isinstance(item, dict):
             continue
-        risk = item.get("risk", "").strip()
-        node_id = item.get("related_node_id", "").strip()
+        risk = (item.get("risk") or "").strip()
+        node_id = (item.get("related_node_id") or "").strip()
         if risk:
             statements.append({
                 "text": risk,
@@ -1202,7 +1202,7 @@ def extract_verifiable_statements(course_text: str) -> list[dict[str, Any]]:
         )
         if irac_m:
             irac = json.loads(irac_m.group(1))
-            conclusion = irac.get("conclusion", "").strip()
+            conclusion = (irac.get("conclusion") or "").strip()
             if conclusion:
                 statements.append({
                     "text": conclusion,
