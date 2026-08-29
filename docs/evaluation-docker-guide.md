@@ -281,16 +281,20 @@ docker volume rm \
   evaluation-single-model_mysql-data \
   evaluation-no-debate_mysql-data
 
-# 清空课程生成产物内容，保留五组目录及 system/results 目录
-for exp in normal no-rag no-rerank single-model no-debate; do
-  mkdir -p "artifacts/evaluation/$exp/system" "artifacts/evaluation/$exp/results"
-  find "artifacts/evaluation/$exp/system" -mindepth 1 -delete
-  find "artifacts/evaluation/$exp/results" -mindepth 1 -delete
-done
-
-# 清空外部 LLM 评分结果内容，保留评分结果根目录
-mkdir -p backend/tests/evaluation/results
-find backend/tests/evaluation/results -mindepth 1 -delete
+# 清空课程生成产物内容，保留五组目录及 system/results 目录。
+# 评测容器默认以 root 写文件，使用临时 root 容器避免宿主机权限错误。
+docker run --rm --user 0:0 \
+  -v "$PWD/artifacts/evaluation:/target/evaluation" \
+  -v "$PWD/backend/tests/evaluation/results:/target/llm-results" \
+  --entrypoint /bin/sh patent-tutor-backend:evaluation -c '
+    for exp in normal no-rag no-rerank single-model no-debate; do
+      mkdir -p "/target/evaluation/$exp/system" "/target/evaluation/$exp/results"
+      find "/target/evaluation/$exp/system" -mindepth 1 -delete
+      find "/target/evaluation/$exp/results" -mindepth 1 -delete
+    done
+    mkdir -p /target/llm-results
+    find /target/llm-results -mindepth 1 -delete
+  '
 ```
 
 上述命令不会删除共享模型卷 `patent-tutor-evaluation-models`。如果某个卷不存在，`docker volume rm` 会报错；可先用 `docker volume ls | grep evaluation` 核对，或只删除实际存在的卷。
