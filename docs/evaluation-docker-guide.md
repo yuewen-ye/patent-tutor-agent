@@ -281,8 +281,11 @@ docker volume rm \
   evaluation-single-model_mysql-data \
   evaluation-no-debate_mysql-data
 
-rm -rf artifacts/evaluation backend/tests/evaluation/results
+rm -rf artifacts/evaluation/* backend/tests/evaluation/results/*
 mkdir -p artifacts/evaluation backend/tests/evaluation/results
+for exp in normal no-rag no-rerank single-model no-debate; do
+  mkdir -p "artifacts/evaluation/$exp/system" "artifacts/evaluation/$exp/results"
+done
 ```
 
 上述命令不会删除共享模型卷 `patent-tutor-evaluation-models`。如果某个卷不存在，`docker volume rm` 会报错；可先用 `docker volume ls | grep evaluation` 核对，或只删除实际存在的卷。

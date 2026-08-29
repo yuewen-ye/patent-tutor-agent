@@ -98,8 +98,11 @@ docker volume rm \
   evaluation-single-model_mysql-data \
   evaluation-no-debate_mysql-data
 
-rm -rf artifacts/evaluation backend/tests/evaluation/results
+rm -rf artifacts/evaluation/* backend/tests/evaluation/results/*
 mkdir -p artifacts/evaluation backend/tests/evaluation/results
+for exp in normal no-rag no-rerank single-model no-debate; do
+  mkdir -p "artifacts/evaluation/$exp/system" "artifacts/evaluation/$exp/results"
+done
 ```
 
 然后按顺序执行。第一步的五个课程生成栈并行运行；第二步的五个外部评分容器也并行运行：
