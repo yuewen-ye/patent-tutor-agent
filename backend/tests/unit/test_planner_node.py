@@ -224,6 +224,10 @@ def test_planner_always_calls_llm_and_builds_enriched_context() -> None:
     result = build_planner_node(client)({"session_id": "debug", "user_input": "学习新颖性", "events": []})
     assert len(client.calls) == 1
     assert client.agents == ["planner"]
+    user_text = next(message.content for message in client.calls[0] if message.role == "user")
+    assert user_text.index("# 学习目标") < user_text.index("# 静态知识 DAG")
+    assert user_text.index("# 学习者画像与掌握度") < user_text.index("# 静态知识 DAG")
+    assert user_text.index("# 算法候选路线") < user_text.index("# 静态易混淆对")
     assert result["path_decision"]["plan_action"] == "replace"
     assert result["path_decision"]["algorithm"] == "llm_adjusted_route_replace"
     assert result["path_decision"]["path_start_node_id"] == "patent-law-foundation"

@@ -301,16 +301,18 @@ def build_planner_node(llm_client: LLMClient) -> Node:
         if not algorithm_candidates:
             raise ValueError("Planner deterministic candidate route is empty")
         candidate_payload = _planner_path_payload(algorithm_candidates)
+        # 将路线决策所需的动态输入放在前面。静态 DAG/混淆对体积较大，必须排在
+        # 动态输入之后，避免通用上下文保护逻辑在超限时只保留静态数据。
         user_text = (
-            "# 静态知识 DAG\n" + json.dumps(knowledge, ensure_ascii=False, separators=(",", ":"))
-            + "\n# 静态易混淆对\n" + json.dumps(confusion, ensure_ascii=False, separators=(",", ":"))
+            "# 学习目标\n" + learning_goal
             + "\n# 学习者画像与掌握度\n" + json.dumps(profile, ensure_ascii=False, separators=(",", ":"))
             + "\n# 当前活动计划（可为空）\n" + json.dumps(active_plan, ensure_ascii=False, separators=(",", ":"), default=str)
             + "\n# 算法候选路线（keep 接受此路线；replace 必须返回完整调整路线）\n"
             + json.dumps(candidate_payload, ensure_ascii=False, separators=(",", ":"))
             + "\n# 基于学习目标推荐的目标原子节点（供参考，请优先在路径中纳入）\n"
             + json.dumps(recommended_targets, ensure_ascii=False)
-            + f"\n# 学习目标\n{learning_goal}"
+            + "\n# 静态知识 DAG\n" + json.dumps(knowledge, ensure_ascii=False, separators=(",", ":"))
+            + "\n# 静态易混淆对\n" + json.dumps(confusion, ensure_ascii=False, separators=(",", ":"))
         )
         known_ids = {
             str(node["node_id"])

@@ -18,6 +18,8 @@ description: Dynamic long-term learning-plan planner for the patent tutoring sys
 
 算法候选路线已经在调用本模型前根据当前活动路线、学习目标、画像、BKT、弱点、混淆风险和静态 DAG 计算完成。候选路线只计算一次；不要假设可以重新计算或调用其他路线生成器。
 
+若调用方未提供学习者画像/BKT 掌握度、当前活动计划、算法候选路线或学习目标中的任一项，必须在 `decision_reason` 中逐项明确说明缺失项及其对 keep/replace 判断的限制；不得假装这些输入已经提供，也不得臆造其内容。仍须在已有输入和输出合同约束下作出保守决策。
+
 ## 输出规则
 
 只返回符合 `PlannerAgentResult` 的 JSON。每个字段均必须提供，禁止附加字段。

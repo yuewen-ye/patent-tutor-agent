@@ -399,18 +399,21 @@ def _estimate_tokens(text: str) -> int:
     return max(1, len(text) // 3)
 
 
-_MAX_INPUT_TOKENS = 24000
+# Leave room for the provider's output and transport-specific framing, while allowing
+# large planner/course contexts to reach providers whose context window supports them.
+_MAX_INPUT_TOKENS = 48000
 
 
 def _truncate_messages_for_token_limit(
     messages: list[LLMMessage],
     max_tokens: int = _MAX_INPUT_TOKENS,
 ) -> list[LLMMessage]:
-    """Truncate message contents to fit within the model's input token limit.
+    """Truncate message contents while preserving both context boundaries.
 
-    Strategy: keep system message intact, proportionally truncate user/assistant
-    messages from the end (least important context first). If still too large,
-    truncate from the beginning of the conversation history.
+    System messages are kept intact. If non-system content exceeds the budget, each
+    message keeps a proportional prefix and suffix so that both the input facts and
+    trailing instructions/decision data remain visible. This is a last-resort guard;
+    callers should keep high-value structured context concise.
     """
     total_tokens = sum(_estimate_tokens(m.content) for m in messages)
     if total_tokens <= max_tokens:
@@ -437,7 +440,14 @@ def _truncate_messages_for_token_limit(
         if target_len < 100:
             target_len = min(100, original_len)
         if target_len < original_len:
-            content = m.content[:target_len] + "\n...[truncated]"
+            # Preserve the beginning (facts/context) and end (instructions/results).
+            prefix_len = (target_len + 1) // 2
+            suffix_len = target_len - prefix_len
+            content = (
+                m.content[:prefix_len]
+                + "\n...[truncated middle]\n"
+                + (m.content[-suffix_len:] if suffix_len else "")
+            )
         else:
             content = m.content
         truncated.append(LLMMessage(role=m.role, content=content))
@@ -1144,9 +1154,11 @@ def _post_chat_completion_with_tools(
     client = http_client or httpx.Client(timeout=config.timeout_seconds)
     close_client = http_client is None
 
+    truncated_messages = _truncate_messages_for_token_limit(messages)
+
     body = _build_chat_body_with_tools(
         config=config,
-        messages=messages,
+        messages=truncated_messages,
         tools=tools,
         temperature=temperature,
         stream=False,
@@ -1159,8 +1171,8 @@ def _post_chat_completion_with_tools(
         model=config.model,
         json_mode=False,
         has_schema=False,
-        message_count=len(messages),
-        estimated_input_tokens=sum(_estimate_tokens(m.content) for m in messages),
+        message_count=len(truncated_messages),
+        estimated_input_tokens=sum(_estimate_tokens(m.content) for m in truncated_messages),
         status="attempting",
         tool_call=True,
     )
