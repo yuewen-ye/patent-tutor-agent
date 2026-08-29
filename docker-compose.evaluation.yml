@@ -122,8 +122,8 @@ services:
       LLM_EVAL_SYSTEM: ${LLM_EVAL_SYSTEM:-false}
       LLM_EVAL_FORCE: ${LLM_EVAL_FORCE:-false}
     volumes:
-      # 镜像内路径即代码默认路径：artifacts/profiles 只读，results 可写（按前缀分目录）。
-      - ./backend/tests/evaluation/artifacts:/app/backend/tests/evaluation/artifacts:ro
+      # 将当前实验组的新课程产物挂到评分器的默认读取路径，避免评分旧样本。
+      - ${EVAL_RESULT_DIR:?set EVAL_RESULT_DIR}:/app/backend/tests/evaluation/artifacts:ro
       - ./backend/tests/evaluation/profiles:/app/backend/tests/evaluation/profiles:ro
       - ./backend/tests/evaluation/results:/app/backend/tests/evaluation/results
       - ./backend/tests/evaluation/LLM/config:/app/backend/tests/evaluation/LLM/config:ro

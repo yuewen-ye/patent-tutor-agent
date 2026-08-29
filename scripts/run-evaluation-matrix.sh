@@ -140,11 +140,17 @@ done
 if [[ "$KEEP_STACKS" -eq 0 ]]; then
     for exp in "${EXPERIMENTS[@]}"; do
         echo "清理隔离栈 evaluation-$exp（保留 MySQL 命名卷便于检查）..."
-        docker compose -p "evaluation-$exp" \
-            --env-file .env \
-            --env-file "docker/evaluation/$exp.env" \
-            -f docker-compose.evaluation.yml \
-            down --remove-orphans
+        (
+            set -a
+            . "docker/evaluation/$exp.env"
+            set +a
+            export LEARNER_PREFIX="$EVAL_LEARNER_PREFIX"
+            docker compose -p "evaluation-$exp" \
+                --env-file .env \
+                --env-file "docker/evaluation/$exp.env" \
+                -f docker-compose.evaluation.yml \
+                down --remove-orphans
+        )
     done
 fi
 

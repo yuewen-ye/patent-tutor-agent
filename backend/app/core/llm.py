@@ -401,7 +401,7 @@ def _estimate_tokens(text: str) -> int:
 
 # Leave room for the provider's output and transport-specific framing, while allowing
 # large planner/course contexts to reach providers whose context window supports them.
-_MAX_INPUT_TOKENS = 48000
+_MAX_INPUT_TOKENS = 50000
 
 
 def _truncate_messages_for_token_limit(

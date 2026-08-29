@@ -66,6 +66,9 @@ for cat in "${CATEGORIES[@]}"; do
     mkdir -p "$LOG_DIR"
     echo "启动 $cat ..."
     (
+        set -a
+        . "$ENV_FILE"
+        set +a
         export LEARNER_PREFIX="$cat"
         docker compose -p "llm-eval-$cat" --env-file .env \
             --env-file "$ENV_FILE" \
