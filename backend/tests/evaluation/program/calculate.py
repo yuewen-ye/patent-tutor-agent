@@ -126,6 +126,18 @@ class RoundMetrics:
 # ── 文件解析 ─────────────────────────────────────────────────────────────────
 
 def _read_text(path: Path) -> str:
+    """读取一个文本文件，文件缺失时返回空串而不是抛 FileNotFoundError。
+
+    原因：
+    - Debate-off / single-agent 轮次天生就没有 ``expert_a_cross_review.md``
+      等辩论专属产物（属正常，不应当让整轮计算崩溃）；
+    - 偶尔因为超时/异常终止，``course_package.md`` 可能没写出来，此时相关
+      指标可以记为 0/NA，但要给下游足够的上下文（空串），而不是把整个
+      calculate_round 中断。
+    """
+    if not path.exists():
+        # 保持非侵入式：直接返回空串，下游每个 calc_* 函数自行对空串做安全降级。
+        return ""
     return path.read_text(encoding="utf-8")
 
 def _parse_cross_review(text: str) -> dict[str, int]:
@@ -698,20 +710,66 @@ def _file_exists_in_round(round_dir: Path, filename: str) -> bool:
     return False
 
 
+def _teach_phase(round_dir: Path) -> str | None:
+    """从 session_snapshot.json 读取 state.teach_phase（debate/single_agent/integration）。
+
+    用于判定本论是否启用了辩论：``single_agent`` = 辩论开关关闭，没有
+    cross_review / revision 类产物，不应把它们视为「缺失」来扣分或中止。
+    读不到时返回 None（= 未知，调用方按保守策略执行）。
+    """
+    import json as _json
+
+    snap = round_dir / "session_snapshot.json"
+    if not snap.exists():
+        return None
+    try:
+        data = _json.loads(snap.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    state = data.get("state") if isinstance(data, dict) else None
+    if not isinstance(state, dict):
+        return None
+    phase = state.get("teach_phase")
+    return phase if isinstance(phase, str) else None
+
+
 def check_artifact_completeness(round_dir: Path, round_num: int, is_final_round: bool = False) -> MetricResult:
-    """M6 产物完整率。"""
-    required_files = ["course_package.md", "judge_report.md", "expert_a_cross_review.md", "expert_b_cross_review.md"]
+    """M4.1 产物完整率。
+
+    自动区分辩论开启/关闭：
+    - 辩论关闭 (``teach_phase == single_agent``)：cross_review / revision 本就
+      不会产生，从 required 列表里剔除，避免无辜扣分；
+    - 辩论开启 (debate / integration)：cross_review / final revision 参与评分。
+    """
+    always_required = ["course_package.md", "judge_report.md", "learning_path.md",
+                       "learner_profile.md", "path_decision.md", "dual_axis_snapshot.md"]
+    debate_required = ["expert_a_cross_review.md", "expert_b_cross_review.md"]
+    final_revision_required = ["expert_a_revision.md", "expert_b_revision.md"]
+
+    required_files: list[str] = list(always_required)
+    phase = _teach_phase(round_dir)
+    debate_enabled = phase is not None and phase != "single_agent"
+    if debate_enabled:
+        required_files.extend(debate_required)
+        if is_final_round:
+            required_files.extend(final_revision_required)
     if round_num > 1:
+        # learner_profile_update 可能在 feedback/ 下或 round 根下，由
+        # _file_exists_in_round 统一判定。
         required_files.append("learner_profile_update.md")
-    if is_final_round:
-        required_files.extend(["expert_a_revision.md", "expert_b_revision.md"])
 
     present = sum(1 for f in required_files if _file_exists_in_round(round_dir, f))
     total = len(required_files)
     rate = round(present / total * 100, 2) if total else 0.0
+    detail: dict[str, Any] = {
+        "存在文件数": present,
+        "应有文件数": total,
+        "应有文件列表": required_files,
+        "teach_phase": phase or "unknown",
+        "debate_enabled": debate_enabled,
+    }
     return MetricResult(
-        name="产物完整率", value=rate, unit="%",
-        detail={"存在文件数": present, "应有文件数": total, "应有文件列表": required_files}
+        name="产物完整率", value=rate, unit="%", detail=detail,
     )
 
 def scan_pii_leaks(round_dir: Path, profile_letter: str, round_num: int) -> MetricResult:
@@ -996,12 +1054,18 @@ def load_coverage_external_result(profile_letter: str, round_num: int) -> list[M
     if section is None:
         return []
 
-    results: list[MetricResult] = []
     mapping = [
         ("section_coverage", "3.1 本节知识点覆盖率(LLM)"),
         ("weakness_coverage", "3.2 薄弱点命中率(LLM)"),
         ("confusion_coverage", "3.3 混淆对覆盖率(LLM)"),
     ]
+    # 区分真实 coverage section 与 _load_round_section 的回退（整个 JSON 当 section）：
+    # 真实 coverage section 必含上述子节之一；否则视为未运行 coverage 评估，返回空列表，
+    # 让报告显示「-」而非误导性的 0.0分（对齐「未计算显示未计算」偏好）。
+    if not any(key in section for key, _ in mapping):
+        return []
+
+    results: list[MetricResult] = []
     for key, name in mapping:
         sub = section.get(key, {})
         score = sub.get("score", 0)
@@ -1323,10 +1387,16 @@ def _calculate_round_impl(
             if candidate.exists():
                 expected_path = candidate
                 break
-    if expected_path is None or not expected_path.exists():
-        raise FileNotFoundError(f"找不到 expected 文件")
-
-    expected_data = json.loads(expected_path.read_text(encoding="utf-8"))
+    expected_missing = (expected_path is None or not expected_path.exists())
+    if expected_missing:
+        expected_data: dict[str, Any] = {}
+        expected_candidates = [
+            str(_PROFILES_DIR / f"expected_{profile_letter}_{round_num:02d}.json"),
+            str(_PROFILES_DIR / f"expected_{profile_letter}.json"),
+        ]
+    else:
+        expected_data = json.loads(expected_path.read_text(encoding="utf-8"))
+        expected_candidates = [str(expected_path)]
     expected_content = expected_data.get("expected_course_content", {})
     node_name_map = _load_node_name_map()
 
@@ -1360,12 +1430,8 @@ def _calculate_round_impl(
     for mr in calc_resource_morphology(course_text):
         rm.metrics.append(mr)
 
-    # 覆盖率（累计 + 祖先匹配 / 双向扩展）
-    rm.metrics.append(calc_coverage_section(course_text, expected_content, learning_path_text=path_text, history_nodes=history_nodes, node_name_map=node_name_map))
-    rm.metrics.append(calc_coverage_weakness(course_text, expected_content, history_nodes=history_nodes))
-    rm.metrics.append(calc_coverage_confusable(course_text, expected_content, node_name_map, history_nodes=history_nodes))
-
-    # 覆盖率 LLM 评估（3.1/3.2/3.3 语义验证，补充脚本硬匹配）
+    # M3 覆盖率（3.1/3.2/3.3）— 已弃用脚本硬匹配，完全改用 LLM 语义评价。
+    # LLM 评估结果从 round_indicator JSON 的 coverage section 加载。
     for mr in load_coverage_external_result(profile_letter, round_num):
         rm.metrics.append(mr)
 
@@ -1449,12 +1515,7 @@ def format_result(rm: RoundMetrics, llm_results: dict[str, Any] | None = None) -
         "2.4 动态迭代触发率",
     ])
 
-    # M3 覆盖率
-    _append_group("M3 覆盖率", [
-        "3.1 本节知识点覆盖率",
-        "3.2 薄弱点命中率",
-        "3.3 混淆对覆盖率",
-    ])
+    # M3 覆盖率 — 完全由 LLM 语义评价，见下方表2「外部LLM评价指标」
 
     # M4 执行完整性
     _append_group("M4 执行完整性", [

@@ -2613,47 +2613,83 @@ def evaluate_coverage(
         print(f"  ❌ course_package.md 为空，跳过覆盖率评估")
         return None
 
-    # 2. 读取 expected_content（预期知识点/薄弱点/混淆对）
-    expected_content: dict[str, Any] = {}
-    profiles_dir = _PROJECT_ROOT / "backend" / "tests" / "evaluation" / "profiles"
-    for candidate in (
-        profiles_dir / f"expected_{profile_id}_{round_num:02d}.json",
-        profiles_dir / f"expected_{profile_id}.json",
-    ):
-        if candidate.exists():
-            try:
-                raw = json.loads(candidate.read_text(encoding="utf-8"))
-                expected_content = raw.get("expected_course_content", {})
-                break
-            except (json.JSONDecodeError, OSError):
-                continue
+    # 2. 从 learning_path.md + knowledge-dag.json + confusion-pairs.json 提取
+    #    本节知识点 / 薄弱点 / 混淆对（不再依赖 expected JSON）
+    print(f"  📖 读取课程内容和路径规划产物...")
+    dag_path = _PROJECT_ROOT / "backend" / "app" / "curriculum" / "data" / "knowledge-dag.json"
+    confusion_path = _PROJECT_ROOT / "backend" / "app" / "curriculum" / "data" / "confusion-pairs.json"
 
-    if not expected_content:
-        print(f"  ⚠️  未找到 expected_content，使用空预期数据")
-        expected_content = {}
+    # 从 learning_path.md 提取当前教学节点 ID
+    current_node_id = ""
+    for line in learning_path.splitlines():
+        line = line.strip()
+        if line.startswith("|") and "current" in line.lower():
+            continue
+        # 尝试从表格行提取 node_id
+        if line.startswith("|") and "node" in line.lower():
+            cells = [c.strip() for c in line.split("|")]
+            cells = [c for c in cells if c]
+            if len(cells) >= 2:
+                current_node_id = cells[0] if cells[0] != "node_id" else ""
+                break
+
+    # 从 knowledge-dag.json 提取当前节点的 knowledge_points
+    section_kcs: list[dict[str, Any]] = []
+    if dag_path.exists() and current_node_id:
+        try:
+            dag = json.loads(dag_path.read_text(encoding="utf-8"))
+            nodes = dag.get("nodes", []) if isinstance(dag, dict) else []
+            for node in nodes:
+                if node.get("id") == current_node_id:
+                    section_kcs = node.get("knowledge_points", [])
+                    break
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    # 从 confusion-pairs.json 提取与当前节点相关的混淆对
+    confusion_pairs: list[dict[str, Any]] = []
+    if confusion_path.exists() and current_node_id:
+        try:
+            cps = json.loads(confusion_path.read_text(encoding="utf-8"))
+            if isinstance(cps, list):
+                for cp in cps:
+                    if current_node_id in str(cp):
+                        confusion_pairs.append(cp)
+            elif isinstance(cps, dict):
+                pairs = cps.get("confusion_pairs", []) or cps.get("pairs", [])
+                for cp in pairs:
+                    if current_node_id in str(cp):
+                        confusion_pairs.append(cp)
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    # 薄弱点：从 learning_path.md 表格中提取 weak_point 标记
+    weak_points: list[dict[str, Any]] = []
+    for line in learning_path.splitlines():
+        if "weak" in line.lower() and line.startswith("|"):
+            cells = [c.strip() for c in line.split("|")]
+            cells = [c for c in cells if c]
+            if cells and cells[0] != "node_id":
+                weak_points.append({"point": cells[-1] if len(cells) > 1 else cells[0]})
 
     # 3. 加载系统提示词（round-indicator.md 第五部分 coverage 模式）
     system_prompt = load_system_prompt("coverage")
     client = LLMClient(llm_config)
 
     # 4. 构造用户提示词
-    expected_kcs = expected_content.get("section_kcs") or expected_content.get("knowledge_nodes", [])
-    expected_wps = expected_content.get("weakness_kcs") or expected_content.get("weak_points", [])
-    expected_cps = expected_content.get("confusable_pairs") or expected_content.get("confusion_pairs", [])
-
     user_prompt = f"""请评估以下课程内容对预期知识点、薄弱点和混淆对的覆盖情况。
 
-## 学习路径
+## 学习路径（含当前教学节点 {current_node_id or "（未识别）"}）
 {learning_path[:3000]}
 
-## 预期知识点列表
-{json.dumps(expected_kcs, ensure_ascii=False, indent=2)[:2000] if expected_kcs else "（无）"}
+## 本节知识点列表（来自 knowledge-dag.json）
+{json.dumps(section_kcs, ensure_ascii=False, indent=2)[:2000] if section_kcs else "（无）"}
 
-## 预期薄弱点列表
-{json.dumps(expected_wps, ensure_ascii=False, indent=2)[:2000] if expected_wps else "（无）"}
+## 薄弱点列表（来自 learning_path.md）
+{json.dumps(weak_points, ensure_ascii=False, indent=2)[:2000] if weak_points else "（无）"}
 
-## 预期混淆对列表
-{json.dumps(expected_cps, ensure_ascii=False, indent=2)[:2000] if expected_cps else "（无）"}
+## 相关混淆对列表（来自 confusion-pairs.json）
+{json.dumps(confusion_pairs, ensure_ascii=False, indent=2)[:2000] if confusion_pairs else "（无）"}
 
 ## 课程内容
 {course_content[:8000]}

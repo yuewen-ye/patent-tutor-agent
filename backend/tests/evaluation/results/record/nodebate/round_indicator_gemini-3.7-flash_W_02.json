@@ -1,0 +1,151 @@
+{
+  "objection_loop": {
+    "eval_type": "objection_loop_evaluation",
+    "raw_llm_response": {
+      "scores": {
+        "context_correctness": {
+          "score": 0,
+          "max": 100,
+          "comment": "输入内容为空，缺少专家评审意见、裁判报告及修订稿文本，无法验证上下文事实准确性与完整性。",
+          "accurate_facts": [],
+          "missing_facts": [
+            "未提供学习路径与课程内容",
+            "未提供专家A/B的具体评审与修订内容"
+          ],
+          "incorrect_facts": []
+        },
+        "correctness": {
+          "score": 0,
+          "max": 100,
+          "comment": "输入文本缺失，无法判定法律事实与推理陈述的正确性。",
+          "correct_statements": [],
+          "incorrect_statements": []
+        },
+        "hallucination": {
+          "score": 0,
+          "max": 100,
+          "comment": "无具体内容可供比对与幻觉检测。",
+          "hallucinated_items": [],
+          "verifiable_items": []
+        },
+        "helpfulness": {
+          "score": 0,
+          "max": 100,
+          "comment": "无实质教学与修订内容，无法对学员或评估任务提供帮助。",
+          "helpful_points": [],
+          "unhelpful_points": [
+            "输入为空，无法进行异议闭环分析"
+          ]
+        },
+        "relevance": {
+          "score": 0,
+          "max": 100,
+          "comment": "未提供有效文本，无法判定与学习主题及异议闭环的相关性。",
+          "relevant_points": [],
+          "off_topic_points": []
+        },
+        "goal_coverage": {
+          "score": 0,
+          "max": 100,
+          "comment": "无法评估目标覆盖度，未提供学习目标或评估材料。",
+          "matched_goals": [],
+          "missed_goals": [
+            "未提供学习路径目标"
+          ]
+        },
+        "factual_accuracy": {
+          "score": 0,
+          "max": 100,
+          "comment": "无具体法条引用或案例事实可供核查。",
+          "correct_items": [],
+          "errors": []
+        },
+        "case_accuracy": {
+          "score": 0,
+          "max": 100,
+          "comment": "未包含任何案例描述。",
+          "reliable_cases": [],
+          "problematic_cases": []
+        },
+        "factual_consistency": {
+          "score": 0,
+          "max": 100,
+          "comment": "缺少上下文，无法评估内部陈述一致性及异议解决一致性。",
+          "consistent_points": [],
+          "contradictions": []
+        },
+        "pedagogical_clarity": {
+          "score": 0,
+          "max": 100,
+          "comment": "无教学讲解文本。",
+          "clear_points": [],
+          "confusing_points": []
+        },
+        "difficulty_fit": {
+          "score": 0,
+          "max": 100,
+          "comment": "无题目或内容以评估难度适配性。",
+          "matched_items": [],
+          "mismatched_items": []
+        },
+        "learner_fit": {
+          "score": 0,
+          "max": 100,
+          "comment": "无法评估是否适配学员特征。",
+          "adapted_points": [],
+          "missing_adaptations": []
+        },
+        "knowledge_completeness": {
+          "score": 0,
+          "max": 100,
+          "comment": "知识点覆盖情况无法评估。",
+          "covered_points": [],
+          "missing_points": [
+            "全部知识点缺失"
+          ]
+        },
+        "weakness_addressing": {
+          "score": 0,
+          "max": 100,
+          "comment": "无法判定是否针对性解决异议与学员薄弱点。",
+          "addressed_weaknesses": [],
+          "untouched_weaknesses": []
+        }
+      },
+      "overall_score": {
+        "score": 0,
+        "max": 100,
+        "comment": "由于提供的专家A/B交叉评审、裁判报告及修订稿内容均为空，无法进行多专家异议闭环及课程质量评估。",
+        "summary": "输入材料缺失关键文本，各项指标均无法完成有效核验。"
+      },
+      "highlights": [],
+      "issues": [
+        "专家 A 交叉评审内容为空",
+        "专家 B 交叉评审内容为空",
+        "裁判报告内容为空",
+        "专家 A 修订稿内容为空",
+        "专家 B 修订稿内容为空"
+      ],
+      "suggestions": [
+        "请补充 multi-W round-02 的完整材料（包含专家A/B的具体异议、裁判判定结果及双方修订文本）后再行提交评估。"
+      ]
+    },
+    "timestamp": "2026-08-27 14:16:21",
+    "metrics": {
+      "value": 100.0,
+      "unit": "分",
+      "detail": {
+        "总🔴异议数": 0.0,
+        "裁判采纳数": 0.0,
+        "闭环数（采纳+修正）": 0.0,
+        "未闭环数": 0,
+        "闭环率(%)": 100.0,
+        "总体评分(100分制)": 100.0,
+        "评分等级": "-",
+        "闭环详情": [],
+        "LLM理由": "",
+        "评估方式": "外部 LLM 判定（round-indicator 异议闭环提示词）"
+      }
+    }
+  }
+}

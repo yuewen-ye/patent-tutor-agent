@@ -45,6 +45,31 @@ import calculate  # noqa: E402
 
 REPORTS_DIR = _EVAL_DIR / "results" / "reports"
 
+
+# ── 默认输出路径 helpers（前缀作用域，避免不同 learner_prefix 互相覆盖）────────
+def default_profile_report_path(learner_prefix: str, profile_letter: str) -> Path:
+    """单画像 Markdown 报告默认路径。
+
+    文件名格式：``report_<learner_prefix>_<letter>.md``。
+
+    例：
+      - ``multi + H`` → ``results/reports/report_multi_H.md``
+      - ``nodebate + W`` → ``results/reports/report_nodebate_W.md``
+    """
+    return REPORTS_DIR / f"report_{learner_prefix}_{profile_letter}.md"
+
+
+def default_full_report_path(learner_prefix: str) -> Path:
+    """完整（跨画像）Markdown 报告默认路径。
+
+    文件名格式：``report_<learner_prefix>.md``。
+
+    例：
+      - ``multi`` → ``results/reports/report_multi.md``
+      - ``nodebate`` → ``results/reports/report_nodebate.md``
+    """
+    return REPORTS_DIR / f"report_{learner_prefix}.md"
+
 def _resolve_llm_results_dir(learner_prefix: str = "multi") -> Path:
     """解析外部 LLM 结果目录：按类别隔离（record_{前缀}）。
 
@@ -96,11 +121,7 @@ _SCRIPT_METRICS: list[tuple[str, list[str]]] = [
         "2.1 难度符合度",
         "2.4 动态迭代触发率",
     ]),
-    ("M3 覆盖率", [
-        "3.1 本节知识点覆盖率",
-        "3.2 薄弱点命中率",
-        "3.3 混淆对覆盖率",
-    ]),
+    # M3 覆盖率已弃用脚本硬匹配，完全改用 LLM 语义评价，见 _LLM_METRICS。
     ("M4 执行完整性", [
         "4.1 产物完整率",
         "4.2.1 资源大类数",
@@ -130,6 +151,11 @@ _LLM_METRICS: list[tuple[str, list[str]]] = [
         "2.3 相关性",
         "2.5 检索准确率",
         "2.5 检索完整率",
+    ]),
+    ("M3 覆盖率", [
+        "3.1 本节知识点覆盖率(LLM)",
+        "3.2 薄弱点命中率(LLM)",
+        "3.3 混淆对覆盖率(LLM)",
     ]),
 ]
 
@@ -242,17 +268,17 @@ METRIC_META: dict[str, tuple[str, str]] = {
         "round_indicator_{model}_{profile}_{round}.json > retrieval（round-indicator.md 外部LLM评估）",
     ),
     # M3 覆盖率
-    "3.1 本节知识点覆盖率": (
-        "|累计实际(含祖先) ∩ learning_path 全量| / |learning_path 全量| × 100%",
-        "course_package.md + learning_path.md + knowledge-dag.json",
+    "3.1 本节知识点覆盖率(LLM)": (
+        "外部LLM语义评估：课程内容对本节知识点列表的覆盖程度（0-100分）",
+        "round_indicator_{model}_{profile}_{round}.json > coverage.section_coverage（round-indicator.md coverage 模式外部LLM评估）",
     ),
-    "3.2 薄弱点命中率": (
-        "命中的薄弱点数 / 总薄弱点数 × 100%",
-        "course_package.md + expected_*.json",
+    "3.2 薄弱点命中率(LLM)": (
+        "外部LLM语义评估：课程内容对薄弱点的命中程度（0-100分）",
+        "round_indicator_{model}_{profile}_{round}.json > coverage.weakness_coverage（round-indicator.md coverage 模式外部LLM评估）",
     ),
-    "3.3 混淆对覆盖率": (
-        "命中的混淆对数 / 总预设混淆对数 × 100%",
-        "course_package.md + expected_*.json",
+    "3.3 混淆对覆盖率(LLM)": (
+        "外部LLM语义评估：课程内容对混淆对的覆盖程度（0-100分）",
+        "round_indicator_{model}_{profile}_{round}.json > coverage.confusion_coverage（round-indicator.md coverage 模式外部LLM评估）",
     ),
     # M4 执行完整性
     "4.1 产物完整率": (
@@ -604,11 +630,22 @@ def _list_available_rounds(session_dir: Path) -> list[int]:
 
 def _list_profiles_with_data(learner_prefix: str = "multi") -> list[str]:
     letters: list[str] = []
+    dir_prefix = f"{learner_prefix}-"
     for d in common.EVAL_ARTIFACTS_DIR.glob(f"{learner_prefix}-*"):
-        if d.is_dir():
-            letter = d.name.split("-", 1)[1]
-            if _list_available_rounds(d):
-                letters.append(letter)
+        if not d.is_dir():
+            continue
+        # 反向解析：既然 glob 用了 "{learner_prefix}-*"，匹配到的目录名一定以
+        # dir_prefix 开头，直接剥掉这个前缀就是画像字母。
+        # 不要用 d.name.split("-", 1)[1]：因为当 learner_prefix 本身带「-」
+        # （如 eval-no-debate）时会把 prefix 残留错误地算进 letter。
+        if d.name.startswith(dir_prefix):
+            letter = d.name[len(dir_prefix):]
+        else:
+            # 极端兼容性回退：glob 命中但不是严格的 dir_prefix 开头时的兜底
+            parts = d.name.split("-", 1)
+            letter = parts[1] if len(parts) > 1 else ""
+        if letter and _list_available_rounds(d):
+            letters.append(letter)
     return sorted(letters)
 
 
@@ -1389,7 +1426,7 @@ def generate_report(
 
     if output_path is None:
         REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-        output_path = REPORTS_DIR / f"report_{profile_letter}.md"
+        output_path = default_profile_report_path(learner_prefix, profile_letter)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(md, encoding="utf-8")
     return output_path
@@ -1457,7 +1494,7 @@ def generate_full_report(
 
     if output_path is None:
         REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-        output_path = REPORTS_DIR / "report_full.md"
+        output_path = default_full_report_path(learner_prefix)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(md, encoding="utf-8")
     return output_path

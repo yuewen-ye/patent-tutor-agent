@@ -57,14 +57,12 @@ POLL_TIMEOUT_SEC = 60 * 120  # 120 minutes（网关慢时单轮 teach 会话可�
 def llm_results_dir(learner_prefix: str = "multi") -> Path:
     """外部 LLM 评估结果目录。
 
-    非默认前缀按类别隔离：``results/record_{前缀}``（如 eval-normal →
-    ``results/record_eval-normal``），避免多个类别（normal/no-rag/...）共用
-    同一个 record 目录导致 round_indicator 等文件互相覆盖。
+    所有类别统一收在 ``results/record/<learner_prefix>/`` 之下，共享同一个
+    ``record`` 父目录，便于人工浏览和批量归档。不同前缀子目录互相隔离，
+    避免不同实验（multi / nodebate / norag / norerank / singlemodel …）共用
+    同一输出目录导致 ``round_indicator`` 等文件相互覆盖。
     """
-    base = EVAL_DIR / "results" / "record"
-    if learner_prefix == "multi":
-        return base
-    return EVAL_DIR / "results" / f"record_{learner_prefix}"
+    return EVAL_DIR / "results" / "record" / learner_prefix
 
 
 if str(EVAL_DIR) not in sys.path:

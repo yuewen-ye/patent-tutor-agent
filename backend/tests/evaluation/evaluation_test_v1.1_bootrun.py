@@ -506,7 +506,7 @@ def _case_profile_eval(
       2. 询问每画像执行到第几轮（all / N）
       3. 基于即将覆盖的画像×轮次，检查是否已有 round/profile JSON → 决定是否 force 询问
       4. 对每个选中画像：
-         - 每一轮：依次提交 round-indicator.md 对应的 6 个 section（all-in-one 聚合到同一个 round_indicator JSON）
+         - 每一轮：依次提交 round-indicator.md 对应的 7 个 section（all-in-one 聚合到同一个 round_indicator JSON）
          - 每个画像最后一次：提交 profile-indicator.md（先跑 prepare_m14，再 evaluate_m14）
     """
     model = config.get("llm", {}).get("model", "unknown")
@@ -558,7 +558,7 @@ def _case_profile_eval(
     force = force or _prompt_force_if_exists(exists_any, default_force)
 
     print("\n" + "=" * 60)
-    print("📦 画像评测（round-indicator.md：每轮 × 6 section + profile-indicator.md：每画像一次）")
+    print("📦 画像评测（round-indicator.md：每轮 × 7 section + profile-indicator.md：每画像一次）")
     print("=" * 60)
     print(f"  模型: {model}")
     print(f"  选中画像: {', '.join(selected)}")
@@ -580,7 +580,7 @@ def _case_profile_eval(
         print(f"{'─' * 50}")
 
         for r in rounds:
-            print(f"\n    ▶ R{r:02d} — round-indicator.md（6 section 聚合到同一 round_indicator JSON）")
+            print(f"\n    ▶ R{r:02d} — round-indicator.md（7 section 聚合到同一 round_indicator JSON）")
             # 1) overall
             try:
                 res = llm_evaluator.evaluate_profile_round(letter, r, config, force=force)
@@ -648,6 +648,18 @@ def _case_profile_eval(
             except Exception as exc:  # noqa: BLE001
                 fail += 1
                 print(f"      ❌ retrieval: {type(exc).__name__}: {exc}")
+            # 7) coverage（M3.1/3.2/3.3 覆盖率 — LLM 语义验证）
+            try:
+                res = llm_evaluator.evaluate_coverage(letter, r, config, force=force)
+                if res is None:
+                    skip += 1
+                    print("      ⏭️  coverage 跳过")
+                else:
+                    success += 1
+                    print("      ✅ coverage")
+            except Exception as exc:  # noqa: BLE001
+                fail += 1
+                print(f"      ❌ coverage: {type(exc).__name__}: {exc}")
 
         # 每个画像的最后：profile-indicator.md (1.6 跨轮自洽率)
         print(f"\n    📌 {pid} — profile-indicator.md（1.6 跨轮自洽率，每画像一次）")
@@ -685,17 +697,18 @@ def _do_llm_evaluate(*, default_force: bool = False, learner_prefix: str = "mult
 
     try:
         config = llm_evaluator.load_config()
-        # 按类别注入前缀与结果目录：评估结果写入 results/record_{learner_prefix}，
-        # evaluator 读产物时使用 {learner_prefix}-{画像} 目录，互不串类别。
+        # 按类别注入前缀与输出目录：所有类别统一写 results/record/<learner_prefix>/，
+        # evaluator 读产物时按 {learner_prefix}-{画像} 读取 artifacts，互不串类别。
         config["learner_prefix"] = learner_prefix
-        _output_base = config.get("output", {}).get(
-            "dir", "backend/tests/evaluation/results/record"
-        )
-        config.setdefault("output", {})["dir"] = (
-            _output_base
-            if learner_prefix == "multi"
-            else f"{_output_base}_{learner_prefix}"
-        )
+        output_cfg = config.setdefault("output", {})
+        # output.base_dir 是「到 record 父目录为止」的相对路径（evaluator 里按
+        # PROJECT_ROOT/base_dir/<prefix> 解析）；幂等：首次注入时缓存原始 base。
+        if "base_dir" not in output_cfg:
+            output_cfg["base_dir"] = output_cfg.get(
+                "dir", "backend/tests/evaluation/results/record"
+            )
+        base = output_cfg["base_dir"].rstrip("/\\")
+        output_cfg["dir"] = f"{base}/{learner_prefix}" if base else learner_prefix
     except Exception as exc:  # noqa: BLE001
         print(f"  ❌ 加载配置失败: {exc}")
         print("  请检查 config/external_llm.yaml 配置文件")
@@ -708,7 +721,7 @@ def _do_llm_evaluate(*, default_force: bool = False, learner_prefix: str = "mult
         print("=" * 60)
         print("  0 —— 返回上级菜单")
         print("  1 —— 系统评测（system-indicator.md：6.1 对抗稳健率 + 6.2 边界拒答恰当率）")
-        print("  2 —— 画像评测（round-indicator.md 每轮 6 section + profile-indicator.md 每画像一次）")
+        print("  2 —— 画像评测（round-indicator.md 每轮 7 section + profile-indicator.md 每画像一次）")
         print("  3 —— 全部评测（系统评测 + 画像评测）")
         case = input("  → 选择编号（默认 0）: ").strip() or "0"
 

@@ -1,0 +1,14 @@
+{
+  "metadata": {
+    "indicator_type": "profile",
+    "prompt_file": "profile-indicator.md",
+    "model": "Dgpt-5.4-mini",
+    "profile_id": "H",
+    "generated_at": "2026-08-30 04:26:29"
+  },
+  "cross_round": {
+    "status": "failed",
+    "error": "HTTPError: 401 Client Error: Unauthorized for url: https://api.sh.kg/v1/chat/completions",
+    "failed_at": "2026-08-30 04:26:29"
+  }
+}

@@ -1,0 +1,3015 @@
+{
+  "metadata": {
+    "indicator_type": "profile",
+    "prompt_file": "profile-indicator.md",
+    "model": "gemini-3.7-flash",
+    "profile_id": "H",
+    "generated_at": "2026-08-27 10:19:01"
+  },
+  "cross_round": {
+    "eval_type": "cross_round_self_consistency",
+    "total_fact_points": 333,
+    "contradicted": 0,
+    "self_consistency_rate": 100.0,
+    "evaluations": [
+      {
+        "fact_point": "patent-law-foundation 专利制度的基本概念与特征：独占性、时间性、地域性",
+        "source_rounds": [
+          1
+        ],
+        "index": 0,
+        "contradiction": false,
+        "reason": "该事实点仅在第1轮出现，符合专利基本特征定义，无跨轮或逻辑矛盾。"
+      },
+      {
+        "fact_point": "patent-law-foundation 专利保护的三种客体：发明、实用新型、外观设计",
+        "source_rounds": [
+          1
+        ],
+        "index": 1,
+        "contradiction": false,
+        "reason": "该事实点仅在第1轮出现，正确表述中国专利保护客体，无跨轮或逻辑矛盾。"
+      },
+      {
+        "fact_point": "patent-law-foundation 专利制度的作用：激励发明创造、促进技术公开、推动技术应用和经济发展",
+        "source_rounds": [
+          1
+        ],
+        "index": 2,
+        "contradiction": false,
+        "reason": "该事实点仅在第1轮出现，准确概括专利制度功能，无跨轮或逻辑矛盾。"
+      },
+      {
+        "fact_point": "patent-law-foundation 中国专利制度发展历程与特点：早期公开延迟审查、初步审查制与实质审查制并存",
+        "source_rounds": [
+          1
+        ],
+        "index": 3,
+        "contradiction": false,
+        "reason": "该事实点仅在第1轮出现，符合中国专利审查制度发展历史与特点，无矛盾。"
+      },
+      {
+        "fact_point": "节点 patent-law-foundation 掌握度 PL=0.993",
+        "source_rounds": [
+          1
+        ],
+        "index": 4,
+        "contradiction": false,
+        "reason": "该状态点仅在第1轮记录，数值明确自洽，无跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 patent-system-overview 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 5,
+        "contradiction": false,
+        "reason": "该状态点仅在第1轮记录，数值明确自洽，无跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 patent-law-framework 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 6,
+        "contradiction": false,
+        "reason": "该状态点仅在第1轮记录，数值明确自洽，无跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 patent-rights-nature 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 7,
+        "contradiction": false,
+        "reason": "该状态点仅在第1轮记录，数值明确自洽，无跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 patentability-substantive 掌握度 PL=0.8899",
+        "source_rounds": [
+          1
+        ],
+        "index": 8,
+        "contradiction": false,
+        "reason": "该状态点仅在第1轮记录，数值明确自洽，无跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 novelty 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 9,
+        "contradiction": false,
+        "reason": "该状态点仅在第1轮记录，数值明确自洽，无跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 prior-art-definition 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 10,
+        "contradiction": false,
+        "reason": "该状态点仅在第1轮记录，数值明确自洽，无跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 conflicting-application 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 11,
+        "contradiction": false,
+        "reason": "该状态点仅在第1轮记录，数值明确自洽，无跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 grace-period 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 12,
+        "contradiction": false,
+        "reason": "该状态点仅在第1轮记录，数值明确自洽，无跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 inventive-step 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 13,
+        "contradiction": false,
+        "reason": "该状态点仅在第1轮记录，数值明确自洽，无跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 three-step-method 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 14,
+        "contradiction": false,
+        "reason": "该状态点仅在第1轮记录，数值明确自洽，无跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 person-skilled-in-art 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 15,
+        "contradiction": false,
+        "reason": "该状态点仅在第1轮记录，数值明确自洽，无跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 practical-applicability 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 16,
+        "contradiction": false,
+        "reason": "该状态点仅在第1轮记录，数值明确自洽，无跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 design-patentability 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 17,
+        "contradiction": false,
+        "reason": "该状态点仅在第1轮记录，数值明确自洽，无跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 non-patentable-subject 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 18,
+        "contradiction": false,
+        "reason": "该状态点仅在第1轮记录，数值明确自洽，无跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 scientific-discovery-vs-invention 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 19,
+        "contradiction": false,
+        "reason": "该状态点仅在第1轮记录，数值明确自洽，无跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 medical-method-exclusion 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 20,
+        "contradiction": false,
+        "reason": "该状态点仅在第1轮记录，数值明确自洽，无跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 public-order-morality 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 21,
+        "contradiction": false,
+        "reason": "该状态点仅在第1轮记录，数值明确自洽，无跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 patent-application-process 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 22,
+        "contradiction": false,
+        "reason": "该状态点仅在第1轮记录，数值明确自洽，无跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 application-documents 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 23,
+        "contradiction": false,
+        "reason": "该状态点仅在第1轮记录，数值明确自洽，无跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 specification-requirements 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 24,
+        "contradiction": false,
+        "reason": "该状态点仅在第1轮记录，数值明确自洽，无跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 claims-drafting-basics 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 0,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 priority-right 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 1,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 filing-date 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 2,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 divisional-application 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 3,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 patent-examination 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 4,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 preliminary-examination 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 5,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 substantive-examination 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 6,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 office-action-response 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 7,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 amendment-limits 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 8,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 patent-reexamination 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 9,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 reexamination-request 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 10,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 collegial-review 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 11,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 patent-invalidation 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 12,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 invalidation-grounds 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 13,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 oral-proceeding 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 14,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 patent-rights-protection 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 15,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 protection-scope 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 16,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 doctrine-of-equivalents 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 17,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 claim-interpretation 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 18,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 infringement-types 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 19,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 infringement-defenses 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 20,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 bolar-exemption 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 21,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 prior-use-right 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 22,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 remedies 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 23,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 patent-agency-practice 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 24,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 claims-drafting-advanced 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 0,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，记录节点掌握度状态，与其他轮次无冲突"
+      },
+      {
+        "fact_point": "节点 oa-response-practice 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 1,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，记录节点掌握度状态，与其他轮次无冲突"
+      },
+      {
+        "fact_point": "节点 invalidation-practice 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 2,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，记录节点掌握度状态，与其他轮次无冲突"
+      },
+      {
+        "fact_point": "节点 related-laws 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 3,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，记录节点掌握度状态，与其他轮次无冲突"
+      },
+      {
+        "fact_point": "节点 civil-law-basics 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 4,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，记录节点掌握度状态，与其他轮次无冲突"
+      },
+      {
+        "fact_point": "节点 contract-law-tech 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 5,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，记录节点掌握度状态，与其他轮次无冲突"
+      },
+      {
+        "fact_point": "节点 administrative-procedure 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 6,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，记录节点掌握度状态，与其他轮次无冲突"
+      },
+      {
+        "fact_point": "节点 civil-procedure 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 7,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，记录节点掌握度状态，与其他轮次无冲突"
+      },
+      {
+        "fact_point": "节点 trips-agreement 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 8,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，记录节点掌握度状态，与其他轮次无冲突"
+      },
+      {
+        "fact_point": "节点 pct-system 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 9,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，记录节点掌握度状态，与其他轮次无冲突"
+      },
+      {
+        "fact_point": "节点 pct-filing 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 10,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，记录节点掌握度状态，与其他轮次无冲突"
+      },
+      {
+        "fact_point": "节点 pct-national-phase 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 11,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，记录节点掌握度状态，与其他轮次无冲突"
+      },
+      {
+        "fact_point": "节点 foreign-priority 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 12,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，记录节点掌握度状态，与其他轮次无冲突"
+      },
+      {
+        "fact_point": "节点 domestic-priority 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 13,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，记录节点掌握度状态，与其他轮次无冲突"
+      },
+      {
+        "fact_point": "节点 scientific-research-exemption 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 14,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，记录节点掌握度状态，与其他轮次无冲突"
+      },
+      {
+        "fact_point": "节点 direct-infringement 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 15,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，记录节点掌握度状态，与其他轮次无冲突"
+      },
+      {
+        "fact_point": "节点 indirect-infringement 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 16,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，记录节点掌握度状态，与其他轮次无冲突"
+      },
+      {
+        "fact_point": "节点 independent-claim 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 17,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，记录节点掌握度状态，与其他轮次无冲突"
+      },
+      {
+        "fact_point": "节点 dependent-claim 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 18,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，记录节点掌握度状态，与其他轮次无冲突"
+      },
+      {
+        "fact_point": "节点 employee-invention 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 19,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，记录节点掌握度状态，与其他轮次无冲突"
+      },
+      {
+        "fact_point": "节点 exhaustion-of-rights 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 20,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，记录节点掌握度状态，与其他轮次无冲突"
+      },
+      {
+        "fact_point": "节点 implied-license 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 21,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，记录节点掌握度状态，与其他轮次无冲突"
+      },
+      {
+        "fact_point": "节点 general-consumer 掌握度 PL=0.15",
+        "source_rounds": [
+          1
+        ],
+        "index": 22,
+        "contradiction": false,
+        "reason": "仅在第1轮出现，记录节点掌握度状态，与其他轮次无冲突"
+      },
+      {
+        "fact_point": "patent-law-foundation 专利制度的基本概念与特征：独占性、时间性、地域性",
+        "source_rounds": [
+          2
+        ],
+        "index": 23,
+        "contradiction": false,
+        "reason": "第2轮引入专利制度基本特征概念，符合专利法学知识体系，跨轮不存在逻辑或事实冲突"
+      },
+      {
+        "fact_point": "patent-law-foundation 专利制度的作用：激励发明创造、促进技术公开、推动技术应用和经济发展",
+        "source_rounds": [
+          2
+        ],
+        "index": 24,
+        "contradiction": false,
+        "reason": "第2轮说明专利制度的作用，符合标准教学知识点，跨轮不存在逻辑或事实冲突"
+      },
+      {
+        "fact_point": "patent-law-foundation 中国专利制度发展历程与特点：早期公开、延迟审查、初步审查制与实质审查制并存",
+        "source_rounds": [
+          2
+        ],
+        "index": 0,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 patent-law-foundation 掌握度 PL=1.0",
+        "source_rounds": [
+          2
+        ],
+        "index": 1,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 patent-system-overview 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 2,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 patent-law-framework 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 3,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 patent-rights-nature 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 4,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 patentability-substantive 掌握度 PL=0.8899",
+        "source_rounds": [
+          2
+        ],
+        "index": 5,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 novelty 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 6,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 prior-art-definition 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 7,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 conflicting-application 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 8,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 grace-period 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 9,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 inventive-step 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 10,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 three-step-method 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 11,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 person-skilled-in-art 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 12,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 practical-applicability 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 13,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 design-patentability 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 14,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 non-patentable-subject 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 15,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 scientific-discovery-vs-invention 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 16,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 medical-method-exclusion 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 17,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 public-order-morality 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 18,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 patent-application-process 掌握度 PL=0.8899",
+        "source_rounds": [
+          2
+        ],
+        "index": 19,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 application-documents 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 20,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 specification-requirements 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 21,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 claims-drafting-basics 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 22,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 priority-right 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 23,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 filing-date 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 24,
+        "contradiction": false,
+        "reason": "该事实点仅在轮次2中出现，不存在跨轮比对数据，无跨轮自相矛盾。"
+      },
+      {
+        "fact_point": "节点 divisional-application 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 0,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 patent-examination 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 1,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 preliminary-examination 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 2,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 substantive-examination 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 3,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 office-action-response 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 4,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 amendment-limits 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 5,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 patent-reexamination 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 6,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 reexamination-request 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 7,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 collegial-review 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 8,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 patent-invalidation 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 9,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 invalidation-grounds 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 10,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 oral-proceeding 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 11,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 patent-rights-protection 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 12,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 protection-scope 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 13,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 doctrine-of-equivalents 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 14,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 claim-interpretation 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 15,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 infringement-types 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 16,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 infringement-defenses 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 17,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 bolar-exemption 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 18,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 prior-use-right 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 19,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 remedies 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 20,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 patent-agency-practice 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 21,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 claims-drafting-advanced 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 22,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 oa-response-practice 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 23,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 invalidation-practice 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 24,
+        "contradiction": false,
+        "reason": "该事实点仅在第2轮出现，状态单一，不存在跨轮冲突或自相矛盾。"
+      },
+      {
+        "fact_point": "节点 related-laws 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 0,
+        "contradiction": false,
+        "reason": "节点掌握度状态描述清晰独立，与其他轮次无矛盾"
+      },
+      {
+        "fact_point": "节点 civil-law-basics 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 1,
+        "contradiction": false,
+        "reason": "节点掌握度状态描述清晰独立，与其他轮次无矛盾"
+      },
+      {
+        "fact_point": "节点 contract-law-tech 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 2,
+        "contradiction": false,
+        "reason": "节点掌握度状态描述清晰独立，与其他轮次无矛盾"
+      },
+      {
+        "fact_point": "节点 administrative-procedure 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 3,
+        "contradiction": false,
+        "reason": "节点掌握度状态描述清晰独立，与其他轮次无矛盾"
+      },
+      {
+        "fact_point": "节点 civil-procedure 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 4,
+        "contradiction": false,
+        "reason": "节点掌握度状态描述清晰独立，与其他轮次无矛盾"
+      },
+      {
+        "fact_point": "节点 trips-agreement 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 5,
+        "contradiction": false,
+        "reason": "节点掌握度状态描述清晰独立，与其他轮次无矛盾"
+      },
+      {
+        "fact_point": "节点 pct-system 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 6,
+        "contradiction": false,
+        "reason": "节点掌握度状态描述清晰独立，与其他轮次无矛盾"
+      },
+      {
+        "fact_point": "节点 pct-filing 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 7,
+        "contradiction": false,
+        "reason": "节点掌握度状态描述清晰独立，与其他轮次无矛盾"
+      },
+      {
+        "fact_point": "节点 pct-national-phase 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 8,
+        "contradiction": false,
+        "reason": "节点掌握度状态描述清晰独立，与其他轮次无矛盾"
+      },
+      {
+        "fact_point": "节点 foreign-priority 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 9,
+        "contradiction": false,
+        "reason": "节点掌握度状态描述清晰独立，与其他轮次无矛盾"
+      },
+      {
+        "fact_point": "节点 domestic-priority 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 10,
+        "contradiction": false,
+        "reason": "节点掌握度状态描述清晰独立，与其他轮次无矛盾"
+      },
+      {
+        "fact_point": "节点 scientific-research-exemption 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 11,
+        "contradiction": false,
+        "reason": "节点掌握度状态描述清晰独立，与其他轮次无矛盾"
+      },
+      {
+        "fact_point": "节点 direct-infringement 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 12,
+        "contradiction": false,
+        "reason": "节点掌握度状态描述清晰独立，与其他轮次无矛盾"
+      },
+      {
+        "fact_point": "节点 indirect-infringement 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 13,
+        "contradiction": false,
+        "reason": "节点掌握度状态描述清晰独立，与其他轮次无矛盾"
+      },
+      {
+        "fact_point": "节点 independent-claim 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 14,
+        "contradiction": false,
+        "reason": "节点掌握度状态描述清晰独立，与其他轮次无矛盾"
+      },
+      {
+        "fact_point": "节点 dependent-claim 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 15,
+        "contradiction": false,
+        "reason": "节点掌握度状态描述清晰独立，与其他轮次无矛盾"
+      },
+      {
+        "fact_point": "节点 employee-invention 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 16,
+        "contradiction": false,
+        "reason": "节点掌握度状态描述清晰独立，与其他轮次无矛盾"
+      },
+      {
+        "fact_point": "节点 exhaustion-of-rights 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 17,
+        "contradiction": false,
+        "reason": "节点掌握度状态描述清晰独立，与其他轮次无矛盾"
+      },
+      {
+        "fact_point": "节点 implied-license 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 18,
+        "contradiction": false,
+        "reason": "节点掌握度状态描述清晰独立，与其他轮次无矛盾"
+      },
+      {
+        "fact_point": "节点 general-consumer 掌握度 PL=0.15",
+        "source_rounds": [
+          2
+        ],
+        "index": 19,
+        "contradiction": false,
+        "reason": "节点掌握度状态描述清晰独立，与其他轮次无矛盾"
+      },
+      {
+        "fact_point": "patent-law-foundation 专利制度的基本概念与特征：独占性、时间性、地域性（详见子节点 patent-rights-nature）",
+        "source_rounds": [
+          3
+        ],
+        "index": 20,
+        "contradiction": false,
+        "reason": "关于专利特征（独占性、时间性、地域性）的知识陈述准确规范，无跨轮矛盾"
+      },
+      {
+        "fact_point": "patent-law-foundation 专利制度的作用：激励发明创造、促进技术公开、推动技术应用和经济发展（详见子节点 patent-system-overview）",
+        "source_rounds": [
+          3
+        ],
+        "index": 21,
+        "contradiction": false,
+        "reason": "关于专利制度作用的陈述符合法理标准，各轮间无矛盾"
+      },
+      {
+        "fact_point": "patent-law-foundation 中国专利制度发展历程与特点：早期公开延迟审查、初步审查制与实质审查制并存（详见子节点 patent-system-overview）",
+        "source_rounds": [
+          3
+        ],
+        "index": 22,
+        "contradiction": false,
+        "reason": "关于中国专利制度发展与审查制度特点的陈述准确，无冲突"
+      },
+      {
+        "fact_point": "节点 patent-law-foundation 掌握度 PL=1.0",
+        "source_rounds": [
+          3
+        ],
+        "index": 23,
+        "contradiction": false,
+        "reason": "节点掌握度评定符合学习递进状态，无跨轮数据矛盾"
+      },
+      {
+        "fact_point": "节点 patent-system-overview 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 24,
+        "contradiction": false,
+        "reason": "节点掌握度状态记录正常，与其他轮次无矛盾"
+      },
+      {
+        "fact_point": "节点 patent-law-framework 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 0,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 patent-rights-nature 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 1,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 patentability-substantive 掌握度 PL=0.993",
+        "source_rounds": [
+          3
+        ],
+        "index": 2,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 novelty 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 3,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 prior-art-definition 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 4,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 conflicting-application 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 5,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 grace-period 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 6,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 inventive-step 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 7,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 three-step-method 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 8,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 person-skilled-in-art 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 9,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 practical-applicability 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 10,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 design-patentability 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 11,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 non-patentable-subject 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 12,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 scientific-discovery-vs-invention 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 13,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 medical-method-exclusion 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 14,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 public-order-morality 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 15,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 patent-application-process 掌握度 PL=0.8899",
+        "source_rounds": [
+          3
+        ],
+        "index": 16,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 application-documents 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 17,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 specification-requirements 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 18,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 claims-drafting-basics 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 19,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 priority-right 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 20,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 filing-date 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 21,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 divisional-application 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 22,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 patent-examination 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 23,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 preliminary-examination 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 24,
+        "contradiction": false,
+        "reason": "该知识点仅在第3轮出现且掌握度记录唯一，无跨轮数据冲突。"
+      },
+      {
+        "fact_point": "节点 substantive-examination 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 0,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 office-action-response 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 1,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 amendment-limits 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 2,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 patent-reexamination 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 3,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 reexamination-request 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 4,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 collegial-review 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 5,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 patent-invalidation 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 6,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 invalidation-grounds 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 7,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 oral-proceeding 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 8,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 patent-rights-protection 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 9,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 protection-scope 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 10,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 doctrine-of-equivalents 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 11,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 claim-interpretation 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 12,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 infringement-types 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 13,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 infringement-defenses 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 14,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 bolar-exemption 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 15,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 prior-use-right 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 16,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 remedies 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 17,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 patent-agency-practice 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 18,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 claims-drafting-advanced 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 19,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 oa-response-practice 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 20,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 invalidation-practice 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 21,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 related-laws 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 22,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 civil-law-basics 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 23,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 contract-law-tech 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 24,
+        "contradiction": false,
+        "reason": "该事实点仅在第3轮出现，单轮记录无跨轮冲突或前后矛盾。"
+      },
+      {
+        "fact_point": "节点 administrative-procedure 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 0,
+        "contradiction": false,
+        "reason": "节点 administrative-procedure 的掌握度在第3轮记录为 PL=0.15，无跨轮冲突陈述。"
+      },
+      {
+        "fact_point": "节点 civil-procedure 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 1,
+        "contradiction": false,
+        "reason": "节点 civil-procedure 的掌握度在第3轮记录为 PL=0.15，无跨轮冲突陈述。"
+      },
+      {
+        "fact_point": "节点 trips-agreement 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 2,
+        "contradiction": false,
+        "reason": "节点 trips-agreement 的掌握度在第3轮记录为 PL=0.15，无跨轮冲突陈述。"
+      },
+      {
+        "fact_point": "节点 pct-system 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 3,
+        "contradiction": false,
+        "reason": "节点 pct-system 的掌握度在第3轮记录为 PL=0.15，无跨轮冲突陈述。"
+      },
+      {
+        "fact_point": "节点 pct-filing 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 4,
+        "contradiction": false,
+        "reason": "节点 pct-filing 的掌握度在第3轮记录为 PL=0.15，无跨轮冲突陈述。"
+      },
+      {
+        "fact_point": "节点 pct-national-phase 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 5,
+        "contradiction": false,
+        "reason": "节点 pct-national-phase 的掌握度在第3轮记录为 PL=0.15，无跨轮冲突陈述。"
+      },
+      {
+        "fact_point": "节点 foreign-priority 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 6,
+        "contradiction": false,
+        "reason": "节点 foreign-priority 的掌握度在第3轮记录为 PL=0.15，无跨轮冲突陈述。"
+      },
+      {
+        "fact_point": "节点 domestic-priority 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 7,
+        "contradiction": false,
+        "reason": "节点 domestic-priority 的掌握度在第3轮记录为 PL=0.15，无跨轮冲突陈述。"
+      },
+      {
+        "fact_point": "节点 scientific-research-exemption 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 8,
+        "contradiction": false,
+        "reason": "节点 scientific-research-exemption 的掌握度在第3轮记录为 PL=0.15，无跨轮冲突陈述。"
+      },
+      {
+        "fact_point": "节点 direct-infringement 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 9,
+        "contradiction": false,
+        "reason": "节点 direct-infringement 的掌握度在第3轮记录为 PL=0.15，无跨轮冲突陈述。"
+      },
+      {
+        "fact_point": "节点 indirect-infringement 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 10,
+        "contradiction": false,
+        "reason": "节点 indirect-infringement 的掌握度在第3轮记录为 PL=0.15，无跨轮冲突陈述。"
+      },
+      {
+        "fact_point": "节点 independent-claim 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 11,
+        "contradiction": false,
+        "reason": "节点 independent-claim 的掌握度在第3轮记录为 PL=0.15，无跨轮冲突陈述。"
+      },
+      {
+        "fact_point": "节点 dependent-claim 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 12,
+        "contradiction": false,
+        "reason": "节点 dependent-claim 的掌握度在第3轮记录为 PL=0.15，无跨轮冲突陈述。"
+      },
+      {
+        "fact_point": "节点 employee-invention 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 13,
+        "contradiction": false,
+        "reason": "节点 employee-invention 的掌握度在第3轮记录为 PL=0.15，无跨轮冲突陈述。"
+      },
+      {
+        "fact_point": "节点 exhaustion-of-rights 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 14,
+        "contradiction": false,
+        "reason": "节点 exhaustion-of-rights 的掌握度在第3轮记录为 PL=0.15，无跨轮冲突陈述。"
+      },
+      {
+        "fact_point": "节点 implied-license 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 15,
+        "contradiction": false,
+        "reason": "节点 implied-license 的掌握度在第3轮记录为 PL=0.15，无跨轮冲突陈述。"
+      },
+      {
+        "fact_point": "节点 general-consumer 掌握度 PL=0.15",
+        "source_rounds": [
+          3
+        ],
+        "index": 16,
+        "contradiction": false,
+        "reason": "节点 general-consumer 的掌握度在第3轮记录为 PL=0.15，无跨轮冲突陈述。"
+      },
+      {
+        "fact_point": "patent-law-foundation 专利制度的基本概念与特征：独占性、时间性、地域性",
+        "source_rounds": [
+          4
+        ],
+        "index": 17,
+        "contradiction": false,
+        "reason": "专利制度基本特征（独占性、时间性、地域性）表述准确，与其他轮次无冲突。"
+      },
+      {
+        "fact_point": "patent-law-foundation 专利保护的三种客体：发明、实用新型、外观设计",
+        "source_rounds": [
+          4
+        ],
+        "index": 18,
+        "contradiction": false,
+        "reason": "专利保护三种客体（发明、实用新型、外观设计）符合专利法规定，跨轮一致。"
+      },
+      {
+        "fact_point": "patent-law-foundation 专利制度的作用：激励发明创造、促进技术公开、推动技术应用和经济发展",
+        "source_rounds": [
+          4
+        ],
+        "index": 19,
+        "contradiction": false,
+        "reason": "专利制度作用的阐释符合法律与经济学基本原理，无矛盾。"
+      },
+      {
+        "fact_point": "patent-law-foundation 中国专利制度发展历程与特点：早期公开延迟审查、初步审查制与实质审查制并存",
+        "source_rounds": [
+          4
+        ],
+        "index": 20,
+        "contradiction": false,
+        "reason": "中国专利制度发展历程与审查特点陈述客观准确，跨轮一致。"
+      },
+      {
+        "fact_point": "节点 patent-law-foundation 掌握度 PL=1.0",
+        "source_rounds": [
+          4
+        ],
+        "index": 21,
+        "contradiction": false,
+        "reason": "节点 patent-law-foundation 在第4轮掌握度更新为 PL=1.0，学习进度递进合理，无矛盾。"
+      },
+      {
+        "fact_point": "节点 patent-system-overview 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 22,
+        "contradiction": false,
+        "reason": "节点 patent-system-overview 的掌握度在第4轮记录为 PL=0.15，无跨轮冲突陈述。"
+      },
+      {
+        "fact_point": "节点 patent-law-framework 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 23,
+        "contradiction": false,
+        "reason": "节点 patent-law-framework 的掌握度在第4轮记录为 PL=0.15，无跨轮冲突陈述。"
+      },
+      {
+        "fact_point": "节点 patent-rights-nature 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 24,
+        "contradiction": false,
+        "reason": "节点 patent-rights-nature 的掌握度在第4轮记录为 PL=0.15，无跨轮冲突陈述。"
+      },
+      {
+        "fact_point": "节点 patentability-substantive 掌握度 PL=0.993",
+        "source_rounds": [
+          4
+        ],
+        "index": 0,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 novelty 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 1,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 prior-art-definition 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 2,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 conflicting-application 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 3,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 grace-period 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 4,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 inventive-step 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 5,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 three-step-method 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 6,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 person-skilled-in-art 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 7,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 practical-applicability 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 8,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 design-patentability 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 9,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 non-patentable-subject 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 10,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 scientific-discovery-vs-invention 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 11,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 medical-method-exclusion 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 12,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 public-order-morality 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 13,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 patent-application-process 掌握度 PL=0.9919",
+        "source_rounds": [
+          4
+        ],
+        "index": 14,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 application-documents 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 15,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 specification-requirements 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 16,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 claims-drafting-basics 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 17,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 priority-right 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 18,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 filing-date 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 19,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 divisional-application 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 20,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 patent-examination 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 21,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 preliminary-examination 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 22,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 substantive-examination 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 23,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 office-action-response 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 24,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在跨轮矛盾。"
+      },
+      {
+        "fact_point": "节点 amendment-limits 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 0,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 patent-reexamination 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 1,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 reexamination-request 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 2,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 collegial-review 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 3,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 patent-invalidation 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 4,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 invalidation-grounds 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 5,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 oral-proceeding 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 6,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 patent-rights-protection 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 7,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 protection-scope 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 8,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 doctrine-of-equivalents 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 9,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 claim-interpretation 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 10,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 infringement-types 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 11,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 infringement-defenses 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 12,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 bolar-exemption 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 13,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 prior-use-right 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 14,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 remedies 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 15,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 patent-agency-practice 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 16,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 claims-drafting-advanced 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 17,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 oa-response-practice 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 18,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 invalidation-practice 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 19,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 related-laws 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 20,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 civil-law-basics 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 21,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 contract-law-tech 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 22,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 administrative-procedure 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 23,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 civil-procedure 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 24,
+        "contradiction": false,
+        "reason": "该事实点仅在第4轮出现，无跨轮数据对比，不存在矛盾"
+      },
+      {
+        "fact_point": "节点 trips-agreement 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 0,
+        "contradiction": false,
+        "reason": "仅在第4轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 pct-system 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 1,
+        "contradiction": false,
+        "reason": "仅在第4轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 pct-filing 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 2,
+        "contradiction": false,
+        "reason": "仅在第4轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 pct-national-phase 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 3,
+        "contradiction": false,
+        "reason": "仅在第4轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 foreign-priority 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 4,
+        "contradiction": false,
+        "reason": "仅在第4轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 domestic-priority 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 5,
+        "contradiction": false,
+        "reason": "仅在第4轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 scientific-research-exemption 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 6,
+        "contradiction": false,
+        "reason": "仅在第4轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 direct-infringement 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 7,
+        "contradiction": false,
+        "reason": "仅在第4轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 indirect-infringement 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 8,
+        "contradiction": false,
+        "reason": "仅在第4轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 independent-claim 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 9,
+        "contradiction": false,
+        "reason": "仅在第4轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 dependent-claim 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 10,
+        "contradiction": false,
+        "reason": "仅在第4轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 employee-invention 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 11,
+        "contradiction": false,
+        "reason": "仅在第4轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 exhaustion-of-rights 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 12,
+        "contradiction": false,
+        "reason": "仅在第4轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 implied-license 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 13,
+        "contradiction": false,
+        "reason": "仅在第4轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "节点 general-consumer 掌握度 PL=0.15",
+        "source_rounds": [
+          4
+        ],
+        "index": 14,
+        "contradiction": false,
+        "reason": "仅在第4轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "patent-law-foundation 专利制度的基本概念与特征：独占性、时间性、地域性",
+        "source_rounds": [
+          5
+        ],
+        "index": 15,
+        "contradiction": false,
+        "reason": "仅在第5轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "patent-law-foundation 专利保护的三种客体：发明、实用新型、外观设计",
+        "source_rounds": [
+          5
+        ],
+        "index": 16,
+        "contradiction": false,
+        "reason": "与第1轮、第2轮关于专利客体（发明、实用新型、外观设计）的表述完全一致，无矛盾"
+      },
+      {
+        "fact_point": "patent-law-foundation 专利制度的作用：激励发明创造、促进技术公开、推动技术应用和经济发展",
+        "source_rounds": [
+          5
+        ],
+        "index": 17,
+        "contradiction": false,
+        "reason": "仅在第5轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "patent-law-foundation 中国专利制度发展历程与特点：早期公开延迟审查、初步审查制与实质审查制并存",
+        "source_rounds": [
+          5
+        ],
+        "index": 18,
+        "contradiction": false,
+        "reason": "仅在第5轮出现，无跨轮冲突"
+      },
+      {
+        "fact_point": "patent-law-foundation 中国专利制度体系：专利法、专利法实施细则、专利审查指南",
+        "source_rounds": [
+          1
+        ],
+        "index": 19,
+        "contradiction": false,
+        "reason": "与第2轮（index 23）关于中国专利制度体系的表述完全一致，无矛盾"
+      },
+      {
+        "fact_point": "《专利法》第二条：本法所称的发明创造是指发明、实用新型和外观设计；并分别规定三者定义。",
+        "source_rounds": [
+          1
+        ],
+        "index": 20,
+        "contradiction": false,
+        "reason": "与第2轮、第5轮关于《专利法》第二条客体划分一致，无矛盾"
+      },
+      {
+        "fact_point": "下列哪一项完整列出了《专利法》第二条所称的发明创造？",
+        "source_rounds": [
+          1
+        ],
+        "index": 21,
+        "contradiction": false,
+        "reason": "仅在第1轮出现的问题，无跨轮冲突"
+      },
+      {
+        "fact_point": "某团队形成三项成果：正极材料制备方法、仅改变电池壳体内部卡扣构造的方案、仅改变外壳局部图案和色彩搭配的设计。按《专利法》第二条，三项成果依次最可能对应哪三类客体？",
+        "source_rounds": [
+          1
+        ],
+        "index": 22,
+        "contradiction": false,
+        "reason": "仅在第1轮出现的案例题，无跨轮冲突"
+      },
+      {
+        "fact_point": "patent-law-foundation 中国专利制度体系：专利法、专利法实施细则、专利审查指南",
+        "source_rounds": [
+          2
+        ],
+        "index": 23,
+        "contradiction": false,
+        "reason": "与第1轮（index 19）关于中国专利制度体系的表述完全一致，无矛盾"
+      },
+      {
+        "fact_point": "patent-law-foundation 专利保护的三种客体：发明、实用新型、外观设计（《专利法》第二条）",
+        "source_rounds": [
+          2
+        ],
+        "index": 24,
+        "contradiction": false,
+        "reason": "与第1轮（index 20）、第5轮（index 16）关于三种客体的表述完全一致，无矛盾"
+      },
+      {
+        "fact_point": "《中华人民共和国专利法》第二条",
+        "source_rounds": [
+          2
+        ],
+        "index": 0,
+        "contradiction": false,
+        "reason": "引用《中华人民共和国专利法》第二条，与其他轮次关于专利法第二条（发明创造客体定义）的引用与内容一致，无矛盾。"
+      },
+      {
+        "fact_point": "《中华人民共和国专利法》第三条",
+        "source_rounds": [
+          2
+        ],
+        "index": 1,
+        "contradiction": false,
+        "reason": "引用《中华人民共和国专利法》第三条，与其他轮次对应法条引用一致，无矛盾。"
+      },
+      {
+        "fact_point": "《中华人民共和国专利法》第一条",
+        "source_rounds": [
+          2
+        ],
+        "index": 2,
+        "contradiction": false,
+        "reason": "引用《中华人民共和国专利法》第一条，与第3、5轮中第一条的引用一致，无矛盾。"
+      },
+      {
+        "fact_point": "《中华人民共和国专利法》第二十二条",
+        "source_rounds": [
+          2
+        ],
+        "index": 3,
+        "contradiction": false,
+        "reason": "引用《中华人民共和国专利法》第二十二条，与第3轮关于专利授权实质条件的引用相符，无矛盾。"
+      },
+      {
+        "fact_point": "《中华人民共和国专利法》第三十九条、第四十条",
+        "source_rounds": [
+          2
+        ],
+        "index": 4,
+        "contradiction": false,
+        "reason": "引用《中华人民共和国专利法》第三十九条、第四十条，与第3轮中关于发明和实用新型/外观授权公告条款的引用完全一致，无矛盾。"
+      },
+      {
+        "fact_point": "《中华人民共和国专利法》第八十二条",
+        "source_rounds": [
+          2
+        ],
+        "index": 5,
+        "contradiction": false,
+        "reason": "引用《中华人民共和国专利法》第八十二条，为独立的法条索引，跨轮次无冲突。"
+      },
+      {
+        "fact_point": "根据《专利法》第二条，以下哪一项最符合实用新型的法定客体？",
+        "source_rounds": [
+          2
+        ],
+        "index": 6,
+        "contradiction": false,
+        "reason": "考察《专利法》第二条实用新型法定客体，与其他轮次关于第二条客体划分（发明、实用新型、外观设计）的知识体系完全一致，无矛盾。"
+      },
+      {
+        "fact_point": "patent-law-foundation 中国专利制度体系：专利法、专利法实施细则、专利审查指南（详见子节点 patent-law-framework）",
+        "source_rounds": [
+          3
+        ],
+        "index": 7,
+        "contradiction": false,
+        "reason": "陈述中国专利制度体系包含专利法、实施细则和审查指南，与第4、5轮的知识框架完全一致，无矛盾。"
+      },
+      {
+        "fact_point": "patent-law-foundation 专利保护的三种客体：发明、实用新型、外观设计（专利法第2条）",
+        "source_rounds": [
+          3
+        ],
+        "index": 8,
+        "contradiction": false,
+        "reason": "陈述专利保护的三种客体为发明、实用新型、外观设计（专利法第2条），与第2、4、5轮的相关法条与题目内容一致，无矛盾。"
+      },
+      {
+        "fact_point": "《专利法》第一条",
+        "source_rounds": [
+          3
+        ],
+        "index": 9,
+        "contradiction": false,
+        "reason": "引用《专利法》第一条（简称与全称一致），跨轮次引用无矛盾。"
+      },
+      {
+        "fact_point": "《专利法》第二条",
+        "source_rounds": [
+          3
+        ],
+        "index": 10,
+        "contradiction": false,
+        "reason": "引用《专利法》第二条，与其他轮次一致，无矛盾。"
+      },
+      {
+        "fact_point": "《专利法》第二十二条第一款至第四款",
+        "source_rounds": [
+          3
+        ],
+        "index": 11,
+        "contradiction": false,
+        "reason": "引用《专利法》第二十二条第一款至第四款，是对第2轮第二十二条的具体化展开，无矛盾。"
+      },
+      {
+        "fact_point": "《专利法》第三十九条、第四十条",
+        "source_rounds": [
+          3
+        ],
+        "index": 12,
+        "contradiction": false,
+        "reason": "引用《专利法》第三十九条、第四十条，与第2轮一致，无矛盾。"
+      },
+      {
+        "fact_point": "《专利法实施细则》第一百四十八条",
+        "source_rounds": [
+          3
+        ],
+        "index": 13,
+        "contradiction": false,
+        "reason": "引用《专利法实施细则》第一百四十八条，法条引用独立且正确，无跨轮矛盾。"
+      },
+      {
+        "fact_point": "根据《专利法》第二条，下列哪一项属于发明专利保护的客体？",
+        "source_rounds": [
+          3
+        ],
+        "index": 14,
+        "contradiction": false,
+        "reason": "考察《专利法》第二条发明专利客体，与第2、4、5轮中专利客体分类知识点保持一致，无矛盾。"
+      },
+      {
+        "fact_point": "本轮基础题连续正确，说明专利法基础与专利授权相关的底层框架已稳定；当前更需要验证的是从规则理解到案例判断的迁移能力。学习偏好仍以材料案例、图示化输入和先总后分的节奏为主，情绪状态保持主动投入。",
+        "source_rounds": [
+          3
+        ],
+        "index": 15,
+        "contradiction": false,
+        "reason": "画像状态及学情评估描述，属于阶段性教学分析，与各轮次学习进度和事实相吻合，无矛盾。"
+      },
+      {
+        "fact_point": "patent-law-foundation 中国专利制度体系：专利法、专利法实施细则、专利审查指南",
+        "source_rounds": [
+          4
+        ],
+        "index": 16,
+        "contradiction": false,
+        "reason": "陈述中国专利制度体系组成，与第3轮、第5轮完全一致，无矛盾。"
+      },
+      {
+        "fact_point": "《中华人民共和国专利法》第二条：发明，是指对产品、方法或者其改进所提出的新的技术方案；实用新型，是指对产品的形状、构造或者其结合所提出的适于实用的新的技术方案；外观设计，是指对产品的整体或者局部的形状、图案或者其结合以及色彩与形状、图案的结合所作出的富有美感并适于工业应用的新设计。",
+        "source_rounds": [
+          4
+        ],
+        "index": 17,
+        "contradiction": false,
+        "reason": "准确陈述《专利法》第二条中发明、实用新型、外观设计的定义，与所有轮次相关知识点高度一致，无矛盾。"
+      },
+      {
+        "fact_point": "根据《专利法》第二条，下列哪一组属于专利法规定的三种基本保护客体？",
+        "source_rounds": [
+          4
+        ],
+        "index": 18,
+        "contradiction": false,
+        "reason": "考察三种基本保护客体，与第3、4、5轮中《专利法》第二条的客体定义一致，无矛盾。"
+      },
+      {
+        "fact_point": "patent-law-foundation 中国专利制度体系：专利法、专利法实施细则、专利审查指南",
+        "source_rounds": [
+          5
+        ],
+        "index": 19,
+        "contradiction": false,
+        "reason": "陈述中国专利制度体系组成，与第3、4轮完全一致，无矛盾。"
+      },
+      {
+        "fact_point": "《中华人民共和国专利法》第一条",
+        "source_rounds": [
+          5
+        ],
+        "index": 20,
+        "contradiction": false,
+        "reason": "引用《中华人民共和国专利法》第一条，跨轮次一致，无矛盾。"
+      },
+      {
+        "fact_point": "《中华人民共和国专利法》第二条",
+        "source_rounds": [
+          5
+        ],
+        "index": 21,
+        "contradiction": false,
+        "reason": "引用《中华人民共和国专利法》第二条，跨轮次一致，无矛盾。"
+      },
+      {
+        "fact_point": "《中华人民共和国专利法》第三条",
+        "source_rounds": [
+          5
+        ],
+        "index": 22,
+        "contradiction": false,
+        "reason": "引用《中华人民共和国专利法》第三条，与第2轮一致，无矛盾。"
+      },
+      {
+        "fact_point": "根据《中华人民共和国专利法》第二条，本法所称“发明创造”包括哪三类？",
+        "source_rounds": [
+          5
+        ],
+        "index": 23,
+        "contradiction": false,
+        "reason": "考察“发明创造”包含的三类客体，与第3、4轮中的客体定义一致，无矛盾。"
+      },
+      {
+        "fact_point": "《专利法》第三十四条：发明专利申请经初步审查认为符合本法要求的，自申请日起满十八个月即行公布；可以根据申请人的请求早日公布。",
+        "source_rounds": [
+          1
+        ],
+        "index": 24,
+        "contradiction": false,
+        "reason": "陈述《专利法》第三十四条发明公布期的法律规定，法条表述准确，与其他轮次无矛盾冲突。"
+      },
+      {
+        "fact_point": "《专利法》第三十五条：发明专利申请自申请日起三年内，国务院专利行政部门可以根据申请人随时提出的请求，对其申请进行实质审查。",
+        "source_rounds": [
+          1
+        ],
+        "index": 0,
+        "contradiction": false,
+        "reason": "准确引用《专利法》第三十五条关于发明专利实质审查请求期限的规定，与其他轮次内容无冲突与矛盾。"
+      },
+      {
+        "fact_point": "按照《专利法》第二十八条，专利申请文件以邮寄方式提交时，申请日通常如何确定？",
+        "source_rounds": [
+          4
+        ],
+        "index": 1,
+        "contradiction": false,
+        "reason": "围绕《专利法》第二十八条关于邮寄确定申请日的规则提问，概念清晰，与其他轮次无矛盾。"
+      },
+      {
+        "fact_point": "涉案材料发明的申请日为2025年6月1日。甲文献在2024年公开，乙为中国专利申请，申请日在涉案申请日前但于2025年8月公开。下列判断最准确的是？",
+        "source_rounds": [
+          4
+        ],
+        "index": 2,
+        "contradiction": false,
+        "reason": "案例中甲为现有技术、乙为抵触申请的设定符合专利法新颖性/创造性评价体系，与其他轮次表述一致。"
+      },
+      {
+        "fact_point": "仅就中国专利申请的一般申请日确定规则而言，下列哪项表述正确？",
+        "source_rounds": [
+          5
+        ],
+        "index": 3,
+        "contradiction": false,
+        "reason": "关于中国专利申请日确定规则的考察，与前序轮次中涉及申请日认定的知识点保持逻辑一致。"
+      },
+      {
+        "fact_point": "《中华人民共和国专利法》第二十二条：授予专利权的发明和实用新型，应当具备新颖性、创造性和实用性；现有技术是指申请日以前在国内外为公众所知的技术。",
+        "source_rounds": [
+          4
+        ],
+        "index": 4,
+        "contradiction": false,
+        "reason": "准确引用《专利法》第二十二条关于三性及现有技术定义的法条，与其他轮次完全自洽。"
+      },
+      {
+        "fact_point": "《中华人民共和国专利法》第二十六条第一款：申请发明或者实用新型专利的，应当提交请求书、说明书及其摘要和权利要求书等文件。",
+        "source_rounds": [
+          4
+        ],
+        "index": 5,
+        "contradiction": false,
+        "reason": "准确引用《专利法》第二十六条第一款关于申请发明/实用新型应当提交的文件要求，无矛盾。"
+      },
+      {
+        "fact_point": "判断新颖性时，应当将各项权利要求分别与每一项现有技术或申请在先公布、公告在后的相关技术内容单独进行比较，不得将几项现有技术或者一份对比文件中的多项技术方案组合进行对比。",
+        "source_rounds": [
+          4
+        ],
+        "index": 6,
+        "contradiction": false,
+        "reason": "准确阐释了新颖性审查中的“单独对比”原则，与其他轮次关于专利审查规则的表述一致。"
+      },
+      {
+        "fact_point": "申请在先、公开在后的中国专利申请文件不属于现有技术，只能单独用于评价权利要求的新颖性，不可以与公知常识或其他对比文件结合评价创造性。",
+        "source_rounds": [
+          4
+        ],
+        "index": 7,
+        "contradiction": false,
+        "reason": "准确阐明了抵触申请的定义及其仅用于单独评价新颖性、不能评价创造性的规则，与 index 2、4、6 逻辑完全闭环且一致。"
+      }
+    ],
+    "timestamp": "2026-08-27 10:19:01"
+  }
+}

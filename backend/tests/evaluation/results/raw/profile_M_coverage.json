@@ -1,0 +1,31 @@
+{
+  "profile_id": "profile_M",
+  "session_id": "eval-profile_M",
+  "coverage": {
+    "section_coverage": 0.0,
+    "weakness_hit_rate": 0.0,
+    "confusion_coverage": 0.0,
+    "_debug": {
+      "actual_sections": [
+        "patent-law-foundation"
+      ],
+      "actual_weaknesses": [],
+      "actual_confusions": [],
+      "exp_sections": [
+        "patent-rights-protection",
+        "patentability-substantive"
+      ],
+      "exp_weaknesses": [
+        "novelty",
+        "抵触申请",
+        "权利要求解释规则",
+        "等同原则"
+      ],
+      "exp_confusions": [
+        "claim-interpretation|doctrine-of-equivalents",
+        "conflicting-application|prior-art-definition",
+        "inventive-step|novelty"
+      ]
+    }
+  }
+}

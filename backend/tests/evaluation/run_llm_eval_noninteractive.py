@@ -39,6 +39,9 @@ def _inject_config(learner_prefix: str) -> dict:
 
     幂等：首次注入时把未加后缀的 base 缓存到 output.base_dir，重复调用不会
     因为 dir 已被改写而叠加后缀。
+
+    输出目录统一为 ``<base_dir>/<learner_prefix>/``（和 ``common.llm_results_dir``
+    保持一致），其中 ``base_dir`` 默认指向 ``backend/tests/evaluation/results/record``。
     """
     config = evaluator_LLM.load_config()
     config["learner_prefix"] = learner_prefix
@@ -47,8 +50,8 @@ def _inject_config(learner_prefix: str) -> dict:
         output["base_dir"] = output.get(
             "dir", "backend/tests/evaluation/results/record"
         )
-    base = output["base_dir"]
-    output["dir"] = base if learner_prefix == "multi" else f"{base}_{learner_prefix}"
+    base = output["base_dir"].rstrip("/\\")
+    output["dir"] = f"{base}/{learner_prefix}" if base else learner_prefix
     return config
 
 

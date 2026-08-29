@@ -1,0 +1,31 @@
+{
+  "profile_id": "profile_B",
+  "session_id": "eval-profile_B",
+  "coverage": {
+    "section_coverage": 0.0,
+    "weakness_hit_rate": 0.0,
+    "confusion_coverage": 0.0,
+    "_debug": {
+      "actual_sections": [
+        "patent-law-foundation"
+      ],
+      "actual_weaknesses": [],
+      "actual_confusions": [],
+      "exp_sections": [
+        "patent-rights-protection",
+        "patentability-substantive"
+      ],
+      "exp_weaknesses": [
+        "一般消费者",
+        "外观设计授权条件",
+        "权利要求解释规则",
+        "等同原则"
+      ],
+      "exp_confusions": [
+        "claim-interpretation|doctrine-of-equivalents",
+        "design-patentability|novelty",
+        "general-consumer|person-skilled-in-art"
+      ]
+    }
+  }
+}
