@@ -13,12 +13,32 @@
 ## 第二步：准备模型卷（只做一次）
 
 ```bash
-docker volume create patent-tutor-evaluation-models
-docker compose -p evaluation-bootstrap --env-file .env --env-file docker/evaluation/normal.env \
-  -f docker-compose.evaluation.yml run --rm --no-deps backend true
+docker volume inspect patent-tutor-evaluation-models >/dev/null 2>&1 || \
+  docker volume create patent-tutor-evaluation-models
+
+(
+  set -a
+  . .env
+  . docker/evaluation/normal.env
+  set +a
+  export LEARNER_PREFIX="$EVAL_LEARNER_PREFIX"
+
+  docker compose \
+    -p evaluation-bootstrap \
+    --env-file .env \
+    --env-file docker/evaluation/normal.env \
+    -f docker-compose.evaluation.yml \
+    run --build --rm --no-deps backend true
+)
 ```
 
-等待模型下载完成（首次较慢），之后再开始正式运行。
+这里的 `LEARNER_PREFIX` 是 Compose 解析整份配置时必须的变量，虽然本次只运行
+`backend` 服务。`--build` 确保模型初始化使用当前源码构建的镜像。
+
+首次运行会通过 `docker/entrypoint.sh` 下载 `bge-m3` 和
+`bge-reranker-v2-m3` 到共享模型卷，等待命令完成后再开始正式运行。之后五组评测栈
+复用该模型卷，不需要重复下载。该步骤不会初始化或复用评测业务数据库；每组 MySQL
+数据卷由正式评测栈单独管理。
 
 ## 第三步：先冒烟一组（可选但推荐）
 
