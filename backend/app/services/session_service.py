@@ -674,7 +674,10 @@ class SessionService:
         has_generated_course = bool(
             course_record.status == "completed"
             and isinstance(course_package, dict)
-            and course_package.get("assessment")
+            and (
+                course_package.get("assessment")
+                or course_package.get("interactive_questions")
+            )
         )
         current_node_id = str(course_decision.get("current_node_id") or "")
         current_node_in_course = any(
