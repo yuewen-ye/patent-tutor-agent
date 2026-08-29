@@ -98,11 +98,16 @@ docker volume rm \
   evaluation-single-model_mysql-data \
   evaluation-no-debate_mysql-data
 
-rm -rf artifacts/evaluation/* backend/tests/evaluation/results/*
-mkdir -p artifacts/evaluation backend/tests/evaluation/results
+# 清空课程生成产物内容，保留五组目录及 system/results 目录
 for exp in normal no-rag no-rerank single-model no-debate; do
   mkdir -p "artifacts/evaluation/$exp/system" "artifacts/evaluation/$exp/results"
+  find "artifacts/evaluation/$exp/system" -mindepth 1 -delete
+  find "artifacts/evaluation/$exp/results" -mindepth 1 -delete
 done
+
+# 清空外部 LLM 评分结果内容，保留评分结果根目录
+mkdir -p backend/tests/evaluation/results
+find backend/tests/evaluation/results -mindepth 1 -delete
 ```
 
 然后按顺序执行。第一步的五个课程生成栈并行运行；第二步的五个外部评分容器也并行运行：
