@@ -5,21 +5,29 @@
 
 ## 输入 / 输出
 
-- **输入**：`backend/tests/evaluation/artifacts/eval-<前缀>-*/round-XX/` 下的课程产物
+- **输入**：第一步课程矩阵生成的 `artifacts/evaluation/<组>/results/eval-<前缀>-*/round-XX/` 下的课程产物
 - **输出**：`backend/tests/evaluation/results/record_<前缀>/`（factpoints / profile_indicator / round_indicator 等）
 - **5 个类别**：`eval-normal` / `eval-no-rag` / `eval-no-rerank` / `eval-single-model` / `eval-no-debate`
 - **画像选择**：默认评该前缀下**有产物的全部画像**（等价交互式的"填 all"）；可用 `LLM_EVAL_PROFILES=1-2-3` 限定
 - **已完成的 section 自动跳过**（⏭️），只补缺失或失败的
 
-> ⚠️ 注意：Docker 课程矩阵的产物在 `artifacts/evaluation/<组>/`，**测评不读它们**；测评只认
-> `backend/tests/evaluation/artifacts/` 下的产物。要用新产物评分，需先放到该目录对应前缀下。
+第二步的每个评分容器只读对应的第一步结果目录，不会读取其他类别或旧样本：
+
+| 评分类别 | 第一阶段输入目录 | 评分输出目录 |
+|---|---|---|
+| `eval-normal` | `artifacts/evaluation/normal/results/` | `backend/tests/evaluation/results/record_eval-normal/` |
+| `eval-no-rag` | `artifacts/evaluation/no-rag/results/` | `backend/tests/evaluation/results/record_eval-no-rag/` |
+| `eval-no-rerank` | `artifacts/evaluation/no-rerank/results/` | `backend/tests/evaluation/results/record_eval-no-rerank/` |
+| `eval-single-model` | `artifacts/evaluation/single-model/results/` | `backend/tests/evaluation/results/record_eval-single-model/` |
+| `eval-no-debate` | `artifacts/evaluation/no-debate/results/` | `backend/tests/evaluation/results/record_eval-no-debate/` |
 
 ## 第一步：准备
 
 1. 仓库根目录 `.env` 已配置 LLM key，`config/agents.yaml` 存在。
 2. `backend/tests/evaluation/LLM/config/external_llm.yaml` 存在（外部 LLM 评估配置）。
 3. Docker 可用：`docker compose version`。
-4. 待评分产物已在 `backend/tests/evaluation/artifacts/eval-<前缀>-*/`。
+4. 第一步已成功完成，五组输入目录已生成在 `artifacts/evaluation/<组>/results/`。
+5. 第二步会将每组结果目录只读挂载到评分容器的 `backend/tests/evaluation/artifacts/`，无需手工复制文件。
 
 ## 第二步：容器并行跑（推荐，`run-llm-eval-matrix.sh`）
 
@@ -57,7 +65,7 @@ done
 
 ## 第三步（备选）：交互式 bootrun 手动跑
 
-不用容器并行时，可交互式跑（菜单选 4 外部 LLM 评估 → 选 2 画像评测 → 填画像 → 填 all）：
+不用容器并行时，可交互式跑（菜单选 4 外部 LLM 评估 → 选 2 画像评测 → 填画像 → 填 all）。交互式方式默认读取旧的 `backend/tests/evaluation/artifacts/`，不适用于第一步生成的五组目录；本轮推荐使用上面的 Docker 并行命令。
 
 ```bash
 uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-normal
@@ -70,7 +78,40 @@ uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner
 uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-normal 2>&1 | tee artifacts/eval-normal-terminal.log
 ```
 
-## 第四步：失败排查
+## 第四步：重新开始一轮完整评测
+
+如果需要确保数据库和历史结果都不影响本轮，先停止旧容器并删除五组 MySQL 数据卷：
+
+```bash
+for exp in normal no-rag no-rerank single-model no-debate; do
+  (set -a; . "docker/evaluation/$exp.env"; set +a
+   export LEARNER_PREFIX="$EVAL_LEARNER_PREFIX"
+   docker compose -p "evaluation-$exp" --env-file .env \
+     --env-file "docker/evaluation/$exp.env" -f docker-compose.evaluation.yml \
+     down --remove-orphans)
+done
+
+docker volume rm \
+  evaluation-normal_mysql-data \
+  evaluation-no-rag_mysql-data \
+  evaluation-no-rerank_mysql-data \
+  evaluation-single-model_mysql-data \
+  evaluation-no-debate_mysql-data
+
+rm -rf artifacts/evaluation backend/tests/evaluation/results
+mkdir -p artifacts/evaluation backend/tests/evaluation/results
+```
+
+然后按顺序执行。第一步的五个课程生成栈并行运行；第二步的五个外部评分容器也并行运行：
+
+```bash
+./scripts/run-evaluation-matrix.sh
+./scripts/run-llm-eval-matrix.sh
+```
+
+第一步结束后，课程产物位于五个 `artifacts/evaluation/<组>/results/` 目录；第二步会分别读取这些目录并将结果写入五个 `record_eval-*` 目录。第一步默认会删除容器但保留 MySQL 卷，因此若要彻底清理，必须额外执行上面的卷删除命令。
+
+## 第五步：失败排查
 
 失败 section 会在产物里写入失败标记，直接查（5 类全查）：
 

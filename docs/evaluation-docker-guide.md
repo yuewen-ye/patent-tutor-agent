@@ -42,8 +42,8 @@ docker compose -p evaluation-bootstrap --env-file .env --env-file docker/evaluat
 ./scripts/run-evaluation-matrix.sh --experiments normal,no-rag --profiles 6-9-10-13-15 --round 3
 ```
 
-脚本行为：每组日志写入 `artifacts/evaluation/<组>/results/compose.log`（与评测产物同目录），全部结束后自动清理容器
-（保留数据卷，方便复查）。
+脚本行为：每组日志写入 `artifacts/evaluation/<组>/results/compose.log`（与评测产物同目录），五组并行完成后自动清理容器，但保留各组 MySQL 数据卷。
+如需完全从零开始，必须额外删除五组 MySQL 卷（见第八步）。
 
 ## 第五步：运行中/运行后查看容器日志
 
@@ -189,18 +189,18 @@ artifacts/evaluation/<组>/
 
 | 类别 | 数据位置 | learner 前缀 |
 |---|---|---|
-| no-debate（无辩论，原产物） | `backend/tests/evaluation/artifacts/eval-no-debate-*` | `eval-no-debate` |
+| no-debate（无辩论） | `artifacts/evaluation/no-debate/results/eval-no-debate-*` | `eval-no-debate` |
 | normal | `artifacts/evaluation/normal/results/eval-normal-*` | `eval-normal` |
 | no-rag | `artifacts/evaluation/no-rag/results/eval-no-rag-*` | `eval-no-rag` |
 | no-rerank | `artifacts/evaluation/no-rerank/results/eval-no-rerank-*` | `eval-no-rerank` |
 | single-model | `artifacts/evaluation/single-model/results/eval-single-model-*` | `eval-single-model` |
 
 ```bash
-uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-no-debate
-uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-normal
-uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-no-rag
-uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-no-rerank
-uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-single-model
+uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-no-debate --artifact-dir artifacts/evaluation/no-debate/results
+uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-normal --artifact-dir artifacts/evaluation/normal/results
+uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-no-rag --artifact-dir artifacts/evaluation/no-rag/results
+uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-no-rerank --artifact-dir artifacts/evaluation/no-rerank/results
+uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner-prefix eval-single-model --artifact-dir artifacts/evaluation/single-model/results
 ```
 
 交互菜单：
@@ -213,7 +213,7 @@ uv run python backend/tests/evaluation/evaluation_test_v1.1_bootrun.py --learner
 注意：
 
 1. 报告固定写到 `backend/tests/evaluation/results/reports/report_full.md`，每组跑完会被覆盖，跑完一组立即改名存档（如 `report_no-debate.md`）。
-2. **不要选菜单 `3`（运行系统）**：会启动新一轮真实运行并写回 `backend/tests/evaluation/artifacts/`，误选会污染现有产物。
+2. **不要选菜单 `3`（运行系统）**：会启动新一轮真实运行；五组 Docker 矩阵产物应以 `artifacts/evaluation/<组>/results/` 为准，避免把交互式运行结果混入本轮数据。
 3. 指标不落盘，只打印终端；外部 LLM 评估结果在 `backend/tests/evaluation/results/record_<前缀>/*.json`（按类别隔离）。
 
 ### 并行跑外部 LLM 评估（多容器，不影响正在跑的进程）
@@ -241,14 +241,28 @@ uv run python backend/tests/evaluation/run_llm_eval_noninteractive.py \
 
 ## 第八步：清理
 
-- 日常：脚本已自动清理容器；保留 MySQL 卷便于复查。
-- 想保留容器排障：加 `--keep-stacks` 运行，之后手动 `docker compose -p evaluation-<组> ... down --remove-orphans`。
-- 某组要完全重来（删数据卷 + 产物）：
+- 日常：脚本已自动清理容器，但保留五组 MySQL 卷。
+- 想保留容器排障：加 `--keep-stacks` 运行，之后用对应类别的 `.env` 手动执行 `down`。
+- 要完全重来（删除五组数据库、容器和运行产物）：
 
 ```bash
-docker compose -p evaluation-normal --env-file .env --env-file docker/evaluation/normal.env \
-  -f docker-compose.evaluation.yml down --remove-orphans
-docker volume ls | grep evaluation-normal          # 核对后删除对应卷
-docker volume rm <该组的mysql卷名>
-rm -rf artifacts/evaluation/normal
+for exp in normal no-rag no-rerank single-model no-debate; do
+  (set -a; . "docker/evaluation/$exp.env"; set +a
+   export LEARNER_PREFIX="$EVAL_LEARNER_PREFIX"
+   docker compose -p "evaluation-$exp" --env-file .env \
+     --env-file "docker/evaluation/$exp.env" -f docker-compose.evaluation.yml \
+     down --remove-orphans)
+done
+
+docker volume rm \
+  evaluation-normal_mysql-data \
+  evaluation-no-rag_mysql-data \
+  evaluation-no-rerank_mysql-data \
+  evaluation-single-model_mysql-data \
+  evaluation-no-debate_mysql-data
+
+rm -rf artifacts/evaluation backend/tests/evaluation/results
+mkdir -p artifacts/evaluation backend/tests/evaluation/results
 ```
+
+上述命令不会删除共享模型卷 `patent-tutor-evaluation-models`。如果某个卷不存在，`docker volume rm` 会报错；可先用 `docker volume ls | grep evaluation` 核对，或只删除实际存在的卷。
