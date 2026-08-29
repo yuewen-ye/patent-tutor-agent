@@ -116,7 +116,8 @@ services:
       - .env
     environment:
       # 类别前缀与可选参数；也可用 -e LEARNER_PREFIX=... 覆盖。
-      LEARNER_PREFIX: ${LEARNER_PREFIX:?set LEARNER_PREFIX}
+      # 仅 bootrun 评分服务使用；默认值用于让 compose config/logs 等非 bootrun 命令可解析整份文件。
+      LEARNER_PREFIX: ${LEARNER_PREFIX:-eval-normal}
       LLM_EVAL_PROFILES: ${LLM_EVAL_PROFILES:-}
       LLM_EVAL_ROUNDS: ${LLM_EVAL_ROUNDS:-all}
       LLM_EVAL_SYSTEM: ${LLM_EVAL_SYSTEM:-false}
