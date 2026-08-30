@@ -61,3 +61,32 @@ def test_profiles_with_run_data_follows_learner_prefix(tmp_path: Path) -> None:
             common.SYS_ARTIFACTS_DIR,
             common.EVAL_DIR,
         ) = _orig
+
+
+@pytest.mark.unit
+def test_next_round_idx_uses_artifact_dir_bootrun(tmp_path: Path) -> None:
+    """_next_round_idx 必须跟随 --artifact-dir，避免覆盖已有轮次。"""
+    # 模拟容器：EVAL_ARTIFACTS_DIR 指向镜像内空目录。
+    _orig = common.EVAL_ARTIFACTS_DIR
+    image_dir = tmp_path / "image-artifacts"
+    image_dir.mkdir()
+    common.EVAL_ARTIFACTS_DIR = image_dir
+
+    # 真实挂载目录已有 round-01 + round-02。
+    results = tmp_path / "results"
+    learner_dir = results / "eval-single-model-H"
+    (learner_dir / "round-01").mkdir(parents=True)
+    (learner_dir / "round-02").mkdir(parents=True)
+
+    try:
+        # 显式传入真实目录：应为 max(1, 2) + 1 = 3。
+        assert (
+            br._next_round_idx(
+                "H", learner_prefix="eval-single-model", artifact_dir=results
+            )
+            == 3
+        )
+        # 缺省仍走 EVAL_ARTIFACTS_DIR（保持指标/报告等既有调用语义）。
+        assert br._next_round_idx("H", learner_prefix="eval-single-model") == 1
+    finally:
+        common.EVAL_ARTIFACTS_DIR = _orig

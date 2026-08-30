@@ -39,13 +39,19 @@ import program.report as report  # noqa: E402
 
 # ── helpers ─────────────────────────────────────────────────────────────────
 
-def _profiles_with_run_data(learner_prefix: str = "multi") -> list[str]:
-    """列出磁盘上有运行痕迹的画像 ID（跟随 --learner-prefix）。"""
+def _profiles_with_run_data(
+    learner_prefix: str = "multi",
+    artifact_dir: str | Path | None = None,
+) -> list[str]:
+    """列出磁盘上有运行痕迹的画像 ID（跟随 --learner-prefix / --artifact-dir）。"""
     result: list[str] = []
+    base_dir = Path(artifact_dir) if artifact_dir is not None else common.EVAL_ARTIFACTS_DIR
     for pid in common.list_profile_ids():
         letter = common.profile_letter_from_id(pid)
         learner_id = f"{learner_prefix}-{letter}"
         paths = [
+            base_dir / learner_id,
+            base_dir / pid,
             common.EVAL_ARTIFACTS_DIR / learner_id,
             common.EVAL_ARTIFACTS_DIR / pid,
             common.SYS_ARTIFACTS_DIR / f"eval-{letter}",
@@ -57,10 +63,20 @@ def _profiles_with_run_data(learner_prefix: str = "multi") -> list[str]:
     return result
 
 
-def _next_round_idx(letter: str, *, learner_prefix: str = "multi") -> int:
-    """根据已有 artifact 目录计算下一个教学轮次编号。"""
+def _next_round_idx(
+    letter: str,
+    *,
+    learner_prefix: str = "multi",
+    artifact_dir: str | Path | None = None,
+) -> int:
+    """根据已有 artifact 目录计算下一个教学轮次编号。
+
+    ``artifact_dir`` 支持 ``--artifact-dir`` 传入的自定义目录；缺省回退到
+    ``EVAL_ARTIFACTS_DIR``，保持非运行模式（指标/报告）的既有语义。
+    """
     learner_id = f"{learner_prefix}-{letter}"
-    learner_dir = common.EVAL_ARTIFACTS_DIR / learner_id
+    base_dir = Path(artifact_dir) if artifact_dir is not None else common.EVAL_ARTIFACTS_DIR
+    learner_dir = base_dir / learner_id
     if not learner_dir.exists():
         return 1
     # 兼容 round_* (旧) 和 round-* (新) 两种命名
@@ -154,16 +170,24 @@ def _list_available_rounds(session_dir: Path) -> list[int]:
     return sorted(rounds)
 
 
-def _do_metrics(profile_ids: list[str], learner_prefix: str = "multi") -> None:
+def _do_metrics(
+    profile_ids: list[str],
+    learner_prefix: str = "multi",
+    artifact_dir: str | Path | None = None,
+) -> None:
     """④-2 计算指标：批量调用 calculate.py 计算所有轮次的指标。
 
     支持多画像，每个画像默认计算所有可用轮次。
     """
     for pid in profile_ids:
-        _do_metrics_one(pid, learner_prefix=learner_prefix)
+        _do_metrics_one(pid, learner_prefix=learner_prefix, artifact_dir=artifact_dir)
 
 
-def _do_metrics_one(profile_id: str, learner_prefix: str = "multi") -> None:
+def _do_metrics_one(
+    profile_id: str,
+    learner_prefix: str = "multi",
+    artifact_dir: str | Path | None = None,
+) -> None:
     """单个画像的指标计算（默认所有轮次）。
 
     跨轮累计 history_nodes 用于 M3 累计覆盖率；
@@ -171,8 +195,9 @@ def _do_metrics_one(profile_id: str, learner_prefix: str = "multi") -> None:
     """
     letter = common.profile_letter_from_id(profile_id)
 
-    # 1. 查找测试快照目录（multi-{letter}）
-    session_dir = common.EVAL_ARTIFACTS_DIR / f"{learner_prefix}-{letter}"
+    # 1. 查找测试快照目录（{prefix}-{letter}）
+    base_dir = Path(artifact_dir) if artifact_dir is not None else common.EVAL_ARTIFACTS_DIR
+    session_dir = base_dir / f"{learner_prefix}-{letter}"
     if not session_dir.exists():
         print(f"  ❌ 找不到画像 {letter} 的测试快照目录: {session_dir}")
         return
@@ -253,20 +278,26 @@ def _do_metrics_one(profile_id: str, learner_prefix: str = "multi") -> None:
                 print(f"  {name}: {avg:.1f}{unit}  (各轮: {values})")
 
 
-def _do_report(learner_prefix: str = "multi") -> None:
+def _do_report(
+    learner_prefix: str = "multi",
+    artifact_dir: str | Path | None = None,
+) -> None:
     """④-3 生成报告：选择最大轮次，只计算有 ≤ 该轮次产物的画像。"""
     # 1. 先列出所有有数据的画像及其最大轮次
-    profiles_with_data = _profiles_with_run_data(learner_prefix)
+    profiles_with_data = _profiles_with_run_data(
+        learner_prefix, artifact_dir=artifact_dir
+    )
     if not profiles_with_data:
         print("  ❌ 没有找到任何有运行数据的画像")
         return
 
     # 收集所有画像的轮次信息
+    base_dir = Path(artifact_dir) if artifact_dir is not None else common.EVAL_ARTIFACTS_DIR
     profile_rounds: dict[str, list[int]] = {}
     all_max_round = 0
     for pid in profiles_with_data:
         letter = common.profile_letter_from_id(pid)
-        session_dir = common.EVAL_ARTIFACTS_DIR / f"{learner_prefix}-{letter}"
+        session_dir = base_dir / f"{learner_prefix}-{letter}"
         rounds = _list_available_rounds(session_dir)
         profile_rounds[pid] = rounds
         if rounds:
@@ -818,7 +849,9 @@ def _run_course_gen(
             return 0
         round_idx = 1
     else:
-        round_idx = _next_round_idx(letter, learner_prefix=learner_prefix)
+        round_idx = _next_round_idx(
+            letter, learner_prefix=learner_prefix, artifact_dir=artifact_dir
+        )
         print(f"[course_gen/{letter}] 后续课程生成 R{round_idx:02d}...")
         try:
             result = course_gen.run_subsequent_round(
@@ -955,7 +988,12 @@ def _do_run_system(
     重复 n 次，直到完成第 n 轮或出错。
     """
     # 确定当前已完成的最大轮次
-    current_max = _next_round_idx(letter, learner_prefix=learner_prefix) - 1
+    current_max = (
+        _next_round_idx(
+            letter, learner_prefix=learner_prefix, artifact_dir=artifact_dir
+        )
+        - 1
+    )
     if current_max < 1:
         print(f"\n  ⚠️ 画像 {letter} 尚未完成首轮课程生成")
         print("  请先选择 1-运行初始化画像，生成首轮课程")
@@ -1095,7 +1133,9 @@ def main(argv: list[str] | None = None) -> int:
 
         # 2=生成报告 / 4=外部LLM评估 → 不预选画像（报告不需选；LLM 子菜单按 case 自行决定是否要画像）
         if choice == "2":
-            _do_report(learner_prefix=args.learner_prefix)
+            _do_report(
+                learner_prefix=args.learner_prefix, artifact_dir=args.artifact_dir
+            )
             print("\n报告生成完成，返回主菜单。")
             continue
         if choice == "4":
@@ -1107,7 +1147,9 @@ def main(argv: list[str] | None = None) -> int:
         # 3=运行系统 → 列全部画像，单选
         multi_select = choice == "1"
         if choice == "1":
-            profiles = _profiles_with_run_data(args.learner_prefix)
+            profiles = _profiles_with_run_data(
+                args.learner_prefix, artifact_dir=args.artifact_dir
+            )
             print(f"\n有运行数据的画像（{len(profiles)} 个）：")
         else:
             profiles = common.list_profile_ids()
@@ -1121,7 +1163,11 @@ def main(argv: list[str] | None = None) -> int:
         # 执行选中项
         if choice == "1":
             print(f"\n将计算 {len(selected)} 个画像的指标：{', '.join(selected)}")
-            _do_metrics(selected, learner_prefix=args.learner_prefix)
+            _do_metrics(
+                selected,
+                learner_prefix=args.learner_prefix,
+                artifact_dir=args.artifact_dir,
+            )
             print("\n指标计算完成，返回主菜单。")
         elif choice == "3":
             _do_run(
