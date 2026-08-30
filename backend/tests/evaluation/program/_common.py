@@ -65,6 +65,51 @@ def llm_results_dir(learner_prefix: str = "multi") -> Path:
     return EVAL_DIR / "results" / "record" / learner_prefix
 
 
+def resolve_latest_artifact_path(directory: Path, filename: str) -> Path:
+    """选择同一产物的最新版本，支持数字后缀。
+
+    工作流在 revise 循环中可能生成多个版本，例如：
+
+      - ``course_package.md``          （无后缀，视为版本 0）
+      - ``course_package-02.md``
+      - ``course_package-03.md``
+
+    本函数返回后缀数字最大的那个路径；若只有无后缀版本则返回它；
+    若完全不存在则仍返回 ``directory / filename``，由调用方决定如何降级。
+    """
+    directory = Path(directory)
+    base_path = directory / filename
+    if not filename:
+        return base_path
+
+    if "." in filename:
+        stem, ext = filename.rsplit(".", 1)
+        ext = "." + ext
+    else:
+        stem, ext = filename, ""
+
+    candidates: list[tuple[int, Path]] = []
+    escaped_stem = re.escape(stem)
+    escaped_ext = re.escape(ext)
+    suffix_pattern = re.compile(rf"{escaped_stem}-(\d+){escaped_ext}$")
+
+    if base_path.exists():
+        candidates.append((0, base_path))
+
+    for item in directory.iterdir():
+        if not item.is_file():
+            continue
+        m = suffix_pattern.match(item.name)
+        if m:
+            candidates.append((int(m.group(1)), item))
+
+    if not candidates:
+        return base_path
+
+    candidates.sort(key=lambda pair: pair[0], reverse=True)
+    return candidates[0][1]
+
+
 if str(EVAL_DIR) not in sys.path:
     sys.path.insert(0, str(EVAL_DIR))
 if str(PROJECT_ROOT) not in sys.path:

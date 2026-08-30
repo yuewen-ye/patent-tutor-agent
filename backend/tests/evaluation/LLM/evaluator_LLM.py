@@ -36,9 +36,10 @@ from typing import Any
 
 _THIS_DIR = Path(__file__).resolve().parent
 _EVAL_DIR = _THIS_DIR.parent  # backend/tests/evaluation
+_PROGRAM_DIR = _EVAL_DIR / "program"
 _PROJECT_ROOT = _EVAL_DIR.parents[2]  # 项目根目录
 
-for _p in (_THIS_DIR, _EVAL_DIR, _PROJECT_ROOT):
+for _p in (_THIS_DIR, _EVAL_DIR, _PROGRAM_DIR, _PROJECT_ROOT):
     _ps = str(_p)
     if _ps not in sys.path:
         sys.path.insert(0, _ps)
@@ -57,6 +58,7 @@ except ImportError:
     print("❌ 缺少依赖: requests。请运行: uv add requests")
     sys.exit(1)
 
+import _common as common
 from dotenv import load_dotenv
 
 ENV_PATH = _PROJECT_ROOT / ".env"
@@ -391,7 +393,7 @@ def read_artifacts(profile_id: str, round_num: int) -> dict[str, str]:
     required_files = ["course_package.md", "learning_path.md"]
 
     for filename in required_files:
-        filepath = round_dir / filename
+        filepath = common.resolve_latest_artifact_path(round_dir, filename)
         if filepath.exists():
             content = filepath.read_text(encoding="utf-8")
             artifacts[filename] = content
@@ -1662,7 +1664,7 @@ def evaluate_m8_objection_loop(
 
     artifact_contents: dict[str, str] = {}
     for key, filename in required_files.items():
-        content = read_file(round_dir / filename)
+        content = read_file(common.resolve_latest_artifact_path(round_dir, filename))
         if content is None:
             print(f"  ⚠️  缺少文件: {filename}")
             artifact_contents[key] = ""

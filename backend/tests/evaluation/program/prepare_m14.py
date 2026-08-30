@@ -36,7 +36,7 @@ for _p in (_THIS_DIR, _EVAL_DIR):
     if _ps not in sys.path:
         sys.path.insert(0, _ps)
 
-import _common as common  # noqa: E402
+import _common as common
 
 # 仅保留与专利法核心主题相关的事实点
 _M14_TOPIC_KEYWORDS = (
@@ -217,8 +217,8 @@ def _extract_profile(
         m = re.search(r"round-(\d+)", rd.name)
         round_num = int(m.group(1)) if m else 0
 
-        # 从 course_package.md 提取
-        cp_path = rd / "course_package.md"
+        # 从 course_package.md（最新版本）提取
+        cp_path = common.resolve_latest_artifact_path(rd, "course_package.md")
         if cp_path.exists():
             facts = _extract_from_course_package(cp_path)
             for f in facts:

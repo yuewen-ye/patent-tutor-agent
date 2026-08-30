@@ -58,7 +58,7 @@ for _p in (_THIS_DIR, _EVAL_DIR, _PROJECT_ROOT):
     if _ps not in sys.path:
         sys.path.insert(0, _ps)
 
-import _common as common  # noqa: E402
+import _common as common
 
 _SYS_ARTIFACTS_DIR = common.SYS_ARTIFACTS_DIR
 _EVAL_ARTIFACTS_DIR = common.EVAL_ARTIFACTS_DIR
@@ -701,12 +701,15 @@ def calc_coverage_confusable(
 # ── 其它指标计算 ──────────────────────────────────────────────────────────
 
 def _file_exists_in_round(round_dir: Path, filename: str) -> bool:
-    """检查产物文件是否存在（支持 feedback/ 子目录回退）。"""
-    if (round_dir / filename).exists():
+    """检查产物文件是否存在（支持 feedback/ 子目录回退与数字后缀版本）。"""
+    latest = common.resolve_latest_artifact_path(round_dir, filename)
+    if latest.exists():
         return True
     feedback_dir = round_dir / "feedback"
-    if feedback_dir.is_dir() and (feedback_dir / filename).exists():
-        return True
+    if feedback_dir.is_dir():
+        latest_feedback = common.resolve_latest_artifact_path(feedback_dir, filename)
+        if latest_feedback.exists():
+            return True
     return False
 
 
@@ -1356,8 +1359,8 @@ def _calculate_round_impl(
     if not round_dir.exists():
         raise FileNotFoundError(f"找不到轮次目录: {session_dir}/round-{round_num:02d}")
 
-    course_text = _read_text(round_dir / "course_package.md")
-    judge_text = _read_text(round_dir / "judge_report.md")
+    course_text = _read_text(common.resolve_latest_artifact_path(round_dir, "course_package.md"))
+    judge_text = _read_text(common.resolve_latest_artifact_path(round_dir, "judge_report.md"))
     review_a_text = _read_text(round_dir / "expert_a_cross_review.md")
     review_b_text = _read_text(round_dir / "expert_b_cross_review.md")
     path_text = _read_text(round_dir / "learning_path.md")
