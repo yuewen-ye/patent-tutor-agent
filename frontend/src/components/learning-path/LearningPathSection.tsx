@@ -37,9 +37,6 @@ export function LearningPathSection({ path, pathDecision, dualAxisSnapshot, mast
             <Badge variant="outline" className="text-xs">
               {path.length} 个节点
             </Badge>
-            <Badge variant="secondary" className="text-xs">
-              总强度 {path.reduce((sum, p) => sum + p.duration_min, 0)} 分钟
-            </Badge>
           </div>
         </div>
         {/* 决策理由条 */}

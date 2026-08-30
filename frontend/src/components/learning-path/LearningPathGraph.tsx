@@ -312,7 +312,6 @@ function PathNode({ data }: { data: { item: LearningPathItem; globalIndex: numbe
         {item.strategy}
       </div>
       <div className={cn("mt-2.5 flex items-center justify-between text-[11px]", secondaryText)}>
-        <span>{item.duration_min} 分钟</span>
         <span>{item.prerequisites.length > 0 ? `前置 ${item.prerequisites.length}` : "无前置"}</span>
       </div>
       <Handle type="source" position={Position.Right} className={cn("!w-2.5 !h-2.5 !rounded-full !border-0", handleColor)} />
