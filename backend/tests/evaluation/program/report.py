@@ -398,6 +398,7 @@ class ProfileReport:
     profile_letter: str
     session_dir: Path
     rounds: list[calculate.RoundMetrics] = field(default_factory=list)
+    profile_level_metrics: list[calculate.MetricResult] = field(default_factory=list)
 
 
 @dataclass
@@ -829,8 +830,9 @@ def _render_comparison_table(
             per_profile_avgs: list[float] = []
             unit = ""
             for p in profiles:
+                merged_metrics = list(profile_level_metrics) + list(p.profile_level_metrics)
                 result = _metric_avg_for_profile(
-                    p, name, llm_results, profile_level_metrics,
+                    p, name, llm_results, merged_metrics,
                 )
                 if result is None:
                     row.append("-")
@@ -998,6 +1000,9 @@ def _render_profile_round_table(
     rounds = profile.rounds
     metric_names = _collect_metric_names_for_table(table_metric_groups)
 
+    # 合并系统级和画像级指标
+    all_profile_metrics = list(profile_level_metrics) + list(profile.profile_level_metrics)
+
     # 表头
     header = "| 指标 | " + " | ".join(f"R{rm.round_num:02d}" for rm in rounds) + " | 平均 |"
     sep = "|---|" + "|".join("---" for _ in rounds) + "|---|"
@@ -1015,7 +1020,7 @@ def _render_profile_round_table(
             for rm in rounds:
                 result = _get_metric_value_for_round(
                     profile.profile_letter, rm.round_num, name,
-                    llm_results, rm.metrics, profile_level_metrics,
+                    llm_results, rm.metrics, all_profile_metrics,
                 )
                 if result is None:
                     row.append("-")
@@ -1033,7 +1038,7 @@ def _render_profile_round_table(
             else:
                 # 系统级指标跨轮共享同一值
                 sys_result = _metric_avg_for_profile(
-                    profile, name, llm_results, profile_level_metrics,
+                    profile, name, llm_results, all_profile_metrics,
                 )
                 if sys_result is not None:
                     val, u = sys_result
@@ -1407,6 +1412,28 @@ def _calculate_profile(
             print(f"  ⚠️ [profile_{profile_letter}] round-{r:02d} 跳过: {exc}")
         except Exception as exc:
             print(f"  ⚠️ [profile_{profile_letter}] round-{r:02d} 异常: {type(exc).__name__}: {exc}")
+
+    # 画像级汇总：2.4 动态迭代触发率
+    triggered_count = 0
+    valid_count = 0
+    for rm in pr.rounds:
+        for m in rm.metrics:
+            if m.name == "2.4 动态迭代触发率":
+                detail = m.detail if isinstance(m.detail, dict) else {}
+                if "note" not in detail:
+                    valid_count += 1
+                    if detail.get("triggered", False):
+                        triggered_count += 1
+                break
+    if valid_count > 0:
+        rate = triggered_count / valid_count * 100
+        pr.profile_level_metrics.append(calculate.MetricResult(
+            name="2.4 动态迭代触发率",
+            value=rate,
+            unit="%",
+            detail={"triggered_count": triggered_count, "valid_count": valid_count},
+        ))
+
     return pr
 
 
@@ -1439,7 +1466,7 @@ def generate_report(
         rounds=pr.rounds,
         generated_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         llm_results=llm_results,
-        profile_level_metrics=profile_level_metrics,
+        profile_level_metrics=profile_level_metrics + pr.profile_level_metrics,
     )
     md = _render_markdown_single(ctx)
 

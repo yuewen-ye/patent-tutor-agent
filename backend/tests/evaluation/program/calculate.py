@@ -453,34 +453,19 @@ def calc_matching_difficulty(
     if not question_levels:
         return MetricResult(name="2.1 难度符合度", value=0.0, unit="%", detail={"note": "无测评题目"})
 
-    low_count = 0
     high_count = 0
     for level, role in zip(question_levels, question_roles):
-        if role == "weakness_probe":
-            low = "L3"
-        elif role == "forward_probe":
-            low = "L1"
-        elif profile_update_text:
-            match = re.search(r"\"pl\":\s*([0-9.]+)", profile_update_text)
-            pl = float(match.group(1)) if match else 0.5
-            low = _get_learner_difficulty_lower(pl, role)
-        else:
-            low = "L1"
-
         high = _get_capped_difficulty(level, node_name, difficulty_limits)
 
-        if DIFFICULTY_ORDER.get(level, 0) < DIFFICULTY_ORDER.get(low, 0):
-            low_count += 1
-        elif DIFFICULTY_ORDER.get(level, 0) > DIFFICULTY_ORDER.get(high, 0):
+        if DIFFICULTY_ORDER.get(level, 0) > DIFFICULTY_ORDER.get(high, 0):
             high_count += 1
 
     total = len(question_levels)
-    mismatched = low_count + high_count
-    matched = total - mismatched
+    matched = total - high_count
     rate = round(matched / total * 100, 2) if total else 0.0
     return MetricResult(
         name="2.1 难度符合度", value=rate, unit="%",
-        detail={"总题数": total, "符合数": matched, "低于下限": low_count, "高于上限": high_count, "节点": node_name}
+        detail={"总题数": total, "符合数": matched, "高于上限": high_count, "节点": node_name}
     )
 
 def calc_resource_morphology(text: str) -> list[MetricResult]:
@@ -756,9 +741,9 @@ def check_artifact_completeness(round_dir: Path, round_num: int, is_final_round:
         required_files.extend(debate_required)
         if is_final_round:
             required_files.extend(final_revision_required)
-    if round_num > 1:
-        # learner_profile_update 可能在 feedback/ 下或 round 根下，由
-        # _file_exists_in_round 统一判定。
+    if round_num > 1 and not is_final_round:
+        # learner_profile_update 来自反馈阶段，末尾轮无反馈故不要求；
+        # 可能在 feedback/ 下或 round 根下，由 _file_exists_in_round 统一判定。
         required_files.append("learner_profile_update.md")
 
     present = sum(1 for f in required_files if _file_exists_in_round(round_dir, f))
@@ -849,17 +834,17 @@ def _extract_bkt_pl_map(text: str) -> dict[str, float]:
 
 
 def calc_bkt_advancement(prev_text: str | None, curr_text: str | None, course_text: str) -> MetricResult:
-    """2.4 动态迭代触发率 — 每轮指标：是否触发动态迭代（百分比）。
+    """2.4 动态迭代触发率 — 画像级指标，每轮返回 / 不直接展示数值。
 
     判定规则：当前后轮 profile_update 存在且 BKT PL 值发生显著变化
     （上升或下降任一节点 |Δpl| ≥ 0.05）时，该轮视为「触发」动态迭代。
-    画像级指标（触发率）= 触发轮次数 / 有效轮次数 × 100%，通常为 100%。
-    分母按数据来源为 n-1（有 n 轮时取 n-1 次比较）。
+    画像级汇总：触发次数 / 有效比较次数 × 100%（R02 vs R01 … R05 vs R04）。
+    每轮返回 unit="/"，triggered 状态存在 detail 中供画像级汇总。
     """
     if not prev_text or not curr_text:
         return MetricResult(
-            name="2.4 动态迭代触发率", value=0.0, unit="%",
-            detail={"触发": False, "note": "缺少前后轮 profile_update，无法比较"}
+            name="2.4 动态迭代触发率", value=0.0, unit="/",
+            detail={"triggered": False, "note": "缺少前后轮 profile_update，无法比较"}
         )
 
     prev_pls = _extract_bkt_pl_map(prev_text)
@@ -867,8 +852,8 @@ def calc_bkt_advancement(prev_text: str | None, curr_text: str | None, course_te
 
     if not prev_pls and not curr_pls:
         return MetricResult(
-            name="2.4 动态迭代触发率", value=0.0, unit="%",
-            detail={"触发": False, "note": "BKT 数据解析为空"}
+            name="2.4 动态迭代触发率", value=0.0, unit="/",
+            detail={"triggered": False, "note": "BKT 数据解析为空"}
         )
 
     all_nodes = set(prev_pls.keys()) | set(curr_pls.keys())
@@ -884,20 +869,19 @@ def calc_bkt_advancement(prev_text: str | None, curr_text: str | None, course_te
 
     changed_nodes = len(advanced_nodes) + len(dropped_nodes)
     triggered = changed_nodes > 0
-    value = 100.0 if triggered else 0.0
 
     return MetricResult(
         name="2.4 动态迭代触发率",
-        value=value,
-        unit="%",
+        value=0.0,
+        unit="/",
         detail={
-            "触发": triggered,
-            "总节点数": len(all_nodes),
-            "变化节点数": changed_nodes,
-            "上升节点数": len(advanced_nodes),
-            "下降节点数": len(dropped_nodes),
-            "上升节点": advanced_nodes[:10],
-            "下降节点": dropped_nodes[:10],
+            "triggered": triggered,
+            "total_nodes": len(all_nodes),
+            "changed_nodes": changed_nodes,
+            "advanced_nodes": len(advanced_nodes),
+            "dropped_nodes": len(dropped_nodes),
+            "advanced": advanced_nodes[:10],
+            "dropped": dropped_nodes[:10],
         }
     )
 
@@ -1579,7 +1563,7 @@ def _calculate_round_impl(
     else:
         rm.metrics.append(MetricResult(
             name="2.4 动态迭代触发率", value=0.0, unit="/",
-            detail={"触发": False, "note": "首轮：缺少前一轮 profile_update，无法比较"}
+            detail={"triggered": False, "note": "首轮：缺少前一轮 profile_update，无法比较"}
         ))
 
     # M5.3 PII 合规检测（改用外部 LLM 评估，替代脚本正则扫描）
