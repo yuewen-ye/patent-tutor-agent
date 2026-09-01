@@ -219,3 +219,35 @@ def test_rejects_adjacent_duplicate_visual_templates(tmp_path) -> None:
         llm_client=DuplicateTemplateLLM(),
     )
     assert result["status"] == "generated"
+
+
+def test_extra_llm_fields_are_stripped_before_validation(tmp_path) -> None:
+    """Regression: LLMs may add helper fields outside the contract."""
+
+    class ExtraFieldsLLM(PresentationLLM):
+        def generate_json(self, *args: object, **kwargs: object) -> object:
+            return {
+                "title": "新颖性入门",
+                "theme": "patent_blue",
+                "slides": [
+                    {
+                        "id": "slide_001",
+                        "order": 1,
+                        "layout": "title",
+                        "title": "新颖性入门",
+                        "subtitle": "专利三性之一",
+                        "speaker_notes": "今天学习专利新颖性。",
+                        "helper_text": "辅助文字",  # slide-level extra
+                    }
+                ],
+                "rationale": "设计说明",  # top-level extra
+            }
+
+    result = generate_presentation_artifact(
+        artifact_root=tmp_path,
+        session_id="session-extra",
+        course_package=_course_package(),
+        course_slides=_course_slides(),
+        llm_client=ExtraFieldsLLM(),
+    )
+    assert result["status"] == "generated"

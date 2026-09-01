@@ -43,6 +43,7 @@ PresentationTheme = Literal[
     "patent_blue",
     "professional_green",
     "warm_orange",
+    "warm_orange_premium",
 ]
 PresentationLayout = Literal[
     "title", "content", "two_column", "process", "comparison", "summary",
@@ -56,6 +57,9 @@ PresentationTemplate = Literal[
     "irac_flow", "legal_citation_focus", "case_analysis_split", "comparison_matrix",
     "timeline_process", "exam_checklist", "summary_roadmap", "hero_statement",
     "evidence_stack", "decision_tree", "concept_map",
+    "premium_cover", "premium_content", "premium_section_divider",
+    "premium_stat_overview", "premium_certificate_gallery", "premium_two_column",
+    "premium_summary",
 ]
 VisualElementType = Literal[
     "timeline", "irac", "comparison_matrix", "callout", "evidence_stack",

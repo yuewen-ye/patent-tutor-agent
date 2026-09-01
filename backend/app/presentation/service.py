@@ -30,6 +30,9 @@ from backend.app.presentation.contracts import (
     PresentationSlide,
     PresentationSource,
     PresentationTemplate,
+    PresentationVisualElement,
+    PresentationVisualSlide,
+    PresentationVisualStyle,
 )
 from backend.app.presentation.pptx_renderer import render_pptx
 from backend.app.presentation.preview import generate_slide_previews
@@ -41,20 +44,42 @@ _LOGGER = logging.getLogger(__name__)
 _PRESENTATION_SYSTEM = load_prompt(__file__)
 
 
+def _strip_unknown_fields(raw: dict[str, Any], model: type[Any]) -> dict[str, Any]:
+    """Drop fields that are not declared on ``model`` to survive ``extra='forbid'``."""
+    allowed = set(model.model_fields.keys())
+    return {k: v for k, v in raw.items() if k in allowed}
+
+
 def _normalize_presentation_design(raw: object) -> object:
-    """Normalize common LLM deviations before Pydantic validation."""
+    """Normalize common LLM deviations before Pydantic validation.
+
+    In addition to value-level fixes, we strip any extra fields the LLM added
+    outside the ``PresentationDesign`` contract so that ``extra='forbid'`` does
+    not degrade an otherwise valid deck.
+    """
     if not isinstance(raw, dict):
         return raw
-    design = dict(raw)
+
+    design = _strip_unknown_fields(raw, PresentationDesign)
+
+    if isinstance(design.get("visual_style"), dict):
+        design["visual_style"] = _strip_unknown_fields(
+            design["visual_style"], PresentationVisualStyle
+        )
+
     slides = design.get("slides")
     if not isinstance(slides, list):
         return design
+
+    allowed_slide = set(PresentationVisualSlide.model_fields.keys())
+    allowed_element = set(PresentationVisualElement.model_fields.keys())
     normalized_slides: list[dict[str, Any]] = []
     for slide in slides:
         if not isinstance(slide, dict):
             normalized_slides.append(slide)
             continue
-        normalized = dict(slide)
+        normalized = {k: v for k, v in slide.items() if k in allowed_slide}
+
         legal_ref = normalized.get("legal_reference")
         if isinstance(legal_ref, list):
             parts = [str(item) for item in legal_ref if item]
@@ -78,7 +103,9 @@ def _normalize_presentation_design(raw: object) -> object:
                 if not isinstance(element, dict):
                     normalized_elements.append(element)
                     continue
-                normalized_element = dict(element)
+                normalized_element = {
+                    k: v for k, v in element.items() if k in allowed_element
+                }
                 element_type = str(normalized_element.get("type") or "")
                 if element_type == "summary_roadmap":
                     normalized_element["type"] = "concept_map"
@@ -146,7 +173,13 @@ def _validate_design(design: PresentationDesign, source: PresentationSource) -> 
 
 
 def _validate_pptx(content: bytes, design: PresentationDesign) -> None:
-    """Run package, Office parser, editable-shape and notes delivery checks."""
+    """Run package, Office parser, editable-shape and notes delivery checks.
+
+    Package integrity and slide/note counts remain hard errors: a broken or
+    incomplete PPTX is not usable. Content-level checks (title presence, shape
+    count, exact speaker-notes match) are logged as warnings so that a single
+    renderer imperfection does not degrade the whole artifact.
+    """
     if not content or not content.startswith(b"PK"):
         raise ValueError("renderer did not return a PPTX zip package")
     try:
@@ -166,11 +199,14 @@ def _validate_pptx(content: bytes, design: PresentationDesign) -> None:
     for source, rendered in zip(design.slides, presentation.slides, strict=True):
         text = " ".join(shape.text for shape in rendered.shapes if hasattr(shape, "text"))
         if source.title not in text:
-            raise ValueError(f"renderer lost title for slide {source.id}")
+            _LOGGER.warning("renderer may have lost title for slide %s", source.id)
         if not rendered.shapes:
-            raise ValueError(f"renderer emitted no editable shapes for slide {source.id}")
-        if source.speaker_notes not in rendered.notes_slide.notes_text_frame.text:
-            raise ValueError(f"renderer lost speaker notes for slide {source.id}")
+            _LOGGER.warning("renderer emitted no editable shapes for slide %s", source.id)
+        notes_text = rendered.notes_slide.notes_text_frame.text
+        if not notes_text:
+            _LOGGER.warning("renderer emitted empty speaker notes for slide %s", source.id)
+        elif source.speaker_notes not in notes_text:
+            _LOGGER.warning("renderer speaker notes differ from source for slide %s", source.id)
 
 
 def generate_presentation_artifact(

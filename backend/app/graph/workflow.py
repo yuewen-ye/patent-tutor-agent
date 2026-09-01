@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+import json
 import logging
 import os
 import sys
@@ -386,20 +387,40 @@ def _is_pptx_enabled() -> bool:
     return raw.lower() not in {"false", "0", "off", "no"}
 
 
+def _write_pptx_error(
+    artifact_root: Path,
+    session_id: str,
+    result: dict[str, Any],
+) -> None:
+    """Write a small JSON error artifact so users can inspect failures without
+    parsing the full session state."""
+    safe_session = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in session_id)
+    safe_session = safe_session.strip("-_") or "session"
+    target_dir = artifact_root / "sessions" / safe_session / "presentation"
+    target_dir.mkdir(parents=True, exist_ok=True)
+    (target_dir / "error.json").write_text(
+        json.dumps(result, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
 def _generate_pptx_node(
     state: StateDict, artifact_root: Path | None, llm_client: LLMClient
 ) -> dict[str, Any]:
     course_package = state.get("course_package") or {}
     course_slides = state.get("course_slides") or {}
     if not course_package or not course_slides:
+        result = {
+            "status": "degraded",
+            "provider": "unavailable",
+            "source_slide_count": 0,
+            "speaker_notes_status": "unknown",
+            "error_summary": "PPTX generation requires course_package and course_slides.",
+        }
+        if artifact_root is not None:
+            _write_pptx_error(artifact_root, state["session_id"], result)
         return {
-            "pptx_result": {
-                "status": "degraded",
-                "provider": "unavailable",
-                "source_slide_count": 0,
-                "speaker_notes_status": "unknown",
-                "error_summary": "PPTX generation requires course_package and course_slides.",
-            },
+            "pptx_result": result,
             "workflow_status": "completed",
             "events": [completed_event("generate_pptx", "PPTX generation skipped: source unavailable")],
         }
@@ -425,6 +446,7 @@ def _generate_pptx_node(
             "speaker_notes_status": "unknown",
             "error_summary": f"{type(exc).__name__}: {exc}",
         }
+        _write_pptx_error(artifact_root, state["session_id"], result)
         message = "PPTX generation degraded (validation/render failure)"
     updates: dict[str, Any] = {
         "pptx_result": result,

@@ -126,7 +126,7 @@ def _premium_stat_overview(slide, canvas: Canvas, item: PresentationVisualSlide,
     rect(slide, canvas, 0, 0, canvas.width, canvas.height, theme.background, radius=False)
     _premium_tab_header(slide, canvas, item, theme, page)
     # 统计卡片区
-    stats = item.stats or item.metrics or []
+    stats = item.stats or []
     _stat_w = 3.8
     for idx, stat in enumerate(stats[:3]):
         _sx = 0.6 + idx * (_stat_w + 0.3)
@@ -155,7 +155,7 @@ def _premium_certificate_gallery(slide, canvas: Canvas, item: PresentationVisual
     rect(slide, canvas, 0, 0, canvas.width, canvas.height, theme.background, radius=False)
     _premium_tab_header(slide, canvas, item, theme, page)
     # 统计卡片（顶部）
-    stats = item.stats or item.metrics or []
+    stats = item.stats or []
     _stat_w = 3.8
     for idx, stat in enumerate(stats[:3]):
         _sx = 0.6 + idx * (_stat_w + 0.3)
