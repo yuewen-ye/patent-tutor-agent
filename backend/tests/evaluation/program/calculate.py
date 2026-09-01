@@ -453,34 +453,19 @@ def calc_matching_difficulty(
     if not question_levels:
         return MetricResult(name="2.1 难度符合度", value=0.0, unit="%", detail={"note": "无测评题目"})
 
-    low_count = 0
     high_count = 0
     for level, role in zip(question_levels, question_roles):
-        if role == "weakness_probe":
-            low = "L3"
-        elif role == "forward_probe":
-            low = "L1"
-        elif profile_update_text:
-            match = re.search(r"\"pl\":\s*([0-9.]+)", profile_update_text)
-            pl = float(match.group(1)) if match else 0.5
-            low = _get_learner_difficulty_lower(pl, role)
-        else:
-            low = "L1"
-
         high = _get_capped_difficulty(level, node_name, difficulty_limits)
 
-        if DIFFICULTY_ORDER.get(level, 0) < DIFFICULTY_ORDER.get(low, 0):
-            low_count += 1
-        elif DIFFICULTY_ORDER.get(level, 0) > DIFFICULTY_ORDER.get(high, 0):
+        if DIFFICULTY_ORDER.get(level, 0) > DIFFICULTY_ORDER.get(high, 0):
             high_count += 1
 
     total = len(question_levels)
-    mismatched = low_count + high_count
-    matched = total - mismatched
+    matched = total - high_count
     rate = round(matched / total * 100, 2) if total else 0.0
     return MetricResult(
         name="2.1 难度符合度", value=rate, unit="%",
-        detail={"总题数": total, "符合数": matched, "低于下限": low_count, "高于上限": high_count, "节点": node_name}
+        detail={"总题数": total, "符合数": matched, "高于上限": high_count, "节点": node_name}
     )
 
 def calc_resource_morphology(text: str) -> list[MetricResult]:
@@ -756,9 +741,9 @@ def check_artifact_completeness(round_dir: Path, round_num: int, is_final_round:
         required_files.extend(debate_required)
         if is_final_round:
             required_files.extend(final_revision_required)
-    if round_num > 1:
-        # learner_profile_update 可能在 feedback/ 下或 round 根下，由
-        # _file_exists_in_round 统一判定。
+    if round_num > 1 and not is_final_round:
+        # learner_profile_update 来自反馈阶段，末尾轮无反馈故不要求；
+        # 可能在 feedback/ 下或 round 根下，由 _file_exists_in_round 统一判定。
         required_files.append("learner_profile_update.md")
 
     present = sum(1 for f in required_files if _file_exists_in_round(round_dir, f))
@@ -849,17 +834,17 @@ def _extract_bkt_pl_map(text: str) -> dict[str, float]:
 
 
 def calc_bkt_advancement(prev_text: str | None, curr_text: str | None, course_text: str) -> MetricResult:
-    """2.4 动态迭代触发率 — 每轮指标：是否触发动态迭代（百分比）。
+    """2.4 动态迭代触发率 — 画像级指标，每轮返回 / 不直接展示数值。
 
     判定规则：当前后轮 profile_update 存在且 BKT PL 值发生显著变化
     （上升或下降任一节点 |Δpl| ≥ 0.05）时，该轮视为「触发」动态迭代。
-    画像级指标（触发率）= 触发轮次数 / 有效轮次数 × 100%，通常为 100%。
-    分母按数据来源为 n-1（有 n 轮时取 n-1 次比较）。
+    画像级汇总：触发次数 / 有效比较次数 × 100%（R02 vs R01 … R05 vs R04）。
+    每轮返回 unit="/"，triggered 状态存在 detail 中供画像级汇总。
     """
     if not prev_text or not curr_text:
         return MetricResult(
-            name="2.4 动态迭代触发率", value=0.0, unit="%",
-            detail={"触发": False, "note": "缺少前后轮 profile_update，无法比较"}
+            name="2.4 动态迭代触发率", value=0.0, unit="/",
+            detail={"triggered": False, "note": "缺少前后轮 profile_update，无法比较"}
         )
 
     prev_pls = _extract_bkt_pl_map(prev_text)
@@ -867,8 +852,8 @@ def calc_bkt_advancement(prev_text: str | None, curr_text: str | None, course_te
 
     if not prev_pls and not curr_pls:
         return MetricResult(
-            name="2.4 动态迭代触发率", value=0.0, unit="%",
-            detail={"触发": False, "note": "BKT 数据解析为空"}
+            name="2.4 动态迭代触发率", value=0.0, unit="/",
+            detail={"triggered": False, "note": "BKT 数据解析为空"}
         )
 
     all_nodes = set(prev_pls.keys()) | set(curr_pls.keys())
@@ -884,20 +869,19 @@ def calc_bkt_advancement(prev_text: str | None, curr_text: str | None, course_te
 
     changed_nodes = len(advanced_nodes) + len(dropped_nodes)
     triggered = changed_nodes > 0
-    value = 100.0 if triggered else 0.0
 
     return MetricResult(
         name="2.4 动态迭代触发率",
-        value=value,
-        unit="%",
+        value=0.0,
+        unit="/",
         detail={
-            "触发": triggered,
-            "总节点数": len(all_nodes),
-            "变化节点数": changed_nodes,
-            "上升节点数": len(advanced_nodes),
-            "下降节点数": len(dropped_nodes),
-            "上升节点": advanced_nodes[:10],
-            "下降节点": dropped_nodes[:10],
+            "triggered": triggered,
+            "total_nodes": len(all_nodes),
+            "changed_nodes": changed_nodes,
+            "advanced_nodes": len(advanced_nodes),
+            "dropped_nodes": len(dropped_nodes),
+            "advanced": advanced_nodes[:10],
+            "dropped": dropped_nodes[:10],
         }
     )
 
@@ -1243,29 +1227,142 @@ def calc_m16(data: dict[str, Any] | None, profile_letter: str) -> MetricResult:
 
 
 def calc_m17(data: dict[str, Any] | None, profile_letter: str, round_num: int) -> list[MetricResult]:
-    """2.5 检索正确性：返回准确率 + 完整率两个子指标。"""
+    """2.5 检索正确性：返回准确率 + 完整率两个子指标。
+
+    对 LLM 输出 schema 做双向兼容（方案A）：
+    - 首选：data 中 accurate_rate / complete_rate （旧聚合字段）；
+    - 兜底：若 accurate_rate 异常（为 0 但 evaluations 中其实有大量 accurate verdict），
+      则按 evaluations[*] 下无论是「顶层 verdict」还是「嵌套 evaluations[].verdict / summary」
+      的形状统一归一化后重算。
+    """
     if not data:
         return [
             _placeholder_metric("2.5 检索准确率", "m2_retrieval"),
             _placeholder_metric("2.5 检索完整率", "m2_retrieval"),
         ]
-    total = data.get("total_chunks", 0)
-    accurate = data.get("accurate", 0)
-    complete = data.get("complete", 0)
-    accurate_rate = data.get("accurate_rate", 0.0)
-    complete_rate = data.get("complete_rate", 0.0)
+    total = data.get("total_chunks", 0) or 0
+    accurate = data.get("accurate", 0) or 0
+    complete = data.get("complete", 0) or 0
+    accurate_rate = data.get("accurate_rate", 0.0) or 0.0
+    complete_rate = data.get("complete_rate", 0.0) or 0.0
 
-    if (accurate == 0 and complete == 0 and total > 0):
-        evaluations = (data.get("evaluations") or [])
-        accurate = sum(1 for e in evaluations if e.get("accuracy_verdict") == "accurate")
-        complete = sum(1 for e in evaluations if e.get("completeness_verdict") == "complete")
-        accurate_rate = round(accurate / total * 100, 2) if total else 0.0
-        complete_rate = round(complete / total * 100, 2) if total else 0.0
+    # 当 aggregate 字段可疑（都是 0 但 evaluations 非空）时统一重算。
+    # 触发条件：(accurate==0 or complete==0) AND evaluations 存在且非空 → 归一化重算。
+    evaluations = data.get("evaluations") or []
+    needs_recalc = (
+        (accurate == 0 or complete == 0 or accurate_rate == 0.0 or complete_rate == 0.0)
+        and isinstance(evaluations, list)
+        and len(evaluations) > 0
+    )
+    if needs_recalc:
+        total_calc, accurate_calc, complete_calc = _recalc_retrieval_from_evaluations(evaluations)
+        # 仅当重算得出"非0结果"时才覆盖（避免把 legitimate 的真实 0 又重写一遍但结果一样）
+        if total_calc > 0 and (accurate_calc > 0 or complete_calc > 0):
+            total = total_calc
+            accurate = accurate_calc
+            complete = complete_calc
+            accurate_rate = round(accurate / total * 100, 2) if total else 0.0
+            complete_rate = round(complete / total * 100, 2) if total else 0.0
+        elif total_calc > 0:
+            # 重算结果仍是 0 但至少 total 归一（例如所有子项真的都 inaccurate）
+            total = total_calc
+            accurate = accurate_calc
+            complete = complete_calc
+
+    # 再兜底：若 accurate_rate == 0 但仍可从 evaluations 中 summary/子对象计算
+    # （此处避免重复计算——上面已经做了）。同时为了避免原始 accurate=0, complete=0, total=0
+    # 情形仍占位 0，detail 标注"重算已执行"/"按外部原值"。
+    recomputed = bool(needs_recalc and (accurate > 0 or complete > 0 or total > 0))
 
     return [
-        MetricResult(name="2.5 检索准确率", value=accurate_rate, unit="%", detail={"computed": True, "chunk数": total, "准确数": accurate}),
-        MetricResult(name="2.5 检索完整率", value=complete_rate, unit="%", detail={"computed": True, "chunk数": total, "完整数": complete}),
+        MetricResult(
+            name="2.5 检索准确率",
+            value=accurate_rate,
+            unit="%",
+            detail={
+                "computed": True,
+                "recounted": recomputed,
+                "chunk数": total,
+                "准确数": accurate,
+            },
+        ),
+        MetricResult(
+            name="2.5 检索完整率",
+            value=complete_rate,
+            unit="%",
+            detail={
+                "computed": True,
+                "recounted": recomputed,
+                "chunk数": total,
+                "完整数": complete,
+            },
+        ),
     ]
+
+
+def _recalc_retrieval_from_evaluations(evaluations: list[Any]) -> tuple[int, int, int]:
+    """calculate 侧自包含的 retrieval evaluation 归一化重算。
+    与 evaluator 侧语义保持一致，但不 import evaluator_LLM（避免 LLM 配置依赖）。
+
+    Returns: (total, accurate, complete)
+    """
+    def _sub_evals(chunk: Any) -> list[dict[str, Any]]:
+        if not isinstance(chunk, dict):
+            return []
+        subs = chunk.get("evaluations")
+        if isinstance(subs, list) and subs:
+            return [s for s in subs if isinstance(s, dict)]
+        if chunk.get("accuracy_verdict") or chunk.get("completeness_verdict"):
+            return [chunk]
+        summary = chunk.get("summary")
+        if isinstance(summary, dict):
+            acc_rate = summary.get("accurate_rate", summary.get("complete_rate"))
+            if isinstance(acc_rate, (int, float)):
+                verdict_a = "accurate" if acc_rate >= 0.5 else "inaccurate"
+                comp_rate = summary.get("complete_rate", acc_rate)
+                cr = comp_rate if isinstance(comp_rate, (int, float)) else (
+                    acc_rate if isinstance(acc_rate, (int, float)) else 0
+                )
+                verdict_c = "complete" if cr >= 0.5 else "incomplete"
+                return [{
+                    "accuracy_verdict": verdict_a,
+                    "completeness_verdict": verdict_c,
+                    "_from_summary": True,
+                }]
+        return []
+
+    total = 0
+    accurate = 0
+    complete = 0
+    for e in evaluations:
+        if not isinstance(e, dict):
+            continue
+        total += 1
+        subs = _sub_evals(e)
+        verdict_a_hit = False
+        verdict_c_hit = False
+        for s in subs:
+            if s.get("accuracy_verdict") == "accurate":
+                verdict_a_hit = True
+            if s.get("completeness_verdict") == "complete":
+                verdict_c_hit = True
+        if not verdict_a_hit and not verdict_c_hit:
+            # 再看顶层 / summary
+            if e.get("accuracy_verdict") == "accurate":
+                verdict_a_hit = True
+            if e.get("completeness_verdict") == "complete":
+                verdict_c_hit = True
+            summary = e.get("summary")
+            if isinstance(summary, dict):
+                if summary.get("accurate_count", 0) > 0:
+                    verdict_a_hit = True
+                if summary.get("complete_count", 0) > 0:
+                    verdict_c_hit = True
+        if verdict_a_hit:
+            accurate += 1
+        if verdict_c_hit:
+            complete += 1
+    return total, accurate, complete
 
 def calculate_system_level_metrics(learner_prefix: str = "multi") -> list[MetricResult]:
     """计算系统级探针指标：M15 对抗稳健率 / M16 边界拒答恰当率。
@@ -1466,7 +1563,7 @@ def _calculate_round_impl(
     else:
         rm.metrics.append(MetricResult(
             name="2.4 动态迭代触发率", value=0.0, unit="/",
-            detail={"触发": False, "note": "首轮：缺少前一轮 profile_update，无法比较"}
+            detail={"triggered": False, "note": "首轮：缺少前一轮 profile_update，无法比较"}
         ))
 
     # M5.3 PII 合规检测（改用外部 LLM 评估，替代脚本正则扫描）

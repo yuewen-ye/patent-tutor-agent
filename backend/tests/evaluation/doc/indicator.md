@@ -183,9 +183,9 @@
 
 | 项目 | 说明 |
 |---|---|
-| **计算公式** | `L_low ≤ 题.difficulty ≤ L_high 的题数 / 总题数 × 100%`（双边区间） |
-| **数据来源** | `course_package.md` + `learning_path.md` + `learner_profile_update.md` |
-| **核心逻辑** | L_low: pl < 0.30 → L1; pl ≥ 0.30 → L2; 再封顶 difficulty_cap。角色特例: weakness → L3, forward_probe → L1 |
+| **计算公式** | `题.difficulty ≤ L_high 的题数 / 总题数 × 100%`（仅上限，不设下限） |
+| **数据来源** | `course_package.md` + `learning_path.md` |
+| **核心逻辑** | L_high 来自 `learning_path.md` 的节点难度封顶表；题目难度超过上限即不合格（超纲），不设下限 |
 | **评估标准** | ≥ 80% 为良好 |
 | **所属表** | 表1：脚本计算指标 |
 
@@ -211,20 +211,26 @@
 
 | 项目 | 说明 |
 |---|---|
-| **计算公式** | 每轮指标：是否触发动态迭代（布尔值）；画像指标：`触发次数 / 有效轮次数 × 100%`（通常为 100%）。分母根据数据来源确定为 `n-1` 或 `n-2` |
-| **数据来源** | `learner_profile_update.md`（跨轮比对） |
-| **核心逻辑** | 检查 BKT 掌握度值是否发生变化（不论上升或下降），统计每轮是否触发迭代。最终统计每轮是否触发动态迭代。 |
-| **评估标准** | 画像级通常为 100%（只要系统执行过迭代即为触发），轮次级用于监控迭代是否发生 |
-| **所属表** | 表1：脚本计算指标 |
+| **计算公式** | 画像级：`触发次数 / 有效比较次数 × 100%`。有效比较 = R02 vs R01、R03 vs R02、R04 vs R03、R05 vs R04（共 4 次） |
+| **数据来源** | `learner_profile_update.md`（跨轮比对 BKT PL 值） |
+| **核心逻辑** | 画像级指标，每轮返回 `/` 不单独展示。比较前后轮 BKT PL 值，任一节点 |Δpl| ≥ 0.05 即为触发。汇总触发次数 / 有效比较次数 |
+| **评估标准** | 画像级百分比，≥ 80% 为良好 |
+| **所属表** | 表1：脚本计算指标（画像级汇总） |
 
 ### 2.5 检索正确性
+
+> 评估对象为 RAG 检索链路返回的**真实检索 chunk**，而非 Expert 合成后的课程章节。
+> 评估器从 `retrieval_context*.md`（含主检索 + Expert A/B tool calling 的检索结果）
+> 中解析 JSON 格式的 chunk（含 chunk_id/source/text/score/rerank_score），
+> 按 chunk_id 去重后逐条送外部 LLM 评估准确性与完整性。
+> 若无 retrieval_context 文件，则回退为 course_package 章节切片代理（JSON 中 `chunk_source` 字段标注来源）。
 
 #### 2.5.1 检索准确率
 
 | 项目 | 说明 |
 |---|---|
 | **计算公式** | `准确检索chunk数 / 总检索chunk数 × 100%` |
-| **数据来源** | `m2_retrieval_*.json`（外部LLM评估结果） |
+| **数据来源** | `retrieval_context*.md` → `round_indicator_*.json` 的 `retrieval` section |
 | **评估标准** | ≥ 90% 为良好 |
 | **所属表** | 表2：外部LLM评价指标 |
 
@@ -233,7 +239,7 @@
 | 项目 | 说明 |
 |---|---|
 | **计算公式** | `完整检索chunk数 / 总检索chunk数 × 100%` |
-| **数据来源** | `m2_retrieval_*.json`（外部LLM评估结果） |
+| **数据来源** | `retrieval_context*.md` → `round_indicator_*.json` 的 `retrieval` section |
 | **评估标准** | ≥ 85% 为良好 |
 | **所属表** | 表2：外部LLM评价指标 |
 

@@ -43,3 +43,4 @@ backend/tests/evaluation/results/record/*
 backend/tests/evaluation/export_data.sql
 backend/tests/evaluation/results/reports/*
 backend/tests/evaluation/clean_export_sql.py
+backend/tests/evaluation/tests
