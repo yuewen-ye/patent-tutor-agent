@@ -2,6 +2,7 @@
 # 并行运行外部 LLM 评估（bootrun 菜单 4 的非交互版）：
 # 每个类别一个 Compose project，容器并行跑 run_llm_eval_noninteractive.py，
 # 输出写入各自独立的 backend/tests/evaluation/results/record_<类别>/。
+# 运行日志写入 backend/tests/evaluation/results/logs/<类别>/llm-eval.log。
 #
 # 默认并行全部 5 类（eval-normal / eval-no-rag / eval-no-rerank /
 # eval-single-model / eval-no-debate）；已完成的 section 会自动跳过（⏭️），
@@ -62,7 +63,7 @@ for cat in "${CATEGORIES[@]}"; do
         echo "未知类别 '$cat': $ENV_FILE 不存在" >&2
         exit 1
     fi
-    LOG_DIR="$ROOT/artifacts/evaluation/$cat"
+    LOG_DIR="$ROOT/backend/tests/evaluation/results/logs/$cat"
     mkdir -p "$LOG_DIR"
     echo "启动 $cat ..."
     (
@@ -86,9 +87,9 @@ for entry in "${PIDS[@]}"; do
     cat="${entry%%:*}"
     pid="${entry##*:}"
     if wait "$pid"; then
-        echo "完成 $cat；日志: artifacts/evaluation/$cat/llm-eval.log"
+        echo "完成 $cat；日志: backend/tests/evaluation/results/logs/$cat/llm-eval.log"
     else
-        echo "失败 $cat（含失败 section，标记已写入产物）；日志: artifacts/evaluation/$cat/llm-eval.log" >&2
+        echo "失败 $cat（含失败 section，标记已写入产物）；日志: backend/tests/evaluation/results/logs/$cat/llm-eval.log" >&2
         FAILED+=("$cat")
     fi
 done
