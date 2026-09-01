@@ -38,7 +38,7 @@
 - `visual_style` 只是顶层对象中的子对象，**不要把它作为整个响应返回**。
 - 每一份输入 slide 必须对应输出 `slides` 数组中的一页，`id` 与 `order` 必须与输入保持一致，**不增删页、不变更顺序**。
 - `slides[i].speaker_notes`：必须**一字不差**使用输入的 `narration.text`，不得改写法律结论。
-- `theme`：**必须固定写 `"warm_orange"`**。如果结构层（course_slides）写了其他主题（例如 `"warm_orange_premium"`），你要覆盖为 `"warm_orange"`，不要继承 premium dark。
+- `theme`：**默认写 `"warm_orange"`**。当课程是竞赛路演、成果展示、荣誉证书或需要深色高对比风格时，可选用 `"warm_orange_premium"`；一旦选用 premium，整份 deck 必须使用 premium 专用模板和深色金棕配色，不要混用浅色主题元素。若结构层未指定且内容不适合 premium，则保持 `"warm_orange"`。
 - 如果你发现结构层 slide 的字数超了（例如标题 ≥ 20 字、body ≥ 6 行、takeaways ≥ 8 条），你需要：保持页序不变，同时在 `subtitle` 里写精简版，而正文裁剪到上限内（不要硬塞，否则后端会截断）。
 
 ---
@@ -60,9 +60,27 @@
 | 进度 / 强调段（金橙高亮） warning | `F8B369`（金橙）| 已播放段进度条；步骤流当前步骤填充；不要大面积使用 |
 | 严重警示 danger | `B91C1C`（石榴红）| warning_panel 标题左侧图标；仅用于真的错误/违法情形，不得滥用装饰 |
 
+### `warm_orange_premium` 深色主题（仅当明确需要竞赛/路演/成果展示风格时选用）
+
+| 语义 | 色值 | 在 PPT 页面上的使用 |
+|---|---|---|
+| 页面背景 background | `7B3F00`（深橙棕）| 每页全幅深色底 |
+| 卡片 / 内容块 surface | `8B4513`（棕褐）| 内容卡、章节面板 |
+| 主文字 + 页面标题 text / primary | `FFFFFF`（纯白）| 标题、正文 |
+| 次要文字 / muted / secondary | `F5DEB3`（小麦色）| 副标题、页脚 |
+| 主强调金 accent | `FFD700`（金色）| 装饰条、当前 tab、要点编号、大数字 |
+| 警告 warning | `FF6B6B`（浅红）| 警示图标 |
+| 成功 success | `4ADE80`（翠绿）| 状态标记 |
+| 分组底 / 标签 grid | `A0522D`（褐棕）| tab 背景、网格底纹 |
+
+使用 premium 主题时：
+- 封面/章节页可使用 tab 导航、大数字章节编号、统计卡片、证书网格等 premium 专属版式。
+- 对应 `template_id` 只能从 `premium_cover`、`premium_content`、`premium_section_divider`、`premium_stat_overview`、`premium_certificate_gallery`、`premium_two_column`、`premium_summary` 中选择。
+- 仍禁止 emoji、粗体 700+、蓝紫黑灰冷色；渐变 HEX 必须取自当前主题色板（深棕/金/小麦色系）。
+
 ### 硬约束（违反直接判定"风格不对齐"）
 
-1. 不得出现以下色板之外的颜色（包括边框/阴影/渐变），尤其是：深蓝专利蓝 `123B66`、深绿专业 `14532D`、紫、黑、灰白 `#F6F8FC` 冷底、金箔 `#FFD700`、深棕黑底 `#7B3F00`。
+1. 不得出现当前主题色板之外的颜色（包括边框/阴影/渐变），尤其是：深蓝专利蓝 `123B66`、深绿专业 `14532D`、紫、灰白 `#F6F8FC` 冷底。`warm_orange` 下额外禁止金箔 `#FFD700`、深棕黑底 `#7B3F00`；`warm_orange_premium` 下额外禁止奶油底 `#FFF7ED`、主橙 `#D9773E` 大面积使用。
 2. **所有卡片必须圆角（约 6–10 px，`card_style = rounded`）**；不得使用 sharp/square 硬角。
 3. 卡片边框使用 `8B5A3C/30`（中棕半透明）或 `D9773E/30`（橙半透明），不使用灰冷色边。
 4. 阴影要**极轻**：仅用于强调卡或当前态（例如封面标题块）；正文卡不加或只使用 20% opacity 的 brown。
@@ -91,7 +109,7 @@
 
 ### Slide type → layout / template 的**唯一映射**（必须严格遵守）
 
-如果你使用不在此表中的 template，例如 `hero_statement`、`cover_minimal`、`concept_map`、`evidence_stack`、`decision_tree` 等，也可以——但**不得使用 premium 的深色模板语义（tab / section-divider / certificate-gallery / golden number）**。那些视觉元素只在 `warm_orange_premium` 里成立，在浅色疗愈风里一定会"丑"。
+如果你使用不在此表中的 template，例如 `hero_statement`、`cover_minimal`、`concept_map`、`evidence_stack`、`decision_tree` 等，也可以——但**浅色主题 (`warm_orange`) 不得使用 premium 的深色模板语义（tab / section-divider / certificate-gallery / golden number）**。这些视觉元素只在 `warm_orange_premium` 里成立。当 `theme == "warm_orange_premium"` 时，应优先使用 `premium_*` 专用模板。
 
 | 输入 slide.type | 输出 layout（必填） | 推荐 template_id | 前端对齐的页面元素 | 推荐 composition | 最多允许的 visual_elements (≤2) |
 |---|---|---|---|---|---|
@@ -210,7 +228,7 @@
 ## 必须逐页通过的"前端风格一致"自检清单
 
 ```
-□ Theme == "warm_orange"（浅色疗愈），从未落到 warm_orange_premium。
+□ Theme 为 `"warm_orange"`（默认浅色疗愈）或 `"warm_orange_premium"`（竞赛/路演/成果展示）。选定后不再混用另一主题的元素。
 □ 背景色 cream #FFF7ED，没有纯白/冷白/深棕/蓝色整底。
 □ 所有卡片圆角（rounded 6–10 px），卡片边界是 8B5A3C 半透明或 D9773E 半透明。
 □ 字重：正文 normal（400），标题最多 medium（500）；没有 bold / 700+。
@@ -227,7 +245,7 @@
 □ **每页 ≥ 1 视觉锚点**：任一内容页有 visual_element / gradient 指令 / metric_cards 之一；无连续 2 页纯 body+bullets 文字堆砌。
 □ **hero 间距**：cover_split / hero_statement（mnemonic 口诀）/ summary_roadmap 三类 hero 页两两之间至少隔 1 个白底内容页。
 □ **非对称版式占比 ≥ 60%**：cover_split / two_column / case_analysis_split / comparison_matrix / legal_citation_focus 占多数；纯 content+bullets 对称页 ≤ 40%。
-□ 没有使用 premium 专属模板：没有 tabs、200pt 金色大数字、certificate 网格、section_divider、hero_statement 上的夸张金色大标题。
+□ 若使用浅色主题，没有 tabs、200pt 金色大数字、certificate 网格、section_divider 等 premium 专属元素；若使用 premium 主题，则优先使用 `premium_*` 专用模板并保持一致的金棕深色风格。
 □ 第 1 页封面 `visual_intent` 含 `gradient:h(FFF7ED->FFE8D0)` 与 `illustration:<kind>`，触发渐变 hero + 扁平插画。
 □ 整份 deck 覆盖至少 5 种不同 `visual_elements[].type`，不是只用 `callout`+`timeline`。
 □ `gradient`/`illustration` 指令的 HEX 只取暖橙色板、kind 只取允许枚举，无蓝紫黑灰色。
