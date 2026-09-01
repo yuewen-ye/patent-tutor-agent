@@ -18,7 +18,7 @@
 | `mysql-setup.md` | WSL2、Ubuntu、Docker Engine/CLI、MySQL 容器和数据库初始化指南 |
 | `agents-yaml-config.md` | `config/agents.yaml` 通道/节点配置、key 解析链、fallback 语义和排错指引 |
 | `evaluation-docker-guide.md` | 多 Docker Compose 实验栈的隔离、并行运行与结果比较指南 |
-| `evaluation-logs-guide.md` | 评测运行日志查看指南（交互式 bootrun 与 Docker 并行运行） |
+| `llm-evaluation.md` | LLM 评测方案与指标 |
 
 运行时行为冲突时，以 `backend/app/graph/workflow.py`、
 `backend/app/schemas/state.py` 和实际 API 路由为准，并同步修正文档。
@@ -41,15 +41,23 @@
 
 ## 知识资产与示例
 
-`各agent过程产物/` 只保存双知识轴说明和流程产物示例，不参与服务运行。
-Planner 实际读取的知识 DAG 和混淆对位于 `backend/app/curriculum/data/`，与路径算法一起
-作为后端运行资源维护。`dual-knowledge-graph-index.json` 是两份资产的索引说明；其他
-Markdown 文件用于展示各阶段产物格式。真实会话输出写入
-`artifacts/sessions/{session_id}/`。
+真实会话输出写入 `artifacts/sessions/{session_id}/`。运行时静态数据必须归入对应的
+`backend/app` 领域包；`docs/` 不保存运行时资产。
 
 ## 工程协作文档
 
-`agents/` 保存 issue tracker、triage 标签和领域文档工具的约定，不描述产品运行时架构。
+`agents/` 保存 issue tracker、triage 标签、领域文档工具约定以及 Agent 行为参考：
+
+| 文件 | 用途 |
+|---|---|
+| `docs/agents/issue-tracker.md` | GitHub Issues 操作约定 |
+| `docs/agents/triage-labels.md` | 标签定义 |
+| `docs/agents/domain.md` | 领域文档/ADR 使用约定 |
+| `docs/agents/workflow-architecture.md` | 运行时图、节点职责与 Agent 实现模式 |
+| `docs/agents/artifact-layout.md` | 会话产物目录、PPTX/音频流水线与环境开关 |
+| `docs/agents/testing.md` | 测试约定与覆盖要求 |
+
+这些文档描述 Agent 如何与本仓库协作，不描述产品运行时架构本身。
 
 ## 维护规则
 

@@ -14,14 +14,14 @@ This is a single-context repo. Use the root `CONTEXT.md` and `docs/adr/` when th
 
 Read [`docs/README.md`](docs/README.md) before changing architecture or contracts.
 
-- Product scope and role responsibilities: `docs/竞赛方案汇报.docx`
+- Product scope and role responsibilities: `docs/竞赛方案汇报.docx` (binary competition deliverable; agents cannot diff it)
 - Runtime graph: `backend/app/graph/workflow.py`
 - Runtime state contracts: `backend/app/schemas/state.py`
 - Agent and frontend contract: `docs/agent-interface-spec.md`
 - Current workflow behavior: `docs/workflow-technical-guide.md`
 - MySQL schema and persistence boundaries: `docs/patent-tutor-rdb-design.md`
 - FastAPI interface reference: `docs/fastapi-api-reference.md`
-- Roadmap only: `docs/implementation-plan.md`
+- Roadmap: `docs/implementation-plan.md`
 
 Code wins when documentation and runtime behavior disagree. Fix the stale document in the same change.
 
@@ -45,15 +45,11 @@ uv run pytest
 uv run ruff check .
 uv run mypy .
 uv run pyright
-```
-
-PowerShell equivalents for Studio live under `scripts/*.ps1`. Integration tests call real LLM
-providers and require valid `.env` API keys. Generate `requirements.txt` only for an external
-platform that requires it:
-
-```bash
 uv export --format requirements-txt --output-file requirements.txt
 ```
+
+Prerequisites: valid `.env`, `config/agents.yaml`, and (for server/workflow/MySQL scripts) `PATENT_TUTOR_MYSQL_URL`.
+PowerShell equivalents live under `scripts/*.ps1`. Integration tests need real API keys.
 
 ## Project Structure
 
@@ -66,178 +62,48 @@ uv export --format requirements-txt --output-file requirements.txt
 │   │   ├── builder/             # LangGraph Studio entry point
 │   │   ├── core/                # provider clients, runtime config and AgentLLMRouter
 │   │   ├── curriculum/          # dual-axis data and deterministic path planning
-│   │   ├── graph/               # StateGraph wiring and runtime side effects
+│   │   ├── graph/               # StateGraph wiring
 │   │   ├── learner_memory/      # Store helpers and learner profile/BKT contracts
-│   │   ├── persistence/         # MySQL pool, migrations and business repositories
 │   │   ├── onboarding/          # questionnaire loader and Markdown definition
+│   │   ├── persistence/         # MySQL pool, migrations and business repositories
+│   │   ├── presentation/        # PPTX rendering and slide previews
 │   │   ├── rag/                 # real Milvus Lite + BGE-M3 retrieval
-│   │   ├── retrieval/           # real/mock retrieval selection boundary
+│   │   ├── retrieval/           # real/mock/off retrieval selection boundary
 │   │   ├── runtime_outputs/     # Markdown artifacts, manifests and workflow logs
 │   │   ├── schemas/             # StateDict, context, Pydantic contracts
-│   │   ├── services/            # session lifecycle and event bridge
+│   │   ├── services/            # session lifecycle, events, audio, cancellation
 │   │   ├── config.py            # FastAPI service settings
 │   │   └── middleware.py        # application-wide HTTP middleware
-│   ├── scripts/                 # workflow runner and graph export
-│   ├── tests/                   # unit and real-provider integration tests
+│   ├── scripts/                 # workflow runner, graph export, API journey, node runner
+│   ├── tests/                   # unit, integration and evaluation harnesses
 │   └── main.py                  # FastAPI entry point
-├── frontend/                    # React 18 + TypeScript + Vite UI (pages, API client, components)
-├── config/agents.example.yaml   # channel/model/temperature template; copy to config/agents.yaml (ignored)
+├── config/
+│   ├── agents.example.yaml      # channel/model/temperature template; copy to config/agents.yaml (ignored)
+│   └── agents.yaml              # live runtime config (ignored)
 ├── docs/                        # active contracts, guides, architecture and output examples
+├── frontend/                    # React 18 + TypeScript + Vite UI
 ├── scripts/                     # Studio start/stop scripts
 ├── artifacts/                   # ignored runtime Markdown, manifests and logs
+├── data/                        # runtime learner memory JSON
+├── docker/                      # Docker and evaluation compose files
+├── models/                      # local BGE-M3 and reranker weights
 ├── langgraph.json
 ├── .env.example
 ├── pyproject.toml
 └── uv.lock
 ```
 
-## Current Architecture
+## Architecture
 
-This repository implements a multi-Agent patent tutoring workflow with an LLM Planner proposal,
-deterministic planning guards/activity-window scheduling, and deterministic retrieval nodes.
-`diagnosis_feedback`, `expert_a`, and `expert_b` are multi-phase Agents; a phase is not a separate
-Agent.
-
-```text
-START -> _init -> route
-  chat     -> retrieve_context -> chat_answer -> END
-  diagnose -> diagnosis_feedback[diagnosis] -> END
-  teach    -> diagnosis_feedback[diagnosis] -> planner
-               -> expert_a[draft] || expert_b[draft]
-               -> _experts_barrier
-               -> expert_a[cross_review] || expert_b[cross_review]
-               -> _experts_barrier
-               -> expert_a[revision] || expert_b[revision]
-               -> _experts_barrier
-               -> expert_a[integration] -> judge
-                    accept/minor -> slide_deck（默认启用，设 PATENT_TUTOR_SLIDE_DECK_ENABLED=false 关闭）
-                                  -> generate_pptx（默认启用，设 PATENT_TUTOR_PPTX_ENABLED=false 关闭）-> END
-                    revise       -> expert_a[integration] -> judge（循环，上限
-                                    agents.judge.max_revisions 次，缺省 3；达上限后带当前
-                                    course_package 继续收尾）
-
-POST /sessions/{course_session_id}/exercise-responses
-  -> independent feedback session
-  -> _init -> diagnosis_feedback[feedback] -> END
-```
-
-`_experts_barrier` is a deterministic join. It advances `expert_phase` only after both parallel
-experts finish the same phase. `expert_a_integration` is a graph alias that invokes the existing
-Expert A node in integration phase; it is not a sixth Agent.
-
-Judge approval ends the course-generation session. A `revise` decision returns to Expert A
-integration and repeats until Judge accepts the course or the revision count reaches
-`agents.judge.max_revisions` (default 3); at the cap the workflow keeps the current
-`course_package` and finishes instead of looping forever. The learner studies and submits exercises
-later, which creates a separate feedback session. The graph has no interrupt-based long wait.
-
-## Node Responsibilities
-
-| Node | Type | Responsibility | Main outputs |
-|---|---|---|---|
-| `route` | LLM | classify `teach/chat/diagnose` | `intent` |
-| `diagnosis_feedback` | LLM + Store | diagnosis or feedback selected by phase | `learner_profile`, `feedback_result` |
-| `planner` | LLM decision + deterministic route builder + Store | decide `keep`/`replace`; restore an active plan or build a goal-directed DAG route | `dual_axis_snapshot`, `learning_path`, `path_decision`, `teaching_context` |
-| `retrieve_context` | deterministic retrieval | fixed chat-path RAG call | `retrieval_context` |
-| `expert_a` | LLM + tool calling | draft, review B, revise, integrate course | A draft/review/revision, `course_package` |
-| `expert_b` | LLM + tool calling | draft, review A, revise | B draft/review/revision |
-| `judge` | LLM | evaluate integrated course without rewriting it | `judge_report` |
-| `chat_answer` | LLM | answer chat requests from retrieved context | `chat_answer` |
-| `generate_pptx` | LLM + deterministic renderer | choose visual direction/templates and render an editable PPTX plus per-slide PNG previews from `course_package` + `course_slides` | `pptx_result`, session-scoped PPTX artifact and `slide_*.png` previews |
-
-Do not reintroduce removed `tool_agent`, `finalize`, or debate-round counters,
-`final_learning_markdown`, `exercise_answer_key`, or `quality_gate_failed` nodes/fields.
-
-## Agent Node Pattern
-
-Every Agent is constructed through dependency injection:
-
-```python
-def build_<name>_node(llm_client: LLMClient) -> Node:
-    def node(
-        state: StateDict,
-        runtime: Runtime[WorkflowContext] | None = None,
-    ) -> dict[str, Any]:
-        validated = generate_validated_json(
-            llm_client,
-            ...,
-            agent="<name>",
-            output_model=OutputContract,
-        )
-        return {"output_field": validated.model_dump(), "events": [completed_event(...)]}
-
-    return node
-```
-
-- Agent factories receive `LLMClient`; never import provider state inside a node.
-- Every final Agent JSON result uses strict JSON Schema output through
-  `generate_validated_json_stream()`, followed by Pydantic validation and one repair attempt.
-  Non-streaming `generate_validated_json()` remains available for callers that require provider-side
-  structured output, but all current Agent nodes consume streaming chat completions; chunks are
-  accumulated, re-assembled into valid JSON, and validated before entering state. Tool calls remain
-  non-streaming. Wrappers such as `CancelAwareLLMClient` must proxy `generate_json_stream()` to the
-  inner client so that streaming is not silently downgraded.
-- Expert A/B use `generate_with_tools()` when deciding whether to call RAG, then validate final JSON.
-- Planner receives the complete runtime knowledge/confusion graphs, learner profile/BKT snapshot and
-  active plan, then makes a strict `PlannerAgentResult` keep/replace decision on every teach session.
-  `keep` accepts the deterministic candidate route and requires `nodes=null`; `replace` returns a
-  complete LLM-adjusted route that is semantically checked in the normal repair loop. The candidate
-  is computed once before the LLM and reused across fallback, retry, and repair. Model failure
-  follows configured primary-to-fallback rounds and fails the node when exhausted; deterministic
-  candidate generation never substitutes for an exhausted model decision. `retrieve_context` does
-  not call an LLM.
-- Multi-phase prompts live beside the node as `<phase>_system.md`; do not inline phase prompts.
-- Normalize provider-specific aliases before Pydantic validation.
-- Every LLM output must pass a `ContractModel` with `extra="forbid"` before entering state.
+See `docs/agents/workflow-architecture.md` for the runtime graph, node responsibilities, and Agent implementation patterns.
 
 ## LLM Configuration
 
-`config/agents.yaml` is the primary non-secret runtime configuration. Providers are
-**user-defined channels** in the `providers:` section — the channel name is arbitrary
-(e.g. `jiji-gpt`), not a code-level enum. Each channel carries:
-
-- `base_url` (required; there is no built-in fallback endpoint)
-- `api_key` (optional inline) / `api_key_env` (optional; default convention is
-  `{CHANNEL uppercased, non-alphanumeric → _}_API_KEY`, e.g. `my-chan` → `MY_CHAN_API_KEY`)
-- `model_name` (channel default model), `supports_strict_schema` (optional; runtime-probed
-  otherwise), and an optional `models` list that, when present, validates the spelling of
-  model names referenced by `agents.*`
-
-Other keys:
-
-- `llm.default_provider` (must reference a defined channel), timeout and retries
-- per-Agent provider/model/temperature/tool temperature/top_k
-- optional per-Agent model failover: `agents.<agent>.fallback_model_name` (plus optional
-  `fallback_provider`/`fallback_base_url`, may cross channels). Any primary-model
-  failure — model-side (429/5xx/524, transport errors, empty or unparsable content)
-  or our-side (400 schema rejection, 401/403 auth) — fails over to the fallback model
-  for one attempt, then the next round starts from the primary model again, bounded
-  by `retry_times`. When
-  `{AGENT}_PROVIDER` env override is set, the yaml `model_name`/`fallback_*` for that Agent
-  are ignored.
-
-API keys and machine-local paths belong in `.env`. `llm.default_provider`,
-`agents.*.provider` and `agents.*.fallback_provider` must all reference channels defined in
-`providers:`; the config fails to load otherwise, and the error lists the available
-channels. A full annotated example lives in `config/agents.example.yaml`. `AgentLLMRouter`
-supports explicit `{AGENT}_PROVIDER` environment overrides (must also reference defined
-channels) for incident recovery. Planner uses the default provider unless a dedicated
-runtime setting is added.
+See `docs/agents-yaml-config.md` for channel/providers, failover, and environment overrides.
 
 ## State And Contracts
 
-`StateDict` is the shared runtime contract. `events`, `artifacts`, and `retrieval_context` are
-append-only reducer fields. Important phase fields are:
-
-- `workflow_mode`: `auto | teach | chat | diagnose | feedback`
-- `diagnosis_feedback_phase`: `diagnosis | feedback`
-- `expert_phase`: `draft | cross_review | revision | integration`; disabled debate mode keeps this at `draft`
-- `teach_phase`: `debate | single_agent | integration`; `single_agent` means the deployment debate switch is disabled and the Expert A draft is also the course package
-- `LearningPathItem.knowledge_points`: fine-grained points extracted from the static DAG
-  (`knowledge_points[].point` strings)
-- `TeachingContext.knowledge_points`: current-node point strings Experts must cover
-
-Schema changes must update, in order:
+`StateDict` is the shared runtime contract. Schema changes must update, in order:
 
 1. `backend/app/schemas/state.py`
 2. `docs/agent-interface-spec.md`
@@ -245,72 +111,13 @@ Schema changes must update, in order:
 4. relevant tests
 5. README or user-facing guides when behavior is externally visible
 
-## Learner Memory And Dual Axes
+## Learner Memory
 
-FastAPI and the CLI use `MySQLLearnerStore`, configured by `PATENT_TUTOR_MYSQL_URL`. It
-stores profile snapshots, learning history, BKT mastery and audit events, workflow state, events,
-questions, attempts, learner-level versioned learning plans and Artifact indexes. MySQL is the only
-business persistence backend; there is no SQLite storage or SQLite-to-MySQL migration path.
-
-The default graph checkpointer is in-memory. LangGraph Studio uses the Store/checkpointing managed by
-LangGraph Dev and does not automatically read FastAPI's MySQL learner store. Product workflows that
-must use persisted learner data should run through FastAPI or explicitly inject the same Store.
-
-Planner reads these backend runtime assets directly:
-
-- `backend/app/curriculum/data/knowledge-dag.json`
-- `backend/app/curriculum/data/confusion-pairs.json`
-
-`knowledge-dag.json` nodes carry a `knowledge_points` list of fine-grained learning objectives;
-each item is an object with a `point` string. Planner extracts the `point` text and enriches every
-`LearningPathItem` with these strings, then surfaces the current node's list in
-`teaching_context.knowledge_points`; Experts must cover each point in `teaching_content` and
-`block_plan` without expanding outside the current node.
-
-The knowledge axis is static. Runtime confusion risk is derived from the latest learner profile and
-BKT mastery. Planner LLM runs on every teach session and decides whether to keep the deterministic
-candidate route or replace it with a complete LLM-adjusted route. The candidate is computed once
-before the LLM from the active route and learner state. A final route only creates a new plan version
-when its persisted route fingerprint materially changes; an unchanged keep reuses the active version.
-Historical completion is carried forward only when backed by a completed course-feedback session for a
-node that reappears; BKT mastery affects routing and review risk, not the completion ledger. The backend
-recomputes the cursor as the first final-route node not completed. Every teach session
-recomputes the activity window from the latest cursor, BKT evidence, weak points and current-node
-confusion risk.
-
-The candidate route is produced by `compute_learning_path()` before the Planner LLM. It combines
-atomic goal matches, relevant weak/confusion signals, BKT mastery evidence, active-route continuity
-and the static prerequisite closure, then emits a stable Kahn topological order. The route is not
-selected by fixed competition/foundation/remediation branches and does not force every weak point;
-it expands only as needed for goal coverage, prerequisite completeness and the configured route
-budget. The recommender (`recommend_target_nodes_for_goal`) supplies goal-related atomic candidates.
-`keep` requires `nodes=null`; `replace.nodes` is a complete LLM-adjusted route and is semantically
-validated against candidate target coverage. The LLM must return a non-empty `decision_reason`, which is
-persisted in `path_decision`, the plan-decision audit row, and the rendered `artifacts/.../path/path_decision.md`.
-The rendered Planner artifacts expose the route source, fingerprint, material-change flag, and whether the
-active plan was reused or a new version was created. The LLM must still successfully decide `replace`;
-exhausted primary/fallback/retry calls fail Planner rather than activating a deterministic failure fallback.
-
-The backend owns the final topological validation, cursor and activity window. Historical review is
-zero to two completed nodes selected by deterministic risk; at-risk direct prerequisites can reserve
-at most one slot, while remaining candidates compete using BKT mastery, observation confidence, weak
-points and confusion risk. Completion order is only a stable tie-break. Experts generate content for
-the selected window and must not add nodes outside it. Do not let an LLM bypass these guards or mutate
-the static confusion definitions. Production code must not read `docs/`; runtime assets belong to the
-backend domain package that owns their schema and behavior.
-
-The full route and cursor live in `learner_learning_plans` and `learner_learning_plan_nodes`
-(cross-session source of truth). Per-session snapshots (path, activity window, `path_decision`)
-persist inside the session state JSON (`session_states`); the old `learning_paths` and
-`session_directives` tables were removed.
+MySQL is the only business persistence backend; FastAPI and the CLI use `MySQLLearnerStore` configured by `PATENT_TUTOR_MYSQL_URL` (also accepts `MYSQL_URL`). The default graph checkpointer is in-memory. See `docs/patent-tutor-rdb-design.md` for schema boundaries and `docs/workflow-technical-guide.md` for plan/cursor/window semantics.
 
 ## Module Placement
 
-Keep root-level `backend/app/*.py` files limited to application-wide boundaries. `config.py` and
-`middleware.py` belong there because `backend/main.py` consumes them directly. Domain behavior,
-persistence, runtime outputs and adapters must live in their owning package. New cohesive domains
-must use a package such as `curriculum/`, `learner_memory/`, `retrieval/`, `runtime_outputs/`, `api/`,
-or `services/`, and keep their runtime data inside that package.
+Keep root-level `backend/app/*.py` files limited to application-wide boundaries. `config.py` and `middleware.py` belong there because `backend/main.py` consumes them directly. Domain behavior, persistence, runtime outputs and adapters must live in their owning package.
 
 ## RAG
 
@@ -318,83 +125,22 @@ or `services/`, and keep their runtime data inside that package.
 
 - unset, empty or `real`: Milvus Lite + BGE-M3, `retrieval_method="vector"`
 - `mock`: fixed local chunks from `backend/app/retrieval/mock.py`, `retrieval_method="manual"`
+- `off`: empty result, no retrieval
 - any other value: configuration error
 
 Real retrieval failures raise `RAGRetrievalError`; never convert failure into an empty success.
-Chat always performs deterministic retrieval. Teach experts decide independently whether to use the
-same retrieval interface through native tool calling.
 
-## Artifact Persistence
+## Artifacts
 
-Structured `StateDict` data is the source of truth. Markdown is a rendered audit/read surface.
-Runtime files live under:
-
-```text
-artifacts/sessions/{session_id}/
-  manifest.json
-  workflow.log.jsonl
-  llm_calls.log.jsonl      # per-call LLM telemetry (tokens, status, duration)
-  llm_payloads.log.jsonl   # per-call request bodies (incl. response_format schema) and raw
-                           # responses; enabled by default, LLM_LOG_PAYLOAD=false disables
-  onboarding/{questionnaire,submission}.md
-  profile/learner_profile.md
-  path/{dual_axis_snapshot,learning_path,path_decision}.md
-  round-01/{retrieval_context,expert drafts,cross reviews,revisions,course_package,judge_report}.md
-  presentation/
-    course_deck.pptx
-    pptx_manifest.json
-    slide_01.png          # per-slide PNG preview for frontend thumbnails
-    slide_02.png
-    ...
-  feedback/{feedback_report,learner_profile_update,grading_report}.md
-```
-
-`path/learning_path.md` renders the planned route as a table and lists the per-node fine-grained
-`knowledge_points` extracted from the static DAG, so the artifact is directly inspectable.
-
-The graph side-effect wrapper owns file I/O. Agent nodes must not write files directly. Artifact paths
-are session-scoped and path traversal must remain rejected. Markdown artifacts remain the audit/read
-surface, while the optional `generate_pptx` node writes an editable PPTX under the same session directory:
-`artifacts/sessions/{session_id}/presentation/course_deck.pptx`. Its manifest records the PPTX artifact,
-source slide count and selected theme. PPTX generation uses the configured `generate_pptx` LLM only for
-strict `PresentationDesign` JSON; the backend deterministically renders the visual director decision,
-theme/template selection, decorative layer, semantic patent-course components and speaker notes. The
-LLM does not return binary PPTX, XML, SVG or arbitrary external resources. PPTX is enabled by default
-and can be disabled by setting `PATENT_TUTOR_PPTX_ENABLED=false`; on failure it degrades only that
-artifact and the course and other artifacts continue. There is no final Markdown file;
-`course_package.md` is the integrated course process artifact.
+Runtime files live under `artifacts/sessions/{session_id}/`. See `docs/agents/artifact-layout.md` for the complete layout, PPTX/audio pipeline, and environment switches.
 
 ## FastAPI Surface
 
-`backend/main.py` serves:
-
-- auth: `POST /auth/register`, `POST /auth/login`
-- health: `GET /health`, `GET /health/ready`
-- onboarding: `GET /questionnaires/onboarding`
-- learner flow: questionnaire submission and exercise submission endpoints
-- sessions: create, lightweight filtered/paginated list, full detail, cancel
-- learner memory: profile, profiles, history and session summary reads
-- events: SSE and WebSocket session streams
-- artifacts: session-scoped Markdown reads
-
-`GET /sessions` returns summaries plus `total/offset/limit`; it must not return full workflow state.
-`GET /sessions/{session_id}` owns the complete state snapshot. Keep handlers thin: API ->
-`SessionService` -> graph. API handlers never call individual Agents.
+`backend/main.py` mounts routers from `backend/app/api/`. See `docs/fastapi-api-reference.md` for the complete endpoint contract.
 
 ## Testing
 
-Tests live in `backend/tests/` and use `@pytest.mark.unit` or `@pytest.mark.integration`.
-
-- Deterministic workflow/API tests use fake `LLMClient` implementations with per-Agent response queues.
-- HTTP request-shape tests use `httpx.MockTransport`; they do not send real provider requests.
-- Integration tests require configured API keys and may skip on missing credentials or provider limits.
-- Workflow changes need route, state-contract, artifact and externally observable behavior coverage.
-- Learning-plan changes must cover new-plan creation, same-goal/version reuse, cursor advancement and
-  activity-window recomputation; review scheduling tests must include zero, one and two-node cases.
-- Concurrency changes must prove A/B phase ordering and parallel fan-out, not only final state equality.
-
-Use focused unit tests during development. Do not run real-provider integration tests unless the task
-requires them or the user asks for a complete integration run.
+Tests live in `backend/tests/` and use `@pytest.mark.unit` or `@pytest.mark.integration`. See `docs/agents/testing.md` for conventions and `backend/tests/README.md` for priorities.
 
 ## Coding And Documentation Rules
 
@@ -404,32 +150,25 @@ requires them or the user asks for a complete integration run.
 - Experts do not read the other expert's full draft during initial drafting.
 - Static assets and API inputs are parsed at their boundary; internal code consumes typed data.
 - Do not commit `.env`, credentials, `artifacts/` or generated caches.
-- Do not add completed plans, temporary research notes or obsolete diagrams to `docs/`; Git history is
-  the archive. Keep `docs/README.md` current when the active document set changes.
+- Do not add completed plans, temporary research notes or obsolete diagrams to `docs/`; Git history is the archive. Keep `docs/README.md` current when the active document set changes.
 
 ## Commit And Collaboration Rules
 
 - Implement the next smallest useful MVP unless the user explicitly asks for a complete feature.
 - Preserve unrelated worktree changes and stage only files relevant to the task.
 - Ask before creating or switching branches when branch strategy is unclear.
-- After verified code or documentation changes, create a structured local commit. Do not push unless
-  explicitly requested.
+- After verified code or documentation changes, create a structured local commit. Do not push unless explicitly requested.
 - Commit bodies list what changed, why, and verification commands/results.
 - Pull requests list purpose, changed modules, verification and linked issue/milestone.
 
 ## Graphify
 
-The repository knowledge graph is generated locally by
-[graphify](https://github.com/yuewen-ye/graphify) into `graphify-out/`. That directory is
-Git-ignored, so it is absent from a fresh checkout until `graphify update .` builds it.
+The repository knowledge graph is generated locally by [graphify](https://github.com/yuewen-ye/graphify) into `graphify-out/`. That directory is Git-ignored, so it is absent from a fresh checkout until `graphify update .` builds it.
 
-- If `graphify-out/GRAPH_REPORT.md` exists, read it before source exploration or codebase answers;
-  if `graphify-out/wiki/index.md` exists, navigate it before raw files.
+- If `graphify-out/GRAPH_REPORT.md` exists, read it before source exploration or codebase answers.
 - Prefer `graphify query/path/explain` for cross-module relationship questions.
 - Run `graphify update .` after source or active documentation changes.
 
 ## Agent Skills
 
-Issues use GitHub via `gh`; see `docs/agents/issue-tracker.md`. Triage labels are defined in
-`docs/agents/triage-labels.md`. Optional domain context/ADR discovery behavior is described in
-`docs/agents/domain.md`.
+Issues use GitHub via `gh`; see `docs/agents/issue-tracker.md`. Triage labels are defined in `docs/agents/triage-labels.md`. Optional domain context/ADR discovery behavior is described in `docs/agents/domain.md`.

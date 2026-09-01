@@ -15,7 +15,9 @@ JSON 请求和响应使用 UTF-8。成功创建后台任务时，接口立即返
 | POST | `/sessions` | 创建通用会话 |
 | GET | `/sessions` | 查询会话列表 |
 | GET | `/sessions/{session_id}` | 查询会话详情 |
-| DELETE | `/sessions/{session_id}` | 取消会话 |
+| DELETE | `/sessions/{session_id}` | 删除会话（运行中会话会先取消） |
+| GET | `/learners/{learner_id}/info` | 查询学员信息 |
+| PUT | `/learners/{learner_id}/info` | 更新学员信息 |
 | POST | `/learners/{learner_id}/diagnostic-sessions` | 创建诊断会话 |
 | GET | `/learners/{learner_id}/diagnostic-sessions` | 列出进行中的诊断会话 |
 | GET | `/learners/{learner_id}/diagnostic-sessions/{diagnostic_session_id}` | 查询诊断进度 |
@@ -28,7 +30,7 @@ JSON 请求和响应使用 UTF-8。成功创建后台任务时，接口立即返
 | GET | `/learners/{learner_id}/sessions` | 查询学员会话 |
 | GET | `/sessions/{session_id}/events/stream` | SSE 事件流 |
 | WS | `/sessions/{session_id}/events` | WebSocket 事件流 |
-| GET | `/sessions/{session_id}/artifacts/{artifact_path}` | 读取会话 Markdown 产物 |
+| GET | `/sessions/{session_id}/artifacts/{artifact_path}` | 读取会话产物（Markdown、JSON、PNG、音频、PPTX） |
 
 FastAPI 自带的接口描述页：`/docs`、`/redoc`、`/openapi.json`。
 
@@ -220,9 +222,9 @@ GET /sessions/{session_id}/artifacts/presentation/previews/slide_001.png
 
 ### `DELETE /sessions/{session_id}`
 
-用途：取消一个仍在运行的后台会话。接口返回取消请求处理后的会话快照；对已经结束的会话不会重新执行任务。
+用途：永久删除一个会话及其相关数据。若会话仍在运行，服务端会先取消后台任务，再删除持久化记录与会话产物目录；对已结束的会话直接删除。接口返回删除前的会话快照；会话不存在时返回 `404`。
 
-请求取消会话，并返回更新后的完整快照。会话不存在时返回 `404`。
+注意：当前没有单独的“取消但不删除”接口。如果需要保留会话记录，应在删除前读取完整快照。
 
 ## 3. CAT 诊断
 
@@ -368,6 +370,20 @@ GET /sessions/{session_id}/artifacts/presentation/previews/slide_001.png
 
 每项答案必须包含 `question_id` 和 `answer`；还可传 `selected_option`、`response_ms`、`idempotency_key`、`observed_correct`、`skill_id` 或 `skill_ids`。成功响应为 `SessionCreatedResponse`。
 
+### `POST /sessions/{course_session_id}/reteach`
+
+用途：在学员完成练习并更新 BKT 掌握度后，基于同一学习目标重新创建一次教学会话。原课程会话必须存在且属于请求中的 `learner_id`。
+
+请求体：
+
+```json
+{
+  "learner_id": "learner-001"
+}
+```
+
+成功响应为 `SessionCreatedResponse`。课程会话不存在返回 `404`；学员不拥有该会话返回 `403`。
+
 ## 5. 学员数据
 
 以下接口的 `limit` 默认值为 `10`，取值范围为 `1` 到 `50`。
@@ -395,6 +411,27 @@ GET /sessions/{session_id}/artifacts/presentation/previews/slide_001.png
 用途：只读取指定学员创建过的会话摘要，适合学员自己的课程、诊断和反馈记录列表。
 
 返回 `learner_id` 和该学员的会话摘要列表 `sessions`。
+
+### `GET /learners/{learner_id}/info`
+
+用途：读取学员注册信息（`display_name`、`email`、`login_id` 等）。
+
+学员不存在时返回 `404`。
+
+### `PUT /learners/{learner_id}/info`
+
+用途：更新学员注册信息。当前只允许修改 `display_name` 和 `email`；请求体中至少提供一个字段。
+
+请求体：
+
+```json
+{
+  "display_name": "新名字",
+  "email": "learner@example.com"
+}
+```
+
+学员不存在返回 `404`；未提供任何可更新字段返回 `400`。
 
 ## 6. 会话事件
 
@@ -437,13 +474,15 @@ data: {"status":"completed"}
 
 事件消息格式为 `{"type":"agent_event","event":{...}}`；结束消息格式为 `{"type":"session_status","status":"completed"}`。会话不存在时 WebSocket 以代码 `1008` 关闭。
 
-## 7. Markdown 产物
+## 7. 会话产物
 
 ### `GET /sessions/{session_id}/artifacts/{artifact_path}`
 
-用途：读取指定会话已经生成的 Markdown 文件，例如课程包、反馈报告或过程记录。`artifact_path` 必须是该会话目录下的相对路径。
+用途：读取指定会话已经生成的产物文件，例如课程包、反馈报告、PPTX、预览图、音频或过程记录。`artifact_path` 必须是该会话目录下的相对路径。
 
-读取指定会话的 Markdown 产物，响应类型为 `text/markdown; charset=utf-8`。路径非法返回 `400`；会话或产物不存在返回 `404`。
+读取指定会话的产物。响应 `Content-Type` 根据文件后缀决定：Markdown 返回 `text/markdown; charset=utf-8`，PNG 返回 `image/png`，PPTX 返回 `application/vnd.openxmlformats-officedocument.presentationml.presentation`，音频返回对应音频 MIME 类型。路径非法返回 `400`；会话或产物不存在返回 `404`。
+
+`HEAD /sessions/{session_id}/artifacts/{artifact_path}` 可用于只检查产物是否存在并获取元数据。
 
 ## 8. 完整 CAT → Agent → 反馈调用流程
 
