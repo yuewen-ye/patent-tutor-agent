@@ -315,6 +315,8 @@ METRIC_META: dict[str, tuple[str, str]] = {
 
 # 指标名规范化映射：calculate.MetricResult.name → 统一展示名
 _RENAME_MAP: dict[str, str] = {
+    # calculate.py 生成的"无编号"名称 → 报告展示的"带编号"名称
+    "产物完整率": "4.1 产物完整率",
     "1.1 闭环率": "1.1 闭环率",
     "1.2 裁判Agent准确性评分": "1.2 裁判Agent准确性评分",
     "5.4 异议率": "5.4 异议率",
@@ -571,7 +573,18 @@ def _get_llm_overall_scores(profile_letter: str, round_num: int,
         return None
     data = llm_results[profile_letter][round_num]["judge_eval"]
     overall = data.get("overall_evaluation", {})
-    return overall.get("scores", {})
+    scores = overall.get("scores")
+    if isinstance(scores, dict) and scores:
+        return scores
+    # 真实 round_indicator 的 data["overall"] = {metadata, overall_evaluation: {scores, ...}, chunk_evaluations}
+    # 而 _load_llm_eval_results 把 overall_evaluation=data["overall"] 再包一层，
+    # 导致需要再往下钻一次 overall.overall_evaluation.scores
+    inner = overall.get("overall_evaluation") if isinstance(overall, dict) else None
+    if isinstance(inner, dict):
+        inner_scores = inner.get("scores")
+        if isinstance(inner_scores, dict) and inner_scores:
+            return inner_scores
+    return scores if isinstance(scores, dict) else {}
 
 
 def _get_llm_overall_summary(profile_letter: str, round_num: int,
@@ -580,12 +593,18 @@ def _get_llm_overall_summary(profile_letter: str, round_num: int,
         return {}
     data = llm_results[profile_letter][round_num]["judge_eval"]
     overall = data.get("overall_evaluation", {})
-    return {
-        "summary": overall.get("overall_score", {}).get("summary", ""),
-        "highlights": overall.get("highlights", []),
-        "issues": overall.get("issues", []),
-        "suggestions": overall.get("suggestions", []),
-    }
+    # 同 _get_llm_overall_scores：先试单层，再试嵌套（兼容真实 JSON 的 data["overall"].overall_evaluation.*）
+    for container in (overall,
+                      overall.get("overall_evaluation") if isinstance(overall, dict) else None):
+        if isinstance(container, dict) and (container.get("overall_score") or
+                                            container.get("highlights") is not None):
+            return {
+                "summary": container.get("overall_score", {}).get("summary", ""),
+                "highlights": container.get("highlights", []),
+                "issues": container.get("issues", []),
+                "suggestions": container.get("suggestions", []),
+            }
+    return {}
 
 
 def _get_m7_resource_scores(profile_letter: str, round_num: int,

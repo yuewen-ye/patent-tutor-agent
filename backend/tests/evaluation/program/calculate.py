@@ -1243,29 +1243,142 @@ def calc_m16(data: dict[str, Any] | None, profile_letter: str) -> MetricResult:
 
 
 def calc_m17(data: dict[str, Any] | None, profile_letter: str, round_num: int) -> list[MetricResult]:
-    """2.5 检索正确性：返回准确率 + 完整率两个子指标。"""
+    """2.5 检索正确性：返回准确率 + 完整率两个子指标。
+
+    对 LLM 输出 schema 做双向兼容（方案A）：
+    - 首选：data 中 accurate_rate / complete_rate （旧聚合字段）；
+    - 兜底：若 accurate_rate 异常（为 0 但 evaluations 中其实有大量 accurate verdict），
+      则按 evaluations[*] 下无论是「顶层 verdict」还是「嵌套 evaluations[].verdict / summary」
+      的形状统一归一化后重算。
+    """
     if not data:
         return [
             _placeholder_metric("2.5 检索准确率", "m2_retrieval"),
             _placeholder_metric("2.5 检索完整率", "m2_retrieval"),
         ]
-    total = data.get("total_chunks", 0)
-    accurate = data.get("accurate", 0)
-    complete = data.get("complete", 0)
-    accurate_rate = data.get("accurate_rate", 0.0)
-    complete_rate = data.get("complete_rate", 0.0)
+    total = data.get("total_chunks", 0) or 0
+    accurate = data.get("accurate", 0) or 0
+    complete = data.get("complete", 0) or 0
+    accurate_rate = data.get("accurate_rate", 0.0) or 0.0
+    complete_rate = data.get("complete_rate", 0.0) or 0.0
 
-    if (accurate == 0 and complete == 0 and total > 0):
-        evaluations = (data.get("evaluations") or [])
-        accurate = sum(1 for e in evaluations if e.get("accuracy_verdict") == "accurate")
-        complete = sum(1 for e in evaluations if e.get("completeness_verdict") == "complete")
-        accurate_rate = round(accurate / total * 100, 2) if total else 0.0
-        complete_rate = round(complete / total * 100, 2) if total else 0.0
+    # 当 aggregate 字段可疑（都是 0 但 evaluations 非空）时统一重算。
+    # 触发条件：(accurate==0 or complete==0) AND evaluations 存在且非空 → 归一化重算。
+    evaluations = data.get("evaluations") or []
+    needs_recalc = (
+        (accurate == 0 or complete == 0 or accurate_rate == 0.0 or complete_rate == 0.0)
+        and isinstance(evaluations, list)
+        and len(evaluations) > 0
+    )
+    if needs_recalc:
+        total_calc, accurate_calc, complete_calc = _recalc_retrieval_from_evaluations(evaluations)
+        # 仅当重算得出"非0结果"时才覆盖（避免把 legitimate 的真实 0 又重写一遍但结果一样）
+        if total_calc > 0 and (accurate_calc > 0 or complete_calc > 0):
+            total = total_calc
+            accurate = accurate_calc
+            complete = complete_calc
+            accurate_rate = round(accurate / total * 100, 2) if total else 0.0
+            complete_rate = round(complete / total * 100, 2) if total else 0.0
+        elif total_calc > 0:
+            # 重算结果仍是 0 但至少 total 归一（例如所有子项真的都 inaccurate）
+            total = total_calc
+            accurate = accurate_calc
+            complete = complete_calc
+
+    # 再兜底：若 accurate_rate == 0 但仍可从 evaluations 中 summary/子对象计算
+    # （此处避免重复计算——上面已经做了）。同时为了避免原始 accurate=0, complete=0, total=0
+    # 情形仍占位 0，detail 标注"重算已执行"/"按外部原值"。
+    recomputed = bool(needs_recalc and (accurate > 0 or complete > 0 or total > 0))
 
     return [
-        MetricResult(name="2.5 检索准确率", value=accurate_rate, unit="%", detail={"computed": True, "chunk数": total, "准确数": accurate}),
-        MetricResult(name="2.5 检索完整率", value=complete_rate, unit="%", detail={"computed": True, "chunk数": total, "完整数": complete}),
+        MetricResult(
+            name="2.5 检索准确率",
+            value=accurate_rate,
+            unit="%",
+            detail={
+                "computed": True,
+                "recounted": recomputed,
+                "chunk数": total,
+                "准确数": accurate,
+            },
+        ),
+        MetricResult(
+            name="2.5 检索完整率",
+            value=complete_rate,
+            unit="%",
+            detail={
+                "computed": True,
+                "recounted": recomputed,
+                "chunk数": total,
+                "完整数": complete,
+            },
+        ),
     ]
+
+
+def _recalc_retrieval_from_evaluations(evaluations: list[Any]) -> tuple[int, int, int]:
+    """calculate 侧自包含的 retrieval evaluation 归一化重算。
+    与 evaluator 侧语义保持一致，但不 import evaluator_LLM（避免 LLM 配置依赖）。
+
+    Returns: (total, accurate, complete)
+    """
+    def _sub_evals(chunk: Any) -> list[dict[str, Any]]:
+        if not isinstance(chunk, dict):
+            return []
+        subs = chunk.get("evaluations")
+        if isinstance(subs, list) and subs:
+            return [s for s in subs if isinstance(s, dict)]
+        if chunk.get("accuracy_verdict") or chunk.get("completeness_verdict"):
+            return [chunk]
+        summary = chunk.get("summary")
+        if isinstance(summary, dict):
+            acc_rate = summary.get("accurate_rate", summary.get("complete_rate"))
+            if isinstance(acc_rate, (int, float)):
+                verdict_a = "accurate" if acc_rate >= 0.5 else "inaccurate"
+                comp_rate = summary.get("complete_rate", acc_rate)
+                cr = comp_rate if isinstance(comp_rate, (int, float)) else (
+                    acc_rate if isinstance(acc_rate, (int, float)) else 0
+                )
+                verdict_c = "complete" if cr >= 0.5 else "incomplete"
+                return [{
+                    "accuracy_verdict": verdict_a,
+                    "completeness_verdict": verdict_c,
+                    "_from_summary": True,
+                }]
+        return []
+
+    total = 0
+    accurate = 0
+    complete = 0
+    for e in evaluations:
+        if not isinstance(e, dict):
+            continue
+        total += 1
+        subs = _sub_evals(e)
+        verdict_a_hit = False
+        verdict_c_hit = False
+        for s in subs:
+            if s.get("accuracy_verdict") == "accurate":
+                verdict_a_hit = True
+            if s.get("completeness_verdict") == "complete":
+                verdict_c_hit = True
+        if not verdict_a_hit and not verdict_c_hit:
+            # 再看顶层 / summary
+            if e.get("accuracy_verdict") == "accurate":
+                verdict_a_hit = True
+            if e.get("completeness_verdict") == "complete":
+                verdict_c_hit = True
+            summary = e.get("summary")
+            if isinstance(summary, dict):
+                if summary.get("accurate_count", 0) > 0:
+                    verdict_a_hit = True
+                if summary.get("complete_count", 0) > 0:
+                    verdict_c_hit = True
+        if verdict_a_hit:
+            accurate += 1
+        if verdict_c_hit:
+            complete += 1
+    return total, accurate, complete
 
 def calculate_system_level_metrics(learner_prefix: str = "multi") -> list[MetricResult]:
     """计算系统级探针指标：M15 对抗稳健率 / M16 边界拒答恰当率。

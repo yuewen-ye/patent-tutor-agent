@@ -440,6 +440,55 @@ def split_by_sections(text: str) -> list[dict[str, Any]]:
     return chunks
 
 
+def parse_retrieval_chunks(round_dir: Path) -> list[dict[str, Any]]:
+    """从 retrieval_context*.md 文件中解析真正的 RAG 检索 chunk。
+
+    工作流会产生多个 retrieval_context 文件：
+      - retrieval_context.md    （retrieve_context 节点）
+      - retrieval_context-02.md （Expert A tool calling）
+      - retrieval_context-03.md （Expert B tool calling）
+
+    每个文件包含若干 ``## Item N`` 段落，内嵌 ```json 代码块，
+    结构为 {chunk_id, source, citation, text, score, rerank_score, metadata}。
+    本函数读取全部文件，按 chunk_id 去重后返回统一列表。
+    """
+    import json as _json
+
+    chunks: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+
+    # 匹配 retrieval_context.md / retrieval_context-NN.md（排除其它前缀）
+    rc_files = sorted(round_dir.glob("retrieval_context*.md"))
+    # 确保无后缀的文件排在最前
+    rc_files.sort(key=lambda p: 0 if p.stem == "retrieval_context" else 1)
+
+    for rc_path in rc_files:
+        content = rc_path.read_text(encoding="utf-8")
+        # 提取 ```json ... ``` 代码块
+        json_blocks = re.findall(r"```json\s*\n(.*?)\n```", content, re.DOTALL)
+        for block in json_blocks:
+            try:
+                obj = _json.loads(block)
+            except _json.JSONDecodeError:
+                continue
+            chunk_id = str(obj.get("chunk_id", ""))
+            if not chunk_id or chunk_id in seen_ids:
+                continue
+            seen_ids.add(chunk_id)
+            chunks.append({
+                "chunk_id": chunk_id,
+                "source": obj.get("source", ""),
+                "citation": obj.get("citation", ""),
+                "text": obj.get("text", ""),
+                "score": obj.get("score"),
+                "rerank_score": obj.get("rerank_score"),
+                "metadata": obj.get("metadata", {}),
+                "retrieval_file": rc_path.name,
+            })
+
+    return chunks
+
+
 def auto_select_eval_mode(text: str, config: dict[str, Any]) -> str:
     """自动选择评估模式。"""
     chunking_config = config.get("chunking", {})
@@ -2392,6 +2441,140 @@ def evaluate_m16(config: dict[str, Any], force: bool = False) -> dict[str, Any] 
 
 # ── M17 检索正确性（外部 LLM 评估） ────────────────────────────────────────────
 
+# ── M2.5 retrieval schema 归一化（方案A：reader + writer 双向兼容） ────────────
+# 背景：round-indicator prompt 的 LLM 实际输出是双层结构：
+#   {"evaluations": [{accuracy_verdict, completeness_verdict, ...}],
+#    "summary": {accurate_count, complete_count, accurate_rate, complete_rate}}
+# 但历史 reader（evaluate_m17 聚合 & calc_m17 兜底）假设 verdict 在 chunk 顶层，
+# 导致 16/16 verdicts 被误算为 0。下面的辅助统一在读取/写盘时做归一。
+
+def _retrieval_sub_evals(chunk_eval: dict[str, Any]) -> list[dict[str, Any]]:
+    """从一个 chunk 的 parsed 结果中抽取「子评价对象列表」（无论扁平/嵌套）。
+    当 LLM 输出嵌套 evaluations[] 时返回其内容；当它本身就是一个评价对象时
+    （此时它自己就带 verdict），把它包装为长度 1 的列表返回。
+    任何异常形状都返回空列表。"""
+    if not isinstance(chunk_eval, dict):
+        return []
+    subs = chunk_eval.get("evaluations")
+    if isinstance(subs, list) and subs:
+        return [s for s in subs if isinstance(s, dict)]
+    # 扁平 schema：chunk_eval 自身就是 verdict 载体
+    if chunk_eval.get("accuracy_verdict") or chunk_eval.get("completeness_verdict"):
+        return [chunk_eval]
+    # 退化：用 summary 推断（即使 evaluations 为空也能产出一条 verdict）
+    summary = chunk_eval.get("summary") or {}
+    if isinstance(summary, dict):
+        acc_rate = summary.get("accurate_rate", summary.get("complete_rate"))
+        if isinstance(acc_rate, (int, float)):
+            verdict_acc = "accurate" if acc_rate >= 0.5 else "inaccurate"
+            comp_rate = summary.get("complete_rate", acc_rate)
+            verdict_comp = "complete" if (comp_rate if isinstance(comp_rate, (int, float)) else acc_rate if isinstance(acc_rate, (int, float)) else 0) >= 0.5 else "incomplete"
+            return [{
+                "accuracy_verdict": verdict_acc,
+                "completeness_verdict": verdict_comp,
+                "_from_summary": True,
+            }]
+    return []
+
+
+def _chunk_is_accurate(chunk_eval: dict[str, Any]) -> bool:
+    """schema-agnostic 判断该 chunk 是否被 LLM 判定为 accurate。
+    优先级：
+    1) 子评价列表中任一为 accurate → 该 chunk 视为准确（any 语义适合当前 1 chunk=1 eval）
+    2) summary.accurate_count > 0 视为准确（兜底）
+    """
+    for sub in _retrieval_sub_evals(chunk_eval):
+        if sub.get("accuracy_verdict") == "accurate":
+            return True
+    summary = chunk_eval.get("summary") if isinstance(chunk_eval, dict) else None
+    if isinstance(summary, dict) and summary.get("accurate_count", 0) > 0:
+        return True
+    if isinstance(chunk_eval, dict) and chunk_eval.get("accuracy_verdict") == "accurate":
+        return True
+    return False
+
+
+def _chunk_is_complete(chunk_eval: dict[str, Any]) -> bool:
+    """镜像 _chunk_is_accurate 的 complete 版本。"""
+    for sub in _retrieval_sub_evals(chunk_eval):
+        if sub.get("completeness_verdict") == "complete":
+            return True
+    summary = chunk_eval.get("summary") if isinstance(chunk_eval, dict) else None
+    if isinstance(summary, dict) and summary.get("complete_count", 0) > 0:
+        return True
+    if isinstance(chunk_eval, dict) and chunk_eval.get("completeness_verdict") == "complete":
+        return True
+    return False
+
+
+def _promote_chunk_verdicts_to_top(chunk_eval: dict[str, Any]) -> dict[str, Any]:
+    """Writer 归一化：把嵌套子评价里的 verdict 提升到 chunk 顶层，
+    使未来新 JSON 的 reader 不需要走 helper 也能命中（向后兼容）。
+    不覆盖已存在的非空顶层字段。"""
+    if not isinstance(chunk_eval, dict):
+        return chunk_eval
+    subs = _retrieval_sub_evals(chunk_eval)
+    if not subs:
+        return chunk_eval
+    # 子评价聚合：any-accurate / any-complete 命中即 chunk 为通过
+    verdict_acc = next(
+        (s["accuracy_verdict"] for s in subs if s.get("accuracy_verdict")),
+        chunk_eval.get("accuracy_verdict"),
+    )
+    verdict_comp = next(
+        (s["completeness_verdict"] for s in subs if s.get("completeness_verdict")),
+        chunk_eval.get("completeness_verdict"),
+    )
+    # 若 summary 存在则也写入顶部评分（便于脚本直读）
+    summary = chunk_eval.get("summary") or {}
+    out = dict(chunk_eval)
+    if verdict_acc and not out.get("accuracy_verdict"):
+        out["accuracy_verdict"] = verdict_acc
+    if verdict_comp and not out.get("completeness_verdict"):
+        out["completeness_verdict"] = verdict_comp
+    # 评分：子评价若有 score 则取平均
+    acc_scores = [s.get("accuracy_score") for s in subs if isinstance(s.get("accuracy_score"), (int, float))]
+    comp_scores = [s.get("completeness_score") for s in subs if isinstance(s.get("completeness_score"), (int, float))]
+    if acc_scores and "accuracy_score" not in out:
+        out["accuracy_score"] = round(sum(acc_scores) / len(acc_scores), 2)
+    if comp_scores and "completeness_score" not in out:
+        out["completeness_score"] = round(sum(comp_scores) / len(comp_scores), 2)
+    if isinstance(summary, dict):
+        if not out.get("chunk_total_chunks") and summary.get("total_chunks") is not None:
+            out["chunk_total_chunks"] = summary["total_chunks"]
+    return out
+
+
+def _normalize_retrieval_section_writeback(section: dict[str, Any]) -> dict[str, Any]:
+    """Writeback 归一化：基于 evaluations[] 重新聚合 accurate/complete，并
+    逐条 promote chunk 顶层 verdict；字段缺失/异常安全（总是返回 dict）。
+    结果写入 round_indicator.retrieval，之后旧 reader 也能正确消费。"""
+    if not isinstance(section, dict):
+        return section or {}
+    evals_raw = section.get("evaluations") or []
+    if not isinstance(evals_raw, list):
+        evals_raw = []
+    promoted: list[dict[str, Any]] = [
+        _promote_chunk_verdicts_to_top(e) if isinstance(e, dict) else e
+        for e in evals_raw
+    ]
+    total = len(promoted)
+    accurate = sum(1 for e in promoted if isinstance(e, dict) and _chunk_is_accurate(e))
+    complete = sum(1 for e in promoted if isinstance(e, dict) and _chunk_is_complete(e))
+    accurate_rate = round(accurate / total * 100, 2) if total else 0.0
+    complete_rate = round(complete / total * 100, 2) if total else 0.0
+    fixed = dict(section)
+    fixed["evaluations"] = promoted
+    fixed["total_chunks"] = total
+    fixed["accurate"] = accurate
+    fixed["complete"] = complete
+    fixed["accurate_rate"] = accurate_rate
+    fixed["complete_rate"] = complete_rate
+    if not fixed.get("eval_type"):
+        fixed["eval_type"] = "retrieval_accuracy"
+    return fixed
+
+
 @_mark_failed_section("retrieval")
 def evaluate_m17(
     profile_id: str,
@@ -2411,44 +2594,85 @@ def evaluate_m17(
             print(f"  ⏭️  跳过：round_indicator retrieval 评估已存在")
             return None
 
-    artifacts = read_artifacts(profile_id, round_num)
-    course_text = artifacts.get("course_package.md", "")
-    if not course_text:
-        print(f"  ❌ course_package.md 为空")
-        return None
+    # 优先从 retrieval_context*.md 解析真正的 RAG 检索 chunk
+    round_dir = get_round_dir(profile_id, round_num)
+    real_chunks = parse_retrieval_chunks(round_dir)
 
-    # 将 course_package 按 ## 切分为"检索 chunk"代理
-    chunks = split_by_sections(course_text)
+    if real_chunks:
+        # 真实 RAG chunk 模式
+        chunks = real_chunks
+        use_real_chunks = True
+        print(f"  📄 从 {len({c['retrieval_file'] for c in chunks})} 个 retrieval_context 文件解析到 {len(chunks)} 个真实 RAG chunk（已按 chunk_id 去重）")
+    else:
+        # 回退：无 retrieval_context 文件时用 course_package 章节切片代理
+        artifacts = read_artifacts(profile_id, round_num)
+        course_text = artifacts.get("course_package.md", "")
+        if not course_text:
+            print(f"  ❌ course_package.md 为空且无 retrieval_context 文件")
+            return None
+        chunks = split_by_sections(course_text)
+        use_real_chunks = False
+        print(f"  ⚠️ 未找到 retrieval_context 文件，回退为 course_package 章节切片（{len(chunks)} 个代理 chunk）")
+
     system_prompt = load_system_prompt("m2_retrieval")
     client = LLMClient(llm_config)
 
     evals: list[dict[str, Any]] = []
     print(f"  🔍 评估 {len(chunks)} 个检索chunk的准确性/完整性...")
-    for chunk in chunks:
-        user_prompt = f"""请评估以下检索 chunk 的准确性与完整性：
+    for idx, chunk in enumerate(chunks):
+        if use_real_chunks:
+            chunk_id = chunk.get("chunk_id", "")
+            source = chunk.get("source", "")
+            chunk_text = chunk.get("text", "")[:3000]
+            score = chunk.get("score")
+            rerank_score = chunk.get("rerank_score")
+            user_prompt = f"""请评估以下检索 chunk 的准确性与完整性：
+
+来源文件：{source}
+chunk_id：{chunk_id}
+检索分数：{score}
+重排分数：{rerank_score}
+检索 chunk：
+{chunk_text}
+
+请严格按照系统提示中的 JSON 格式输出。"""
+            extra_fields = {
+                "chunk_id": chunk_id,
+                "source": source,
+                "retrieval_score": score,
+                "rerank_score": rerank_score,
+            }
+        else:
+            user_prompt = f"""请评估以下检索 chunk 的准确性与完整性：
 
 问题/陈述：该分块对应章节"{chunk.get('title', '')}"
 检索 chunk：
 {chunk.get('content', '')[:3000]}
 
 请严格按照系统提示中的 JSON 格式输出。"""
+            extra_fields = {}
+
         # LLM 调用失败直接抛给上层 → 该 section 记为失败，不伪造 chunk 记录
         resp = client.chat(system_prompt, user_prompt)
         parsed = parse_llm_response(resp)
-        evals.append({
-            "chunk_index": chunk.get("index", 0),
-            "chunk_title": chunk.get("title", ""),
+        # 归一化：把 verdict/scores promote 到顶层，方便旧 reader 直读
+        promoted = _promote_chunk_verdicts_to_top({
+            "chunk_index": idx,
+            "chunk_title": chunk.get("source", chunk.get("title", "")) if use_real_chunks else chunk.get("title", ""),
+            **extra_fields,
             **parsed,
         })
+        evals.append(promoted)
 
     total = len(evals)
-    accurate = sum(1 for e in evals if e.get("accuracy_verdict") == "accurate")
-    complete = sum(1 for e in evals if e.get("completeness_verdict") == "complete")
+    accurate = sum(1 for e in evals if _chunk_is_accurate(e))
+    complete = sum(1 for e in evals if _chunk_is_complete(e))
     accurate_rate = round(accurate / total * 100, 2) if total else 0.0
     complete_rate = round(complete / total * 100, 2) if total else 0.0
 
-    result = {
+    result: dict[str, Any] = {
         "eval_type": "retrieval_accuracy",
+        "chunk_source": "retrieval_context" if use_real_chunks else "course_package_sections",
         "total_chunks": total,
         "accurate": accurate,
         "accurate_rate": accurate_rate,
@@ -2457,13 +2681,15 @@ def evaluate_m17(
         "evaluations": evals,
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
+    # 最后做一次写盘归一，确保 JSON 顶层 aggregate 与每条 chunk 的顶层字段一致
+    result = _normalize_retrieval_section_writeback(result)
 
     merge_round_section(
         config, model_name, profile_id, round_num,
         section="retrieval", value=result,
     )
 
-    print(f"  ✅ 检索质量评估完成: {output_path.name} > retrieval — 准确率 {accurate_rate}%, 完整率 {complete_rate}%")
+    print(f"  ✅ 检索质量评估完成: {output_path.name} > retrieval — 准确率 {result['accurate_rate']}%, 完整率 {result['complete_rate']}%")
     return result
 
 
@@ -2621,18 +2847,25 @@ def evaluate_coverage(
     dag_path = _PROJECT_ROOT / "backend" / "app" / "curriculum" / "data" / "knowledge-dag.json"
     confusion_path = _PROJECT_ROOT / "backend" / "app" / "curriculum" / "data" / "confusion-pairs.json"
 
-    # 从 learning_path.md 提取当前教学节点 ID
+    # 从 course_package.md 提取当前教学节点 ID（最可靠来源）
     current_node_id = ""
-    for line in learning_path.splitlines():
-        line = line.strip()
-        if line.startswith("|") and "current" in line.lower():
-            continue
-        # 尝试从表格行提取 node_id
-        if line.startswith("|") and "node" in line.lower():
+    m = re.search(r"当前教学节点[：:]\s*`?([^`\n]+)`?", course_content)
+    if m:
+        current_node_id = m.group(1).strip()
+    # 回退：从 learning_path.md 表格数据行提取（跳过表头和分隔线）
+    if not current_node_id:
+        for line in learning_path.splitlines():
+            line = line.strip()
+            if not line.startswith("|") or "---" in line:
+                continue
             cells = [c.strip() for c in line.split("|")]
             cells = [c for c in cells if c]
+            # 跳过表头行（第一列为"顺序"或"node_id"）
+            if not cells or cells[0] in ("顺序", "node_id") or not cells[0].isdigit():
+                continue
+            # 数据行：第二列是 node_id（可能带反引号）
             if len(cells) >= 2:
-                current_node_id = cells[0] if cells[0] != "node_id" else ""
+                current_node_id = cells[1].strip(" `")
                 break
 
     # 从 knowledge-dag.json 提取当前节点的 knowledge_points
@@ -2679,6 +2912,10 @@ def evaluate_coverage(
     client = LLMClient(llm_config)
 
     # 4. 构造用户提示词
+    confusion_hint = ""
+    if not confusion_pairs:
+        confusion_hint = "\n注意：当前节点在 confusion-pairs.json 中没有分配任何混淆对，confusion_coverage 应直接给满分（100分），不要自行添加未列出的混淆对。"
+
     user_prompt = f"""请评估以下课程内容对预期知识点、薄弱点和混淆对的覆盖情况。
 
 ## 学习路径（含当前教学节点 {current_node_id or "（未识别）"}）
@@ -2692,12 +2929,14 @@ def evaluate_coverage(
 
 ## 相关混淆对列表（来自 confusion-pairs.json）
 {json.dumps(confusion_pairs, ensure_ascii=False, indent=2)[:2000] if confusion_pairs else "（无）"}
+{confusion_hint}
 
 ## 课程内容
 {course_content[:8000]}
 
 请严格按照系统提示中的 JSON 格式输出覆盖率评估结果。
-注意：区分"名词提及"和"实质讲解"；混淆对要求"对比辨析"而非分别提及。"""
+注意：区分"名词提及"和"实质讲解"；混淆对要求"对比辨析"而非分别提及。
+混淆对列表"（无）"时不要自行编造预期混淆对。"""
 
     try:
         resp = client.chat(system_prompt, user_prompt)

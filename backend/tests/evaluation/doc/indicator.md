@@ -219,12 +219,18 @@
 
 ### 2.5 检索正确性
 
+> 评估对象为 RAG 检索链路返回的**真实检索 chunk**，而非 Expert 合成后的课程章节。
+> 评估器从 `retrieval_context*.md`（含主检索 + Expert A/B tool calling 的检索结果）
+> 中解析 JSON 格式的 chunk（含 chunk_id/source/text/score/rerank_score），
+> 按 chunk_id 去重后逐条送外部 LLM 评估准确性与完整性。
+> 若无 retrieval_context 文件，则回退为 course_package 章节切片代理（JSON 中 `chunk_source` 字段标注来源）。
+
 #### 2.5.1 检索准确率
 
 | 项目 | 说明 |
 |---|---|
 | **计算公式** | `准确检索chunk数 / 总检索chunk数 × 100%` |
-| **数据来源** | `m2_retrieval_*.json`（外部LLM评估结果） |
+| **数据来源** | `retrieval_context*.md` → `round_indicator_*.json` 的 `retrieval` section |
 | **评估标准** | ≥ 90% 为良好 |
 | **所属表** | 表2：外部LLM评价指标 |
 
@@ -233,7 +239,7 @@
 | 项目 | 说明 |
 |---|---|
 | **计算公式** | `完整检索chunk数 / 总检索chunk数 × 100%` |
-| **数据来源** | `m2_retrieval_*.json`（外部LLM评估结果） |
+| **数据来源** | `retrieval_context*.md` → `round_indicator_*.json` 的 `retrieval` section |
 | **评估标准** | ≥ 85% 为良好 |
 | **所属表** | 表2：外部LLM评价指标 |
 
