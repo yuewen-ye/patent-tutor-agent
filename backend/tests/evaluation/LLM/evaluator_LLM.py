@@ -1266,10 +1266,34 @@ def extract_verifiable_statements(course_text: str) -> list[dict[str, Any]]:
     except (json.JSONDecodeError, TypeError):
         pass
 
+    # 碎片过滤：剔除过短、纯短语、无判断语义的陈述，避免干扰 LLM 批量评估
+    MIN_CHARS = 12
+
+    def _is_fragment(text: str) -> bool:
+        s = text.strip()
+        if len(s) < MIN_CHARS:
+            # 法条引用行（"《专利法》第二条 | xxx"）允许 <12 字，只要含书名号
+            if "《" in s and "》" in s:
+                return False
+            return True
+        # 纯短语/标签（无任何标点，不含判断性成分：的/是/为/对/与/及/应/不得/必须/视为/包括）
+        # 若仅含期限数字+名词（如 "30个月期限"）且无主谓结构 -> 视为碎片
+        if not re.search(r"[。！？：:；;，,（）()《》]", s):
+            # 没有任何标点的句子要更谨慎：看是否有判断/关系词
+            has_judgment = re.search(
+                r"的|是|为|对|与|及|应|不得|必须|视为|包括|属于|需要|注意|导致|忽略|正确|错误|混淆|误解|适用|构成|产生|属于",
+                s,
+            )
+            if not has_judgment:
+                return True
+        return False
+
+    filtered: list[dict[str, Any]] = [s for s in statements if not _is_fragment(s["text"])]
+
     # 去重
     seen: set[str] = set()
     unique: list[dict[str, Any]] = []
-    for s in statements:
+    for s in filtered:
         if s["text"] not in seen:
             seen.add(s["text"])
             unique.append(s)
@@ -1281,7 +1305,7 @@ def evaluate_statements(
     statements: list[dict[str, Any]],
     system_prompt: str,
     config: dict[str, Any],
-    batch_size: int = 50,
+    batch_size: int = 10,
 ) -> list[dict[str, Any]]:
     """批量评估陈述正确性（含 M1 谬误判定 + M9 内容相关性判定）。
     
@@ -1397,22 +1421,121 @@ def evaluate_statements(
                     "relevance_reasoning": result.get("relevance_reasoning", ""),
                 })
             else:
-                # 如果 LLM 没有返回足够的结果，使用默认值
-                results.append({
-                    "text": statement["text"],
-                    "score": 0,
-                    "verdict": "uncertain",
-                    "reasoning": "LLM 未返回评估结果",
-                    "source_verifiable": statement.get("has_source", False),
-                    "source_score": 0,
-                    "source_check_result": "unverified",
-                    "content_relevance": False,
-                    "relevance_score": 0,
-                    "relevance_check_result": "irrelevant",
-                    "relevance_reasoning": "",
-                })
-    
+                # LLM 返回条数不足 → 退化为逐条单独评估，避免整批因 JSON 截断全置 0
+                one_result = _evaluate_single_statement(
+                    statement, system_prompt, client,
+                )
+                if one_result is None:
+                    # 单次也失败，才使用评估器故障兜底占位（会被 calc_hallucination_rate
+                    # 等聚合函数通过 _is_llm_missed_eval 排除出统计）
+                    one_result = {
+                        "text": statement["text"],
+                        "score": 0,
+                        "verdict": "uncertain",
+                        "reasoning": "LLM 未返回评估结果",
+                        "source_verifiable": statement.get("has_source", False),
+                        "source_score": 0,
+                        "source_check_result": "unverified",
+                        "content_relevance": False,
+                        "relevance_score": 0,
+                        "relevance_check_result": "irrelevant",
+                        "relevance_reasoning": "",
+                    }
+                results.append(one_result)
+
     return results
+
+
+def _evaluate_single_statement(
+    statement: dict[str, Any],
+    system_prompt: str,
+    client,
+) -> dict[str, Any] | None:
+    """单条陈述评估兜底：把批量失败的陈述单独再送一次 LLM。
+
+    只保留单条 evaluations 数组，减少输出 token 占用和 JSON 截断概率。
+    成功返回单条评估 dict；失败返回 None（调用方再塞占位值）。
+    """
+    import json as _json
+
+    user_prompt = f"""请评估以下 1 条陈述的正确性和溯源有效性（100 分制）：
+
+{_json.dumps([statement], ensure_ascii=False, indent=2)}
+
+评估维度：
+1. **正确性评分 (score)**：0-100 分制
+   - 90-100 分：准确无误，完全符合专利法规定
+   - 70-89 分：基本正确，有极少量瑕疵
+   - 50-69 分：部分正确但存在争议
+   - 30-49 分：明显错误，核心意思尚可辨认
+   - 0-29 分：完全错误
+   基于 score 自动判定 verdict：≥70 → correct；40-69 → uncertain；<40 → incorrect
+
+2. **溯源评估**：
+   - source_score (0-100) 与 source_check_result：verified/partially_verified/unverified
+   - relevance_score (0-100)、relevance_check_result：relevant/partially_relevant/irrelevant
+   - relevance_reasoning
+
+请严格按照以下 JSON 格式输出：
+{{
+    "evaluations": [
+        {{
+            "text": "原文陈述",
+            "score": 0,
+            "verdict": "correct/incorrect/uncertain",
+            "reasoning": "判定理由",
+            "source_verifiable": true/false,
+            "source_score": 0,
+            "source_check_result": "verified/partially_verified/unverified",
+            "content_relevance": true/false,
+            "relevance_score": 0,
+            "relevance_check_result": "relevant/partially_relevant/irrelevant",
+            "relevance_reasoning": "相关性判定理由"
+        }}
+    ]
+}}
+"""
+    try:
+        response = client.chat(system_prompt, user_prompt)
+        parsed = parse_llm_response(response)
+    except Exception:
+        return None
+
+    batch_results: list[dict[str, Any]] = []
+    if isinstance(parsed, dict):
+        if "evaluations" in parsed and isinstance(parsed["evaluations"], list):
+            batch_results = parsed["evaluations"]
+        elif "verdict" in parsed:
+            batch_results = [parsed]
+    elif isinstance(parsed, list):
+        batch_results = parsed
+
+    if not batch_results:
+        return None
+
+    r = batch_results[0]
+    score = r.get("score", 0) or 0
+    verdict = r.get("verdict", "")
+    if not verdict and score:
+        if score >= 70:
+            verdict = "correct"
+        elif score >= 40:
+            verdict = "uncertain"
+        else:
+            verdict = "incorrect"
+    return {
+        "text": statement["text"],
+        "score": score,
+        "verdict": verdict,
+        "reasoning": r.get("reasoning", ""),
+        "source_verifiable": r.get("source_verifiable", statement.get("has_source", False)),
+        "source_score": r.get("source_score", 0) or 0,
+        "source_check_result": r.get("source_check_result", "unverified"),
+        "content_relevance": r.get("content_relevance", statement.get("has_source", False)),
+        "relevance_score": r.get("relevance_score", 0) or 0,
+        "relevance_check_result": r.get("relevance_check_result", "irrelevant"),
+        "relevance_reasoning": r.get("relevance_reasoning", ""),
+    }
 
 
 # M1 错误类型权重（可通过 config 覆盖）
@@ -1446,6 +1569,20 @@ def _classify_error_type(statement_text: str, reasoning: str) -> str:
     return "other"
 
 
+def _is_llm_missed_eval(r: dict[str, Any]) -> bool:
+    """判定一条 uncertain 是否是“LLM未返回评估结果”的兜底占位。
+
+    这类 uncertain 不是真的“判断不确定”，而是批量 JSON 截断/空返回导致的评估失败。
+    聚合时应排除出平均（既不充当 0 分，也不充当 incorrect），避免把评估器故障
+    当作课程质量缺陷。
+    """
+    if r.get("verdict") != "uncertain":
+        return False
+    reasoning = str(r.get("reasoning") or "")
+    # 与 evaluator_LLM.py fallback 分支的 reasoning 文本一致
+    return "LLM 未返回评估结果" in reasoning
+
+
 def calc_hallucination_rate(
     eval_results: list[dict[str, Any]],
     config: dict[str, Any] | None = None,
@@ -1456,33 +1593,45 @@ def calc_hallucination_rate(
     1. 基于 verdict 的传统计算（correct/incorrect/uncertain）
     2. 基于 score 的 100 分制计算（取所有陈述的平均得分）
 
-    返回的 value 字段为 100 分制的平均正确率。
+    关键稳健性处理：“LLM 未返回评估结果” 的 uncertain 被视为评估器故障占位，
+    排除出 score 平均和 verdict 统计；仅作为 informational 的 missed_count 字段报告。
+
+    返回的 value 字段为 100 分制的平均正确率；若有效评估为 0，则 value 返回 0.0 并在
+    note 中说明，不再把 0 视为课程全错。
     """
     total = len(eval_results)
-    incorrect = sum(1 for r in eval_results if r.get("verdict") == "incorrect")
-    uncertain = sum(1 for r in eval_results if r.get("verdict") == "uncertain")
-    correct = sum(1 for r in eval_results if r.get("verdict") == "correct")
+    missed = [r for r in eval_results if _is_llm_missed_eval(r)]
+    missed_count = len(missed)
+    effective = [r for r in eval_results if not _is_llm_missed_eval(r)]
+
+    incorrect = sum(1 for r in effective if r.get("verdict") == "incorrect")
+    uncertain_eff = sum(1 for r in effective if r.get("verdict") == "uncertain")
+    correct = sum(1 for r in effective if r.get("verdict") == "correct")
+    eff_total = len(effective)
 
     # 基于 verdict 的谬误率（传统方式，保留兼容）
-    rate = incorrect / total * 100 if total > 0 else 0
+    rate = incorrect / eff_total * 100 if eff_total > 0 else 0.0
 
-    # 基于 score 的 100 分制计算
-    scores = [r.get("score", 0) for r in eval_results if "score" in r]
+    # 基于 score 的 100 分制计算（只在有效评估上平均；排除 missed=0 这种假分）
+    scores = [r.get("score", 0) for r in effective if "score" in r]
     if scores:
         avg_score = round(sum(scores) / len(scores), 1)
+    elif eff_total > 0:
+        avg_score = round((eff_total - incorrect) / eff_total * 100, 1)
     else:
-        avg_score = round((total - incorrect) / total * 100, 1) if total > 0 else 0
+        # 所有评估全部是“LLM未返回评估结果”：不能视为全错，记为 0.0 并加 note
+        avg_score = 0.0
 
-    # 加权计算（保留兼容）
+    # 加权计算（保留兼容，只在 effective 上算）
     weights = M1_ERROR_WEIGHTS.copy()
     if config and "m1_weights" in config:
         weights.update(config["m1_weights"])
 
     weighted_error_sum = 0.0
-    max_weight_sum = total * max(weights.values()) if total > 0 else 0
+    max_weight_sum = eff_total * max(weights.values()) if eff_total > 0 else 0
 
     error_type_details: dict[str, int] = {}
-    for r in eval_results:
+    for r in effective:
         if r.get("verdict") == "incorrect":
             error_type = _classify_error_type(
                 r.get("text", ""), r.get("reasoning", "")
@@ -1497,6 +1646,18 @@ def calc_hallucination_rate(
         else 0.0
     )
 
+    uncertain_total = uncertain_eff + missed_count
+
+    note_parts = [
+        "value 为 100 分制平均正确率，verdict_based_rate 为传统谬误率，weighted_value 为加权谬误率",
+    ]
+    if missed_count > 0:
+        note_parts.append(
+            f"（另有 {missed_count}/{total} 条为 LLM 批量截断未评估，未计入统计）"
+        )
+    if eff_total == 0:
+        note_parts.append("（本轮有效评估为 0，结果不代表课程质量）")
+
     return {
         "name": "专业知识谬误率",
         "value": avg_score,
@@ -1504,7 +1665,10 @@ def calc_hallucination_rate(
         "total": total,
         "incorrect": incorrect,
         "correct": correct,
-        "uncertain": uncertain,
+        "uncertain": uncertain_total,
+        "uncertain_effective": uncertain_eff,
+        "missed_count": missed_count,
+        "effective_count": eff_total,
         "score_based_avg": avg_score,
         "verdict_based_rate": round(rate, 1),
         # 加权相关（保留兼容）
@@ -1513,7 +1677,7 @@ def calc_hallucination_rate(
         "max_weight_sum": round(max_weight_sum, 2),
         "error_type_distribution": error_type_details,
         "weights_used": weights,
-        "note": "value 为 100 分制平均正确率，verdict_based_rate 为传统谬误率，weighted_value 为加权谬误率",
+        "note": " ".join(note_parts),
     }
 
 
@@ -1524,39 +1688,63 @@ def calc_source_verifiable_rate(eval_results: list[dict[str, Any]]) -> dict[str,
     1. 基于 verdict/result 的传统计算（verified/relevant 计数）
     2. 基于 source_score 和 relevance_score 的 100 分制计算
 
+    关键稳健性处理：排除 “LLM 未返回评估结果” 的 missed 条目，避免 fallback
+    塞的 0 分被当作真实溯源得分拉低平均值。
+
     返回的 value 字段为 100 分制的平均溯源得分。
     """
-    source_with = [r for r in eval_results if r.get("source_verifiable")]
-    
+    total_raw = len(eval_results)
+    effective = [r for r in eval_results if not _is_llm_missed_eval(r)]
+    missed_src = sum(
+        1 for r in eval_results
+        if _is_llm_missed_eval(r) and r.get("source_verifiable")
+    )
+
+    source_with = [r for r in effective if r.get("source_verifiable")]
+    note_parts = [
+        "value 为 (avg_source_score + avg_relevance_score) / 2 的 100 分制溯源综合分，verdict_based_rate 为传统溯源率",
+    ]
+
     if not source_with:
+        if missed_src > 0 or total_raw == 0:
+            note_parts.append(
+                "（本轮可溯源陈述全部为 LLM 未返回评估，结果不代表课程质量）"
+            )
+        else:
+            note_parts.append("（无带来源陈述）")
         return {
             "name": "知识溯源可验证率",
             "value": 0,
             "unit": "分",
-            "note": "无带来源的陈述",
+            "note": " ".join(note_parts),
             "total_with_source": 0,
             "verified": 0,
             "content_relevant": 0,
             "fully_verified": 0,
+            "missed_count": missed_src,
+            "unverified": 0,
+            "avg_source_score": 0,
+            "avg_relevance_score": 0,
+            "verdict_based_rate": 0.0,
         }
-    
-    verified = sum(1 for r in source_with 
+
+    verified = sum(1 for r in source_with
                    if r.get("source_check_result") == "verified")
     content_relevant = sum(1 for r in source_with
-                          if r.get("content_relevance") and r.get("relevance_check_result") == "relevant")
+                           if r.get("content_relevance") and r.get("relevance_check_result") == "relevant")
     # 完全验证：来源可验证 AND 内容相关
     fully_verified = sum(1 for r in source_with
-                        if r.get("source_check_result") == "verified"
-                        and r.get("content_relevance")
-                        and r.get("relevance_check_result") == "relevant")
+                         if r.get("source_check_result") == "verified"
+                         and r.get("content_relevance")
+                         and r.get("relevance_check_result") == "relevant")
 
     # 基于传统 verdict 的溯源率
     rate = fully_verified / len(source_with) * 100 if source_with else 0
 
-    # 基于 score 的 100 分制计算
+    # 基于 score 的 100 分制计算（只对有效评估算平均）
     source_scores = [r.get("source_score", 0) for r in source_with if "source_score" in r]
     relevance_scores = [r.get("relevance_score", 0) for r in source_with if "relevance_score" in r]
-    
+
     if source_scores and relevance_scores:
         avg_source_score = round(sum(source_scores) / len(source_scores), 1)
         avg_relevance_score = round(sum(relevance_scores) / len(relevance_scores), 1)
@@ -1569,7 +1757,12 @@ def calc_source_verifiable_rate(eval_results: list[dict[str, Any]]) -> dict[str,
         avg_source_score = 0
         avg_relevance_score = 0
         avg_verifiability = round(rate, 1)
-    
+
+    if missed_src > 0:
+        note_parts.append(
+            f"（另有 {missed_src} 条可溯源陈述为 LLM 批量截断未评估，未计入统计）"
+        )
+
     return {
         "name": "知识溯源可验证率",
         "value": avg_verifiability,
@@ -1579,10 +1772,11 @@ def calc_source_verifiable_rate(eval_results: list[dict[str, Any]]) -> dict[str,
         "content_relevant": content_relevant,
         "fully_verified": fully_verified,
         "unverified": len(source_with) - fully_verified,
-        "avg_source_score": avg_source_score,
-        "avg_relevance_score": avg_relevance_score,
+        "missed_count": missed_src,
+        "avg_source_score": avg_source_score if source_scores else 0,
+        "avg_relevance_score": avg_relevance_score if relevance_scores else 0,
         "verdict_based_rate": round(rate, 1),
-        "note": "value 为 100 分制平均溯源得分，verdict_based_rate 为传统溯源率",
+        "note": " ".join(note_parts),
     }
 
 

@@ -497,6 +497,10 @@ def _load_llm_eval_results(learner_prefix: str = "multi") -> dict[str, Any]:
         if "objection_loop" in data and not _is_failed_marker(data["objection_loop"]):
             _store(profile_id, round_num, "objection_eval",
                    {"metadata": metadata, **data["objection_loop"]})
+        # coverage → coverage_eval（用于 3.1/3.2/3.3 覆盖率指标）
+        if "coverage" in data and not _is_failed_marker(data["coverage"]):
+            _store(profile_id, round_num, "coverage_eval",
+                   {"metadata": metadata, **data["coverage"]})
 
     # 画像级：profile_indicator_{model}_{profile}.json
     for json_file in sorted(llm_dir.glob("profile_indicator_*_*.json")):
@@ -738,6 +742,23 @@ def _get_metric_value_for_round(
                 return m17_data.get("accurate_rate", 0.0), "%"
             elif display_name == "2.5 检索完整率":
                 return m17_data.get("complete_rate", 0.0), "%"
+
+    # M3 覆盖率（3.1/3.2/3.3，来自 round_indicator > coverage section）
+    if display_name in ("3.1 本节知识点覆盖率(LLM)", "3.2 薄弱点命中率(LLM)", "3.3 混淆对覆盖率(LLM)"):
+        cov_data = llm_results.get(profile_letter, {}).get(round_num, {}).get("coverage_eval")
+        if cov_data:
+            if display_name.startswith("3.1"):
+                sc = cov_data.get("section_coverage", {})
+                if sc:
+                    return sc.get("score", 0), f"/{sc.get('max', 100)}"
+            elif display_name.startswith("3.2"):
+                wc = cov_data.get("weakness_coverage", {})
+                if wc:
+                    return wc.get("score", 0), f"/{wc.get('max', 100)}"
+            elif display_name.startswith("3.3"):
+                cc = cov_data.get("confusion_coverage", {})
+                if cc:
+                    return cc.get("score", 0), f"/{cc.get('max', 100)}"
 
     # 系统级指标（问答质量测试表）
     if profile_level_metrics:
