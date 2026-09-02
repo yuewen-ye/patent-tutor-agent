@@ -1,20 +1,15 @@
-"""评估报告生成脚本 — v3（M1~M6 新分类 · 三张表 · 每画像五段式）
+"""评估报告生成脚本 — v3（M1~M7 新分类 · 模板四段式）
 
-报告结构：
-  完整报告（多画像汇总）:
-    1. 概览
-    2. 指标说明
-    3. 三张主表 — 脚本计算指标 / 外部LLM评价指标 / 问答质量测试指标
-       每张表 X轴 = 指标, Y轴 = 各画像 + 平均值
-    4. 各画像详情（画像信息 / 三张表 / 外部LLM文字评价 / 各轮明细）
-    5. 证据表
-
-  单画像报告:
-    1. 概览
-    2. 指标说明
-    3. 画像指标汇总表（X轴=指标, Y轴=轮次+平均值）
-    4. 各轮详细指标说明（含 MetricResult.detail 原始数据）
-    5. 证据表
+报告结构（单画像 / 完整汇总 均遵循）:
+  ① 报告抬头 + 指标说明（计算公式 / 数据来源 / 合格标准）
+  ② 报告总表【附1】 — 教学流程评价指标 + 问答质量评价指标
+     · 教学流程评价指标：X轴=指标, Y轴=各画像 + 总体平均 + 合格标准
+     · 问答质量评价指标：系统级两列格式（数值 + 合格标准）
+  ③ 画像详情
+     · 3.1 画像汇总【附2】 — X轴=指标, Y轴=各轮次 + 平均 + 预期
+     · 3.2 指标详细 — 按 M1-M6 分组，每指标展示字段来源 + 各轮详细评价
+  ④ 问答测试详情 — M7 系统级指标通过情况 + 未通过题目详情
+  --- 时间戳
 
 CLI 用法:
   uv run python backend/tests/evaluation/program/report.py
@@ -89,17 +84,13 @@ def _resolve_llm_results_dir(learner_prefix: str = "multi") -> Path:
 # ── LLM 维度映射（标签 → 内部 key） ────────────────────────────────────────
 
 _LLM_DIM_KEY_MAP: dict[str, str] = {
-    "上下文正确性(Context Correctness)": "context_correctness",
-    "答案正确性(Correctness)": "correctness",
     "幻觉评估(Hallucination)": "hallucination",
     "有用性(Helpfulness)": "helpfulness",
     "相关性(Relevance)": "relevance",
 }
 
-# M1 外部LLM评估器维度（3概念）
+# M1 外部LLM评估器维度（1概念）
 _M1_LLM_DIMS: list[str] = [
-    "上下文正确性",
-    "答案正确性",
     "幻觉评估",
 ]
 
@@ -109,69 +100,59 @@ _M2_LLM_DIMS: list[str] = [
     "相关性",
 ]
 
-# ── 报告三张主表的指标分组 ────────────────────────────────────────────────
+# ── 报告两张主表的指标分组 ────────────────────────────────────────────────
 
-# 表1: 脚本计算指标（无需LLM，确定性计算）
-_SCRIPT_METRICS: list[tuple[str, list[str]]] = [
-    ("M1 幻觉率", [
-        "1.1 闭环率",
-        "1.2 裁判Agent准确性评分",
+# 【附1】教学流程评价指标（M1-M6 合并，脚本计算 + LLM 评估混合分组）
+_APPENDIX1_METRICS: list[tuple[str, list[str]]] = [
+    ("M1 内容幻觉率", [
+        "1.1 裁判Agent准确性评分",
+        "1.2 幻觉评估 [LLM]",
+        "1.3.1 事实性谬误率 [LLM]",
+        "1.3.2 逻辑性谬误率 [LLM]",
+        "1.3.3 指令性谬误率 [LLM]",
+        "1.4.1 溯源可验证率 [LLM]",
+        "1.4.2 溯源内容支撑率 [LLM]",
+        "1.5 内容跨轮自洽率",
     ]),
-    ("M2 匹配度", [
+    ("M2 画像匹配度", [
         "2.1 难度符合度",
+        "2.2 有用性 [LLM]",
+        "2.3 相关性 [LLM]",
         "2.4 动态迭代触发率",
     ]),
-    # M3 覆盖率已弃用脚本硬匹配，完全改用 LLM 语义评价，见 _LLM_METRICS。
-    ("M4 执行完整性", [
-        "4.1 产物完整率",
-        "4.2.1 资源大类数",
-        "4.2.2 资源小类数",
+    ("M3 内容覆盖率", [
+        "3.1 知识点覆盖率 [LLM]",
+        "3.2 薄弱点命中率 [LLM]",
+        "3.3 混淆对覆盖率 [LLM]",
     ]),
-    ("M5 其它指标", [
-        "5.3 PII合规检测",
-        "5.4 异议率",
+    ("M4 RAG检索切片质量", [
+        "4.1 检索准确率 [LLM]",
+        "4.2 检索完整率 [LLM]",
     ]),
-]
-
-# 表2: 外部LLM评价指标（需外部LLM评估结果）
-_LLM_METRICS: list[tuple[str, list[str]]] = [
-    ("M1 幻觉率", [
-        "1.3.1 上下文正确性",
-        "1.3.2 答案正确性",
-        "1.3.3 幻觉评估",
-        "1.4.1 事实性谬误率",
-        "1.4.2 逻辑性谬误率",
-        "1.4.3 指令性谬误率",
-        "1.5.1 知识溯源可验证率",
-        "1.5.2 溯源内容支撑率",
-        "1.6 跨轮自洽率",
+    ("M5 系统产物评价", [
+        "5.1 产物完整率",
+        "5.2.1 资源大类数",
+        "5.2.2 资源小类数",
+        "5.3 PII合规检测 [LLM]",
     ]),
-    ("M2 匹配度", [
-        "2.2 有用性",
-        "2.3 相关性",
-        "2.5 检索准确率",
-        "2.5 检索完整率",
-    ]),
-    ("M3 覆盖率", [
-        "3.1 本节知识点覆盖率(LLM)",
-        "3.2 薄弱点命中率(LLM)",
-        "3.3 混淆对覆盖率(LLM)",
+    ("M6 组合评价指标", [
+        "6.1 异议率",
+        "6.2 异议闭环 [LLM]",
     ]),
 ]
 
-# 表3: 问答质量测试指标（系统级单次测量）
-_QA_METRICS: list[tuple[str, list[str]]] = [
-    ("M6 问答质量测试", [
-        "6.1 对抗稳健率",
-        "6.2 边界拒答恰当率",
+# 【附2】问答质量评价指标（M7，系统级独立测量）
+_APPENDIX2_METRICS: list[tuple[str, list[str]]] = [
+    ("M7 问答质量测试", [
+        "7.1 对抗稳健率",
+        "7.2 边界拒答恰当率",
     ]),
 ]
 
-# 完整报告三张主表（分组名 + 指标列表）
+# 完整报告两张主表（表名 + 分组列表）
 THREE_TABLES: list[tuple[str, list[tuple[str, list[str]]]]] = [
-    ("脚本计算指标", _SCRIPT_METRICS),
-    ("外部LLM评价指标", _LLM_METRICS),
-    ("问答质量测试指标", _QA_METRICS),
+    ("教学流程评价指标", _APPENDIX1_METRICS),
+    ("问答质量评价指标", _APPENDIX2_METRICS),
 ]
 
 # 所有指标的扁平有序列表（用于查找和遍历）
@@ -184,178 +165,194 @@ for _table_name, groups in THREE_TABLES:
 
 # 系统级指标（问答质量测试表，所有画像共享同一数值）
 SYSTEM_LEVEL_METRICS: list[str] = [
-    "6.1 对抗稳健率",
-    "6.2 边界拒答恰当率",
+    "7.1 对抗稳健率",
+    "7.2 边界拒答恰当率",
 ]
 
 # 独立于画像的系统级指标（展示时需独立处理）
 INDEPENDENT_SYSTEM_METRICS: list[str] = [
-    "6.1 对抗稳健率",
-    "6.2 边界拒答恰当率",
+    "7.1 对抗稳健率",
+    "7.2 边界拒答恰当率",
 ]
 
-# ── 指标说明：name → (计算公式, 数据来源) ──────────────────────────────────
+# ── 指标说明：name → (计算公式, 数据来源, 合格标准) ──────────────────────────
 
-METRIC_META: dict[str, tuple[str, str]] = {
-    # M1 幻觉率
-    "1.1 闭环率": (
-        "闭环条数 / 总🔴条数 × 100%（外部LLM判定）",
-        "round_indicator_{model}_{profile}_{round}.json > objection_loop（round-indicator.md 外部LLM评估）",
-    ),
-    "1.2 裁判Agent准确性评分": (
+METRIC_META: dict[str, tuple[str, str, str]] = {
+    # M1 内容幻觉率
+    "1.1 裁判Agent准确性评分": (
         "直接取 X/5",
         "judge_report.md",
+        "≥4分",
     ),
-    "1.3.1 上下文正确性": (
-        "外部LLM评估：事实准确性+关键信息完整性（0-100分）",
-        "round_indicator_{model}_{profile}_{round}.json > overall.scores.context_correctness（round-indicator.md 外部LLM评估）",
-    ),
-    "1.3.2 答案正确性": (
-        "外部LLM评估：生成内容与专利法/实践/逻辑的一致性（0-100分）",
-        "round_indicator_{model}_{profile}_{round}.json > overall.scores.correctness（round-indicator.md 外部LLM评估）",
-    ),
-    "1.3.3 幻觉评估": (
+    "1.2 幻觉评估 [LLM]": (
         "外部LLM评估：与客观事实/可验证数据/逻辑推理相违背的内容比例（0-100分）",
         "round_indicator_{model}_{profile}_{round}.json > overall.scores.hallucination（round-indicator.md 外部LLM评估）",
+        "≥95分",
     ),
-    "1.4.1 事实性谬误率": (
+    "1.3.1 事实性谬误率 [LLM]": (
         "事实性错误陈述数 / 事实性陈述总数 × 100%",
         "round_indicator_{model}_{profile}_{round}.json > statement（round-indicator.md 外部LLM评估）",
+        "≤5%",
     ),
-    "1.4.2 逻辑性谬误率": (
+    "1.3.2 逻辑性谬误率 [LLM]": (
         "逻辑性错误陈述数 / 逻辑性陈述总数 × 100%",
         "round_indicator_{model}_{profile}_{round}.json > statement（round-indicator.md 外部LLM评估）",
+        "≤5%",
     ),
-    "1.4.3 指令性谬误率": (
+    "1.3.3 指令性谬误率 [LLM]": (
         "指令性错误陈述数 / 指令性陈述总数 × 100%",
         "round_indicator_{model}_{profile}_{round}.json > statement（round-indicator.md 外部LLM评估）",
+        "≤5%",
     ),
-    "1.5.1 知识溯源可验证率": (
+    "1.4.1 溯源可验证率 [LLM]": (
         "完全验证的带来源陈述数 / 带来源陈述总数 × 100%",
         "round_indicator_{model}_{profile}_{round}.json > statement（round-indicator.md 外部LLM评估）",
+        "≥95%",
     ),
-    "1.5.2 溯源内容支撑率": (
+    "1.4.2 溯源内容支撑率 [LLM]": (
         "内容支撑的带来源陈述数 / 带来源陈述总数 × 100%",
         "round_indicator_{model}_{profile}_{round}.json > statement（round-indicator.md 外部LLM评估）",
+        "≥95%",
     ),
-    "1.6 跨轮自洽率": (
+    "1.5 内容跨轮自洽率": (
         "1 - 矛盾事实点数 / 总事实点数 × 100%",
         "profile_indicator_{model}_{profile}.json > cross_round（profile-indicator.md 外部LLM评估）",
+        "≥95%",
     ),
-    # M2 匹配度
+    # M2 画像匹配度
     "2.1 难度符合度": (
-        "L_low ≤ 题.difficulty ≤ L_high 的题数 / 总题数 × 100%（双边区间）",
+        "题.difficulty ≤ L_high 的题数 / 总题数 × 100%（仅上限检查，难度高于 L_high 才算不合格）",
         "course_package.md + learning_path.md + learner_profile_update.md",
+        "≥95%",
     ),
-    "2.2 有用性": (
+    "2.2 有用性 [LLM]": (
         "外部LLM评估：内容对学员的实际帮助程度，含清晰性/友好性（0-100分）",
         "round_indicator_{model}_{profile}_{round}.json > overall.scores.helpfulness（round-indicator.md 外部LLM评估）",
+        "≥85分",
     ),
-    "2.3 相关性": (
+    "2.3 相关性 [LLM]": (
         "外部LLM评估：内容与学习主题的聚焦程度，无冗余/跑题（0-100分）",
         "round_indicator_{model}_{profile}_{round}.json > overall.scores.relevance（round-indicator.md 外部LLM评估）",
+        "≥85分",
     ),
     "2.4 动态迭代触发率": (
         "每轮：是否触发动态迭代（|Δpl| ≥ 0.05 的节点变化），画像级：触发轮次数 / 有效轮次数 × 100%",
         "learner_profile_update.md（跨轮比对，分母 n-1）",
+        "≥95%",
     ),
-    "2.5 检索准确率": (
-        "准确检索chunk数 / 总检索chunk数 × 100%",
-        "round_indicator_{model}_{profile}_{round}.json > retrieval（round-indicator.md 外部LLM评估）",
-    ),
-    "2.5 检索完整率": (
-        "完整检索chunk数 / 总检索chunk数 × 100%",
-        "round_indicator_{model}_{profile}_{round}.json > retrieval（round-indicator.md 外部LLM评估）",
-    ),
-    # M3 覆盖率
-    "3.1 本节知识点覆盖率(LLM)": (
+    # M3 内容覆盖率
+    "3.1 知识点覆盖率 [LLM]": (
         "外部LLM语义评估：课程内容对本节知识点列表的覆盖程度（0-100分）",
         "round_indicator_{model}_{profile}_{round}.json > coverage.section_coverage（round-indicator.md coverage 模式外部LLM评估）",
+        "≥90%",
     ),
-    "3.2 薄弱点命中率(LLM)": (
+    "3.2 薄弱点命中率 [LLM]": (
         "外部LLM语义评估：课程内容对薄弱点的命中程度（0-100分）",
         "round_indicator_{model}_{profile}_{round}.json > coverage.weakness_coverage（round-indicator.md coverage 模式外部LLM评估）",
+        "≥90%",
     ),
-    "3.3 混淆对覆盖率(LLM)": (
+    "3.3 混淆对覆盖率 [LLM]": (
         "外部LLM语义评估：课程内容对混淆对的覆盖程度（0-100分）",
         "round_indicator_{model}_{profile}_{round}.json > coverage.confusion_coverage（round-indicator.md coverage 模式外部LLM评估）",
+        "≥90%",
     ),
-    # M4 执行完整性
-    "4.1 产物完整率": (
+    # M4 RAG检索切片质量
+    "4.1 检索准确率 [LLM]": (
+        "准确检索chunk数 / 总检索chunk数 × 100%",
+        "round_indicator_{model}_{profile}_{round}.json > retrieval（round-indicator.md 外部LLM评估）",
+        "≥95%",
+    ),
+    "4.2 检索完整率 [LLM]": (
+        "完整检索chunk数 / 总检索chunk数 × 100%",
+        "round_indicator_{model}_{profile}_{round}.json > retrieval（round-indicator.md 外部LLM评估）",
+        "≥95%",
+    ),
+    # M5 系统产物评价
+    "5.1 产物完整率": (
         "存在文件数 / 应有文件数 × 100%",
         "round-*/ 目录下的产物文件",
+        "≥95%",
     ),
-    "4.2.1 资源大类数": (
+    "5.2.1 资源大类数": (
         "统计课程中覆盖的资源大类总数",
         "course_package.md（脚本解析）",
+        "=3个",
     ),
-    "4.2.2 资源小类数": (
+    "5.2.2 资源小类数": (
         "统计课程中实际使用的资源小类总数",
         "course_package.md（脚本解析）",
+        "≥8个",
     ),
-    # M5 其它指标
-    "5.3 PII合规检测": (
+    "5.3 PII合规检测 [LLM]": (
         "LLM 评估课程内容中的 PII 合规性（替代原正则扫描）",
         "round_indicator_{model}_{profile}_{round}.json > pii（round-indicator.md 外部LLM评估）",
+        "=100%",
     ),
-    "5.4 异议率": (
+    # M6 组合评价指标
+    "6.1 异议率": (
         "(🔴+🟡) / 总批注数 × 100%",
         "expert_a_cross_review.md + expert_b_cross_review.md",
+        "≥30%",
     ),
-    # M6 问答质量测试
-    "6.1 对抗稳健率": (
+    "6.2 异议闭环 [LLM]": (
+        "闭环条数 / 总🔴条数 × 100%（外部LLM判定）",
+        "round_indicator_{model}_{profile}_{round}.json > objection_loop（round-indicator.md 外部LLM评估）",
+        "≥90分",
+    ),
+    # M7 问答质量测试
+    "7.1 对抗稳健率": (
         "通过对抗探针题数 / 总对抗探针题数 × 100%（系统级独立评估）",
         "system_indicator_{model}.json > m6_adversarial（system-indicator.md 系统级外部LLM评估）",
+        "≥80%",
     ),
-    "6.2 边界拒答恰当率": (
+    "7.2 边界拒答恰当率": (
         "恰当拒答题数 / 总边界探针题数 × 100%（系统级独立评估）",
         "system_indicator_{model}.json > m6_boundary（system-indicator.md 系统级外部LLM评估）",
+        "≥80%",
     ),
 }
 
-# 指标名规范化映射：calculate.MetricResult.name → 统一展示名
+# 指标名规范化映射：calculate.MetricResult.name → 统一展示名（带 [LLM] 后缀的为 LLM 评估指标）
 _RENAME_MAP: dict[str, str] = {
-    # calculate.py 生成的"无编号"名称 → 报告展示的"带编号"名称
-    "产物完整率": "4.1 产物完整率",
-    "1.1 闭环率": "1.1 闭环率",
-    "1.2 裁判Agent准确性评分": "1.2 裁判Agent准确性评分",
-    "5.4 异议率": "5.4 异议率",
-    "上下文正确性(Context Correctness)": "1.3.1 上下文正确性",
-    "答案正确性(Correctness)": "1.3.2 答案正确性",
-    "幻觉评估(Hallucination)": "1.3.3 幻觉评估",
-    "1.4.1 事实性谬误率": "1.4.1 事实性谬误率",
-    "1.4.2 逻辑性谬误率": "1.4.2 逻辑性谬误率",
-    "1.4.3 指令性谬误率": "1.4.3 指令性谬误率",
-    "1.5.1 知识溯源可验证率": "1.5.1 知识溯源可验证率",
-    "1.5.2 溯源内容支撑率": "1.5.2 溯源内容支撑率",
-    "1.6 跨轮自洽率": "1.6 跨轮自洽率",
+    # M1
+    "1.1 裁判Agent准确性评分": "1.1 裁判Agent准确性评分",
+    "1.3.1 事实性谬误率": "1.3.1 事实性谬误率 [LLM]",
+    "1.3.2 逻辑性谬误率": "1.3.2 逻辑性谬误率 [LLM]",
+    "1.3.3 指令性谬误率": "1.3.3 指令性谬误率 [LLM]",
+    "1.4.1 溯源可验证率": "1.4.1 溯源可验证率 [LLM]",
+    "1.4.2 溯源内容支撑率": "1.4.2 溯源内容支撑率 [LLM]",
+    "1.5 内容跨轮自洽率": "1.5 内容跨轮自洽率",
+    # M2
     "2.1 难度符合度": "2.1 难度符合度",
-    "有用性(Helpfulness)": "2.2 有用性",
-    "相关性(Relevance)": "2.3 相关性",
     "2.4 动态迭代触发率": "2.4 动态迭代触发率",
-    "2.5 检索准确率": "2.5 检索准确率",
-    "2.5 检索完整率": "2.5 检索完整率",
-    "3.1 本节知识点覆盖率": "3.1 本节知识点覆盖率",
-    "3.2 薄弱点命中率": "3.2 薄弱点命中率",
-    "3.3 混淆对覆盖率": "3.3 混淆对覆盖率",
-    "4.1 产物完整率": "4.1 产物完整率",
-    "4.2.1 资源大类数": "4.2.1 资源大类数",
-    "4.2.2 资源小类数": "4.2.2 资源小类数",
-    "5.3 PII合规检测": "5.3 PII合规检测",
-    "6.1 对抗稳健率": "6.1 对抗稳健率",
-    "6.2 边界拒答恰当率": "6.2 边界拒答恰当率",
+    # M3
+    "3.1 知识点覆盖率": "3.1 知识点覆盖率 [LLM]",
+    "3.2 薄弱点命中率": "3.2 薄弱点命中率 [LLM]",
+    "3.3 混淆对覆盖率": "3.3 混淆对覆盖率 [LLM]",
+    # M4
+    "4.1 检索准确率": "4.1 检索准确率 [LLM]",
+    "4.2 检索完整率": "4.2 检索完整率 [LLM]",
+    # M5
+    "5.1 产物完整率": "5.1 产物完整率",
+    "5.2.1 资源大类数": "5.2.1 资源大类数",
+    "5.2.2 资源小类数": "5.2.2 资源小类数",
+    "5.3 PII合规检测": "5.3 PII合规检测 [LLM]",
+    # M6
+    "6.1 异议率": "6.1 异议率",
+    "6.2 异议闭环": "6.2 异议闭环 [LLM]",
+    # M7
+    "7.1 对抗稳健率": "7.1 对抗稳健率",
+    "7.2 边界拒答恰当率": "7.2 边界拒答恰当率",
 }
 
 # 反向映射：展示名 → 计算侧名称（用于在 calculate.py 返回的列表中查找）
 _DISPLAY_TO_OLD: dict[str, str] = {v: k for k, v in _RENAME_MAP.items()}
 
-# 直接映射：展示名 → LLM 维度 key（用于把 1.3.1 等展示名翻译回 LLM 维度）
+# 直接映射：展示名 → LLM 维度 label（用于把展示名翻译回 LLM 维度 key）
 _DISPLAY_TO_LLM_DIM: dict[str, str] = {
-    "1.3.1 上下文正确性": "上下文正确性(Context Correctness)",
-    "1.3.2 答案正确性": "答案正确性(Correctness)",
-    "1.3.3 幻觉评估": "幻觉评估(Hallucination)",
-    "2.2 有用性": "有用性(Helpfulness)",
-    "2.3 相关性": "相关性(Relevance)",
+    "1.2 幻觉评估 [LLM]": "幻觉评估(Hallucination)",
+    "2.2 有用性 [LLM]": "有用性(Helpfulness)",
+    "2.3 相关性 [LLM]": "相关性(Relevance)",
 }
 
 # ── 证据表 ──────────────────────────────────────────────────────────────────
@@ -551,7 +548,7 @@ def _load_llm_eval_results(learner_prefix: str = "multi") -> dict[str, Any]:
 def _load_profile_level_metrics(
     profile_letter: str | None = None, learner_prefix: str = "multi",
 ) -> list[calculate.MetricResult]:
-    """加载系统级指标（M6 问答质量测试），独立于画像。"""
+    """加载系统级指标（M7 问答质量测试），独立于画像。"""
     return calculate.calculate_system_level_metrics(learner_prefix=learner_prefix)
 
 
@@ -720,31 +717,29 @@ def _get_metric_value_for_round(
     # 查找规则计算指标
     for m in round_metrics:
         if m.name == old_name or m.name == display_name or _RENAME_MAP.get(m.name, m.name) == display_name:
+            # computed:False 表示指标未真正计算（如分母为 0、缺数据），
+            # 返回 None 让表格显示 "-" 而非把 0.0 当成真实谬误率（虚假完美）
+            if m.detail.get("computed", True) is False:
+                return None
             return m.value, m.unit
 
-    # 查找外部 LLM 指标 (M7 资源形态)
-    if old_name == "资源形态评估":
-        m7_scores = _get_m7_resource_scores(profile_letter, round_num, llm_results)
-        if m7_scores:
-            return m7_scores.get("value", 0), m7_scores.get("unit", "分")
-
     # M14 跨轮自洽率（每画像一次，跨轮共享）
-    if display_name == "1.6 跨轮自洽率":
+    if display_name == "1.5 内容跨轮自洽率":
         m14_data = llm_results.get(profile_letter, {}).get("_m14")
         if m14_data:
             return m14_data.get("self_consistency_rate", 0.0), "%"
 
     # M17 检索准确率/完整率（每画像每轮）
-    if display_name in ("2.5 检索准确率", "2.5 检索完整率"):
+    if display_name in ("4.1 检索准确率 [LLM]", "4.2 检索完整率 [LLM]"):
         m17_data = llm_results.get(profile_letter, {}).get(round_num, {}).get("m2_retrieval")
         if m17_data:
-            if display_name == "2.5 检索准确率":
+            if display_name.startswith("4.1"):
                 return m17_data.get("accurate_rate", 0.0), "%"
-            elif display_name == "2.5 检索完整率":
+            elif display_name.startswith("4.2"):
                 return m17_data.get("complete_rate", 0.0), "%"
 
     # M3 覆盖率（3.1/3.2/3.3，来自 round_indicator > coverage section）
-    if display_name in ("3.1 本节知识点覆盖率(LLM)", "3.2 薄弱点命中率(LLM)", "3.3 混淆对覆盖率(LLM)"):
+    if display_name in ("3.1 知识点覆盖率 [LLM]", "3.2 薄弱点命中率 [LLM]", "3.3 混淆对覆盖率 [LLM]"):
         cov_data = llm_results.get(profile_letter, {}).get(round_num, {}).get("coverage_eval")
         if cov_data:
             if display_name.startswith("3.1"):
@@ -813,14 +808,14 @@ def _collect_metric_names_for_table(
 
 def _render_metric_meta_table() -> list[str]:
     lines: list[str] = []
-    lines.append("| 指标 | 计算公式 | 数据来源 |")
-    lines.append("|---|---|---|")
+    lines.append("| 指标 | 计算公式 | 数据来源 | 合格标准 |")
+    lines.append("|---|---|---|---|")
     for table_name, groups in THREE_TABLES:
         for group_name, metrics in groups:
             for name in metrics:
-                formula, source = METRIC_META.get(name, ("-", "-"))
+                formula, source, pass_criteria = METRIC_META.get(name, ("-", "-", "-"))
                 suffix = "（系统级）" if name in SYSTEM_LEVEL_METRICS else ""
-                lines.append(f"| `{name}`{suffix} | {formula} | {source} |")
+                lines.append(f"| `{name}`{suffix} | {formula} | {source} | {pass_criteria} |")
     return lines
 
 
@@ -837,14 +832,14 @@ def _render_comparison_table(
     metric_names = _collect_metric_names_for_table(table_metric_groups)
 
     # 表头
-    header = "| 指标 | " + " | ".join(f"`profile_{p.profile_letter}`" for p in profiles) + " | **总体平均** |"
-    sep = "|---|" + "|".join("---" for _ in profiles) + "|---|"
+    header = "| 指标 | " + " | ".join(f"`profile_{p.profile_letter}`" for p in profiles) + " | **总体平均** | **合格标准** |"
+    sep = "|---|" + "|".join("---" for _ in profiles) + "|---|---|"
     lines.append(header)
     lines.append(sep)
 
     # 数据行（按分组组织）
     for group_name, metrics in table_metric_groups:
-        group_header = f"| **{group_name}** |" + "|".join("   " for _ in profiles) + "|   |"
+        group_header = f"| **{group_name}** |" + "|".join("   " for _ in profiles) + "|   |   |"
         lines.append(group_header)
         for name in metrics:
             row = [f"`{name}`"]
@@ -867,6 +862,9 @@ def _render_comparison_table(
                 row.append(_format_value(grand_avg, unit))
             else:
                 row.append("-")
+            # 合格标准列
+            _formula, _source, pass_criteria = METRIC_META.get(name, ("-", "-", "-"))
+            row.append(pass_criteria)
             lines.append("| " + " | ".join(row) + " |")
 
     return lines
@@ -885,12 +883,12 @@ def _render_system_level_table(
     lines: list[str] = []
 
     # 表头
-    lines.append("| 指标 | **数值** |")
-    lines.append("|---|---|")
+    lines.append("| 指标 | **数值** | **合格标准** |")
+    lines.append("|---|---|---|")
 
     # 数据行（按分组组织）
     for group_name, metrics in table_metric_groups:
-        group_header = f"| **{group_name}** | |"
+        group_header = f"| **{group_name}** | | |"
         lines.append(group_header)
         for name in metrics:
             # 从 profile_level_metrics 中查找值
@@ -900,7 +898,9 @@ def _render_system_level_table(
                 if mapped == name or m.name == name:
                     value = _format_value(m.value, m.unit)
                     break
-            row = f"| `{name}` | {value} |"
+            # 合格标准列
+            _formula, _source, pass_criteria = METRIC_META.get(name, ("-", "-", "-"))
+            row = f"| `{name}` | {value} | {pass_criteria} |"
             lines.append(row)
 
     return lines
@@ -912,22 +912,22 @@ def _render_m6_detail_section(
     profile_level_metrics: list[calculate.MetricResult],
     llm_results: dict[str, Any] | None = None,
 ) -> list[str]:
-    """渲染 M6 问答质量测试的详细说明模块。"""
+    """渲染 M7 问答质量测试的详细说明模块。"""
     lines: list[str] = []
 
-    lines.append("### 4.5 M6 问答质量测试详情")
+    lines.append("### M7 问答质量测试详情")
     lines.append("")
-    lines.append("M6 问答质量测试为**系统级独立评估**，所有画像共享同一结果。")
+    lines.append("M7 问答质量测试为**系统级独立评估**，所有画像共享同一结果。")
     lines.append("")
 
-    # M6.1 对抗稳健率
+    # M7.1 对抗稳健率
     adv_metric = None
     bnd_metric = None
     for m in profile_level_metrics:
         mapped = _RENAME_MAP.get(m.name, m.name)
-        if mapped == "6.1 对抗稳健率":
+        if mapped == "7.1 对抗稳健率":
             adv_metric = m
-        elif mapped == "6.2 边界拒答恰当率":
+        elif mapped == "7.2 边界拒答恰当率":
             bnd_metric = m
 
     # 获取 M6 原始评估数据
@@ -936,7 +936,7 @@ def _render_m6_detail_section(
     bnd_raw = sys_data.get("_m16", {})
 
     if adv_metric:
-        lines.append("#### 6.1 对抗稳健率")
+        lines.append("#### 7.1 对抗稳健率")
         lines.append("")
         lines.append(f"- **数值**: {_format_value(adv_metric.value, adv_metric.unit)}")
         lines.append(f"- **计算公式**: 通过对抗探针题数 / 总对抗探针题数 × 100%")
@@ -969,7 +969,7 @@ def _render_m6_detail_section(
                 lines.append("")
 
     if bnd_metric:
-        lines.append("#### 6.2 边界拒答恰当率")
+        lines.append("#### 7.2 边界拒答恰当率")
         lines.append("")
         lines.append(f"- **数值**: {_format_value(bnd_metric.value, bnd_metric.unit)}")
         lines.append(f"- **计算公式**: 恰当拒答题数 / 总边界探针题数 × 100%")
@@ -1002,7 +1002,7 @@ def _render_m6_detail_section(
                 lines.append("")
 
     if not adv_metric and not bnd_metric:
-        lines.append("_（M6 指标数据未就绪，请先运行系统级探针和外部LLM评估）_")
+        lines.append("_（M7 指标数据未就绪，请先运行系统级探针和外部LLM评估）_")
         lines.append("")
 
     return lines
@@ -1025,13 +1025,13 @@ def _render_profile_round_table(
     all_profile_metrics = list(profile_level_metrics) + list(profile.profile_level_metrics)
 
     # 表头
-    header = "| 指标 | " + " | ".join(f"R{rm.round_num:02d}" for rm in rounds) + " | 平均 |"
-    sep = "|---|" + "|".join("---" for _ in rounds) + "|---|"
+    header = "| 指标 | " + " | ".join(f"R{rm.round_num:02d}" for rm in rounds) + " | 平均 | 预期 |"
+    sep = "|---|" + "|".join("---" for _ in rounds) + "|---|---|"
     lines.append(header)
     lines.append(sep)
 
     for group_name, metrics in table_metric_groups:
-        group_header = f"| **{group_name}** |" + "|".join("   " for _ in rounds) + "|   |"
+        group_header = f"| **{group_name}** |" + "|".join("   " for _ in rounds) + "|   |   |"
         lines.append(group_header)
         for name in metrics:
             row = [f"`{name}`"]
@@ -1069,7 +1069,67 @@ def _render_profile_round_table(
                     row.append(_format_value(val, u))
                 else:
                     row.append("-")
+            # 预期列（合格标准）
+            _formula, _source, pass_criteria = METRIC_META.get(name, ("-", "-", "-"))
+            row.append(pass_criteria)
             lines.append("| " + " | ".join(row) + " |")
+
+    return lines
+
+
+# ── Markdown 渲染：指标详细（按指标展开字段来源+各轮详细评价）────────────────
+
+def _render_metric_detail_section(
+    profile_letter: str,
+    rounds: list[calculate.RoundMetrics],
+    llm_results: dict[str, Any],
+    profile_level_metrics: list[calculate.MetricResult],
+) -> list[str]:
+    """渲染指标详细：按 M1-M6 分组，每指标展示字段来源 + 各轮详细评价。"""
+    lines: list[str] = []
+
+    for group_name, metrics in _APPENDIX1_METRICS:
+        lines.append(f"**{group_name}**")
+        lines.append("")
+        for name in metrics:
+            formula, source, pass_criteria = METRIC_META.get(name, ("-", "-", "-"))
+            lines.append(f"##### `{name}`")
+            lines.append("")
+            lines.append(f"- **字段来源**: {source}")
+            lines.append(f"- **合格标准**: {pass_criteria}")
+            lines.append("")
+
+            has_data = False
+            for rm in rounds:
+                result = _get_metric_value_for_round(
+                    profile_letter, rm.round_num, name,
+                    llm_results, rm.metrics, profile_level_metrics,
+                )
+                if result is None:
+                    continue
+                has_data = True
+                val, u = result
+                lines.append(f"- **R{rm.round_num:02d}**: {_format_value(val, u)}")
+
+                # 附带 MetricResult.detail 原始字段
+                old_name = _display_to_old_name(name)
+                metric = None
+                for m in rm.metrics:
+                    if m.name == old_name or _RENAME_MAP.get(m.name, m.name) == name or m.name == name:
+                        metric = m
+                        break
+                if metric is not None and metric.detail:
+                    detail = metric.detail
+                    if isinstance(detail, dict):
+                        for k, v in detail.items():
+                            if isinstance(v, (list, dict)):
+                                lines.append(f"  - {k}: {_format_detail(v)}")
+                            else:
+                                lines.append(f"  - {k}: {v}")
+
+            if not has_data:
+                lines.append("- _（无数据）_")
+            lines.append("")
 
     return lines
 
@@ -1077,16 +1137,16 @@ def _render_profile_round_table(
 # ── Markdown 渲染：单画像报告 ────────────────────────────────────────────────
 
 def _render_markdown_single(ctx: ReportContext) -> str:
-    """渲染单画像 Markdown 报告（五段式）。"""
+    """渲染单画像 Markdown 报告（按模板：①抬头+指标说明 ②【附1】总表 ③画像详情 ④问答测试详情 时间戳）。"""
     lines: list[str] = []
     rounds = ctx.rounds
     llm_results = ctx.llm_results or {}
     profile_letter = ctx.profile_letter
     profile_level_metrics = ctx.profile_level_metrics or []
+    pr = ProfileReport(profile_letter, ctx.session_dir, rounds)
 
+    # ① 报告抬头 + 指标说明
     lines.append(f"# 评估报告 — profile_{profile_letter}")
-    lines.append("")
-    lines.append("## 一、概览")
     lines.append("")
     lines.append(f"- 画像：`profile_{profile_letter}`")
     lines.append(f"- 测试快照目录：`{ctx.session_dir}`")
@@ -1094,98 +1154,52 @@ def _render_markdown_single(ctx: ReportContext) -> str:
     lines.append(f"- 轮次列表：{', '.join(f'round-{rm.round_num:02d}' for rm in rounds)}")
     lines.append(f"- 报告生成时间：{ctx.generated_at}")
     lines.append("")
-    lines.append("---")
-    lines.append("")
-
-    # 二、指标说明
-    lines.append("## 二、指标说明")
+    lines.append("### 指标说明")
     lines.append("")
     lines.extend(_render_metric_meta_table())
     lines.append("")
     lines.append("---")
     lines.append("")
 
-    # 三、画像指标汇总表（三张表）
-    lines.append("## 三、画像指标汇总")
+    # ② 报告总表【附1】
+    lines.append("## 二、报告总表")
     lines.append("")
     for table_name, table_groups in THREE_TABLES:
         lines.append(f"### {table_name}")
         lines.append("")
-        if table_name == "问答质量测试指标":
-            # 系统级指标使用两列格式
-            lines.extend(_render_system_level_table(
-                table_groups, profile_level_metrics,
-            ))
+        if table_name == "问答质量评价指标":
+            lines.extend(_render_system_level_table(table_groups, profile_level_metrics))
         else:
-            lines.extend(_render_profile_round_table(
-                table_groups,
-                ProfileReport(profile_letter, ctx.session_dir, rounds),
-                llm_results, profile_level_metrics,
-            ))
+            lines.extend(_render_comparison_table(table_groups, [pr], llm_results, profile_level_metrics))
         lines.append("")
-
-    # 四、五段式详情
-    lines.append("## 四、画像详情")
+    lines.append("---")
     lines.append("")
 
-    # 4.1 脚本计算指标
-    lines.append("### 4.1 脚本计算指标")
+    # ③ 画像详情
+    lines.append("## 三、画像详情")
+    lines.append("")
+
+    # 3.1 画像汇总【附2】
+    lines.append("### 3.1 画像汇总")
     lines.append("")
     lines.extend(_render_profile_round_table(
-        _SCRIPT_METRICS,
-        ProfileReport(profile_letter, ctx.session_dir, rounds),
-        llm_results, profile_level_metrics,
+        _APPENDIX1_METRICS, pr, llm_results, profile_level_metrics,
     ))
     lines.append("")
 
-    # 4.2 外部LLM评价指标
-    lines.append("### 4.2 外部LLM评价指标")
+    # 3.2 指标详细（按指标展开字段来源 + 各轮详细评价）
+    lines.append("### 3.2 指标详细")
     lines.append("")
-    lines.extend(_render_profile_round_table(
-        _LLM_METRICS,
-        ProfileReport(profile_letter, ctx.session_dir, rounds),
-        llm_results, profile_level_metrics,
+    lines.extend(_render_metric_detail_section(
+        profile_letter, rounds, llm_results, profile_level_metrics,
     ))
-    lines.append("")
 
-    # 4.3 外部LLM文字评价（如有）
-    lines.append("### 4.3 外部LLM文字评价")
-    lines.append("")
-    has_text_eval = False
-    for rm in rounds:
-        summary = _get_llm_overall_summary(profile_letter, rm.round_num, llm_results)
-        if summary and (summary.get("summary") or summary.get("highlights") or summary.get("issues")):
-            has_text_eval = True
-            lines.append(f"**round-{rm.round_num:02d}**")
-            lines.append("")
-            if summary.get("summary"):
-                lines.append(f"- **总体评价**: {summary['summary']}")
-            if summary.get("highlights"):
-                lines.append(f"- **亮点**: {', '.join(summary['highlights'][:5])}")
-            if summary.get("issues"):
-                lines.append(f"- **问题**: {', '.join(summary['issues'][:5])}")
-            if summary.get("suggestions"):
-                lines.append(f"- **建议**: {', '.join(summary['suggestions'][:5])}")
-            lines.append("")
-    if not has_text_eval:
-        lines.append("_（无外部LLM文字评价数据，请先运行外部LLM评估）_")
-        lines.append("")
-
-    # 4.4 各轮详细指标说明
-    lines.append("### 4.4 各轮详细指标说明")
-    lines.append("")
-    for rm in rounds:
-        lines.extend(_render_round_detail_section(
-            profile_letter, rm, llm_results, profile_level_metrics,
-        ))
-
-    # 4.5 M6 问答质量测试详情（系统级独立展示）
+    # ④ 问答测试详情
+    lines.append("## 四、问答测试详情")
     lines.append("")
     lines.extend(_render_m6_detail_section(profile_level_metrics, llm_results))
 
-    # 五、证据表
-    _append_evidence_tables(lines)
-
+    # 时间戳
     lines.append("---")
     lines.append("")
     lines.append(f"_报告由 report.py v3 自动生成 @ {ctx.generated_at}_")
@@ -1208,37 +1222,11 @@ def _render_round_detail_section(
     lines.append(f"**round-{round_num:02d}**")
     lines.append("")
 
-    # 脚本计算指标详情
-    for group_name, metrics in _SCRIPT_METRICS:
+    # 指标详情（统一遍历【附1】所有指标，混合脚本计算 + LLM 评估）
+    for group_name, metrics in _APPENDIX1_METRICS:
         group_header_shown = False
         for name in metrics:
-            old_name = _display_to_old_name(name)
-            metric = None
-            for m in rm.metrics:
-                if m.name == old_name or _RENAME_MAP.get(m.name, m.name) == name:
-                    metric = m
-                    break
-            if metric is None:
-                continue
-
-            if not group_header_shown:
-                lines.append(f"**{group_name}**")
-                lines.append("")
-                group_header_shown = True
-
-            lines.append(f"- **{name}**: {_format_value(metric.value, metric.unit)}")
-            detail = metric.detail or {}
-            for k, v in detail.items():
-                if isinstance(v, (list, dict)):
-                    lines.append(f"    - {k}: {_format_detail(v)}")
-                else:
-                    lines.append(f"    - {k}: {v}")
-
-    # 外部LLM评价指标详情（如果有）
-    llm_detail_shown = False
-    for group_name, metrics in _LLM_METRICS:
-        group_header_shown = False
-        for name in metrics:
+            # 统一用 _get_metric_value_for_round 取值（内部处理 LLM 维度/脚本指标/各种特殊路径）
             result = _get_metric_value_for_round(
                 profile_letter, round_num, name,
                 llm_results, rm.metrics, profile_level_metrics,
@@ -1246,17 +1234,28 @@ def _render_round_detail_section(
             if result is None:
                 continue
 
-            if not llm_detail_shown:
-                lines.append("**外部LLM评价指标详情**")
-                lines.append("")
-                llm_detail_shown = True
-
             if not group_header_shown:
-                lines.append(f"- **{group_name}**:")
+                lines.append(f"**{group_name}**")
+                lines.append("")
                 group_header_shown = True
 
             val, u = result
-            lines.append(f"    - {name}: {_format_value(val, u)}")
+            lines.append(f"- **{name}**: {_format_value(val, u)}")
+
+            # 补充 detail（脚本计算指标在 rm.metrics 里有 detail；LLM 维度指标无）
+            old_name = _display_to_old_name(name)
+            metric = None
+            for m in rm.metrics:
+                if m.name == old_name or _RENAME_MAP.get(m.name, m.name) == name or m.name == name:
+                    metric = m
+                    break
+            if metric is not None:
+                detail = metric.detail or {}
+                for k, v in detail.items():
+                    if isinstance(v, (list, dict)):
+                        lines.append(f"    - {k}: {_format_detail(v)}")
+                    else:
+                        lines.append(f"    - {k}: {v}")
 
     # 外部LLM文字评价详情
     summary = _get_llm_overall_summary(profile_letter, round_num, llm_results)
@@ -1280,15 +1279,14 @@ def _render_round_detail_section(
 # ── Markdown 渲染：完整报告 ──────────────────────────────────────────────────
 
 def _render_markdown_full(ctx: FullReportContext) -> str:
-    """渲染完整 Markdown 报告（多画像汇总，三张主表）。"""
+    """渲染完整 Markdown 报告（多画像汇总，按模板：①抬头+指标说明 ②【附1】总表 ③画像详情 ④问答测试详情 时间戳）。"""
     lines: list[str] = []
     profiles = ctx.profiles
     llm_results = ctx.llm_eval_results
     profile_level_metrics = ctx.profile_level_metrics
 
-    lines.append("# 评估报告 — 完整汇总（v3）")
-    lines.append("")
-    lines.append("## 一、概览")
+    # ① 报告抬头 + 指标说明
+    lines.append("# 评估报告 — 完整汇总")
     lines.append("")
     lines.append(f"- 画像数：{len(profiles)}")
     lines.append(f"- 画像列表：{', '.join(f'profile_{p.profile_letter}' for p in profiles)}")
@@ -1304,39 +1302,29 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
         rounds_str = ", ".join(f"R{rm.round_num:02d}" for rm in p.rounds) or "-"
         lines.append(f"| profile_{p.profile_letter} | {len(p.rounds)} | {rounds_str} |")
     lines.append("")
-    lines.append("---")
-    lines.append("")
-
-    # 二、指标说明
-    lines.append("## 二、指标说明")
+    lines.append("### 指标说明")
     lines.append("")
     lines.extend(_render_metric_meta_table())
     lines.append("")
     lines.append("---")
     lines.append("")
 
-    # 三、三张主表
-    lines.append("## 三、指标横向对比（三张主表）")
+    # ② 报告总表【附1】
+    lines.append("## 二、报告总表")
     lines.append("")
     for table_name, table_groups in THREE_TABLES:
         lines.append(f"### {table_name}")
         lines.append("")
-        if table_name == "问答质量测试指标":
-            # 系统级指标使用两列格式
-            lines.extend(_render_system_level_table(
-                table_groups, profile_level_metrics,
-            ))
+        if table_name == "问答质量评价指标":
+            lines.extend(_render_system_level_table(table_groups, profile_level_metrics))
         else:
-            lines.extend(_render_comparison_table(
-                table_groups, profiles, llm_results, profile_level_metrics,
-            ))
+            lines.extend(_render_comparison_table(table_groups, profiles, llm_results, profile_level_metrics))
         lines.append("")
-
     lines.append("---")
     lines.append("")
 
-    # 四、各画像详情
-    lines.append("## 四、各画像详情")
+    # ③ 画像详情
+    lines.append("## 三、画像详情")
     lines.append("")
     for p in profiles:
         letter = p.profile_letter
@@ -1346,49 +1334,30 @@ def _render_markdown_full(ctx: FullReportContext) -> str:
         lines.append(f"- 轮次数：{len(p.rounds)}")
         lines.append("")
 
-        # 三张表（M6 问答质量测试为系统级指标，不在画像详情中重复渲染）
-        for table_name, table_groups in THREE_TABLES:
-            if table_name == "问答质量测试指标":
-                continue
-            lines.append(f"#### {table_name}")
-            lines.append("")
-            lines.extend(_render_profile_round_table(
-                table_groups, p, llm_results, profile_level_metrics,
-            ))
-            lines.append("")
-
-        # 外部LLM文字评价
-        lines.append("#### 外部LLM文字评价")
+        # 3.1 画像汇总【附2】
+        lines.append("#### 3.1 画像汇总")
         lines.append("")
-        has_text = False
-        for rm in p.rounds:
-            summary = _get_llm_overall_summary(letter, rm.round_num, llm_results)
-            if summary and (summary.get("summary") or summary.get("highlights") or summary.get("issues")):
-                has_text = True
-                lines.append(f"- **R{rm.round_num:02d}**: {summary.get('summary', '')}")
-        if not has_text:
-            lines.append("_（无外部LLM文字评价数据）_")
+        lines.extend(_render_profile_round_table(
+            _APPENDIX1_METRICS, p, llm_results, profile_level_metrics,
+        ))
         lines.append("")
 
-        # 各轮详细指标说明
-        lines.append("#### 各轮明细")
+        # 3.2 指标详细
+        lines.append("#### 3.2 指标详细")
         lines.append("")
-        for rm in p.rounds:
-            lines.extend(_render_round_detail_section(
-                letter, rm, llm_results, profile_level_metrics,
-            ))
+        lines.extend(_render_metric_detail_section(
+            letter, p.rounds, llm_results, profile_level_metrics,
+        ))
 
         lines.append("---")
         lines.append("")
 
-    # 五、M6 问答质量测试详情（系统级独立展示）
-    lines.append("## 五、M6 问答质量测试详情")
+    # ④ 问答测试详情
+    lines.append("## 四、问答测试详情")
     lines.append("")
     lines.extend(_render_m6_detail_section(profile_level_metrics, llm_results))
 
-    # 六、证据表
-    _append_evidence_tables(lines)
-
+    # 时间戳
     lines.append("---")
     lines.append("")
     lines.append(f"_报告由 report.py v3 自动生成 @ {ctx.generated_at}_")

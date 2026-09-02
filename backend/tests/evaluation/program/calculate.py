@@ -3,37 +3,37 @@
 计算 M1~M6 六大类指标（按单轮定义，多轮取算术平均值）：
 
 M1 幻觉率：
-  1.1 闭环率（脚本计算 + 外部LLM）
-  1.2 裁判Agent准确性评分（脚本计算，judge_report.md 准确性：X/5）
-  1.3.1 上下文正确性 / 1.3.2 答案正确性 / 1.3.3 幻觉评估（外部LLM overall）
-  1.4.1 事实性 / 1.4.2 逻辑性 / 1.4.3 指令性谬误率（外部LLM statement）
-  1.5.1 知识溯源可验证率 / 1.5.2 溯源内容支撑率（外部LLM statement）
-  1.6 跨轮自洽率（外部LLM profile）
+  6.2 异议闭环（脚本计算 + 外部LLM）
+  1.1 裁判Agent准确性评分（脚本计算，judge_report.md 准确性：X/5）
+  1.3.3 幻觉评估（外部LLM overall）
+  1.3.1 事实性 / 1.3.2 逻辑性 / 1.3.3 指令性谬误率（外部LLM statement）
+  1.4.1 溯源可验证率 / 1.4.2 溯源内容支撑率（外部LLM statement）
+  1.5 内容跨轮自洽率（外部LLM profile）
 
 M2 匹配度：
   2.1 难度符合度（脚本计算）
   2.2 有用性 / 2.3 相关性（外部LLM overall）
   2.4 动态迭代触发率（脚本计算）
-  2.5 检索准确率 / 检索完整率（外部LLM retrieval）
+  4.1 检索准确率 / 4.2 检索完整率（外部LLM retrieval）
 
 M3 覆盖率：
-  3.1 本节知识点覆盖率（脚本计算 + 外部LLM coverage 语义验证）
+  3.1 知识点覆盖率（脚本计算 + 外部LLM coverage 语义验证）
   3.2 薄弱点命中率（脚本计算 + 外部LLM coverage 语义验证）
   3.3 混淆对覆盖率（脚本计算 + 外部LLM coverage 语义验证）
 
 M4 执行完整性：
-  4.1 产物完整率（脚本计算）
-  4.2.1 资源大类数 / 4.2.2 资源小类数（脚本计算）
+  4.1 5.1 产物完整率（脚本计算）
+  5.2.1 资源大类数 / 5.2.2 资源小类数（脚本计算）
 
 M5 其它指标：
   5.1 测试差异化画像个数（仅保留概念）
   5.2 知识库覆盖（仅保留概念）
-  5.3 PII合规检测（脚本计算 + 外部LLM）
-  5.4 异议率（脚本计算，(🔴+🟡)/总批注）
+  5.3 PII合规检测（外部LLM）
+  6.1 异议率（脚本计算，(🔴+🟡)/总批注）
 
 M6 问答质量测试：
-  6.1 对抗稳健率（系统级外部LLM）
-  6.2 边界拒答恰当率（系统级外部LLM）
+  7.1 对抗稳健率（系统级外部LLM）
+  7.2 边界拒答恰当率（系统级外部LLM）
 
 CLI 用法：
   uv run python backend/tests/evaluation/program/calculate.py --profile B --round 1
@@ -253,7 +253,7 @@ def _parse_learning_path_nodes(path_text: str) -> set[str]:
 def _expand_with_ancestors(nodes: set[str], dag: dict[str, Any]) -> set[str]:
     """扩展节点集：基于 knowledge-dag.json 的 predecessors 关系（向上追溯祖先）。
 
-    用途：3.1 本节知识点覆盖率 —— 教了子节点 → 其前置祖先视为已覆盖。
+    用途：3.1 知识点覆盖率 —— 教了子节点 → 其前置祖先视为已覆盖。
     """
     expanded = set(nodes)
     nodes_data = dag.get("dag", {}).get("nodes", [])
@@ -369,7 +369,7 @@ def _load_knowledge_dag() -> dict[str, Any]:
 # ── 幻觉率相关计算 ──────────────────────────────────────────────────────────
 
 def calc_objection_loop(judge_text: str, review_a_text: str, review_b_text: str) -> MetricResult:
-    """1.1 闭环率 — 占位指标。
+    """6.2 异议闭环 — 占位指标。
 
     闭环率 = 闭环条数 / 总🔴条数 × 100%。
     实际值由外部 LLM 评估（round_indicator_*.json > objection_loop section）通过 `load_m8_external_result` 加载。
@@ -381,7 +381,7 @@ def calc_objection_loop(judge_text: str, review_a_text: str, review_b_text: str)
     total_critical = counts_a.get("🔴", 0) + counts_b.get("🔴", 0)
 
     return MetricResult(
-        name="1.1 闭环率", value=100.0 if total_critical == 0 else 0.0, unit="%",
+        name="6.2 异议闭环", value=100.0 if total_critical == 0 else 0.0, unit="%",
         detail={
             "总🔴条数": total_critical,
             "闭环条数": None,
@@ -392,7 +392,7 @@ def calc_objection_loop(judge_text: str, review_a_text: str, review_b_text: str)
 
 
 def calc_hallucination_expert_review(review_a_text: str, review_b_text: str) -> MetricResult:
-    """5.4 异议率 — (🔴 + 🟡) / 总批注数 × 100%。"""
+    """6.1 异议率 — (🔴 + 🟡) / 总批注数 × 100%。"""
     counts_a = _parse_cross_review(review_a_text)
     counts_b = _parse_cross_review(review_b_text)
     total_issues = sum(counts_a.values()) + sum(counts_b.values())
@@ -401,7 +401,7 @@ def calc_hallucination_expert_review(review_a_text: str, review_b_text: str) -> 
     issue_count = critical + warning
     rate = round(issue_count / total_issues * 100, 2) if total_issues else 0.0
     return MetricResult(
-        name="5.4 异议率", value=rate, unit="%",
+        name="6.1 异议率", value=rate, unit="%",
         detail={
             "专家A总批注": sum(counts_a.values()), "专家B总批注": sum(counts_b.values()),
             "🔴": critical, "🟡": warning, "🟢": counts_a.get("🟢", 0) + counts_b.get("🟢", 0),
@@ -411,10 +411,10 @@ def calc_hallucination_expert_review(review_a_text: str, review_b_text: str) -> 
     )
 
 def calc_hallucination_judge_accuracy(judge_text: str) -> MetricResult:
-    """1.2 裁判Agent准确性评分 — 直接取 judge_report.md 中 准确性：X/5。"""
+    """1.1 裁判Agent准确性评分 — 直接取 judge_report.md 中 准确性：X/5。"""
     info = _parse_judge_report(judge_text)
     return MetricResult(
-        name="1.2 裁判Agent准确性评分", value=info["accuracy"], unit="/5",
+        name="1.1 裁判Agent准确性评分", value=info["accuracy"], unit="/5",
         detail={"决策": info["decision"]}
     )
 
@@ -471,16 +471,16 @@ def calc_matching_difficulty(
 def calc_resource_morphology(text: str) -> list[MetricResult]:
     """M4 执行完整性 — 资源形态。
 
-    4.2.1 资源大类数：课程中出现的核心资源大类数（应覆盖 3 类：讲义类 / 实操指南类 / 分阶题类）。
-    4.2.2 资源小类数：课程中实际出现的资源小类总数（block_type 去重数量）。
+    5.2.1 资源大类数：课程中出现的核心资源大类数（应覆盖 3 类：讲义类 / 实操指南类 / 分阶题类）。
+    5.2.2 资源小类数：课程中实际出现的资源小类总数（block_type 去重数量）。
     """
     parsed = _parse_course_package(text)
     block_types = parsed["block_types"]
     if not block_types:
         return [
-            MetricResult(name="4.2.1 资源大类数", value=0.0, unit="个",
+            MetricResult(name="5.2.1 资源大类数", value=0.0, unit="个",
                          detail={"note": "无教学模块", "覆盖大类": [], "应覆盖大类": list(RESOURCE_MORPHOLOGY_CORE_CATEGORIES.keys())}),
-            MetricResult(name="4.2.2 资源小类数", value=0.0, unit="个",
+            MetricResult(name="5.2.2 资源小类数", value=0.0, unit="个",
                          detail={"note": "无教学模块", "小类列表": []}),
         ]
 
@@ -498,14 +498,14 @@ def calc_resource_morphology(text: str) -> list[MetricResult]:
 
     return [
         MetricResult(
-            name="4.2.1 资源大类数", value=major_count, unit="个",
+            name="5.2.1 资源大类数", value=major_count, unit="个",
             detail={
                 "覆盖大类": sorted(covered_categories),
                 "应覆盖大类": sorted(RESOURCE_MORPHOLOGY_CORE_CATEGORIES.keys()),
             }
         ),
         MetricResult(
-            name="4.2.2 资源小类数", value=minor_count, unit="个",
+            name="5.2.2 资源小类数", value=minor_count, unit="个",
             detail={
                 "小类列表": sorted(type_counts.keys()),
                 "小类分布": type_counts,
@@ -524,7 +524,7 @@ def calc_coverage_section(
     history_nodes: set[str] | None = None,
     node_name_map: dict[str, str] | None = None,
 ) -> MetricResult:
-    """M3 覆盖率 — 本节知识点覆盖率（累计路径 + 祖先匹配）。"""
+    """M3 覆盖率 — 知识点覆盖率（累计路径 + 祖先匹配）。"""
     node_name_map = node_name_map or {}
     parsed = _parse_course_package(course_text)
     current_node_id = parsed.get("current_node_id")
@@ -542,7 +542,7 @@ def calc_coverage_section(
 
     expected_nodes = expected_content.get("section_kcs") or expected_content.get("knowledge_nodes", [])
     if not expected_nodes:
-        return MetricResult(name="本节知识点覆盖率", value=0.0, unit="%", detail={"note": "无预期知识点"})
+        return MetricResult(name="3.1 知识点覆盖率", value=0.0, unit="%", detail={"note": "无预期知识点"})
 
     name_to_id = _load_node_id_by_name()
     expected_ids: set[str] = set()
@@ -558,11 +558,11 @@ def calc_coverage_section(
                 expected_ids.add(nid)
                 raw_expected.append(nid)
     if not expected_ids:
-        return MetricResult(name="本节知识点覆盖率", value=0.0, unit="%", detail={"note": "无预期知识点"})
+        return MetricResult(name="3.1 知识点覆盖率", value=0.0, unit="%", detail={"note": "无预期知识点"})
     covered = expanded_nodes & expected_ids
     rate = round(len(covered) / len(expected_ids) * 100, 2) if expected_ids else 0.0
     return MetricResult(
-        name="本节知识点覆盖率", value=rate, unit="%",
+        name="3.1 知识点覆盖率", value=rate, unit="%",
         detail={
             "预期节点数": len(expected_ids),
             "预期节点": raw_expected,
@@ -595,7 +595,7 @@ def calc_coverage_weakness(
 
     expected_weakpoints = expected_content.get("weakness_kcs") or expected_content.get("weak_points", [])
     if not expected_weakpoints:
-        return MetricResult(name="薄弱点命中率", value=0.0, unit="%", detail={"note": "无薄弱点"})
+        return MetricResult(name="3.2 薄弱点命中率", value=0.0, unit="%", detail={"note": "无薄弱点"})
 
     name_to_id = _load_node_id_by_name()
     expected_wp_ids: set[str] = set()
@@ -614,7 +614,7 @@ def calc_coverage_weakness(
     rate = round(len(hit) / len(expected_wp_ids) * 100, 2) if expected_wp_ids else 0.0
     node_name_map = _load_node_name_map()
     return MetricResult(
-        name="薄弱点命中率", value=rate, unit="%",
+        name="3.2 薄弱点命中率", value=rate, unit="%",
         detail={"预期薄弱点数": len(expected_wp_ids),
                 "预期薄弱点": raw_expected,
                 "命中数": len(hit),
@@ -648,7 +648,7 @@ def calc_coverage_confusable(
 
     confusable_pairs = expected_content.get("confusable_pairs") or expected_content.get("confusion_pairs", [])
     if not confusable_pairs:
-        return MetricResult(name="混淆对覆盖率", value=0.0, unit="%", detail={"note": "无混淆对"})
+        return MetricResult(name="3.3 混淆对覆盖率", value=0.0, unit="%", detail={"note": "无混淆对"})
 
     total_pairs = len(confusable_pairs)
     covered_pairs = 0
@@ -676,7 +676,7 @@ def calc_coverage_confusable(
 
     rate = round(covered_pairs / total_pairs * 100, 2) if total_pairs else 0.0
     return MetricResult(
-        name="混淆对覆盖率", value=rate, unit="%",
+        name="3.3 混淆对覆盖率", value=rate, unit="%",
         detail={"总混淆对数": total_pairs, "覆盖对数": covered_pairs,
                 "本轮节点数": len(course_kp_ids),
                 "双向扩展后节点数": len(expanded),
@@ -722,7 +722,7 @@ def _teach_phase(round_dir: Path) -> str | None:
 
 
 def check_artifact_completeness(round_dir: Path, round_num: int, is_final_round: bool = False) -> MetricResult:
-    """M4.1 产物完整率。
+    """M4.1 5.1 产物完整率。
 
     自动区分辩论开启/关闭：
     - 辩论关闭 (``teach_phase == single_agent``)：cross_review / revision 本就
@@ -757,7 +757,7 @@ def check_artifact_completeness(round_dir: Path, round_num: int, is_final_round:
         "debate_enabled": debate_enabled,
     }
     return MetricResult(
-        name="产物完整率", value=rate, unit="%", detail=detail,
+        name="5.1 产物完整率", value=rate, unit="%", detail=detail,
     )
 
 def scan_pii_leaks(round_dir: Path, profile_letter: str, round_num: int) -> MetricResult:
@@ -967,27 +967,8 @@ def _load_system_section(
     return data, path
 
 
-def load_m7_external_result(profile_letter: str, round_num: int) -> MetricResult | None:
-    """加载 M4.2 资源形态外部 LLM 评估结果（round_indicator > resource_morphology）。"""
-    section, path = _load_round_section(profile_letter, round_num, "resource_morphology")
-    if section is None:
-        return None
-    raw = section.get("raw_llm_response", {})
-    metrics = section.get("metrics", {})
-    overall = metrics.get("value") or raw.get("overall_score") or section.get("overall_score") or 0.0
-    return MetricResult(
-        name="2.2.2 资源形态匹配度（外部LLM）", value=float(overall), unit="分",
-        detail={
-            "评估方式": "外部 LLM (round-indicator 资源形态)",
-            "原始文件": path.name if path else "-",
-            "覆盖分": raw.get("coverage_score", 0),
-            "适配分": raw.get("fit_score", 0),
-        }
-    )
-
-
 def load_m8_external_result(profile_letter: str, round_num: int) -> MetricResult | None:
-    """加载 1.1 闭环率外部 LLM 评估结果（round_indicator > objection_loop）。"""
+    """加载 6.2 异议闭环外部 LLM 评估结果（round_indicator > objection_loop）。"""
     section, path = _load_round_section(profile_letter, round_num, "objection_loop")
     if section is None:
         return None
@@ -998,7 +979,7 @@ def load_m8_external_result(profile_letter: str, round_num: int) -> MetricResult
     closed = raw.get("closed_loop_count") or detail.get("闭环数（采纳+修正）", 0)
     rate = round((closed or 0) / (total or 1) * 100, 2) if total else 100.0
     return MetricResult(
-        name="1.1 闭环率", value=metrics.get("value", rate) if metrics else rate, unit="分",
+        name="6.2 异议闭环", value=metrics.get("value", rate) if metrics else rate, unit="分",
         detail={
             "评估方式": "外部 LLM (round-indicator 异议闭环)",
             "原始文件": path.name if path else "-",
@@ -1010,14 +991,14 @@ def load_m8_external_result(profile_letter: str, round_num: int) -> MetricResult
 
 
 def load_m9_external_result(profile_letter: str, round_num: int) -> MetricResult | None:
-    """加载 1.5.1 知识溯源可验证率外部评估结果（round_indicator > statement 内）。"""
+    """加载 1.4.1 溯源可验证率外部评估结果（round_indicator > statement 内）。"""
     section, _path = _load_round_section(profile_letter, round_num, "statement")
     if section is None:
         return None
     evals = (section.get("evaluations") or [])
     total = len(evals)
     if total == 0:
-        return MetricResult(name="1.5.1 知识溯源可验证率", value=0.0, unit="%", detail={"note": "无陈述"})
+        return MetricResult(name="1.4.1 溯源可验证率", value=0.0, unit="%", detail={"note": "无陈述"})
 
     sourced = [e for e in evals if e.get("source_verifiable") is True]
     total_sourced = len(sourced)
@@ -1025,10 +1006,10 @@ def load_m9_external_result(profile_letter: str, round_num: int) -> MetricResult
         verified = sum(1 for e in sourced if e.get("content_relevance") is True)
         m9_rate = round(verified / total_sourced * 100, 2)
         return MetricResult(
-            name="1.5.1 知识溯源可验证率", value=m9_rate, unit="%",
+            name="1.4.1 溯源可验证率", value=m9_rate, unit="%",
             detail={"评估方式": "外部 LLM", "带来源陈述数": total_sourced, "内容支撑数": verified}
         )
-    return MetricResult(name="1.5.1 知识溯源可验证率", value=0.0, unit="%", detail={"note": "无带来源陈述"})
+    return MetricResult(name="1.4.1 溯源可验证率", value=0.0, unit="%", detail={"note": "无带来源陈述"})
 
 
 def load_coverage_external_result(profile_letter: str, round_num: int) -> list[MetricResult]:
@@ -1042,9 +1023,9 @@ def load_coverage_external_result(profile_letter: str, round_num: int) -> list[M
         return []
 
     mapping = [
-        ("section_coverage", "3.1 本节知识点覆盖率(LLM)"),
-        ("weakness_coverage", "3.2 薄弱点命中率(LLM)"),
-        ("confusion_coverage", "3.3 混淆对覆盖率(LLM)"),
+        ("section_coverage", "3.1 知识点覆盖率"),
+        ("weakness_coverage", "3.2 薄弱点命中率"),
+        ("confusion_coverage", "3.3 混淆对覆盖率"),
     ]
     # 区分真实 coverage section 与 _load_round_section 的回退（整个 JSON 当 section）：
     # 真实 coverage section 必含上述子节之一；否则视为未运行 coverage 评估，返回空列表，
@@ -1069,74 +1050,91 @@ def load_coverage_external_result(profile_letter: str, round_num: int) -> list[M
 
 # ── 深化指标计算（M1 子分 / M9-b / M14-M17） ────────────────────────────
 
-def _heuristic_type(text: str) -> str:
-    """type 字段缺失时按关键词粗略分类。"""
-    t = text or ""
-    if any(kw in t for kw in ["请", "应当", "建议", "步骤", "操作", "执行", "先", "然后", "注意"]):
-        return "instructional"
-    if any(kw in t for kw in ["因此", "因为", "所以", "推导", "得出", "结论", "综上"]):
-        return "logical"
-    return "factual"
+def _is_missed_eval(e: dict[str, Any]) -> bool:
+    """判定一条 uncertain 是否是「LLM 未返回评估结果」的兜底占位。
+
+    与 evaluator_LLM._is_llm_missed_eval 语义一致，但本地定义以避免
+    calculate.py 依赖 evaluator_LLM 的配置加载（见本模块 1305 行注释）。
+    这类 uncertain 是评估器故障，聚合时应排除出分母，避免稀释谬误率。
+    """
+    if e.get("verdict") != "uncertain":
+        return False
+    return "LLM 未返回评估结果" in str(e.get("reasoning") or "")
 
 
 def load_statement_evaluations(profile_letter: str, round_num: int) -> list[dict[str, Any]] | None:
-    """加载 round_indicator statement section 中的 evaluations。"""
+    """加载 round_indicator statement section 中的 evaluations。
+
+    每条评估记录的 error_type 由裁判 LLM 在评估时直接打出
+    （∈ factual/logical/instructional/other），本函数不再做启发式补全。
+    """
     section, _path = _load_round_section(profile_letter, round_num, "statement")
     if section is None:
         return None
-    evals = (section.get("evaluations") or [])
-    for e in evals:
-        if not e.get("type"):
-            e["type"] = _heuristic_type(e.get("text", ""))
-    return evals
+    return section.get("evaluations") or []
 
 
 def calc_m1_subtypes(evaluations: list[dict[str, Any]] | None) -> list[MetricResult]:
-    """M1 拆三子分：事实性 / 逻辑性 / 指令性 谬误率。"""
+    """M1 拆三子分：1.3.1 事实性 / 1.3.2 逻辑性 / 1.3.3 指令性 谬误率。
+
+    分母 = 该 error_type 的有效陈述数（排除 LLM 未返回的 missed 占位）；
+    分子 = 该 error_type 中 verdict == "incorrect" 的条数。
+    分母为 0（无该类陈述或全为 missed）时标 N/A 而非 0.0，避免虚假完美。
+    """
     type_map = {
-        "1.4.1 事实性谬误率": "factual",
-        "1.4.2 逻辑性谬误率": "logical",
-        "1.4.3 指令性谬误率": "instructional",
+        "1.3.1 事实性谬误率": "factual",
+        "1.3.2 逻辑性谬误率": "logical",
+        "1.3.3 指令性谬误率": "instructional",
     }
     if not evaluations:
         return [
             MetricResult(
                 name=n, value=0.0, unit="%",
-                detail={"computed": False, "note": "未计算：缺少 statement 外部LLM结果"}
+                detail={"computed": False, "note": "N/A：缺少 statement 外部LLM结果"}
             )
             for n in type_map
         ]
+    # 排除评估器故障占位（与 calc_hallucination_rate 主指标口径对齐）
+    effective = [e for e in evaluations if not _is_missed_eval(e)]
     out: list[MetricResult] = []
     for name, key in type_map.items():
-        subset = [e for e in evaluations if e.get("type") == key]
+        subset = [e for e in effective if str(e.get("error_type") or "other").lower() == key]
         total = len(subset)
         incorrect = sum(1 for e in subset if e.get("verdict") == "incorrect")
-        rate = round(incorrect / total * 100, 2) if total else 0.0
-        out.append(MetricResult(
-            name=name, value=rate, unit="%",
-            detail={"computed": True, "该类型陈述数": total, "错误数": incorrect, "评估方式": "外部 LLM"}
-        ))
+        if total == 0:
+            out.append(MetricResult(
+                name=name, value=0.0, unit="%",
+                detail={"computed": False, "该类型陈述数": 0, "错误数": 0,
+                        "评估方式": "外部 LLM", "note": "N/A：该类有效陈述数为 0"}
+            ))
+        else:
+            rate = round(incorrect / total * 100, 2)
+            out.append(MetricResult(
+                name=name, value=rate, unit="%",
+                detail={"computed": True, "该类型陈述数": total, "错误数": incorrect,
+                        "评估方式": "外部 LLM"}
+            ))
     return out
 
 
 def calc_m9b(evaluations: list[dict[str, Any]] | None) -> MetricResult:
-    """1.5.2 溯源内容支撑率。"""
+    """1.4.2 溯源内容支撑率。"""
     if not evaluations:
-        return MetricResult(name="1.5.2 溯源内容支撑率", value=0.0, unit="%", detail={"computed": False, "note": "未计算"})
+        return MetricResult(name="1.4.2 溯源内容支撑率", value=0.0, unit="%", detail={"computed": False, "note": "未计算"})
     sourced = [e for e in evaluations if e.get("source_verifiable") is True]
     total = len(sourced)
     if total == 0:
-        return MetricResult(name="1.5.2 溯源内容支撑率", value=0.0, unit="%", detail={"computed": True, "带来源陈述数": 0, "note": "无带来源陈述"})
+        return MetricResult(name="1.4.2 溯源内容支撑率", value=0.0, unit="%", detail={"computed": True, "带来源陈述数": 0, "note": "无带来源陈述"})
     supported = sum(1 for e in sourced if e.get("content_relevance") is True or e.get("relevance_check_result") in ("relevant", "partially_relevant"))
     rate = round(supported / total * 100, 2)
     return MetricResult(
-        name="1.5.2 溯源内容支撑率", value=rate, unit="%",
+        name="1.4.2 溯源内容支撑率", value=rate, unit="%",
         detail={"computed": True, "带来源陈述数": total, "内容支撑数": supported}
     )
 
 
 def load_m14_external_result(profile_letter: str) -> dict[str, Any] | None:
-    """加载 1.6 跨轮自洽率结果（profile_indicator > cross_round section）。"""
+    """加载 1.5 内容跨轮自洽率结果（profile_indicator > cross_round section）。"""
     section, _path = _load_profile_section(profile_letter, "cross_round")
     return section
 
@@ -1197,11 +1195,11 @@ def _placeholder_metric(name: str, mode: str) -> MetricResult:
 
 
 def calc_m14(data: dict[str, Any] | None, profile_letter: str) -> MetricResult:
-    """1.6 跨轮自洽率。"""
+    """1.5 内容跨轮自洽率。"""
     if not data:
-        return _placeholder_metric("1.6 跨轮自洽率", "m1_cross_round")
+        return _placeholder_metric("1.5 内容跨轮自洽率", "m1_cross_round")
     return MetricResult(
-        name="1.6 跨轮自洽率", value=data.get("self_consistency_rate", 0.0), unit="%",
+        name="1.5 内容跨轮自洽率", value=data.get("self_consistency_rate", 0.0), unit="%",
         detail={"computed": True, "事实点总数": data.get("total_fact_points", 0), "矛盾数": data.get("contradicted", 0)}
     )
 
@@ -1211,7 +1209,7 @@ def calc_m15(data: dict[str, Any] | None, profile_letter: str) -> MetricResult:
     if not data:
         return _placeholder_metric("6.1 对抗稳健率", "m6_adversarial")
     return MetricResult(
-        name="6.1 对抗稳健率", value=data.get("pass_rate", 0.0), unit="%",
+        name="7.1 对抗稳健率", value=data.get("pass_rate", 0.0), unit="%",
         detail={"computed": True, "问题数": data.get("total_questions", 0), "通过数": data.get("passed", 0), "评估方式": data.get("methodology", "material_proxy")}
     )
 
@@ -1221,7 +1219,7 @@ def calc_m16(data: dict[str, Any] | None, profile_letter: str) -> MetricResult:
     if not data:
         return _placeholder_metric("6.2 边界拒答恰当率", "m6_boundary")
     return MetricResult(
-        name="6.2 边界拒答恰当率", value=data.get("appropriate_rate", 0.0), unit="%",
+        name="7.2 边界拒答恰当率", value=data.get("appropriate_rate", 0.0), unit="%",
         detail={"computed": True, "问题数": data.get("total_questions", 0), "恰当数": data.get("appropriate", 0), "评估方式": data.get("methodology", "material_proxy")}
     )
 
@@ -1237,8 +1235,8 @@ def calc_m17(data: dict[str, Any] | None, profile_letter: str, round_num: int) -
     """
     if not data:
         return [
-            _placeholder_metric("2.5 检索准确率", "m2_retrieval"),
-            _placeholder_metric("2.5 检索完整率", "m2_retrieval"),
+            _placeholder_metric("4.1 检索准确率", "m2_retrieval"),
+            _placeholder_metric("4.2 检索完整率", "m2_retrieval"),
         ]
     total = data.get("total_chunks", 0) or 0
     accurate = data.get("accurate", 0) or 0
@@ -1276,7 +1274,7 @@ def calc_m17(data: dict[str, Any] | None, profile_letter: str, round_num: int) -
 
     return [
         MetricResult(
-            name="2.5 检索准确率",
+            name="4.1 检索准确率",
             value=accurate_rate,
             unit="%",
             detail={
@@ -1287,7 +1285,7 @@ def calc_m17(data: dict[str, Any] | None, profile_letter: str, round_num: int) -
             },
         ),
         MetricResult(
-            name="2.5 检索完整率",
+            name="4.2 检索完整率",
             value=complete_rate,
             unit="%",
             detail={
@@ -1383,8 +1381,6 @@ calculate_profile_level_metrics = calculate_system_level_metrics
 # ── 外部LLM维度展示 ──────────────────────────────────────────────────────
 
 _M1_LLM_DIMENSIONS: list[tuple[str, str]] = [
-    ("context_correctness", "上下文正确性(Context Correctness)"),
-    ("correctness", "答案正确性(Correctness)"),
     ("hallucination", "幻觉评估(Hallucination)"),
 ]
 
@@ -1509,16 +1505,16 @@ def _calculate_round_impl(
     )
     is_final = round_num >= max(available_rounds) if available_rounds else True
 
-    # 4.1 产物完整率
+    # 4.1 5.1 产物完整率
     rm.metrics.append(check_artifact_completeness(round_dir, round_num, is_final_round=is_final))
 
-    # 1.1 闭环率：优先采用外部 LLM 结果（round_indicator_*.json section=objection_loop），缺失时回退占位
+    # 6.2 异议闭环：优先采用外部 LLM 结果（round_indicator_*.json section=objection_loop），缺失时回退占位
     m8_result = load_m8_external_result(profile_letter, round_num)
     if m8_result:
         rm.metrics.append(m8_result)
     else:
         rm.metrics.append(calc_objection_loop(judge_text, review_a_text, review_b_text))
-    # 5.4 异议率 (脚本计算 (🔴+🟡)/总批注)
+    # 6.1 异议率 (脚本计算 (🔴+🟡)/总批注)
     rm.metrics.append(calc_hallucination_expert_review(review_a_text, review_b_text))
     # 1.2 裁判 Agent 准确性评分
     rm.metrics.append(calc_hallucination_judge_accuracy(judge_text))
@@ -1566,13 +1562,10 @@ def _calculate_round_impl(
             detail={"triggered": False, "note": "首轮：缺少前一轮 profile_update，无法比较"}
         ))
 
-    # M5.3 PII 合规检测（改用外部 LLM 评估，替代脚本正则扫描）
+    # M5.3 PII 合规检测（仅接受外部 LLM 评估，无结果则不添加指标）
     pii_result = load_pii_external_result(profile_letter, round_num)
     if pii_result:
         rm.metrics.append(pii_result)
-    else:
-        # 回退：使用旧版脚本计算（仅当无 LLM 评估结果时）
-        rm.metrics.append(scan_pii_leaks(round_dir, profile_letter, round_num))
 
     return rm
 
@@ -1605,8 +1598,8 @@ def format_result(rm: RoundMetrics, llm_results: dict[str, Any] | None = None) -
 
     # M1 幻觉率
     _append_group("M1 幻觉率", [
-        "1.1 闭环率",
-        "1.2 裁判Agent准确性评分",
+        "6.2 异议闭环",
+        "1.1 裁判Agent准确性评分",
     ])
 
     # M2 匹配度
@@ -1619,15 +1612,15 @@ def format_result(rm: RoundMetrics, llm_results: dict[str, Any] | None = None) -
 
     # M4 执行完整性
     _append_group("M4 执行完整性", [
-        "4.1 产物完整率",
-        "4.2.1 资源大类数",
-        "4.2.2 资源小类数",
+        "4.1 5.1 产物完整率",
+        "5.2.1 资源大类数",
+        "5.2.2 资源小类数",
     ])
 
     # M5 其它指标
     _append_group("M5 其它指标", [
         "5.3 PII合规检测",
-        "5.4 异议率",
+        "6.1 异议率",
     ])
 
     # ── 表2: 外部LLM评价指标 ──────────────────────────────────
@@ -1649,12 +1642,12 @@ def format_result(rm: RoundMetrics, llm_results: dict[str, Any] | None = None) -
 
     # M1 幻觉率 — 深化指标
     _append_group("M1 幻觉率 — 深化指标", [
-        "1.4.1 事实性谬误率",
-        "1.4.2 逻辑性谬误率",
-        "1.4.3 指令性谬误率",
-        "1.5.1 知识溯源可验证率",
-        "1.5.2 溯源内容支撑率",
-        "1.6 跨轮自洽率",
+        "1.3.1 事实性谬误率",
+        "1.3.2 逻辑性谬误率",
+        "1.3.3 指令性谬误率",
+        "1.4.1 溯源可验证率",
+        "1.4.2 溯源内容支撑率",
+        "1.5 内容跨轮自洽率",
     ])
 
     # M2 匹配度 — 外部LLM维度
@@ -1672,15 +1665,15 @@ def format_result(rm: RoundMetrics, llm_results: dict[str, Any] | None = None) -
 
     # M2 匹配度 — 检索正确性
     _append_group("M2 匹配度 — 检索正确性", [
-        "2.5 检索准确率",
-        "2.5 检索完整率",
+        "4.1 检索准确率",
+        "4.2 检索完整率",
     ])
 
     # M3 覆盖率 — 外部LLM语义验证
     _append_group("M3 覆盖率 — 外部LLM语义验证", [
-        "3.1 本节知识点覆盖率(LLM)",
-        "3.2 薄弱点命中率(LLM)",
-        "3.3 混淆对覆盖率(LLM)",
+        "3.1 知识点覆盖率",
+        "3.2 薄弱点命中率",
+        "3.3 混淆对覆盖率",
     ])
 
     # M4 执行完整性 — 资源形态
@@ -1695,9 +1688,9 @@ def format_result(rm: RoundMetrics, llm_results: dict[str, Any] | None = None) -
     # ── 表3: 问答质量测试指标 ─────────────────────────────────
     lines.append("")
     lines.append("── 表3: 问答质量测试指标 ──")
-    _append_group("M6 问答质量测试", [
-        "6.1 对抗稳健率",
-        "6.2 边界拒答恰当率",
+    _append_group("M7 问答质量测试", [
+        "7.1 对抗稳健率",
+        "7.2 边界拒答恰当率",
     ])
 
     return "\n".join(lines)

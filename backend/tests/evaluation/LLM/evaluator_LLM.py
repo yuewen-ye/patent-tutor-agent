@@ -1345,7 +1345,13 @@ def evaluate_statements(
    - 0-29 分：完全错误
    基于 score 自动判定 verdict：score ≥ 70 → correct；40 ≤ score < 70 → uncertain；score < 40 → incorrect
 
-2. **溯源评估**：
+2. **陈述性质分类 (error_type)**：判断该陈述的性质类别（与对错无关，每条必填）：
+   - factual（事实性）：陈述具体事实/法条/期限/数额/定义等客观断言
+   - logical（逻辑性）：陈述推理/因果关系/结论推导（含"因此/所以/综上"等）
+   - instructional（指令性）：陈述操作指令/步骤/应当/建议（含"请/应当/步骤"等）
+   - other（其他）：无法归入上述三类
+
+3. **溯源评估**：
    - source_score (0-100 分)：来源可验证性评分
    - source_check_result：verified/partially_verified/unverified
    - relevance_score (0-100 分)：内容相关性评分
@@ -1359,6 +1365,7 @@ def evaluate_statements(
             "text": "原文陈述",
             "score": 0,
             "verdict": "correct/incorrect/uncertain",
+            "error_type": "factual/logical/instructional/other",
             "reasoning": "判定理由",
             "source_verifiable": true/false,
             "source_score": 0,
@@ -1407,10 +1414,15 @@ def evaluate_statements(
                 # 确保 source_score / relevance_score 字段存在
                 source_score = result.get("source_score", 0)
                 relevance_score = result.get("relevance_score", 0)
+                # 陈述性质分类（LLM 必填；非法或缺失兜底为 other）
+                error_type = str(result.get("error_type") or "other").lower().strip()
+                if error_type not in {"factual", "logical", "instructional", "other"}:
+                    error_type = "other"
                 results.append({
                     "text": statement["text"],
                     "score": score,
                     "verdict": verdict,
+                    "error_type": error_type,
                     "reasoning": result.get("reasoning", ""),
                     "source_verifiable": result.get("source_verifiable", statement.get("has_source", False)),
                     "source_score": source_score,
@@ -1432,6 +1444,7 @@ def evaluate_statements(
                         "text": statement["text"],
                         "score": 0,
                         "verdict": "uncertain",
+                        "error_type": "other",
                         "reasoning": "LLM 未返回评估结果",
                         "source_verifiable": statement.get("has_source", False),
                         "source_score": 0,
@@ -1471,7 +1484,13 @@ def _evaluate_single_statement(
    - 0-29 分：完全错误
    基于 score 自动判定 verdict：≥70 → correct；40-69 → uncertain；<40 → incorrect
 
-2. **溯源评估**：
+2. **陈述性质分类 (error_type)**：与对错无关，每条必填
+   - factual（事实性）：陈述具体事实/法条/期限/数额/定义等客观断言
+   - logical（逻辑性）：陈述推理/因果关系/结论推导
+   - instructional（指令性）：陈述操作指令/步骤/应当/建议
+   - other（其他）：无法归入上述三类
+
+3. **溯源评估**：
    - source_score (0-100) 与 source_check_result：verified/partially_verified/unverified
    - relevance_score (0-100)、relevance_check_result：relevant/partially_relevant/irrelevant
    - relevance_reasoning
@@ -1483,6 +1502,7 @@ def _evaluate_single_statement(
             "text": "原文陈述",
             "score": 0,
             "verdict": "correct/incorrect/uncertain",
+            "error_type": "factual/logical/instructional/other",
             "reasoning": "判定理由",
             "source_verifiable": true/false,
             "source_score": 0,
@@ -1523,10 +1543,14 @@ def _evaluate_single_statement(
             verdict = "uncertain"
         else:
             verdict = "incorrect"
+    error_type = str(r.get("error_type") or "other").lower().strip()
+    if error_type not in {"factual", "logical", "instructional", "other"}:
+        error_type = "other"
     return {
         "text": statement["text"],
         "score": score,
         "verdict": verdict,
+        "error_type": error_type,
         "reasoning": r.get("reasoning", ""),
         "source_verifiable": r.get("source_verifiable", statement.get("has_source", False)),
         "source_score": r.get("source_score", 0) or 0,
@@ -1539,34 +1563,13 @@ def _evaluate_single_statement(
 
 
 # M1 错误类型权重（可通过 config 覆盖）
+# 按 LLM 打的 error_type 四键聚合（陈述性质分类），与 1.4.1/1.4.2/1.4.3 口径一致
 M1_ERROR_WEIGHTS: dict[str, float] = {
-    "legal_scope": 1.0,       # 法律适用错误（原则性错误）
-    "time_limit": 0.8,        # 期限/时间错误
-    "procedure": 0.7,         # 程序步骤错误
-    "amount": 0.5,            # 数量/金额错误
-    "terminology": 0.3,       # 术语使用错误
-    "other": 0.5,             # 其他错误
+    "factual": 1.0,           # 事实性错误（法条/期限/数额等硬事实错，最严重）
+    "logical": 0.8,          # 逻辑性错误（推理/因果关系错）
+    "instructional": 0.7,    # 指令性错误（操作步骤/应当/建议错）
+    "other": 0.5,            # 其他错误
 }
-
-
-def _classify_error_type(statement_text: str, reasoning: str) -> str:
-    """将错误分类为权重不同的类型。
-
-    基于陈述文本和判定理由中的关键词进行启发式分类。
-    """
-    combined = (statement_text + " " + reasoning).lower()
-
-    if any(kw in combined for kw in ["期限", "时间", "年", "月", "日", "时效"]):
-        return "time_limit"
-    if any(kw in combined for kw in ["程序", "步骤", "流程", "申请", "审查"]):
-        return "procedure"
-    if any(kw in combined for kw in ["法律", "法条", "适用", "依据", "条例"]):
-        return "legal_scope"
-    if any(kw in combined for kw in ["金额", "费用", "罚款", "赔偿", "数额"]):
-        return "amount"
-    if any(kw in combined for kw in ["术语", "定义", "概念", "含义"]):
-        return "terminology"
-    return "other"
 
 
 def _is_llm_missed_eval(r: dict[str, Any]) -> bool:
@@ -1622,7 +1625,7 @@ def calc_hallucination_rate(
         # 所有评估全部是“LLM未返回评估结果”：不能视为全错，记为 0.0 并加 note
         avg_score = 0.0
 
-    # 加权计算（保留兼容，只在 effective 上算）
+    # 加权计算：按 LLM 打的 error_type 四键聚合（不再启发式分类）
     weights = M1_ERROR_WEIGHTS.copy()
     if config and "m1_weights" in config:
         weights.update(config["m1_weights"])
@@ -1630,15 +1633,16 @@ def calc_hallucination_rate(
     weighted_error_sum = 0.0
     max_weight_sum = eff_total * max(weights.values()) if eff_total > 0 else 0
 
-    error_type_details: dict[str, int] = {}
+    # error_type_distribution：四键全初始化为 0，确保无错误的类也显式显示而非缺失
+    error_type_details: dict[str, int] = {k: 0 for k in weights}
     for r in effective:
         if r.get("verdict") == "incorrect":
-            error_type = _classify_error_type(
-                r.get("text", ""), r.get("reasoning", "")
-            )
-            w = weights.get(error_type, 0.5)
+            et = str(r.get("error_type") or "other").lower().strip()
+            if et not in weights:
+                et = "other"
+            w = weights[et]
             weighted_error_sum += w
-            error_type_details[error_type] = error_type_details.get(error_type, 0) + 1
+            error_type_details[et] = error_type_details.get(et, 0) + 1
 
     weighted_rate = (
         round(weighted_error_sum / max_weight_sum * 100, 1)
