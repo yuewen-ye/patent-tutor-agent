@@ -264,18 +264,29 @@ def _do_metrics_one(
         print(f"{'=' * 50}")
         metric_names = [m.name for m in all_results[0].metrics]
         for name in metric_names:
-            values = []
+            values: list[float] = []
+            rounds_with_data: list[str] = []
             for rm in all_results:
                 for m in rm.metrics:
                     if m.name == name:
-                        values.append(m.value)
+                        if m.value is None:
+                            rounds_with_data.append("N/A")
+                        else:
+                            values.append(float(m.value))
+                            rounds_with_data.append(f"{m.value:.1f}")
                         break
             if values:
                 avg = sum(values) / len(values)
                 unit = all_results[0].metrics[
                     metric_names.index(name)
                 ].unit
-                print(f"  {name}: {avg:.1f}{unit}  (各轮: {values})")
+                print(f"  {name}: {avg:.1f}{unit}  (各轮: {rounds_with_data})")
+            else:
+                # 全部为 N/A（如 nodebate 组的异议率/闭环率）
+                unit = all_results[0].metrics[
+                    metric_names.index(name)
+                ].unit
+                print(f"  {name}: N/A{unit}  (各轮: {rounds_with_data})")
 
 
 def _do_report(

@@ -5,10 +5,11 @@
 M1 幻觉率：
   6.2 异议闭环（脚本计算 + 外部LLM）
   1.1 裁判Agent准确性评分（脚本计算，judge_report.md 准确性：X/5）
-  1.3.3 幻觉评估（外部LLM overall）
-  1.3.1 事实性 / 1.3.2 逻辑性 / 1.3.3 指令性谬误率（外部LLM statement）
-  1.4.1 溯源可验证率 / 1.4.2 溯源内容支撑率（外部LLM statement）
-  1.5 内容跨轮自洽率（外部LLM profile）
+  （旧 1.2 幻觉评估 [LLM] 已于 2026-09-03 从指标体系删除；整体 LLM 评估不再产出 hallucination 维度）
+  1.2.1 事实性 / 1.2.2 逻辑性 / 1.2.3 指令性谬误率（外部LLM statement）
+  1.2 谬误率汇总（外部LLM statement 合并口径）
+  1.3.1 溯源可验证率 / 1.3.2 溯源内容支撑率（外部LLM statement）
+  1.4 内容跨轮自洽率（外部LLM profile）
 
 M2 匹配度：
   2.1 难度符合度（脚本计算）
@@ -112,9 +113,14 @@ DIFFICULTY_ORDER = {"L1": 1, "L2": 2, "L3": 3}
 class MetricResult:
     """单个指标的计算结果。"""
     name: str
-    value: float
+    value: float | None
     unit: str
     detail: dict[str, Any] = field(default_factory=dict)
+    # 当 display_mode == "ratio" 时，渲染层按 numerator/denominator 显示为 x/y，
+    # value 仍保留百分比数值用于合格判定（≤5% 等）。适用于谬误率等分母敏感指标。
+    numerator: int | None = None
+    denominator: int | None = None
+    display_mode: str = "default"  # default / ratio / ratio_pct_in_avg
 
 @dataclass
 class RoundMetrics:
@@ -392,7 +398,23 @@ def calc_objection_loop(judge_text: str, review_a_text: str, review_b_text: str)
 
 
 def calc_hallucination_expert_review(review_a_text: str, review_b_text: str) -> MetricResult:
-    """6.1 异议率 — (🔴 + 🟡) / 总批注数 × 100%。"""
+    """6.1 异议率 — (🔴 + 🟡) / 总批注数 × 100%。
+
+    若 cross_review 文本全部为空（如 nodebate 组未启用辩论），标 N/A：
+    没有交叉评审就没有"异议"这个概念，给 0% 反而是假满分。
+    """
+    both_missing = (not review_a_text) and (not review_b_text)
+    if both_missing:
+        return MetricResult(
+            name="6.1 异议率", value=None, unit="%",
+            detail={
+                "computed": False,
+                "专家A总批注": None, "专家B总批注": None,
+                "🔴": None, "🟡": None, "异议数": None,
+                "评估方式": "not_applicable（无交叉评审产物）",
+                "note": "该实验组未启用辩论/交叉评审，异议率不适用，标 N/A",
+            }
+        )
     counts_a = _parse_cross_review(review_a_text)
     counts_b = _parse_cross_review(review_b_text)
     total_issues = sum(counts_a.values()) + sum(counts_b.values())
@@ -836,10 +858,12 @@ def _extract_bkt_pl_map(text: str) -> dict[str, float]:
 def calc_bkt_advancement(prev_text: str | None, curr_text: str | None, course_text: str) -> MetricResult:
     """2.4 动态迭代触发率 — 画像级指标，每轮返回 / 不直接展示数值。
 
-    判定规则：当前后轮 profile_update 存在且 BKT PL 值发生显著变化
-    （上升或下降任一节点 |Δpl| ≥ 0.05）时，该轮视为「触发」动态迭代。
+    判定规则：当前后轮 profile_update 存在且 BKT PL 值发生显著变化时，该轮视为「触发」。
+    由于 PL ∈ [0, 1]，同样的 Δ 在不同掌握区间的教学意义不同：
+      - 低掌握（prev_pl < 0.30）：|Δ| ≥ 0.08 算显著（学员从几乎不会到掌握基础，小步迭代即可）
+      - 中掌握（0.30 ≤ prev_pl < 0.70）：|Δ| ≥ 0.10 算显著（中间区间的实质性推进）
+      - 高掌握（prev_pl ≥ 0.70）：|Δ| ≥ 0.12 算显著（天花板效应，接近 1.0 时 0.03 属于 BKT 噪声）
     画像级汇总：触发次数 / 有效比较次数 × 100%（R02 vs R01 … R05 vs R04）。
-    每轮返回 unit="/"，triggered 状态存在 detail 中供画像级汇总。
     """
     if not prev_text or not curr_text:
         return MetricResult(
@@ -856,15 +880,23 @@ def calc_bkt_advancement(prev_text: str | None, curr_text: str | None, course_te
             detail={"triggered": False, "note": "BKT 数据解析为空"}
         )
 
+    def threshold_for(pl: float) -> float:
+        if pl < 0.30:
+            return 0.08
+        if pl < 0.70:
+            return 0.10
+        return 0.12
+
     all_nodes = set(prev_pls.keys()) | set(curr_pls.keys())
     advanced_nodes: list[str] = []
     dropped_nodes: list[str] = []
     for nid in all_nodes:
         prev_pl = prev_pls.get(nid, 0.0)
         curr_pl = curr_pls.get(nid, 0.0)
-        if curr_pl - prev_pl >= 0.05:
+        t = threshold_for(prev_pl)
+        if curr_pl - prev_pl >= t:
             advanced_nodes.append(nid)
-        elif prev_pl - curr_pl >= 0.05:
+        elif prev_pl - curr_pl >= t:
             dropped_nodes.append(nid)
 
     changed_nodes = len(advanced_nodes) + len(dropped_nodes)
@@ -968,18 +1000,35 @@ def _load_system_section(
 
 
 def load_m8_external_result(profile_letter: str, round_num: int) -> MetricResult | None:
-    """加载 6.2 异议闭环外部 LLM 评估结果（round_indicator > objection_loop）。"""
+    """加载 6.2 异议闭环外部 LLM 评估结果（round_indicator > objection_loop）。
+
+    若 objection_loop section 被标记为 not_applicable（如 nodebate 组无辩论环节产物），
+    返回标了 computed=False 的 MetricResult（报告层显示 N/A）。
+    """
     section, path = _load_round_section(profile_letter, round_num, "objection_loop")
     if section is None:
         return None
+    # 标记为不适用的场景：返回占位，value=None 表示 N/A
+    if isinstance(section, dict) and section.get("status") == "not_applicable":
+        return MetricResult(
+            name="6.2 异议闭环", value=None, unit="分",
+            detail={
+                "computed": False,
+                "评估方式": "not_applicable（无辩论环节产物）",
+                "原因": str(section.get("reason", "")),
+                "原始文件": path.name if path else "-",
+                "note": "该实验组未启用交叉评审，异议率/闭环率不适用，标 N/A",
+            }
+        )
     raw = section.get("raw_llm_response", {})
     metrics = section.get("metrics", {})
     detail = metrics.get("detail", {})
     total = raw.get("total_objections") or detail.get("总🔴异议数", 0)
     closed = raw.get("closed_loop_count") or detail.get("闭环数（采纳+修正）", 0)
     rate = round((closed or 0) / (total or 1) * 100, 2) if total else 100.0
+    val = metrics.get("value", rate) if metrics else rate
     return MetricResult(
-        name="6.2 异议闭环", value=metrics.get("value", rate) if metrics else rate, unit="分",
+        name="6.2 异议闭环", value=val, unit="分",
         detail={
             "评估方式": "外部 LLM (round-indicator 异议闭环)",
             "原始文件": path.name if path else "-",
@@ -991,14 +1040,14 @@ def load_m8_external_result(profile_letter: str, round_num: int) -> MetricResult
 
 
 def load_m9_external_result(profile_letter: str, round_num: int) -> MetricResult | None:
-    """加载 1.4.1 溯源可验证率外部评估结果（round_indicator > statement 内）。"""
+    """加载 1.3.1 溯源可验证率外部评估结果（round_indicator > statement 内）。"""
     section, _path = _load_round_section(profile_letter, round_num, "statement")
     if section is None:
         return None
     evals = (section.get("evaluations") or [])
     total = len(evals)
     if total == 0:
-        return MetricResult(name="1.4.1 溯源可验证率", value=0.0, unit="%", detail={"note": "无陈述"})
+        return MetricResult(name="1.3.1 溯源可验证率", value=0.0, unit="%", detail={"note": "无陈述"})
 
     sourced = [e for e in evals if e.get("source_verifiable") is True]
     total_sourced = len(sourced)
@@ -1006,10 +1055,10 @@ def load_m9_external_result(profile_letter: str, round_num: int) -> MetricResult
         verified = sum(1 for e in sourced if e.get("content_relevance") is True)
         m9_rate = round(verified / total_sourced * 100, 2)
         return MetricResult(
-            name="1.4.1 溯源可验证率", value=m9_rate, unit="%",
+            name="1.3.1 溯源可验证率", value=m9_rate, unit="%",
             detail={"评估方式": "外部 LLM", "带来源陈述数": total_sourced, "内容支撑数": verified}
         )
-    return MetricResult(name="1.4.1 溯源可验证率", value=0.0, unit="%", detail={"note": "无带来源陈述"})
+    return MetricResult(name="1.3.1 溯源可验证率", value=0.0, unit="%", detail={"note": "无带来源陈述"})
 
 
 def load_coverage_external_result(profile_letter: str, round_num: int) -> list[MetricResult]:
@@ -1075,66 +1124,116 @@ def load_statement_evaluations(profile_letter: str, round_num: int) -> list[dict
 
 
 def calc_m1_subtypes(evaluations: list[dict[str, Any]] | None) -> list[MetricResult]:
-    """M1 拆三子分：1.3.1 事实性 / 1.3.2 逻辑性 / 1.3.3 指令性 谬误率。
+    """M1 拆三子分：1.2.1 事实性 / 1.2.2 逻辑性 / 1.2.3 指令性 谬误率 + 1.2 谬误率汇总。
 
-    分母 = 该 error_type 的有效陈述数（排除 LLM 未返回的 missed 占位）；
-    分子 = 该 error_type 中 verdict == "incorrect" 的条数。
-    分母为 0（无该类陈述或全为 missed）时标 N/A 而非 0.0，避免虚假完美。
+    （2026-09-03：删除旧 1.2 幻觉评估 [LLM]，原 1.3/1.4/1.5 系列前移一位）
+    展示格式：每条以 "错误条数/总条数" (x/y) 显示，不显示裸百分比，消除因分母差异导致的组间错觉。
+    平均列汇总为 "跨轮错误总数 / 跨轮抽取总数 (谬误比例%)"。
+    value 仍保留百分比数值，用于 ≤5% 合格判定。
+    error_type 由 LLM statement 模式标注，脚本只按标签聚合，不做启发式分类。
     """
-    type_map = {
-        "1.3.1 事实性谬误率": "factual",
-        "1.3.2 逻辑性谬误率": "logical",
-        "1.3.3 指令性谬误率": "instructional",
-    }
+    MIN_TYPE_STATEMENTS = 5
+    type_map: list[tuple[str, str]] = [
+        ("1.2.1 事实性谬误率 [LLM]", "factual"),
+        ("1.2.2 逻辑性谬误率 [LLM]", "logical"),
+        ("1.2.3 指令性谬误率 [LLM]", "instructional"),
+    ]
     if not evaluations:
-        return [
-            MetricResult(
-                name=n, value=0.0, unit="%",
-                detail={"computed": False, "note": "N/A：缺少 statement 外部LLM结果"}
+        out: list[MetricResult] = []
+        for n, _ in type_map:
+            m = MetricResult(
+                name=n, value=0.0, unit="%", numerator=0, denominator=0, display_mode="ratio",
+                detail={"computed": False, "note": "N/A：缺少 statement 外部LLM结果",
+                        "评估方式": "外部 LLM（error_type 标注 → 脚本按标签聚合，不自行分类）"}
             )
-            for n in type_map
-        ]
-    # 排除评估器故障占位（与 calc_hallucination_rate 主指标口径对齐）
+            out.append(m)
+        out.append(MetricResult(
+            name="1.2 谬误率汇总 [LLM]", value=0.0, unit="%", numerator=0, denominator=0,
+            display_mode="ratio",
+            detail={"computed": False, "note": "N/A：缺少 statement 外部LLM结果",
+                    "评估方式": "外部 LLM（三类合并，不做启发式分类）"},
+        ))
+        return out
+
     effective = [e for e in evaluations if not _is_missed_eval(e)]
-    out: list[MetricResult] = []
-    for name, key in type_map.items():
+    out = []
+    total_incorrect_all = 0
+    total_valid_all = 0
+
+    for name, key in type_map:
         subset = [e for e in effective if str(e.get("error_type") or "other").lower() == key]
         total = len(subset)
         incorrect = sum(1 for e in subset if e.get("verdict") == "incorrect")
+        total_incorrect_all += incorrect
+        total_valid_all += total
         if total == 0:
             out.append(MetricResult(
-                name=name, value=0.0, unit="%",
+                name=name, value=0.0, unit="%", numerator=0, denominator=0, display_mode="ratio",
                 detail={"computed": False, "该类型陈述数": 0, "错误数": 0,
-                        "评估方式": "外部 LLM", "note": "N/A：该类有效陈述数为 0"}
+                        "评估方式": "外部 LLM（error_type 标注 → 脚本按标签聚合，不自行分类）",
+                        "note": "N/A：该类有效陈述数为 0"},
             ))
         else:
             rate = round(incorrect / total * 100, 2)
+            det: dict[str, Any] = {
+                "computed": True, "该类型陈述数": total, "错误数": incorrect,
+                "评估方式": "外部 LLM（error_type 标注 → 脚本按标签聚合，不自行分类）",
+            }
+            if total < MIN_TYPE_STATEMENTS:
+                det["警示"] = (
+                    f"样本量不足（该类仅 {total} 条陈述，<{MIN_TYPE_STATEMENTS}），"
+                    "统计波动大，跨组比较不可信。请参考「1.2 谬误率汇总」合并指标。"
+                )
             out.append(MetricResult(
-                name=name, value=rate, unit="%",
-                detail={"computed": True, "该类型陈述数": total, "错误数": incorrect,
-                        "评估方式": "外部 LLM"}
+                name=name, value=rate, unit="%", detail=det,
+                numerator=incorrect, denominator=total, display_mode="ratio",
             ))
+
+    # 1.2 谬误率汇总：三类合并（error_type 为 other 的不计入三类，也不计入汇总分母=只统计分类后的陈述）
+    # 但为了与 calc_hallucination_rate 口径一致（主幻觉率分母=全部有效陈述），这里用 effective 总数
+    total_valid_summary = len(effective)
+    total_incorrect_summary = sum(1 for e in effective if e.get("verdict") == "incorrect")
+    if total_valid_summary == 0:
+        out.append(MetricResult(
+            name="1.2 谬误率汇总 [LLM]", value=0.0, unit="%",
+            numerator=0, denominator=0, display_mode="ratio",
+            detail={"computed": False, "抽取陈述总数": 0, "错误总数": 0,
+                    "评估方式": "外部 LLM（三类合并）",
+                    "note": "N/A：无有效陈述"}
+        ))
+    else:
+        rate = round(total_incorrect_summary / total_valid_summary * 100, 2)
+        out.append(MetricResult(
+            name="1.2 谬误率汇总 [LLM]", value=rate, unit="%",
+            numerator=total_incorrect_summary, denominator=total_valid_summary,
+            display_mode="ratio",
+            detail={"computed": True, "抽取陈述总数": total_valid_summary,
+                    "错误总数": total_incorrect_summary,
+                    "三类错误合计": total_incorrect_all,
+                    "评估方式": "外部 LLM（三类合并，分母=全部有效陈述，与主幻觉率口径一致）"},
+        ))
+
     return out
 
 
 def calc_m9b(evaluations: list[dict[str, Any]] | None) -> MetricResult:
-    """1.4.2 溯源内容支撑率。"""
+    """1.3.2 溯源内容支撑率。"""
     if not evaluations:
-        return MetricResult(name="1.4.2 溯源内容支撑率", value=0.0, unit="%", detail={"computed": False, "note": "未计算"})
+        return MetricResult(name="1.3.2 溯源内容支撑率", value=0.0, unit="%", detail={"computed": False, "note": "未计算"})
     sourced = [e for e in evaluations if e.get("source_verifiable") is True]
     total = len(sourced)
     if total == 0:
-        return MetricResult(name="1.4.2 溯源内容支撑率", value=0.0, unit="%", detail={"computed": True, "带来源陈述数": 0, "note": "无带来源陈述"})
+        return MetricResult(name="1.3.2 溯源内容支撑率", value=0.0, unit="%", detail={"computed": True, "带来源陈述数": 0, "note": "无带来源陈述"})
     supported = sum(1 for e in sourced if e.get("content_relevance") is True or e.get("relevance_check_result") in ("relevant", "partially_relevant"))
     rate = round(supported / total * 100, 2)
     return MetricResult(
-        name="1.4.2 溯源内容支撑率", value=rate, unit="%",
+        name="1.3.2 溯源内容支撑率", value=rate, unit="%",
         detail={"computed": True, "带来源陈述数": total, "内容支撑数": supported}
     )
 
 
 def load_m14_external_result(profile_letter: str) -> dict[str, Any] | None:
-    """加载 1.5 内容跨轮自洽率结果（profile_indicator > cross_round section）。"""
+    """加载 1.4 内容跨轮自洽率结果（profile_indicator > cross_round section）。"""
     section, _path = _load_profile_section(profile_letter, "cross_round")
     return section
 
@@ -1195,11 +1294,11 @@ def _placeholder_metric(name: str, mode: str) -> MetricResult:
 
 
 def calc_m14(data: dict[str, Any] | None, profile_letter: str) -> MetricResult:
-    """1.5 内容跨轮自洽率。"""
+    """1.4 内容跨轮自洽率。"""
     if not data:
-        return _placeholder_metric("1.5 内容跨轮自洽率", "m1_cross_round")
+        return _placeholder_metric("1.4 内容跨轮自洽率", "m1_cross_round")
     return MetricResult(
-        name="1.5 内容跨轮自洽率", value=data.get("self_consistency_rate", 0.0), unit="%",
+        name="1.4 内容跨轮自洽率", value=data.get("self_consistency_rate", 0.0), unit="%",
         detail={"computed": True, "事实点总数": data.get("total_fact_points", 0), "矛盾数": data.get("contradicted", 0)}
     )
 
@@ -1230,19 +1329,49 @@ def calc_m17(data: dict[str, Any] | None, profile_letter: str, round_num: int) -
     对 LLM 输出 schema 做双向兼容（方案A）：
     - 首选：data 中 accurate_rate / complete_rate （旧聚合字段）；
     - 兜底：若 accurate_rate 异常（为 0 但 evaluations 中其实有大量 accurate verdict），
-      则按 evaluations[*] 下无论是「顶层 verdict」还是「嵌套 evaluations[].verdict / summary」
+      则按 evaluations[*] 下无论是「嵌套 verdict」还是「嵌套 evaluations[].verdict / summary」
       的形状统一归一化后重算。
+    - 若 data 标记为 not_applicable（如 norag 组未启用 RAG），直接返回 computed=False, value=None。
     """
     if not data:
         return [
             _placeholder_metric("4.1 检索准确率", "m2_retrieval"),
             _placeholder_metric("4.2 检索完整率", "m2_retrieval"),
         ]
+    # 显式 not_applicable：该组未启用 RAG，不应当有分数
+    if data.get("status") == "not_applicable":
+        reason = data.get("reason", "该实验组未启用 RAG 检索")
+        return [
+            MetricResult(
+                name="4.1 检索准确率", value=None, unit="%",
+                detail={"computed": False, "评估方式": "not_applicable", "原因": reason},
+            ),
+            MetricResult(
+                name="4.2 检索完整率", value=None, unit="%",
+                detail={"computed": False, "评估方式": "not_applicable", "原因": reason},
+            ),
+        ]
     total = data.get("total_chunks", 0) or 0
     accurate = data.get("accurate", 0) or 0
     complete = data.get("complete", 0) or 0
-    accurate_rate = data.get("accurate_rate", 0.0) or 0.0
-    complete_rate = data.get("complete_rate", 0.0) or 0.0
+    accurate_rate_raw = data.get("accurate_rate")
+    complete_rate_raw = data.get("complete_rate")
+    # 若 accurate_rate / complete_rate 是 None → 不能强行用 0.0 兜底占位（这是 NA 的另一种表现）
+    if accurate_rate_raw is None or complete_rate_raw is None:
+        return [
+            MetricResult(
+                name="4.1 检索准确率", value=None, unit="%",
+                detail={"computed": False, "评估方式": "not_applicable",
+                        "原因": f"accurate_rate is {accurate_rate_raw}, total_chunks={total}"},
+            ),
+            MetricResult(
+                name="4.2 检索完整率", value=None, unit="%",
+                detail={"computed": False, "评估方式": "not_applicable",
+                        "原因": f"complete_rate is {complete_rate_raw}, total_chunks={total}"},
+            ),
+        ]
+    accurate_rate = float(accurate_rate_raw)
+    complete_rate = float(complete_rate_raw)
 
     # 当 aggregate 字段可疑（都是 0 但 evaluations 非空）时统一重算。
     # 触发条件：(accurate==0 or complete==0) AND evaluations 存在且非空 → 归一化重算。
@@ -1380,9 +1509,9 @@ calculate_profile_level_metrics = calculate_system_level_metrics
 
 # ── 外部LLM维度展示 ──────────────────────────────────────────────────────
 
-_M1_LLM_DIMENSIONS: list[tuple[str, str]] = [
-    ("hallucination", "幻觉评估(Hallucination)"),
-]
+# 2026-09-03：旧 M1 外部LLM维度「hallucination / 幻觉评估」对应的 1.2 幻觉评估 [LLM] 指标已删除。
+# 列表清空，format_result 中的 M1 外部LLM评估器维度不再单独输出幻觉评估维度。
+_M1_LLM_DIMENSIONS: list[tuple[str, str]] = []
 
 _M2_LLM_DIMENSIONS: list[tuple[str, str]] = [
     ("helpfulness", "有用性(Helpfulness)"),
@@ -1642,12 +1771,13 @@ def format_result(rm: RoundMetrics, llm_results: dict[str, Any] | None = None) -
 
     # M1 幻觉率 — 深化指标
     _append_group("M1 幻觉率 — 深化指标", [
-        "1.3.1 事实性谬误率",
-        "1.3.2 逻辑性谬误率",
-        "1.3.3 指令性谬误率",
-        "1.4.1 溯源可验证率",
-        "1.4.2 溯源内容支撑率",
-        "1.5 内容跨轮自洽率",
+        "1.2.1 事实性谬误率 [LLM]",
+        "1.2.2 逻辑性谬误率 [LLM]",
+        "1.2.3 指令性谬误率 [LLM]",
+        "1.2 谬误率汇总 [LLM]",
+        "1.3.1 溯源可验证率",
+        "1.3.2 溯源内容支撑率",
+        "1.4 内容跨轮自洽率",
     ])
 
     # M2 匹配度 — 外部LLM维度

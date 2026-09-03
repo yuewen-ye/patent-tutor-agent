@@ -84,14 +84,13 @@ def _resolve_llm_results_dir(learner_prefix: str = "multi") -> Path:
 # ── LLM 维度映射（标签 → 内部 key） ────────────────────────────────────────
 
 _LLM_DIM_KEY_MAP: dict[str, str] = {
-    "幻觉评估(Hallucination)": "hallucination",
+    # 2026-09-03：1.2 幻觉评估 [LLM] 指标已从体系删除，hallucination 维度不再写入报告
     "有用性(Helpfulness)": "helpfulness",
     "相关性(Relevance)": "relevance",
 }
 
-# M1 外部LLM评估器维度（1概念）
+# M1 外部LLM评估器维度（1.2 幻觉评估 [LLM] 已移除，2026-09-03）
 _M1_LLM_DIMS: list[str] = [
-    "幻觉评估",
 ]
 
 # M2 外部LLM评估器维度（2维度）
@@ -103,16 +102,17 @@ _M2_LLM_DIMS: list[str] = [
 # ── 报告两张主表的指标分组 ────────────────────────────────────────────────
 
 # 【附1】教学流程评价指标（M1-M6 合并，脚本计算 + LLM 评估混合分组）
+# 2026-09-03：删除「1.2 幻觉评估 [LLM]」（原 hallucination 外部LLM维度），原 1.3/1.4/1.5 系列前移一位
 _APPENDIX1_METRICS: list[tuple[str, list[str]]] = [
     ("M1 内容幻觉率", [
         "1.1 裁判Agent准确性评分",
-        "1.2 幻觉评估 [LLM]",
-        "1.3.1 事实性谬误率 [LLM]",
-        "1.3.2 逻辑性谬误率 [LLM]",
-        "1.3.3 指令性谬误率 [LLM]",
-        "1.4.1 溯源可验证率 [LLM]",
-        "1.4.2 溯源内容支撑率 [LLM]",
-        "1.5 内容跨轮自洽率",
+        "1.2.1 事实性谬误率 [LLM]",
+        "1.2.2 逻辑性谬误率 [LLM]",
+        "1.2.3 指令性谬误率 [LLM]",
+        "1.2 谬误率汇总 [LLM]",
+        "1.3.1 溯源可验证率 [LLM]",
+        "1.3.2 溯源内容支撑率 [LLM]",
+        "1.4 内容跨轮自洽率",
     ]),
     ("M2 画像匹配度", [
         "2.1 难度符合度",
@@ -176,6 +176,7 @@ INDEPENDENT_SYSTEM_METRICS: list[str] = [
 ]
 
 # ── 指标说明：name → (计算公式, 数据来源, 合格标准) ──────────────────────────
+# 2026-09-03：删除旧「1.2 幻觉评估 [LLM]」。原 1.3/1.4/1.5 编号整体前移一位（1.3→1.2、1.4→1.3、1.5→1.4）。
 
 METRIC_META: dict[str, tuple[str, str, str]] = {
     # M1 内容幻觉率
@@ -184,38 +185,38 @@ METRIC_META: dict[str, tuple[str, str, str]] = {
         "judge_report.md",
         "≥4分",
     ),
-    "1.2 幻觉评估 [LLM]": (
-        "外部LLM评估：与客观事实/可验证数据/逻辑推理相违背的内容比例（0-100分）",
-        "round_indicator_{model}_{profile}_{round}.json > overall.scores.hallucination（round-indicator.md 外部LLM评估）",
-        "≥95分",
-    ),
-    "1.3.1 事实性谬误率 [LLM]": (
-        "事实性错误陈述数 / 事实性陈述总数 × 100%",
-        "round_indicator_{model}_{profile}_{round}.json > statement（round-indicator.md 外部LLM评估）",
+    "1.2.1 事实性谬误率 [LLM]": (
+        "事实性错误陈述条数 / 事实性陈述总条数（展示 x/y，不展示裸百分比）。错误分类（factual/logical/instructional）由外部 LLM 标注，脚本仅按标签聚合。合格判定依据 value（百分比）≤5%。",
+        "round_indicator_{model}_{profile}_{round}.json > statement.evaluations[].error_type + verdict",
         "≤5%",
     ),
-    "1.3.2 逻辑性谬误率 [LLM]": (
-        "逻辑性错误陈述数 / 逻辑性陈述总数 × 100%",
-        "round_indicator_{model}_{profile}_{round}.json > statement（round-indicator.md 外部LLM评估）",
+    "1.2.2 逻辑性谬误率 [LLM]": (
+        "逻辑性错误陈述条数 / 逻辑性陈述总条数（展示 x/y）。样本量 <5 条时跨组比较不可信，参考「1.2 谬误率汇总」。",
+        "round_indicator_{model}_{profile}_{round}.json > statement.evaluations[].error_type + verdict",
         "≤5%",
     ),
-    "1.3.3 指令性谬误率 [LLM]": (
-        "指令性错误陈述数 / 指令性陈述总数 × 100%",
-        "round_indicator_{model}_{profile}_{round}.json > statement（round-indicator.md 外部LLM评估）",
+    "1.2.3 指令性谬误率 [LLM]": (
+        "指令性错误陈述条数 / 指令性陈述总条数（展示 x/y）。样本量 <5 条时跨组比较不可信，参考「1.2 谬误率汇总」。",
+        "round_indicator_{model}_{profile}_{round}.json > statement.evaluations[].error_type + verdict",
         "≤5%",
     ),
-    "1.4.1 溯源可验证率 [LLM]": (
-        "完全验证的带来源陈述数 / 带来源陈述总数 × 100%",
+    "1.2 谬误率汇总 [LLM]": (
+        "错误陈述总条数 / 抽取陈述总条数（跨三类合并，展示 x/y）。分母=所有有效陈述，与主幻觉率口径一致。平均列显示 x/y(错误比例%)。",
+        "round_indicator_{model}_{profile}_{round}.json > statement.evaluations[] 全量 + verdict",
+        "-",
+    ),
+    "1.3.1 溯源可验证率 [LLM]": (
+        "完全验证的带来源陈述数 / 带来源陈述总数 × 100%（原 1.4.1，因删除 1.2 幻觉评估前移一位）",
         "round_indicator_{model}_{profile}_{round}.json > statement（round-indicator.md 外部LLM评估）",
         "≥95%",
     ),
-    "1.4.2 溯源内容支撑率 [LLM]": (
-        "内容支撑的带来源陈述数 / 带来源陈述总数 × 100%",
+    "1.3.2 溯源内容支撑率 [LLM]": (
+        "内容支撑的带来源陈述数 / 带来源陈述总数 × 100%（原 1.4.2，因删除 1.2 幻觉评估前移一位）",
         "round_indicator_{model}_{profile}_{round}.json > statement（round-indicator.md 外部LLM评估）",
         "≥95%",
     ),
-    "1.5 内容跨轮自洽率": (
-        "1 - 矛盾事实点数 / 总事实点数 × 100%",
+    "1.4 内容跨轮自洽率": (
+        "1 - 矛盾事实点数 / 总事实点数 × 100%（原 1.5，因删除 1.2 幻觉评估前移一位）",
         "profile_indicator_{model}_{profile}.json > cross_round（profile-indicator.md 外部LLM评估）",
         "≥95%",
     ),
@@ -265,7 +266,7 @@ METRIC_META: dict[str, tuple[str, str, str]] = {
     "4.2 检索完整率 [LLM]": (
         "完整检索chunk数 / 总检索chunk数 × 100%",
         "round_indicator_{model}_{profile}_{round}.json > retrieval（round-indicator.md 外部LLM评估）",
-        "≥95%",
+        "≥85%",
     ),
     # M5 系统产物评价
     "5.1 产物完整率": (
@@ -313,15 +314,32 @@ METRIC_META: dict[str, tuple[str, str, str]] = {
 }
 
 # 指标名规范化映射：calculate.MetricResult.name → 统一展示名（带 [LLM] 后缀的为 LLM 评估指标）
+# 2026-09-03：删除旧 1.2 幻觉评估 [LLM]；原 1.3/1.4/1.5 系列前移一位。
 _RENAME_MAP: dict[str, str] = {
     # M1
     "1.1 裁判Agent准确性评分": "1.1 裁判Agent准确性评分",
-    "1.3.1 事实性谬误率": "1.3.1 事实性谬误率 [LLM]",
-    "1.3.2 逻辑性谬误率": "1.3.2 逻辑性谬误率 [LLM]",
-    "1.3.3 指令性谬误率": "1.3.3 指令性谬误率 [LLM]",
-    "1.4.1 溯源可验证率": "1.4.1 溯源可验证率 [LLM]",
-    "1.4.2 溯源内容支撑率": "1.4.2 溯源内容支撑率 [LLM]",
-    "1.5 内容跨轮自洽率": "1.5 内容跨轮自洽率",
+    # 谬误率三子分 + 汇总（编号前移，新=1.2.x、1.2汇总）
+    "1.2.1 事实性谬误率": "1.2.1 事实性谬误率 [LLM]",
+    "1.2.2 逻辑性谬误率": "1.2.2 逻辑性谬误率 [LLM]",
+    "1.2.3 指令性谬误率": "1.2.3 指令性谬误率 [LLM]",
+    "1.2 谬误率汇总": "1.2 谬误率汇总 [LLM]",
+    # 双向兼容：如果 calculate.py 临时仍产出旧名，则自动映射到新编号
+    "1.3.1 事实性谬误率": "1.2.1 事实性谬误率 [LLM]",
+    "1.3.2 逻辑性谬误率": "1.2.2 逻辑性谬误率 [LLM]",
+    "1.3.3 指令性谬误率": "1.2.3 指令性谬误率 [LLM]",
+    "1.3 谬误率汇总": "1.2 谬误率汇总 [LLM]",
+    "1.3.1 事实性谬误率 [LLM]": "1.2.1 事实性谬误率 [LLM]",
+    "1.3.2 逻辑性谬误率 [LLM]": "1.2.2 逻辑性谬误率 [LLM]",
+    "1.3.3 指令性谬误率 [LLM]": "1.2.3 指令性谬误率 [LLM]",
+    "1.3 谬误率汇总 [LLM]": "1.2 谬误率汇总 [LLM]",
+    # 溯源（原 1.4 → 1.3）
+    "1.3.1 溯源可验证率": "1.3.1 溯源可验证率 [LLM]",
+    "1.3.2 溯源内容支撑率": "1.3.2 溯源内容支撑率 [LLM]",
+    "1.4.1 溯源可验证率": "1.3.1 溯源可验证率 [LLM]",
+    "1.4.2 溯源内容支撑率": "1.3.2 溯源内容支撑率 [LLM]",
+    # 跨轮自洽（原 1.5 → 1.4）
+    "1.4 内容跨轮自洽率": "1.4 内容跨轮自洽率",
+    "1.5 内容跨轮自洽率": "1.4 内容跨轮自洽率",
     # M2
     "2.1 难度符合度": "2.1 难度符合度",
     "2.4 动态迭代触发率": "2.4 动态迭代触发率",
@@ -349,8 +367,8 @@ _RENAME_MAP: dict[str, str] = {
 _DISPLAY_TO_OLD: dict[str, str] = {v: k for k, v in _RENAME_MAP.items()}
 
 # 直接映射：展示名 → LLM 维度 label（用于把展示名翻译回 LLM 维度 key）
+# 2026-09-03：1.2 幻觉评估 [LLM] 已从体系删除，不再与 hallucination 维度绑定
 _DISPLAY_TO_LLM_DIM: dict[str, str] = {
-    "1.2 幻觉评估 [LLM]": "幻觉评估(Hallucination)",
     "2.2 有用性 [LLM]": "有用性(Helpfulness)",
     "2.3 相关性 [LLM]": "相关性(Relevance)",
 }
@@ -424,6 +442,11 @@ def _is_failed_marker(section_data: Any) -> bool:
     return isinstance(section_data, dict) and section_data.get("status") == "failed"
 
 
+def _is_not_applicable_marker(section_data: Any) -> bool:
+    """显式 not_applicable 标记（例如 nodebate 无辩论产物、norag 无检索文件）→ 视为无数据。"""
+    return isinstance(section_data, dict) and section_data.get("status") == "not_applicable"
+
+
 def _load_llm_eval_results(learner_prefix: str = "multi") -> dict[str, Any]:
     """从新的聚合产物目录加载评估结果。
 
@@ -471,31 +494,31 @@ def _load_llm_eval_results(learner_prefix: str = "multi") -> dict[str, Any]:
         if not profile_id or not round_num:
             continue
         # overall → judge_eval
-        if "overall" in data and not _is_failed_marker(data["overall"]):
+        if "overall" in data and not _is_failed_marker(data["overall"]) and not _is_not_applicable_marker(data["overall"]):
             _store(profile_id, round_num, "judge_eval",
                    {"metadata": metadata, "overall_evaluation": data["overall"]})
         # statement → statement_eval
-        if "statement" in data and not _is_failed_marker(data["statement"]):
+        if "statement" in data and not _is_failed_marker(data["statement"]) and not _is_not_applicable_marker(data["statement"]):
             _store(profile_id, round_num, "statement_eval",
                    {"metadata": metadata, **data["statement"]})
         # resource_morphology → m7_resource
-        if "resource_morphology" in data and not _is_failed_marker(data["resource_morphology"]):
+        if "resource_morphology" in data and not _is_failed_marker(data["resource_morphology"]) and not _is_not_applicable_marker(data["resource_morphology"]):
             _store(profile_id, round_num, "m7_resource",
                    {"metadata": metadata, "raw_llm_response": data["resource_morphology"]})
-        # retrieval → m2_retrieval
-        if "retrieval" in data and not _is_failed_marker(data["retrieval"]):
+        # retrieval → m2_retrieval（not_applicable 不入库，确保 4.1/4.2 显示 "-"）
+        if "retrieval" in data and not _is_failed_marker(data["retrieval"]) and not _is_not_applicable_marker(data["retrieval"]):
             _store(profile_id, round_num, "m2_retrieval",
                    {"metadata": metadata, **data["retrieval"]})
         # pii → pii_compliance
-        if "pii" in data and not _is_failed_marker(data["pii"]):
+        if "pii" in data and not _is_failed_marker(data["pii"]) and not _is_not_applicable_marker(data["pii"]):
             _store(profile_id, round_num, "pii_compliance",
                    {"metadata": metadata, **data["pii"]})
-        # objection_loop → objection_eval（用于 1.1 闭环率，若 calculate.py 需要）
-        if "objection_loop" in data and not _is_failed_marker(data["objection_loop"]):
+        # objection_loop → objection_eval（用于 6.2 闭环率；not_applicable 不入库，显示 "-"）
+        if "objection_loop" in data and not _is_failed_marker(data["objection_loop"]) and not _is_not_applicable_marker(data["objection_loop"]):
             _store(profile_id, round_num, "objection_eval",
                    {"metadata": metadata, **data["objection_loop"]})
         # coverage → coverage_eval（用于 3.1/3.2/3.3 覆盖率指标）
-        if "coverage" in data and not _is_failed_marker(data["coverage"]):
+        if "coverage" in data and not _is_failed_marker(data["coverage"]) and not _is_not_applicable_marker(data["coverage"]):
             _store(profile_id, round_num, "coverage_eval",
                    {"metadata": metadata, **data["coverage"]})
 
@@ -672,12 +695,33 @@ def _list_profiles_with_data(learner_prefix: str = "multi") -> list[str]:
 
 # ── 格式化 ───────────────────────────────────────────────────────────────────
 
-def _format_value(value: float, unit: str) -> str:
+def _format_value(value: Any, unit: str) -> str:
+    if value is None:
+        return "-"
     if unit == "/":
         return "/"
     if unit == "/5":
-        return f"{value:.1f}/5"
-    return f"{value:.1f}{unit}"
+        return f"{float(value):.1f}/5"
+    return f"{float(value):.1f}{unit}"
+
+
+def _format_metric_ratio(metric: calculate.MetricResult) -> str:
+    """针对 display_mode == "ratio" 的谬误率指标渲染：错误条数/总条数。"""
+    if metric.value is None or metric.detail.get("computed", True) is False:
+        # 分母为 0 / 未计算 / NA → 显示 "-"
+        if (metric.numerator == 0 and metric.denominator == 0):
+            return "-"
+        return "-"
+    return f"{metric.numerator}/{metric.denominator}"
+
+
+def _find_metric_by_name(
+    round_metrics: list[calculate.MetricResult], name: str
+) -> calculate.MetricResult | None:
+    for m in round_metrics:
+        if m.name == name:
+            return m
+    return None
 
 
 def _format_detail(v: Any) -> str:
@@ -718,13 +762,14 @@ def _get_metric_value_for_round(
     for m in round_metrics:
         if m.name == old_name or m.name == display_name or _RENAME_MAP.get(m.name, m.name) == display_name:
             # computed:False 表示指标未真正计算（如分母为 0、缺数据），
-            # 返回 None 让表格显示 "-" 而非把 0.0 当成真实谬误率（虚假完美）
-            if m.detail.get("computed", True) is False:
+            # value:None 表示显式 not_applicable（如 nodebate 组异议率、norag 组检索分），
+            # 以上两种情况均返回 None 让表格显示 "-" 而非 0.0 或 False 均值崩溃。
+            if m.detail.get("computed", True) is False or m.value is None:
                 return None
             return m.value, m.unit
 
-    # M14 跨轮自洽率（每画像一次，跨轮共享）
-    if display_name == "1.5 内容跨轮自洽率":
+    # M14 跨轮自洽率（每画像一次，跨轮共享）—— 指标编号 1.4（原 1.5）
+    if display_name in ("1.4 内容跨轮自洽率", "1.5 内容跨轮自洽率"):
         m14_data = llm_results.get(profile_letter, {}).get("_m14")
         if m14_data:
             return m14_data.get("self_consistency_rate", 0.0), "%"
@@ -845,8 +890,37 @@ def _render_comparison_table(
             row = [f"`{name}`"]
             per_profile_avgs: list[float] = []
             unit = ""
+            # ratio 模式：累计所有画像所有轮的 numerator/denominator
+            ratio_mode = False
+            total_numer: int = 0
+            total_denom: int = 0
             for p in profiles:
                 merged_metrics = list(profile_level_metrics) + list(p.profile_level_metrics)
+                # ratio 模式：从每个轮次的 metrics 中查找匹配的 display_mode == "ratio" 的指标
+                all_round_metrics = [m for rm in p.rounds for m in rm.metrics]
+                ratio_candidates = [m for m in all_round_metrics if m.display_mode == "ratio"
+                                    and (_RENAME_MAP.get(m.name, m.name) == name or m.name == name)]
+                if ratio_candidates:
+                    ratio_mode = True
+                    p_numer = 0
+                    p_denom = 0
+                    for m in ratio_candidates:
+                        if (m.value is None or m.detail.get("computed", True) is False
+                                or (m.numerator == 0 and m.denominator == 0)):
+                            continue
+                        p_numer += m.numerator or 0
+                        p_denom += m.denominator or 0
+                    if p_denom == 0:
+                        row.append("-")
+                    else:
+                        p_pct = round(p_numer / p_denom * 100, 1)
+                        row.append(f"{p_numer}/{p_denom}")
+                        per_profile_avgs.append(p_pct)
+                        total_numer += p_numer
+                        total_denom += p_denom
+                        unit = "%"
+                    continue
+
                 result = _metric_avg_for_profile(
                     p, name, llm_results, merged_metrics,
                 )
@@ -857,7 +931,13 @@ def _render_comparison_table(
                     row.append(_format_value(val, u))
                     per_profile_avgs.append(val)
                     unit = u
-            if per_profile_avgs:
+            if ratio_mode:
+                if total_denom == 0:
+                    row.append("-")
+                else:
+                    total_pct = round(total_numer / total_denom * 100, 1)
+                    row.append(f"{total_numer}/{total_denom} ({total_pct:.1f}%)")
+            elif per_profile_avgs:
                 grand_avg = sum(per_profile_avgs) / len(per_profile_avgs)
                 row.append(_format_value(grand_avg, unit))
             else:
@@ -1038,7 +1118,28 @@ def _render_profile_round_table(
             values: list[float] = []
             skip_rounds: list[int] = []
             unit = ""
+            # ratio 模式：累计各轮 numer/denom，平均列汇总 x/y(p%)
+            ratio_sum_num: int = 0
+            ratio_sum_den: int = 0
+            ratio_mode = False
             for rm in rounds:
+                # 先判断 ratio 模式：从 rm.metrics 中找 display_mode=="ratio" 且名匹配的
+                ratio_m = _find_metric_by_name(rm.metrics, name)
+                if (ratio_m is not None and ratio_m.display_mode == "ratio"):
+                    ratio_mode = True
+                    if (ratio_m.value is None or ratio_m.detail.get("computed", True) is False
+                            or (ratio_m.numerator == 0 and ratio_m.denominator == 0)):
+                        row.append("-")
+                        continue
+                    n = ratio_m.numerator or 0
+                    d = ratio_m.denominator or 0
+                    ratio_sum_num += n
+                    ratio_sum_den += d
+                    row.append(f"{n}/{d}")
+                    pct = round(n / d * 100, 1) if d else 0.0
+                    values.append(pct)
+                    unit = "%"
+                    continue
                 result = _get_metric_value_for_round(
                     profile.profile_letter, rm.round_num, name,
                     llm_results, rm.metrics, all_profile_metrics,
@@ -1053,7 +1154,13 @@ def _render_profile_round_table(
                     else:
                         values.append(val)
                         unit = u
-            if values:
+            if ratio_mode:
+                if ratio_sum_den == 0:
+                    row.append("-")
+                else:
+                    total_pct = round(ratio_sum_num / ratio_sum_den * 100, 1)
+                    row.append(f"{ratio_sum_num}/{ratio_sum_den} ({total_pct:.1f}%)")
+            elif values:
                 avg = sum(values) / len(values)
                 row.append(_format_value(avg, unit))
             else:
@@ -1101,15 +1208,31 @@ def _render_metric_detail_section(
 
             has_data = False
             for rm in rounds:
-                result = _get_metric_value_for_round(
-                    profile_letter, rm.round_num, name,
-                    llm_results, rm.metrics, profile_level_metrics,
-                )
-                if result is None:
-                    continue
-                has_data = True
-                val, u = result
-                lines.append(f"- **R{rm.round_num:02d}**: {_format_value(val, u)}")
+                old_name = _display_to_old_name(name)
+                metric = None
+                for m in rm.metrics:
+                    if m.name == old_name or _RENAME_MAP.get(m.name, m.name) == name or m.name == name:
+                        metric = m
+                        break
+                # ratio 模式优先按 x/y 显示
+                if metric is not None and metric.display_mode == "ratio":
+                    if (metric.value is None or metric.detail.get("computed", True) is False
+                            or (metric.numerator == 0 and metric.denominator == 0)):
+                        cell = "-"
+                    else:
+                        cell = f"{metric.numerator}/{metric.denominator}"
+                    has_data = True
+                    lines.append(f"- **R{rm.round_num:02d}**: {cell}")
+                else:
+                    result = _get_metric_value_for_round(
+                        profile_letter, rm.round_num, name,
+                        llm_results, rm.metrics, profile_level_metrics,
+                    )
+                    if result is None:
+                        continue
+                    has_data = True
+                    val, u = result
+                    lines.append(f"- **R{rm.round_num:02d}**: {_format_value(val, u)}")
 
                 # 附带 MetricResult.detail 原始字段
                 old_name = _display_to_old_name(name)

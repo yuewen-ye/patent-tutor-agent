@@ -635,9 +635,10 @@ def merge_profile_section(
 
 
 def _section_done(data: dict[str, Any], section: str) -> bool:
-    """该 section 是否已成功完成。
+    """该 section 是否已完成（含 NA 标记）。
 
-    失败标记（status == "failed"）视为未完成：重跑会重新评估，而不是被跳过。
+    失败标记（status == "failed"）视为未完成：重跑会重新评估。
+    NA 标记（status == "not_applicable"）视为已完成：该场景不适用，不应重复标记。
     """
     value = data.get(section)
     if value is None:
@@ -758,6 +759,29 @@ def build_whole_prompt(
 """
 
 
+# ── 指标 1.2 幻觉评估 [LLM] 下线清理（2026-09-03）────────────────────────────
+
+def _sanitize_overall_output(result: dict[str, Any]) -> None:
+    """移除 round_indicator overall.scores.hallucination，确保下次评估不产出幻觉评估维度。
+
+    无论 LLM 是否仍输出 hallucination 字段（受缓存/旧 prompt 影响），此处强制剥离，
+    保证 calculate.format_result 的 M1 外部LLM评估器维度、report.py 的 _M1_LLM_DIMS
+    侧不再收到该维度的数据。
+    """
+    if not isinstance(result, dict):
+        return
+    overall = result.get("overall_evaluation")
+    if not isinstance(overall, dict):
+        return
+    scores = overall.get("scores")
+    if isinstance(scores, dict):
+        scores.pop("hallucination", None)   # ← 核心下线动作
+    # 同时移除 section 顶部标记，避免误读为「有 hallucination 但 0 分」
+    meta = overall.get("metadata") if isinstance(overall.get("metadata"), dict) else None
+    if isinstance(meta, dict):
+        meta["drops"] = sorted(list(set(meta.get("drops", []) + ["1.2 幻觉评估 [LLM]"])))
+
+
 # ── 评估流程 ──────────────────────────────────────────────────────────────────
 
 @_mark_failed_section("overall")
@@ -861,6 +885,9 @@ def evaluate_profile_round(
         result["overall_evaluation"] = parsed
 
     # 5. 合并写入 round_indicator 的 overall section
+    # 2026-09-03：指标体系删除「1.2 幻觉评估 [LLM]」，无论 LLM 基于旧 prompt 是否仍
+    # 输出 hallucination 评分块，下次运行都主动清除，确保报告层不再收到该维度。
+    _sanitize_overall_output(result)
     merge_round_section(
         config, model_name, profile_id, round_num,
         section="overall", value=result,
@@ -1910,13 +1937,44 @@ def evaluate_m8_objection_loop(
     }
 
     artifact_contents: dict[str, str] = {}
+    missing_critical: list[str] = []
     for key, filename in required_files.items():
         content = read_file(common.resolve_latest_artifact_path(round_dir, filename))
         if content is None:
             print(f"  ⚠️  缺少文件: {filename}")
             artifact_contents[key] = ""
+            if key.startswith("cross_review") or key.startswith("revision"):
+                missing_critical.append(filename)
         else:
             artifact_contents[key] = content
+
+    # 无交叉评审或无修订 → 异议闭环环节不适用（如 nodebate 组未启用 debate）
+    # 直接写 not_applicable，不要让 LLM 对空内容打分（会造成0异议却不及格的荒谬结果）
+    if missing_critical:
+        result: dict[str, Any] = {
+            "status": "not_applicable",
+            "reason": (
+                f"缺少辩论环节产物：{', '.join(missing_critical)}，"
+                "该实验组未启用专家交叉评审，异议闭环评估不适用。"
+            ),
+            "metrics": {
+                "value": None,
+                "unit": "分",
+                "detail": {
+                    "总🔴异议数": None,
+                    "闭环率(%)": None,
+                    "总体评分(100分制)": None,
+                    "评估方式": "not_applicable（无辩论环节产物）",
+                },
+            },
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        merge_round_section(
+            config, model_name, profile_id, round_num,
+            section="objection_loop", value=result,
+        )
+        print(f"  ⏭️  跳过异议闭环评估：缺少 {', '.join(missing_critical)}（标记为 not_applicable）")
+        return None
 
     # 3. 加载系统提示词（统一 round-indicator.md）
     system_prompt = load_system_prompt("m1")
@@ -1972,10 +2030,15 @@ def evaluate_m8_objection_loop(
     if total_objections > 0:
         loop_rate = round(closed_loop_count / total_objections * 100, 1)
     else:
+        # 没有异议时按空闭环节的客观事实给 100%，不要依赖 LLM 主观 overall
         loop_rate = 100.0
 
     llm_overall_score = _to_float(parsed.get("overall_score", 0))
-    if llm_overall_score:
+    # 优先取客观闭环率（loop_rate），仅在 loop_rate 与 LLM 主观分都给出时加权
+    # 若总异议为 0：直接以 100 作为最终分（客观事实优先于 LLM 主观印象）
+    if total_objections == 0:
+        final_score = 100.0
+    elif llm_overall_score:
         final_score = round(llm_overall_score, 1)
     else:
         final_score = loop_rate
@@ -2796,21 +2859,29 @@ def evaluate_m17(
     round_dir = get_round_dir(profile_id, round_num)
     real_chunks = parse_retrieval_chunks(round_dir)
 
-    if real_chunks:
-        # 真实 RAG chunk 模式
-        chunks = real_chunks
-        use_real_chunks = True
-        print(f"  📄 从 {len({c['retrieval_file'] for c in chunks})} 个 retrieval_context 文件解析到 {len(chunks)} 个真实 RAG chunk（已按 chunk_id 去重）")
-    else:
-        # 回退：无 retrieval_context 文件时用 course_package 章节切片代理
-        artifacts = read_artifacts(profile_id, round_num)
-        course_text = artifacts.get("course_package.md", "")
-        if not course_text:
-            print(f"  ❌ course_package.md 为空且无 retrieval_context 文件")
-            return None
-        chunks = split_by_sections(course_text)
-        use_real_chunks = False
-        print(f"  ⚠️ 未找到 retrieval_context 文件，回退为 course_package 章节切片（{len(chunks)} 个代理 chunk）")
+    if not real_chunks:
+        # 无 retrieval_context 文件 → 该组未启用 RAG，检索质量评估不适用
+        # 写入 not_applicable 标记（_section_done 视为已完成，不会重跑）
+        model_name = llm_config.get("model", "unknown")
+        result: dict[str, Any] = {
+            "status": "not_applicable",
+            "reason": "未找到 retrieval_context 文件，该实验组未启用 RAG 检索，检索质量评估不适用",
+            "chunk_source": "not_applicable",
+            "total_chunks": 0,
+            "accurate_rate": None,
+            "complete_rate": None,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        merge_round_section(
+            config, model_name, profile_id, round_num,
+            section="retrieval", value=result,
+        )
+        print(f"  ⏭️  跳过检索质量评估：未找到 retrieval_context 文件（该组未启用 RAG，标记为 not_applicable）")
+        return None
+
+    chunks = real_chunks
+    use_real_chunks = True
+    print(f"  📄 从 {len({c['retrieval_file'] for c in chunks})} 个 retrieval_context 文件解析到 {len(chunks)} 个真实 RAG chunk（已按 chunk_id 去重）")
 
     system_prompt = load_system_prompt("m2_retrieval")
     client = LLMClient(llm_config)
@@ -2818,13 +2889,12 @@ def evaluate_m17(
     evals: list[dict[str, Any]] = []
     print(f"  🔍 评估 {len(chunks)} 个检索chunk的准确性/完整性...")
     for idx, chunk in enumerate(chunks):
-        if use_real_chunks:
-            chunk_id = chunk.get("chunk_id", "")
-            source = chunk.get("source", "")
-            chunk_text = chunk.get("text", "")[:3000]
-            score = chunk.get("score")
-            rerank_score = chunk.get("rerank_score")
-            user_prompt = f"""请评估以下检索 chunk 的准确性与完整性：
+        chunk_id = chunk.get("chunk_id", "")
+        source = chunk.get("source", "")
+        chunk_text = chunk.get("text", "")[:3000]
+        score = chunk.get("score")
+        rerank_score = chunk.get("rerank_score")
+        user_prompt = f"""请评估以下检索 chunk 的准确性与完整性：
 
 来源文件：{source}
 chunk_id：{chunk_id}
@@ -2834,21 +2904,12 @@ chunk_id：{chunk_id}
 {chunk_text}
 
 请严格按照系统提示中的 JSON 格式输出。"""
-            extra_fields = {
-                "chunk_id": chunk_id,
-                "source": source,
-                "retrieval_score": score,
-                "rerank_score": rerank_score,
-            }
-        else:
-            user_prompt = f"""请评估以下检索 chunk 的准确性与完整性：
-
-问题/陈述：该分块对应章节"{chunk.get('title', '')}"
-检索 chunk：
-{chunk.get('content', '')[:3000]}
-
-请严格按照系统提示中的 JSON 格式输出。"""
-            extra_fields = {}
+        extra_fields = {
+            "chunk_id": chunk_id,
+            "source": source,
+            "retrieval_score": score,
+            "rerank_score": rerank_score,
+        }
 
         # LLM 调用失败直接抛给上层 → 该 section 记为失败，不伪造 chunk 记录
         resp = client.chat(system_prompt, user_prompt)
@@ -2856,7 +2917,7 @@ chunk_id：{chunk_id}
         # 归一化：把 verdict/scores promote 到顶层，方便旧 reader 直读
         promoted = _promote_chunk_verdicts_to_top({
             "chunk_index": idx,
-            "chunk_title": chunk.get("source", chunk.get("title", "")) if use_real_chunks else chunk.get("title", ""),
+            "chunk_title": source,
             **extra_fields,
             **parsed,
         })
@@ -2870,7 +2931,7 @@ chunk_id：{chunk_id}
 
     result: dict[str, Any] = {
         "eval_type": "retrieval_accuracy",
-        "chunk_source": "retrieval_context" if use_real_chunks else "course_package_sections",
+        "chunk_source": "retrieval_context",
         "total_chunks": total,
         "accurate": accurate,
         "accurate_rate": accurate_rate,
