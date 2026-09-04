@@ -1,9 +1,0 @@
-{
-  "profile_id": "profile_C",
-  "session_id": "eval-profile_C",
-  "hallucination": {
-    "objection_rate": 0.0,
-    "judge_accuracy": 0,
-    "judge_pass_rate": false
-  }
-}
